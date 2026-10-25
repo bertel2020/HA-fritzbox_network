@@ -2,8 +2,10 @@
 
 from dataclasses import replace
 
+from homeassistant.core import State
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
+from pytest_homeassistant_custom_component.common import mock_restore_cache_with_extra_data
 
 from custom_components.fritzbox_network import async_remove_config_entry_device
 from custom_components.fritzbox_network.const import CONF_HIDDEN_MACS
@@ -122,3 +124,20 @@ async def test_filters_remove_devices_but_not_the_repeater(hass, fake_client, en
     assert hass.states.get("device_tracker.fritz_020000000003") is None
     assert _device(hass, entry, REPEATER)
     assert hass.states.get("device_tracker.fritz_02000000000e").state == "home"
+
+
+async def test_last_seen_survives_a_restart(hass, fake_client, entry):
+    sensor_id = "sensor.fritz_020000000003_last_seen"
+    mock_restore_cache_with_extra_data(
+        hass,
+        [
+            (
+                State(sensor_id, "2026-10-01T10:00:00+00:00"),
+                {"value": "2026-10-01T10:00:00+00:00", "was_active": True},
+            )
+        ],
+    )
+    await _setup(hass, entry)
+
+    # online before and after the restart: the connect time stays
+    assert hass.states.get(sensor_id).state == "2026-10-01T10:00:00+00:00"

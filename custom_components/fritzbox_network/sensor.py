@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from homeassistant.components.sensor import RestoreSensor, SensorDeviceClass, SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.restore_state import RestoredExtraData, RestoreEntity
 from homeassistant.util import dt as dt_util
 
 from .const import KEY_ACCESS_POINT, KEY_CONNECTION_TYPE, KEY_IP_ADDRESS, KEY_LAST_SEEN
@@ -84,12 +85,13 @@ class FritzNetworkAccessPoint(FritzNetworkClientEntity, SensorEntity):
         return link.ap_name if link else None
 
 
-class FritzNetworkLastSeen(FritzNetworkClientEntity, RestoreSensor):
+class FritzNetworkLastSeen(FritzNetworkClientEntity, SensorEntity, RestoreEntity):
     """When the device was last seen.
 
     The value changes only on a transition, so it does not write a new state
     on every poll: going online sets it to now, going offline to the last poll
-    that still saw the device.
+    that still saw the device. Both the value and whether the device was online
+    survive a restart, so a device that stayed online keeps its connect time.
     """
 
     _attr_translation_key = KEY_LAST_SEEN
@@ -100,11 +102,21 @@ class FritzNetworkLastSeen(FritzNetworkClientEntity, RestoreSensor):
         self._value: datetime | None = None
         self._was_active: bool | None = None
 
+    @property
+    def extra_restore_state_data(self) -> RestoredExtraData:
+        return RestoredExtraData(
+            {
+                "value": self._value.isoformat() if self._value else None,
+                "was_active": self._was_active,
+            }
+        )
+
     async def async_added_to_hass(self) -> None:
         await super().async_added_to_hass()
-        if (last := await self.async_get_last_sensor_data()) is not None:
-            value = last.native_value
-            self._value = value if isinstance(value, datetime) else None
+        if (extra := await self.async_get_last_extra_data()) is not None:
+            data = extra.as_dict()
+            self._value = dt_util.parse_datetime(data.get("value") or "")
+            self._was_active = data.get("was_active")
         self._track(self.host)
 
     def _track(self, host: Host | None) -> None:

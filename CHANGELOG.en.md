@@ -11,3 +11,7 @@
   - Offline devices can be deleted by hand and then stay hidden.
   - Options for interval, presence, guest network, private MACs, device filter.
   - Devices excluded by a filter are removed. Repeaters are never filtered.
+
+### Fixed
+
+- "Last seen" survives a restart, also for devices that stayed online.
