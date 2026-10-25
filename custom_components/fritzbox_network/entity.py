@@ -63,9 +63,12 @@ class FritzNetworkClientEntity(CoordinatorEntity[FritzNetworkCoordinator]):
 def async_setup_client_entities(
     entry: FritzNetworkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
-    factory: Callable[[FritzNetworkCoordinator, Host], list[Entity]],
+    factory: Callable[[FritzNetworkCoordinator, Host], list[Entity] | None],
 ) -> None:
-    """Create entities for every host now and for every host that appears later."""
+    """Create entities for every host now and for every host that appears later.
+
+    The factory returns None for a host it cannot decide on yet.
+    """
     coordinator = entry.runtime_data
     known: set[str] = set()
 
@@ -76,8 +79,13 @@ def async_setup_client_entities(
             for mac, h in coordinator.data.hosts.items()
             if mac not in known and coordinator.wants_device(h)
         ]
-        known.update(h.mac for h in new)
-        entities = [e for host in new for e in factory(coordinator, host)]
+        entities: list[Entity] = []
+        for host in new:
+            created = factory(coordinator, host)
+            if created is None:  # not applicable yet, ask again with the next poll
+                continue
+            known.add(host.mac)
+            entities.extend(created)
         if entities:
             async_add_entities(entities)
 

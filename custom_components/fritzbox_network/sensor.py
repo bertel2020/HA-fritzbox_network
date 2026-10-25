@@ -2,9 +2,21 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
+)
+from homeassistant.const import (
+    SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+    EntityCategory,
+    UnitOfDataRate,
+)
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoredExtraData, RestoreEntity
@@ -16,6 +28,11 @@ from .const import (
     KEY_CONNECTION_TYPE,
     KEY_IP_ADDRESS,
     KEY_LAST_SEEN,
+    KEY_LINK_RATE_DOWNLOAD,
+    KEY_LINK_RATE_UPLOAD,
+    KEY_SIGNAL_STRENGTH,
+    KEY_SSID,
+    KEY_WLAN_BAND,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import (
@@ -24,7 +41,7 @@ from .entity import (
     async_setup_client_entities,
     async_setup_node_entities,
 )
-from .models import Host, MeshNode
+from .models import ClientLink, Host, MeshNode
 
 CONNECTION_LAN = "lan"
 CONNECTION_WLAN = "wlan"
@@ -45,12 +62,93 @@ async def async_setup_entry(
             FritzNetworkLastSeen(coordinator, host),
         ],
     )
+    # only for devices the box has a connection for, so offline devices get
+    # none until they come online
+    async_setup_client_entities(
+        entry,
+        async_add_entities,
+        lambda coordinator, host: (
+            [FritzNetworkLinkSensor(coordinator, host, d) for d in LINK_SENSORS]
+            if coordinator.data.mesh and host.mac in coordinator.data.mesh.links
+            else None
+        ),
+    )
 
     async_setup_node_entities(
         entry,
         async_add_entities,
         lambda coordinator, node: [FritzNetworkClients(coordinator, node)],
     )
+
+
+@dataclass(frozen=True, kw_only=True)
+class LinkSensorDescription(SensorEntityDescription):
+    """A value of the connection between a device and its access point."""
+
+    value_fn: Callable[[ClientLink], str | float | None]
+
+
+LINK_SENSORS = (
+    LinkSensorDescription(
+        key=KEY_SIGNAL_STRENGTH,
+        translation_key=KEY_SIGNAL_STRENGTH,
+        device_class=SensorDeviceClass.SIGNAL_STRENGTH,
+        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda link: link.signal_dbm,
+    ),
+    LinkSensorDescription(
+        key=KEY_LINK_RATE_DOWNLOAD,
+        translation_key=KEY_LINK_RATE_DOWNLOAD,
+        device_class=SensorDeviceClass.DATA_RATE,
+        native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda link: link.rate_download,
+    ),
+    LinkSensorDescription(
+        key=KEY_LINK_RATE_UPLOAD,
+        translation_key=KEY_LINK_RATE_UPLOAD,
+        device_class=SensorDeviceClass.DATA_RATE,
+        native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda link: link.rate_upload,
+    ),
+    LinkSensorDescription(
+        key=KEY_WLAN_BAND,
+        translation_key=KEY_WLAN_BAND,
+        device_class=SensorDeviceClass.ENUM,
+        options=["2_4ghz", "5ghz", "6ghz"],
+        value_fn=lambda link: link.band,
+    ),
+    LinkSensorDescription(
+        key=KEY_SSID,
+        translation_key=KEY_SSID,
+        value_fn=lambda link: link.ssid,
+    ),
+)
+
+
+class FritzNetworkLinkSensor(FritzNetworkClientEntity, SensorEntity):
+    """Signal, rate, band and network name of the connection; off by default."""
+
+    entity_description: LinkSensorDescription
+    _attr_entity_registry_enabled_default = False
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(
+        self,
+        coordinator: FritzNetworkCoordinator,
+        host: Host,
+        description: LinkSensorDescription,
+    ) -> None:
+        super().__init__(coordinator, host, "sensor", description.key)
+        self.entity_description = description
+
+    @property
+    def native_value(self) -> str | float | None:
+        mesh = self.coordinator.data.mesh
+        link = mesh.links.get(self._mac) if mesh else None
+        return self.entity_description.value_fn(link) if link else None
 
 
 class FritzNetworkClients(FritzNetworkNodeEntity, SensorEntity):

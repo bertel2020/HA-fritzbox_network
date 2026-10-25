@@ -205,3 +205,17 @@ async def test_diagnostics_show_the_poll_time_and_hide_secrets(hass, fake_client
     assert result["host_count"] == len(fake_client.hosts)
     assert "secret" not in str(result)
     assert WLAN not in str(result)
+
+
+async def test_link_sensors_exist_only_for_devices_with_a_connection(hass, fake_client, entry):
+    coordinator = await _setup(hass, entry)
+    registry = er.async_get(hass)
+
+    assert registry.async_get("sensor.fritz_020000000003_signal_strength").disabled_by
+    assert registry.async_get("sensor.fritz_020000000001_signal_strength") is None
+
+    fake_client.mesh.links[OFFLINE] = fake_client.mesh.links[WLAN]
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert registry.async_get("sensor.fritz_020000000001_signal_strength")

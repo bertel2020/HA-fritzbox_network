@@ -59,6 +59,11 @@ class ClientLink:
     ap_mac: str | None
     ap_name: str | None
     link_type: str
+    signal_dbm: int | None = None
+    rate_download: float | None = None
+    rate_upload: float | None = None
+    ssid: str | None = None
+    band: str | None = None
 
 
 @dataclass
@@ -165,6 +170,22 @@ def _ap_side(
     return None
 
 
+def _rcpi(value: Any) -> int | None:
+    """Signal in dBm; the box reports 255 where it does not know."""
+    return value if isinstance(value, int) and value < 0 else None
+
+
+def _mbit(kbit: Any) -> float | None:
+    return round(kbit / 1000, 1) if isinstance(kbit, int | float) and kbit > 0 else None
+
+
+def _band(interface: dict[str, Any]) -> str | None:
+    freq = (interface.get("current_channel_info") or {}).get("primary_freq")
+    if not isinstance(freq, int) or freq <= 0:
+        return None
+    return "2_4ghz" if freq < 3_000_000 else "5ghz" if freq < 5_925_000 else "6ghz"
+
+
 def parse_mesh(raw: str | bytes) -> MeshTopology:
     """Parse the JSON behind ``X_AVM-DE_GetMeshListPath``."""
     data = json.loads(raw)
@@ -216,6 +237,7 @@ def parse_mesh(raw: str | bytes) -> MeshTopology:
                 client_mac = client.get("device_mac_address")
                 if not client_mac:
                     continue
+                ap_side = if_1 if side == 1 else if_2
                 topology.links[format_mac(client_mac)] = ClientLink(
                     ap_uid=ap["uid"],
                     ap_mac=format_mac(ap["device_mac_address"])
@@ -223,6 +245,17 @@ def parse_mesh(raw: str | bytes) -> MeshTopology:
                     else None,
                     ap_name=ap.get("device_friendly_name") or ap.get("device_name"),
                     link_type=link.get("type", "unknown"),
+                    # rx/tx are as seen by the node of the link they belong to;
+                    # the signal and the rates are given from the client's side
+                    signal_dbm=_rcpi(link.get("rx_rcpi" if side == 1 else "tx_rcpi")),
+                    rate_download=_mbit(
+                        link.get("cur_data_rate_tx" if side == 1 else "cur_data_rate_rx")
+                    ),
+                    rate_upload=_mbit(
+                        link.get("cur_data_rate_rx" if side == 1 else "cur_data_rate_tx")
+                    ),
+                    ssid=ap_side.get("ssid") if link.get("type") == "WLAN" else None,
+                    band=_band(ap_side) if link.get("type") == "WLAN" else None,
                 )
     return topology
 

@@ -96,6 +96,26 @@
       },
       "clients": {
         "name": "Connected devices"
+      },
+      "signal_strength": {
+        "name": "Signal strength"
+      },
+      "link_rate_download": {
+        "name": "Link rate download"
+      },
+      "link_rate_upload": {
+        "name": "Link rate upload"
+      },
+      "ssid": {
+        "name": "Network name (SSID)"
+      },
+      "wlan_band": {
+        "name": "Wi-Fi band",
+        "state": {
+          "2_4ghz": "2.4 GHz",
+          "5ghz": "5 GHz",
+          "6ghz": "6 GHz"
+        }
       }
     },
     "switch": {

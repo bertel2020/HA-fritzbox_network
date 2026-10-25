@@ -30,3 +30,16 @@ def test_rights_and_private_mac():
     assert rights == {"BoxAdmin": "readwrite", "Phone": "none"}
     assert is_private_mac("3a:2a:f4:a1:b2:c3")
     assert not is_private_mac("3c:2a:f4:a1:b2:c3")
+
+
+def test_signal_rates_band_and_network_name_of_a_wlan_link():
+    mesh = FakeClient().mesh
+
+    wlan = mesh.links[WLAN]
+    assert wlan.signal_dbm is not None and -100 < wlan.signal_dbm < 0
+    assert wlan.rate_download > 0 and wlan.rate_upload > 0
+    assert wlan.band in ("2_4ghz", "5ghz") and wlan.ssid
+
+    lan = mesh.links[LAN]
+    assert lan.signal_dbm is None and lan.band is None and lan.ssid is None
+    assert lan.rate_download >= 100
