@@ -12,10 +12,12 @@ Per poll the client reads two documents, never one request per host:
 from __future__ import annotations
 
 import logging
+import re
 import threading
 
 from fritzconnection import FritzConnection
 from fritzconnection.core.exceptions import FritzActionError, FritzServiceError
+from homeassistant.helpers.device_registry import format_mac
 
 from .const import HOST_FILTER_SERVICE_PREFIX, HOSTS_SERVICE
 from .models import Host, MeshTopology, parse_hosts, parse_mesh, parse_rights
@@ -109,6 +111,22 @@ class FritzNetworkClient:
                 _LOGGER.debug("The box provides no mesh topology")
                 return None
             return parse_mesh(self._download(result["NewX_AVM-DE_MeshListPath"]))
+
+    def is_mesh_repeater(self) -> bool:
+        """Whether this device is a mesh repeater, whose host list is incomplete.
+
+        The serial number of a FRITZ!Box is its MAC address; the mesh topology
+        tells which role the node with that MAC has.
+        """
+        serial = self.serial_number
+        if not serial or not re.fullmatch(r"[0-9A-Fa-f]{12}", serial):
+            return False
+        mesh = self.get_mesh()
+        if mesh is None:
+            return False
+        mac = format_mac(serial)
+        node = next((n for n in mesh.nodes.values() if mac in n.macs), None)
+        return node is not None and node.role == "slave"
 
     def set_internet_access(self, ip: str, allowed: bool) -> None:
         """Allow or block the internet access of the host with this IPv4 address."""

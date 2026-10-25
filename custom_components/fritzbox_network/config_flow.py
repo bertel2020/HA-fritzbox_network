@@ -69,7 +69,11 @@ async def _validate_input(hass: HomeAssistant, data: Mapping[str, Any]) -> dict[
 
     def _connect_and_check() -> dict[str, Any]:
         client.connect()
-        return {"serial": client.serial_number, "model": client.model_name}
+        return {
+            "serial": client.serial_number,
+            "model": client.model_name,
+            "repeater": client.is_mesh_repeater(),
+        }
 
     return await hass.async_add_executor_job(_connect_and_check)
 
@@ -97,6 +101,15 @@ class FritzNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
                 if errors["base"] == "unknown":
                     _LOGGER.exception("Unexpected error while testing the connection")
             else:
+                if info["repeater"]:
+                    errors["base"] = "mesh_repeater"
+                    return self.async_show_form(
+                        step_id="user",
+                        data_schema=self.add_suggested_values_to_schema(
+                            STEP_USER_DATA_SCHEMA, user_input
+                        ),
+                        errors=errors,
+                    )
                 await self.async_set_unique_id(str(info["serial"] or user_input[CONF_HOST]))
                 self._abort_if_unique_id_configured()
                 return self.async_create_entry(

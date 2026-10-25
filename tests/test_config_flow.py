@@ -38,6 +38,7 @@ async def test_user_flow_already_configured(hass, fake_client, entry):
 
 
 async def test_reconfigure_changes_the_host(hass, fake_client, entry):
+    await hass.config_entries.async_setup(entry.entry_id)
     result = await entry.start_reconfigure_flow(hass)
     result = await hass.config_entries.flow.async_configure(
         result["flow_id"], {"host": "192.168.178.2"}
@@ -47,6 +48,8 @@ async def test_reconfigure_changes_the_host(hass, fake_client, entry):
     assert result["reason"] == "reconfigure_successful"
     assert entry.data["host"] == "192.168.178.2"
     assert entry.data["password"] == "secret"
+    await hass.async_block_till_done()
+    await hass.config_entries.async_unload(entry.entry_id)
 
 
 async def test_reconfigure_refuses_another_box(hass, fake_client, entry):
@@ -58,3 +61,12 @@ async def test_reconfigure_refuses_another_box(hass, fake_client, entry):
 
     assert result["reason"] == "wrong_device"
     assert entry.data["host"] == "192.168.178.1"
+
+
+async def test_user_flow_refuses_a_mesh_repeater(hass, fake_client):
+    fake_client.repeater = True
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], USER_INPUT)
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["errors"] == {"base": "mesh_repeater"}

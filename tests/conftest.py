@@ -31,6 +31,7 @@ class FakeClient:
         self.hosts = parse_hosts((FIXTURES / "hosts.xml").read_text())
         self.mesh = parse_mesh((FIXTURES / "mesh.json").read_text())
         self.writable = True
+        self.repeater = False
         self.calls: list[tuple] = []
 
     def connect(self) -> None:
@@ -38,6 +39,9 @@ class FakeClient:
 
     def can_write(self) -> bool:
         return self.writable
+
+    def is_mesh_repeater(self) -> bool:
+        return self.repeater
 
     def get_hosts(self):
         return list(self.hosts)

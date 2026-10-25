@@ -33,7 +33,8 @@
     "error": {
       "cannot_connect": "Verbindung zur FRITZ!Box fehlgeschlagen.",
       "invalid_auth": "Benutzername oder Kennwort falsch.",
-      "unknown": "Unerwarteter Fehler."
+      "unknown": "Unerwarteter Fehler.",
+      "mesh_repeater": "Dieses Gerät ist ein Mesh-Repeater. Verbinde dich mit der FRITZ!Box, die der Mesh-Master ist, nur sie kennt alle Geräte."
     },
     "abort": {
       "already_configured": "Diese FRITZ!Box ist bereits konfiguriert.",
