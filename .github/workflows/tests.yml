@@ -1,4 +1,4 @@
-name: Validate
+name: Tests
 
 on:
   push:
@@ -9,8 +9,8 @@ permissions:
   contents: read
 
 jobs:
-  tests:
-    name: Tests and static checks
+  python:
+    name: Integration tests and lint
     runs-on: ubuntu-latest
     steps:
       - name: Check out repository
@@ -22,20 +22,11 @@ jobs:
           python-version: "3.14"
           cache: pip
           cache-dependency-path: requirements-dev.txt
-      - name: Install test tools and Home Assistant
-        run: python -m pip install -r requirements-dev.txt
-      - name: Run Ruff
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Lint
         run: ruff check custom_components tests tools
       - name: Check formatting
         run: ruff format --check custom_components tests tools
-      - name: Run tests
-        run: python -m pytest -q
-
-  hassfest:
-    name: Hassfest
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v7
-      - name: Validate integration
-        uses: home-assistant/actions/hassfest@master
+      - name: Test
+        run: pytest

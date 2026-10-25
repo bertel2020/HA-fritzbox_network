@@ -1,0 +1,114 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Bereits vorhandenes Tag, für das ein Release erstellt werden soll"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publish release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+        with:
+          # Annotated tags carry the release title, and only a full clone
+          # brings their message along.
+          ref: ${{ inputs.tag || github.ref }}
+          fetch-depth: 0
+
+      # Event data (the tag name, the tag message) is attacker-influenced
+      # text: it reaches the shell only through environment variables,
+      # never by expanding ${{ }} into the script itself.
+      - name: Determine version
+        id: version
+        env:
+          INPUT_TAG: ${{ inputs.tag }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          tag="${INPUT_TAG:-$REF_NAME}"
+          if ! printf '%s' "$tag" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$'; then
+            echo "::error::'$tag' ist kein gültiges Versions-Tag (erwartet: vX.Y.Z oder vX.Y.Z-suffix)."
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "version=${tag#v}" >> "$GITHUB_OUTPUT"
+
+      - name: Check tag against manifest.json
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          manifest=$(jq -r .version custom_components/fritzbox_network/manifest.json)
+          if [ "$manifest" != "$VERSION" ]; then
+            echo "::error::Tag $TAG und manifest.json ($manifest) passen nicht zusammen."
+            exit 1
+          fi
+
+      - name: Extract release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          # Everything between "## <version>" and the next "## " heading.
+          # Compared as plain text, not as a regex - the dots in a version
+          # number would otherwise match any character.
+          awk -v want="$VERSION" '
+            substr($0, 1, 3) == "## " {
+              if (found) exit
+              head = substr($0, 4)
+              if (head == want || substr(head, 1, length(want) + 1) == want " ") found = 1
+              next
+            }
+            found { print }
+          ' CHANGELOG.md | sed -e '/./,$!d' > notes.md
+          if [ ! -s notes.md ]; then
+            echo "::error::CHANGELOG.md hat keinen Abschnitt '## $VERSION'."
+            exit 1
+          fi
+          echo "" >> notes.md
+          echo "Vollständiger Änderungsverlauf: [CHANGELOG.md](https://github.com/$REPOSITORY/blob/main/CHANGELOG.md)" >> notes.md
+
+      - name: Determine release title
+        id: title
+        env:
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # Subject line of the annotated tag, e.g. "1.15.0 - Klartext-
+          # Begründungen im Logbuch"; falls back to the bare version for a
+          # lightweight tag.
+          subject=$(git tag -l --format='%(contents:subject)' "$TAG")
+          # Written through a here-document delimiter so a title containing
+          # newlines cannot smuggle extra outputs in.
+          {
+            echo "title<<__TITLE_EOF__"
+            printf '%s\n' "${subject:-$VERSION}" | head -n 1
+            echo "__TITLE_EOF__"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TITLE: ${{ steps.title.outputs.title }}
+        run: |
+          prerelease=""
+          case "$VERSION" in
+            *-*) prerelease="--prerelease" ;;
+          esac
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release edit "$TAG" --title "$TITLE" --notes-file notes.md
+          else
+            gh release create "$TAG" $prerelease --title "$TITLE" --notes-file notes.md
+          fi

@@ -1,0 +1,38 @@
+name: Bug report / Fehlermeldung
+description: Something does not work as expected. / Etwas funktioniert nicht wie erwartet.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! English or German is fine. / Danke für die Meldung! Deutsch oder Englisch ist beides recht.
+  - type: textarea
+    id: details
+    attributes:
+      label: Versions / Versionen
+      description: |
+        Integration version, Home Assistant version, FRITZ!Box model and FRITZ!OS version (System → Update).
+        Version der Integration, Home-Assistant-Version, FRITZ!Box-Modell und FRITZ!OS-Version (System → Update).
+      placeholder: "HA-fritzbox_network 0.1.0, Home Assistant 2026.10.0, FRITZ!Box 7590 AX, FRITZ!OS 8.25"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened? / Was ist passiert?
+      description: What did you do, what did you expect, what happened instead? / Was hast du getan, was erwartet, was ist stattdessen passiert?
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics (optional) / Diagnosedaten (optional)
+      description: |
+        Settings → Devices & services → FRITZ!Box Network → ⋮ → Download diagnostics. MAC addresses, IP addresses and names are removed; look through the file before you share it.
+        Einstellungen → Geräte & Dienste → FRITZ!Box Netzwerk → ⋮ → Diagnose herunterladen. MAC- und IP-Adressen sowie Namen sind entfernt; sieh die Datei vor dem Teilen durch.
+  - type: textarea
+    id: log
+    attributes:
+      label: Log (optional)
+      description: Errors from Settings → System → Logs that mention fritzbox_network. / Fehler aus Einstellungen → System → Protokolle, die fritzbox_network nennen.
+      render: text
