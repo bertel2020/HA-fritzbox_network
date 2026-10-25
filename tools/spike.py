@@ -126,6 +126,16 @@ def main() -> int:
         service = fc.services.get(name)
         log(f"service {name}: " + (", ".join(sorted(service.actions)) if service else "missing"))
 
+    for name, wanted in (
+        ("X_AVM-DE_HostFilter1", None),
+        ("Hosts1", ("X_AVM-DE_WakeOnLANByMACAddress", "X_AVM-DE_SetFriendlyNameByMAC")),
+    ):
+        service = fc.services.get(name)
+        for action_name, action in sorted(service.actions.items() if service else []):
+            if wanted is None or action_name in wanted:
+                args = {k: v.direction for k, v in action.arguments.items()}
+                log(f"args {name}/{action_name}: {args}")
+
     files: dict[str, str] = {}
     hosts = probe(fc, "Hosts1", "X_AVM-DE_GetHostListPath")
     if hosts:
