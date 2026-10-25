@@ -1,0 +1,4 @@
+homeassistant==2026.8.3
+pytest-homeassistant-custom-component==0.13.357
+fritzconnection==1.15.1
+ruff

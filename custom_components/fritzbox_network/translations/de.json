@@ -1,0 +1,109 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "FRITZ!Box verbinden",
+        "description": "Zugangsdaten eines FRITZ!Box-Benutzers mit dem Recht \"FRITZ!Box Einstellungen\". TR-064 muss unter Heimnetz > Netzwerk > Netzwerkeinstellungen > \"Zugriff für Anwendungen zulassen\" aktiviert sein.",
+        "data": {
+          "host": "Hostname oder IP-Adresse",
+          "username": "Benutzername",
+          "password": "Kennwort",
+          "use_tls": "Verschlüsselte Verbindung (TLS) verwenden",
+          "port": "Port (optional, Standard je nach TLS-Einstellung)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Erneut anmelden",
+        "description": "Die Anmeldung an der FRITZ!Box {host} funktioniert nicht mehr. Gib die aktuellen Zugangsdaten ein.",
+        "data": {
+          "username": "Benutzername",
+          "password": "Kennwort"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zur FRITZ!Box fehlgeschlagen.",
+      "invalid_auth": "Benutzername oder Kennwort falsch.",
+      "unknown": "Unerwarteter Fehler."
+    },
+    "abort": {
+      "already_configured": "Diese FRITZ!Box ist bereits konfiguriert.",
+      "reauth_successful": "Die Anmeldung wurde aktualisiert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "FRITZ!Box Netzwerk",
+        "data": {
+          "scan_interval": "Abfrageintervall (Sekunden)",
+          "consider_home": "Als anwesend werten für (Sekunden)",
+          "adopt_names": "Gerätenamen aus der FRITZ!Box übernehmen",
+          "ignore_guests": "Geräte im Gastnetz ignorieren",
+          "ignore_private_macs": "Geräte mit privater (zufälliger) MAC-Adresse ignorieren",
+          "filter_mode": "Gerätefilter",
+          "filter_devices": "Geräte für den Filter",
+          "hidden_macs": "Ausgeblendete Geräte"
+        },
+        "data_description": {
+          "consider_home": "Wie lange ein Gerät nach dem Offline-Gehen noch als anwesend gilt.",
+          "adopt_names": "Namen, die du in Home Assistant selbst vergibst, werden nie überschrieben.",
+          "hidden_macs": "Von Hand entfernte Geräte stehen hier. Abwählen blendet ein Gerät wieder ein."
+        }
+      }
+    }
+  },
+  "selector": {
+    "filter_mode": {
+      "options": {
+        "all": "Alle Geräte",
+        "include": "Nur die ausgewählten Geräte",
+        "exclude": "Alle außer den ausgewählten Geräten"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "ip_address": {
+        "name": "IP-Adresse"
+      },
+      "connection_type": {
+        "name": "Verbindung",
+        "state": {
+          "lan": "LAN",
+          "wlan": "WLAN"
+        }
+      },
+      "access_point": {
+        "name": "Access Point"
+      },
+      "last_seen": {
+        "name": "Zuletzt gesehen"
+      }
+    },
+    "switch": {
+      "internet_access": {
+        "name": "Internetzugang"
+      }
+    },
+    "button": {
+      "wake_on_lan": {
+        "name": "Wake on LAN"
+      }
+    }
+  },
+  "exceptions": {
+    "no_ipv4_address": {
+      "message": "Das Gerät hat keine IPv4-Adresse, sein Internetzugang lässt sich nicht schalten."
+    },
+    "action_failed": {
+      "message": "Die FRITZ!Box hat die Aktion abgelehnt: {error}"
+    }
+  },
+  "issues": {
+    "missing_rights": {
+      "title": "Fehlende Rechte des FRITZ!Box-Benutzers",
+      "description": "Der Benutzer \"{user}\" darf keine Einstellungen ändern. Die Geräte werden angezeigt, aber die Schalter für den Internetzugang und die Wake-on-LAN-Buttons werden nicht angelegt. Gib dem Benutzer unter System > FRITZ!Box-Benutzer das Recht \"FRITZ!Box Einstellungen\"."
+    }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect FRITZ!Box",
+        "description": "Credentials of a FRITZ!Box user with the right \"FRITZ!Box settings\". TR-064 must be enabled under Home Network > Network > Network Settings > \"Allow access for applications\".",
+        "data": {
+          "host": "Host name or IP address",
+          "username": "User name",
+          "password": "Password",
+          "use_tls": "Use an encrypted connection (TLS)",
+          "port": "Port (optional, default depends on TLS)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Sign in again",
+        "description": "The login for the FRITZ!Box {host} no longer works. Enter the current credentials.",
+        "data": {
+          "username": "User name",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connection to the FRITZ!Box failed.",
+      "invalid_auth": "User name or password wrong.",
+      "unknown": "Unexpected error."
+    },
+    "abort": {
+      "already_configured": "This FRITZ!Box is already configured.",
+      "reauth_successful": "The login was updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "FRITZ!Box network",
+        "data": {
+          "scan_interval": "Polling interval (seconds)",
+          "consider_home": "Consider home for (seconds)",
+          "adopt_names": "Take over device names from the FRITZ!Box",
+          "ignore_guests": "Ignore devices in the guest network",
+          "ignore_private_macs": "Ignore devices with a private (randomized) MAC address",
+          "filter_mode": "Device filter",
+          "filter_devices": "Devices for the filter",
+          "hidden_macs": "Hidden devices"
+        },
+        "data_description": {
+          "consider_home": "How long an offline device still counts as home.",
+          "adopt_names": "Names you set yourself in Home Assistant are never overwritten.",
+          "hidden_macs": "Devices removed by hand are listed here. Deselect one to show it again."
+        }
+      }
+    }
+  },
+  "selector": {
+    "filter_mode": {
+      "options": {
+        "all": "All devices",
+        "include": "Only the selected devices",
+        "exclude": "All except the selected devices"
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "ip_address": {
+        "name": "IP address"
+      },
+      "connection_type": {
+        "name": "Connection",
+        "state": {
+          "lan": "LAN",
+          "wlan": "WLAN"
+        }
+      },
+      "access_point": {
+        "name": "Access point"
+      },
+      "last_seen": {
+        "name": "Last seen"
+      }
+    },
+    "switch": {
+      "internet_access": {
+        "name": "Internet access"
+      }
+    },
+    "button": {
+      "wake_on_lan": {
+        "name": "Wake on LAN"
+      }
+    }
+  },
+  "exceptions": {
+    "no_ipv4_address": {
+      "message": "The device has no IPv4 address, its internet access cannot be switched."
+    },
+    "action_failed": {
+      "message": "The FRITZ!Box rejected the action: {error}"
+    }
+  },
+  "issues": {
+    "missing_rights": {
+      "title": "Missing rights for the FRITZ!Box user",
+      "description": "The user \"{user}\" may not change settings. The devices are shown, but the internet access switches and the Wake on LAN buttons are not created. Give the user the right \"FRITZ!Box settings\" under System > FRITZ!Box Users."
+    }
+  }
+}
