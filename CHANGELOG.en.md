@@ -14,6 +14,7 @@
 - Option not to create devices for offline hosts; they appear once the device comes online.
 - The connection (address, port, TLS) can be changed later, for example when the FRITZ!Box has a new IP.
 - Setup refuses a mesh repeater, because only the mesh master knows all devices.
+- The FRITZ!Box and its repeaters are devices of their own with model, firmware and the number of connected devices; a repeater is also its entry in the host list.
 
 ### Fixed
 

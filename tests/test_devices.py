@@ -157,3 +157,27 @@ async def test_skip_offline_creates_devices_only_when_online(hass, fake_client, 
     await hass.async_block_till_done()
 
     assert _device(hass, entry, OFFLINE)
+
+
+async def test_box_and_repeater_count_their_devices(hass, fake_client, entry):
+    # the repeater's own host entry and its mesh node are one device
+    fake_client.hosts = [
+        *fake_client.hosts,
+        replace(
+            fake_client.hosts[0], mac=REPEATER, mac_list=[REPEATER], name="repeater", active=True
+        ),
+    ]
+    await _setup(hass, entry)
+    mesh = fake_client.mesh
+
+    box = hass.states.get("sensor.fritz_020000000005_clients")
+    repeater = hass.states.get("sensor.fritz_02000000000e_clients")
+    assert int(box.state) == sum(1 for lk in mesh.links.values() if lk.ap_uid == "n-1") >= 2
+    assert int(repeater.state) == 1
+
+    devices = dr.async_get(hass)
+    [node_device] = devices.async_get_devices(identifiers={("fritzbox_network", REPEATER)})
+    assert node_device == _device(hass, entry, REPEATER)
+    assert node_device.model == "FRITZ!Repeater 1200 AX" and node_device.sw_version == "268.08.20"
+    assert node_device.name == "repeater"
+    assert not await async_remove_config_entry_device(hass, entry, node_device)

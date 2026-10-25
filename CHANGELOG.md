@@ -14,6 +14,7 @@
 - Option, für Offline-Geräte keine Geräte anzulegen; sie entstehen, sobald das Gerät online kommt.
 - Die Verbindung (Adresse, Port, TLS) lässt sich nachträglich ändern, etwa wenn die FRITZ!Box eine neue IP hat.
 - Beim Einrichten wird ein Mesh-Repeater abgewiesen, weil nur der Mesh-Master alle Geräte kennt.
+- Die FRITZ!Box und ihre Repeater sind eigene Geräte mit Modell, Firmware und der Anzahl verbundener Geräte; der Repeater ist zugleich der Eintrag in der Geräteliste.
 
 ### Behoben
 

@@ -41,6 +41,7 @@ KEY_ACCESS_POINT = "access_point"
 KEY_LAST_SEEN = "last_seen"
 KEY_INTERNET_ACCESS = "internet_access"
 KEY_WAKE_ON_LAN = "wake_on_lan"
+KEY_CLIENTS = "clients"
 
 HOSTS_SERVICE = "Hosts1"
 HOST_FILTER_SERVICE_PREFIX = "X_AVM-DE_HostFilter"

@@ -129,6 +129,9 @@ async def async_remove_config_entry_device(
     coordinator = entry.runtime_data
     if (DOMAIN, coordinator.serial) in device_entry.identifiers:
         return False
+    mesh = coordinator.data.mesh
+    if mesh and any((DOMAIN, n.mac) in device_entry.identifiers for n in mesh.nodes.values()):
+        return False
     mac = next((m for kind, m in device_entry.connections if kind == CONNECTION_NETWORK_MAC), None)
     if mac is None:
         return True

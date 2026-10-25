@@ -4,16 +4,27 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoredExtraData, RestoreEntity
 from homeassistant.util import dt as dt_util
 
-from .const import KEY_ACCESS_POINT, KEY_CONNECTION_TYPE, KEY_IP_ADDRESS, KEY_LAST_SEEN
+from .const import (
+    KEY_ACCESS_POINT,
+    KEY_CLIENTS,
+    KEY_CONNECTION_TYPE,
+    KEY_IP_ADDRESS,
+    KEY_LAST_SEEN,
+)
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
-from .entity import FritzNetworkClientEntity, async_setup_client_entities
-from .models import Host
+from .entity import (
+    FritzNetworkClientEntity,
+    FritzNetworkNodeEntity,
+    async_setup_client_entities,
+    async_setup_node_entities,
+)
+from .models import Host, MeshNode
 
 CONNECTION_LAN = "lan"
 CONNECTION_WLAN = "wlan"
@@ -34,6 +45,29 @@ async def async_setup_entry(
             FritzNetworkLastSeen(coordinator, host),
         ],
     )
+
+    async_setup_node_entities(
+        entry,
+        async_add_entities,
+        lambda coordinator, node: [FritzNetworkClients(coordinator, node)],
+    )
+
+
+class FritzNetworkClients(FritzNetworkNodeEntity, SensorEntity):
+    """How many devices are connected to the box or repeater."""
+
+    _attr_translation_key = KEY_CLIENTS
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, node: MeshNode) -> None:
+        super().__init__(coordinator, node, "sensor", KEY_CLIENTS)
+
+    @property
+    def native_value(self) -> int | None:
+        mesh = self.coordinator.data.mesh
+        if mesh is None:
+            return None
+        return sum(1 for link in mesh.links.values() if link.ap_uid == self._uid)
 
 
 class FritzNetworkIpAddress(FritzNetworkClientEntity, SensorEntity):

@@ -43,7 +43,7 @@ from .const import (
     FILTER_INCLUDE,
     MAX_BACKOFF_SECONDS,
 )
-from .models import Host, MeshTopology, NetworkData, is_private_mac
+from .models import Host, MeshNode, MeshTopology, NetworkData, is_private_mac
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -161,6 +161,13 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 continue
             selected[host.mac] = host
         return selected
+
+    def node_name(self, node: MeshNode) -> str:
+        """The name of a mesh node: the one its host entry has, else the mesh name."""
+        for host in self.all_hosts.values():
+            if {host.mac, *host.mac_list} & node.macs:
+                return host.name
+        return node.name
 
     def wants_device(self, host: Host) -> bool:
         """Whether a device should be created for this host now.

@@ -93,6 +93,9 @@
       },
       "last_seen": {
         "name": "Zuletzt gesehen"
+      },
+      "clients": {
+        "name": "Verbundene Geräte"
       }
     },
     "switch": {
