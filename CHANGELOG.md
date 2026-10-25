@@ -16,6 +16,7 @@
 - Beim Einrichten wird ein Mesh-Repeater abgewiesen, weil nur der Mesh-Master alle Geräte kennt.
 - Die FRITZ!Box und ihre Repeater sind eigene Geräte mit Modell, Firmware und der Anzahl verbundener Geräte; der Repeater ist zugleich der Eintrag in der Geräteliste.
 - Hinweis „Gastnetz“ pro Gerät; er ist nur für Geräte im Gastnetz von Anfang an aktiv.
+- Die Diagnose zeigt die Dauer der letzten und der langsamsten Abfrage.
 
 ### Behoben
 

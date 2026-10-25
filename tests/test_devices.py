@@ -9,6 +9,7 @@ from pytest_homeassistant_custom_component.common import mock_restore_cache_with
 
 from custom_components.fritzbox_network import async_remove_config_entry_device
 from custom_components.fritzbox_network.const import CONF_HIDDEN_MACS
+from custom_components.fritzbox_network.diagnostics import async_get_config_entry_diagnostics
 
 from .conftest import LAN, OFFLINE, REPEATER, WLAN
 
@@ -190,3 +191,14 @@ async def test_guest_flag_is_enabled_only_for_guests(hass, fake_client, entry):
     registry = er.async_get(hass)
     plain = registry.async_get("binary_sensor.fritz_020000000003_guest")
     assert plain.disabled_by is er.RegistryEntryDisabler.INTEGRATION
+
+
+async def test_diagnostics_show_the_poll_time_and_hide_secrets(hass, fake_client, entry):
+    await _setup(hass, entry)
+
+    result = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert result["poll"]["last_fetch_seconds"] is not None
+    assert result["host_count"] == len(fake_client.hosts)
+    assert "secret" not in str(result)
+    assert WLAN not in str(result)

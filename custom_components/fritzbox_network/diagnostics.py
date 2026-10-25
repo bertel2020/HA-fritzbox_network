@@ -26,6 +26,13 @@ async def async_get_config_entry_diagnostics(
             k: v for k, v in entry.options.items() if k not in ("hidden_macs", "filter_devices")
         },
         "can_write": coordinator.can_write,
+        "poll": {
+            "interval_seconds": coordinator.update_interval.total_seconds()
+            if coordinator.update_interval
+            else None,
+            "last_fetch_seconds": coordinator.last_fetch_seconds,
+            "slowest_fetch_seconds": coordinator.slowest_fetch_seconds,
+        },
         "host_count": len(coordinator.all_hosts),
         "selected_count": len(coordinator.data.hosts),
         "hosts": [

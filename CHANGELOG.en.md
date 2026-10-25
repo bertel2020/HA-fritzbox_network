@@ -16,6 +16,7 @@
 - Setup refuses a mesh repeater, because only the mesh master knows all devices.
 - The FRITZ!Box and its repeaters are devices of their own with model, firmware and the number of connected devices; a repeater is also its entry in the host list.
 - "Guest network" flag per device; enabled from the start only for devices in the guest network.
+- The diagnostics show how long the last and the slowest poll took.
 
 ### Fixed
 

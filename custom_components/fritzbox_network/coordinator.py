@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 import logging
+import time
 from xml.etree import ElementTree as ET
 
 from fritzconnection.core.exceptions import (
@@ -80,6 +81,9 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.all_hosts: dict[str, Host] = {}
         self.last_active: dict[str, datetime] = {}
         self._failures = 0
+        # How long the last and the slowest poll took, shown in the diagnostics.
+        self.last_fetch_seconds: float | None = None
+        self.slowest_fetch_seconds: float = 0.0
         # Options at setup: removing a device only adds to the hidden list and
         # needs no reload (see __init__._async_update_listener).
         self.options_snapshot = dict(entry.options)
@@ -100,6 +104,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         return hosts, mesh
 
     async def _async_update_data(self) -> NetworkData:
+        started = time.monotonic()
         try:
             hosts, mesh = await self.hass.async_add_executor_job(self._fetch)
         except (FritzAuthorizationError, FritzSecurityError) as err:
@@ -108,6 +113,9 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             self._register_failure()
             raise UpdateFailed(f"Error talking to the FRITZ!Box: {err}") from err
 
+        self.last_fetch_seconds = round(time.monotonic() - started, 2)
+        self.slowest_fetch_seconds = max(self.slowest_fetch_seconds, self.last_fetch_seconds)
+        _LOGGER.debug("Poll took %.2f s for %d hosts", self.last_fetch_seconds, len(hosts))
         self._reset_failures()
         self.all_hosts = {h.mac: h for h in hosts}
         selected = self._apply_filters(hosts, mesh)
