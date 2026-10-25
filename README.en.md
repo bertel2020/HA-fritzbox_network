@@ -6,6 +6,8 @@ follows the name in the FRITZ!Box automatically.
 
 [Deutsche Version](README.md)
 
+Unofficial integration, not made by AVM. FRITZ!Box is a trademark of AVM GmbH.
+
 ## Features
 
 - One device per network device, with presence (device tracker), IP address,

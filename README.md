@@ -6,6 +6,8 @@ Name folgt automatisch dem Namen in der FRITZ!Box.
 
 [English version](README.en.md)
 
+Inoffizielle Integration, nicht von AVM. FRITZ!Box ist eine Marke der AVM GmbH.
+
 ## Funktionen
 
 - Ein Gerät pro Netzwerkgerät, mit Anwesenheit (Device Tracker), IP-Adresse,
