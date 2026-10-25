@@ -107,6 +107,11 @@
       "wake_on_lan": {
         "name": "Wake on LAN"
       }
+    },
+    "binary_sensor": {
+      "guest": {
+        "name": "Gastnetz"
+      }
     }
   },
   "exceptions": {

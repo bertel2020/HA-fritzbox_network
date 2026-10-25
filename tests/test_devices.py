@@ -181,3 +181,12 @@ async def test_box_and_repeater_count_their_devices(hass, fake_client, entry):
     assert node_device.model == "FRITZ!Repeater 1200 AX" and node_device.sw_version == "268.08.20"
     assert node_device.name == "repeater"
     assert not await async_remove_config_entry_device(hass, entry, node_device)
+
+
+async def test_guest_flag_is_enabled_only_for_guests(hass, fake_client, entry):
+    await _setup(hass, entry)
+
+    assert hass.states.get("binary_sensor.fritz_02000000000d_guest").state == "on"
+    registry = er.async_get(hass)
+    plain = registry.async_get("binary_sensor.fritz_020000000003_guest")
+    assert plain.disabled_by is er.RegistryEntryDisabler.INTEGRATION
