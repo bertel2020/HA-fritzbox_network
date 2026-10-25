@@ -12,6 +12,7 @@
   - Options for interval, presence, guest network, private MACs, device filter.
   - Devices excluded by a filter are removed. Repeaters are never filtered.
 - Option not to create devices for offline hosts; they appear once the device comes online.
+- The connection (address, port, TLS) can be changed later, for example when the FRITZ!Box has a new IP.
 
 ### Fixed
 

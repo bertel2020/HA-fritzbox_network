@@ -12,6 +12,7 @@
   - Optionen für Intervall, Anwesenheit, Gastnetz, private MACs, Gerätefilter.
   - Geräte, die ein Filter ausschließt, werden entfernt. Repeater werden nie gefiltert.
 - Option, für Offline-Geräte keine Geräte anzulegen; sie entstehen, sobald das Gerät online kommt.
+- Die Verbindung (Adresse, Port, TLS) lässt sich nachträglich ändern, etwa wenn die FRITZ!Box eine neue IP hat.
 
 ### Behoben
 

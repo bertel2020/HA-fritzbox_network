@@ -19,6 +19,15 @@
           "username": "User name",
           "password": "Password"
         }
+      },
+      "reconfigure": {
+        "title": "Change the connection",
+        "description": "Use this when the FRITZ!Box has a new address. The login stays as it is.",
+        "data": {
+          "host": "Host name or IP address",
+          "use_tls": "Use an encrypted connection (TLS)",
+          "port": "Port (optional, default depends on TLS)"
+        }
       }
     },
     "error": {
@@ -28,7 +37,9 @@
     },
     "abort": {
       "already_configured": "This FRITZ!Box is already configured.",
-      "reauth_successful": "The login was updated."
+      "reauth_successful": "The login was updated.",
+      "reconfigure_successful": "The connection was updated.",
+      "wrong_device": "This is a different FRITZ!Box than the one that was set up."
     }
   },
   "options": {

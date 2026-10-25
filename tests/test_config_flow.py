@@ -35,3 +35,26 @@ async def test_user_flow_already_configured(hass, fake_client, entry):
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
+
+
+async def test_reconfigure_changes_the_host(hass, fake_client, entry):
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"host": "192.168.178.2"}
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "reconfigure_successful"
+    assert entry.data["host"] == "192.168.178.2"
+    assert entry.data["password"] == "secret"
+
+
+async def test_reconfigure_refuses_another_box(hass, fake_client, entry):
+    fake_client.serial_number = "OTHER"
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"host": "192.168.178.2"}
+    )
+
+    assert result["reason"] == "wrong_device"
+    assert entry.data["host"] == "192.168.178.1"

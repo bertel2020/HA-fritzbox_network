@@ -140,6 +140,38 @@ class FritzNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
             description_placeholders={"host": entry.data[CONF_HOST]},
         )
 
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Change host, port and TLS, for example after the box got a new address."""
+        errors: dict[str, str] = {}
+        entry = self._get_reconfigure_entry()
+        if user_input is not None:
+            data = {**entry.data, **user_input}
+            try:
+                info = await _validate_input(self.hass, data)
+            except Exception as err:  # noqa: BLE001
+                errors["base"] = _error_for(err)
+            else:
+                await self.async_set_unique_id(str(info["serial"] or data[CONF_HOST]))
+                self._abort_if_unique_id_mismatch(reason="wrong_device")
+                return self.async_update_reload_and_abort(
+                    entry, data=data, title=f"{info['model']} ({data[CONF_HOST]})"
+                )
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_HOST): str,
+                vol.Optional(CONF_USE_TLS): bool,
+                vol.Optional(CONF_PORT): int,
+            }
+        )
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=self.add_suggested_values_to_schema(schema, entry.data),
+            errors=errors,
+        )
+
     @staticmethod
     def async_get_options_flow(config_entry: FritzNetworkConfigEntry) -> OptionsFlow:
         return FritzNetworkOptionsFlow()

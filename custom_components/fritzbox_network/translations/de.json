@@ -19,6 +19,15 @@
           "username": "Benutzername",
           "password": "Kennwort"
         }
+      },
+      "reconfigure": {
+        "title": "Verbindung ändern",
+        "description": "Für den Fall, dass die FRITZ!Box eine neue Adresse hat. Die Anmeldung bleibt unverändert.",
+        "data": {
+          "host": "Hostname oder IP-Adresse",
+          "use_tls": "Verschlüsselte Verbindung (TLS) verwenden",
+          "port": "Port (optional, Standard je nach TLS-Einstellung)"
+        }
       }
     },
     "error": {
@@ -28,7 +37,9 @@
     },
     "abort": {
       "already_configured": "Diese FRITZ!Box ist bereits konfiguriert.",
-      "reauth_successful": "Die Anmeldung wurde aktualisiert."
+      "reauth_successful": "Die Anmeldung wurde aktualisiert.",
+      "reconfigure_successful": "Die Verbindung wurde aktualisiert.",
+      "wrong_device": "Das ist eine andere FRITZ!Box als die eingerichtete."
     }
   },
   "options": {
