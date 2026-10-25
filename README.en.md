@@ -16,6 +16,10 @@ follows the name in the FRITZ!Box automatically.
   with it. Names you set yourself in Home Assistant are kept.
 - Block or allow the internet access per device, Wake on LAN (button, disabled by
   default).
+- Optional, off by default: signal strength (dBm), link rate (download/upload), Wi-Fi band
+  and network name per device, also for devices on a repeater. The values come from the
+  mesh data of the box, without an extra request. The signal strength is how the access
+  point sees the device.
 - Offline devices can be deleted by hand. Deleted devices stay hidden and can be
   shown again in the options.
 - Filters for guest network devices, devices with a private MAC address and a

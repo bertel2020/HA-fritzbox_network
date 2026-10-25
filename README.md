@@ -16,6 +16,10 @@ Name folgt automatisch dem Namen in der FRITZ!Box.
   Assistant mit. Namen, die du selbst in Home Assistant vergibst, bleiben erhalten.
 - Internetzugang pro Gerät sperren oder freigeben, Wake on LAN (Button, standardmäßig
   deaktiviert).
+- Optional, standardmäßig aus: Signalstärke (dBm), Link-Rate (Download/Upload), WLAN-Band
+  und Netzwerkname je Gerät, auch für Geräte am Repeater. Die Werte kommen aus den
+  Mesh-Daten der Box, ohne zusätzliche Abfrage. Die Signalstärke ist die Sicht des
+  Access Points auf das Gerät.
 - Geräte lassen sich von Hand löschen, wenn sie offline sind. Gelöschte Geräte
   bleiben ausgeblendet und lassen sich in den Optionen wieder einblenden.
 - Filter für Gastnetz-Geräte, Geräte mit privater MAC-Adresse und eine Auswahl
