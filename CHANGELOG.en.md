@@ -12,6 +12,7 @@
   - Options for interval, presence, guest network, private MACs, device filter.
   - Devices excluded by a filter are removed. Repeaters are never filtered.
 - Option not to create devices for offline hosts; they appear once the device comes online.
+
 ### Fixed
 
 - "Last seen" survives a restart, also for devices that stayed online.
