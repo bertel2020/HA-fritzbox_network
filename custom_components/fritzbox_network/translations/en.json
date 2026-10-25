@@ -43,12 +43,14 @@
           "ignore_private_macs": "Ignore devices with a private (randomized) MAC address",
           "filter_mode": "Device filter",
           "filter_devices": "Devices for the filter",
-          "hidden_macs": "Hidden devices"
+          "hidden_macs": "Hidden devices",
+          "skip_offline": "Do not create devices for offline hosts"
         },
         "data_description": {
           "consider_home": "How long an offline device still counts as home.",
           "adopt_names": "Names you set yourself in Home Assistant are never overwritten.",
-          "hidden_macs": "Devices removed by hand are listed here. Deselect one to show it again."
+          "hidden_macs": "Devices removed by hand are listed here. Deselect one to show it again.",
+          "skip_offline": "The box remembers every device it ever saw. A host that is offline and has no device yet gets one when it first comes online. Existing devices are kept."
         }
       }
     }

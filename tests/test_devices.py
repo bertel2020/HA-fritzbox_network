@@ -141,3 +141,19 @@ async def test_last_seen_survives_a_restart(hass, fake_client, entry):
 
     # online before and after the restart: the connect time stays
     assert hass.states.get(sensor_id).state == "2026-10-01T10:00:00+00:00"
+
+
+async def test_skip_offline_creates_devices_only_when_online(hass, fake_client, entry):
+    hass.config_entries.async_update_entry(entry, options={"skip_offline": True})
+    coordinator = await _setup(hass, entry)
+
+    assert _device(hass, entry, WLAN)
+    assert _device(hass, entry, OFFLINE) is None
+
+    fake_client.hosts = [
+        replace(h, active=True) if h.mac == OFFLINE else h for h in fake_client.hosts
+    ]
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert _device(hass, entry, OFFLINE)

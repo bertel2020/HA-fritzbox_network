@@ -43,12 +43,14 @@
           "ignore_private_macs": "Geräte mit privater (zufälliger) MAC-Adresse ignorieren",
           "filter_mode": "Gerätefilter",
           "filter_devices": "Geräte für den Filter",
-          "hidden_macs": "Ausgeblendete Geräte"
+          "hidden_macs": "Ausgeblendete Geräte",
+          "skip_offline": "Für Offline-Geräte keine Geräte anlegen"
         },
         "data_description": {
           "consider_home": "Wie lange ein Gerät nach dem Offline-Gehen noch als anwesend gilt.",
           "adopt_names": "Namen, die du in Home Assistant selbst vergibst, werden nie überschrieben.",
-          "hidden_macs": "Von Hand entfernte Geräte stehen hier. Abwählen blendet ein Gerät wieder ein."
+          "hidden_macs": "Von Hand entfernte Geräte stehen hier. Abwählen blendet ein Gerät wieder ein.",
+          "skip_offline": "Die Box merkt sich jedes Gerät, das sie je gesehen hat. Ein Gerät, das offline ist und noch kein Gerät in Home Assistant hat, wird angelegt, sobald es online kommt. Vorhandene Geräte bleiben."
         }
       }
     }

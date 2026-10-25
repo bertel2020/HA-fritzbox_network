@@ -64,7 +64,11 @@ def async_setup_client_entities(
 
     @callback
     def _add_new_hosts() -> None:
-        new = [h for mac, h in coordinator.data.hosts.items() if mac not in known]
+        new = [
+            h
+            for mac, h in coordinator.data.hosts.items()
+            if mac not in known and coordinator.wants_device(h)
+        ]
         known.update(h.mac for h in new)
         entities = [e for host in new for e in factory(coordinator, host)]
         if entities:

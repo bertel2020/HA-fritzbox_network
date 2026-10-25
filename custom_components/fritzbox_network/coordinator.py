@@ -30,11 +30,13 @@ from .const import (
     CONF_IGNORE_GUESTS,
     CONF_IGNORE_PRIVATE_MACS,
     CONF_SCAN_INTERVAL,
+    CONF_SKIP_OFFLINE,
     DEFAULT_ADOPT_NAMES,
     DEFAULT_CONSIDER_HOME,
     DEFAULT_IGNORE_GUESTS,
     DEFAULT_IGNORE_PRIVATE_MACS,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SKIP_OFFLINE,
     DOMAIN,
     EVENT_DEVICE_RENAMED,
     FILTER_EXCLUDE,
@@ -159,6 +161,22 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 continue
             selected[host.mac] = host
         return selected
+
+    def wants_device(self, host: Host) -> bool:
+        """Whether a device should be created for this host now.
+
+        With "skip offline" a host that is offline and has no device yet waits
+        until it comes online; existing devices are never touched.
+        """
+        if host.active or not self._options.get(CONF_SKIP_OFFLINE, DEFAULT_SKIP_OFFLINE):
+            return True
+        registry = dr.async_get(self.hass)
+        return (
+            registry.async_get_device_by_connection(
+                (CONNECTION_NETWORK_MAC, host.mac), self.config_entry.entry_id
+            )
+            is not None
+        )
 
     def _remove_filtered_devices(self, selected: dict[str, Host]) -> None:
         """Drop the devices of hosts a filter now excludes.

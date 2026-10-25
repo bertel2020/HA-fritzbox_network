@@ -11,7 +11,7 @@
   - Offline-Geräte lassen sich von Hand löschen und bleiben dann ausgeblendet.
   - Optionen für Intervall, Anwesenheit, Gastnetz, private MACs, Gerätefilter.
   - Geräte, die ein Filter ausschließt, werden entfernt. Repeater werden nie gefiltert.
-
+- Option, für Offline-Geräte keine Geräte anzulegen; sie entstehen, sobald das Gerät online kommt.
 ### Behoben
 
 - „Zuletzt gesehen“ bleibt nach einem Neustart erhalten, auch für Geräte, die online geblieben sind.

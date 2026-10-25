@@ -27,12 +27,14 @@ from .const import (
     CONF_IGNORE_GUESTS,
     CONF_IGNORE_PRIVATE_MACS,
     CONF_SCAN_INTERVAL,
+    CONF_SKIP_OFFLINE,
     CONF_USE_TLS,
     DEFAULT_ADOPT_NAMES,
     DEFAULT_CONSIDER_HOME,
     DEFAULT_IGNORE_GUESTS,
     DEFAULT_IGNORE_PRIVATE_MACS,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SKIP_OFFLINE,
     DOMAIN,
     FILTER_ALL,
     FILTER_EXCLUDE,
@@ -191,6 +193,10 @@ class FritzNetworkOptionsFlow(OptionsFlow):
                 vol.Optional(
                     CONF_ADOPT_NAMES,
                     default=options.get(CONF_ADOPT_NAMES, DEFAULT_ADOPT_NAMES),
+                ): bool,
+                vol.Optional(
+                    CONF_SKIP_OFFLINE,
+                    default=options.get(CONF_SKIP_OFFLINE, DEFAULT_SKIP_OFFLINE),
                 ): bool,
                 vol.Optional(
                     CONF_IGNORE_GUESTS,
