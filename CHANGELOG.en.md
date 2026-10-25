@@ -10,3 +10,4 @@
   - The device name follows the name in the FRITZ!Box, names you set yourself are kept.
   - Offline devices can be deleted by hand and then stay hidden.
   - Options for interval, presence, guest network, private MACs, device filter.
+  - Devices excluded by a filter are removed. Repeaters are never filtered.

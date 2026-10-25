@@ -71,6 +71,7 @@ class MeshNode:
     model: str | None
     firmware: str | None
     role: str
+    macs: frozenset[str] = frozenset()
 
 
 @dataclass
@@ -83,6 +84,11 @@ class MeshTopology:
     @property
     def master(self) -> MeshNode | None:
         return next((n for n in self.nodes.values() if n.role == "master"), None)
+
+    def node_of(self, host: Host) -> MeshNode | None:
+        """The mesh node (box or repeater) this host entry belongs to, if any."""
+        wanted = {host.mac, *host.mac_list}
+        return next((n for n in self.nodes.values() if wanted & n.macs), None)
 
 
 @dataclass
@@ -177,6 +183,17 @@ def parse_mesh(raw: str | bytes) -> MeshTopology:
                 model=node.get("device_model"),
                 firmware=node.get("device_firmware_version"),
                 role=node.get("mesh_role") or "unknown",
+                macs=frozenset(
+                    format_mac(m)
+                    for m in (
+                        node["device_mac_address"],
+                        *(
+                            i["mac_address"]
+                            for i in node.get("node_interfaces", [])
+                            if i.get("mac_address")
+                        ),
+                    )
+                ),
             )
 
     seen_links: set[str] = set()

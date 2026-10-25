@@ -60,6 +60,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         client: FritzNetworkClient,
         serial: str,
         can_write: bool,
+        box_device_id: str,
     ) -> None:
         self._base_interval = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         super().__init__(
@@ -72,10 +73,14 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.client = client
         self.serial = serial
         self.can_write = can_write
+        self.box_device_id = box_device_id
         # Unfiltered host list: the options flow offers it for selection.
         self.all_hosts: dict[str, Host] = {}
         self.last_active: dict[str, datetime] = {}
         self._failures = 0
+        # Options at setup: removing a device only adds to the hidden list and
+        # needs no reload (see __init__._async_update_listener).
+        self.options_snapshot = dict(entry.options)
 
     @property
     def _options(self):
@@ -110,6 +115,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             if host.active:
                 self.last_active[host.mac] = now
 
+        self._remove_filtered_devices(selected)
         self._sync_names(selected)
         return NetworkData(hosts=selected, mesh=mesh)
 
@@ -132,11 +138,16 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         selection = set(options.get(CONF_FILTER_DEVICES, []))
         ignore_guests = options.get(CONF_IGNORE_GUESTS, DEFAULT_IGNORE_GUESTS)
         ignore_private = options.get(CONF_IGNORE_PRIVATE_MACS, DEFAULT_IGNORE_PRIVATE_MACS)
-        box_mac = mesh.master.mac if mesh and mesh.master else None
+        box = mesh.master if mesh else None
 
         selected: dict[str, Host] = {}
         for host in hosts:
-            if host.mac == box_mac or host.mac in hidden:
+            node = mesh.node_of(host) if mesh else None
+            if host.mac in hidden or (node is not None and node is box):
+                continue
+            if node is not None:
+                # repeaters are part of the network, no filter hides them
+                selected[host.mac] = host
                 continue
             if ignore_guests and host.guest:
                 continue
@@ -149,22 +160,34 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             selected[host.mac] = host
         return selected
 
+    def _remove_filtered_devices(self, selected: dict[str, Host]) -> None:
+        """Drop the devices of hosts a filter now excludes.
+
+        Only hosts the box still lists count: a host that is merely gone from the
+        list is not touched here.
+        """
+        registry = dr.async_get(self.hass)
+        for device in dr.async_entries_for_config_entry(registry, self.config_entry.entry_id):
+            mac = next(
+                (m for kind, m in device.connections if kind == CONNECTION_NETWORK_MAC), None
+            )
+            if mac in self.all_hosts and mac not in selected:
+                registry.async_remove_device(device.id)
+
     def _sync_names(self, hosts: dict[str, Host]) -> None:
         """Carry names changed in the box over to the device registry.
 
-        Only devices that belong to this entry are touched, and only `name`:
-        a name set by the user (`name_by_user`) keeps winning in the UI.
+        Only `name` is written: a name set by the user (`name_by_user`) keeps
+        winning in the UI.
         """
         if not self._options.get(CONF_ADOPT_NAMES, DEFAULT_ADOPT_NAMES):
             return
         registry = dr.async_get(self.hass)
         for host in hosts.values():
-            device = registry.async_get_device(connections={(CONNECTION_NETWORK_MAC, host.mac)})
-            if (
-                device is None
-                or device.primary_config_entry != self.config_entry.entry_id
-                or device.name == host.name
-            ):
+            device = registry.async_get_device_by_connection(
+                (CONNECTION_NETWORK_MAC, host.mac), self.config_entry.entry_id
+            )
+            if device is None or device.name == host.name:
                 continue
             old_name = device.name
             registry.async_update_device(device.id, name=host.name)

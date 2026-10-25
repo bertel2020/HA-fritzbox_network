@@ -10,3 +10,4 @@
   - Der Gerätename folgt dem Namen in der FRITZ!Box, eigene Namen bleiben erhalten.
   - Offline-Geräte lassen sich von Hand löschen und bleiben dann ausgeblendet.
   - Optionen für Intervall, Anwesenheit, Gastnetz, private MACs, Gerätefilter.
+  - Geräte, die ein Filter ausschließt, werden entfernt. Repeater werden nie gefiltert.

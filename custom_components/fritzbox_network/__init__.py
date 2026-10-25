@@ -57,7 +57,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
     serial = serial or entry.unique_id or entry.data[CONF_HOST]
     _update_rights_issue(hass, entry, can_write)
 
-    dr.async_get(hass).async_get_or_create(
+    box = dr.async_get(hass).async_get_or_create(
         config_entry_id=entry.entry_id,
         identifiers={(DOMAIN, serial)},
         name=entry.title,
@@ -68,7 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
         configuration_url=f"http://{entry.data[CONF_HOST]}",
     )
 
-    coordinator = FritzNetworkCoordinator(hass, entry, client, serial, can_write)
+    coordinator = FritzNetworkCoordinator(hass, entry, client, serial, can_write, box.id)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
@@ -96,7 +96,20 @@ def _update_rights_issue(
 
 
 async def _async_update_listener(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
-    """Reload the entry when its options change."""
+    """Reload the entry when its options change.
+
+    Deleting a device by hand only adds it to the hidden list. That needs no
+    reload, and a reload racing with the removal in the device registry would
+    make the removal fail.
+    """
+    coordinator = entry.runtime_data
+    old, new = coordinator.options_snapshot, dict(entry.options)
+    old_hidden, new_hidden = set(old.get(CONF_HIDDEN_MACS, [])), set(new.get(CONF_HIDDEN_MACS, []))
+    old.pop(CONF_HIDDEN_MACS, None)
+    new_without_hidden = {k: v for k, v in new.items() if k != CONF_HIDDEN_MACS}
+    if old == new_without_hidden and old_hidden <= new_hidden:
+        coordinator.options_snapshot = new
+        return
     await hass.config_entries.async_reload(entry.entry_id)
 
 

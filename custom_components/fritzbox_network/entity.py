@@ -10,7 +10,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, KEY_TRACKER
+from .const import KEY_TRACKER
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .models import Host, mac_id
 
@@ -38,9 +38,9 @@ class FritzNetworkClientEntity(CoordinatorEntity[FritzNetworkCoordinator]):
         self.entity_id = f"{platform_domain}.fritz_{mac_id(host.mac)}{suffix}"
         self._attr_device_info = DeviceInfo(
             connections={(CONNECTION_NETWORK_MAC, host.mac)},
-            default_name=host.name,
-            default_model=host.model,
-            via_device=(DOMAIN, coordinator.serial),
+            name=host.name,
+            model=host.model,
+            via_device_id=coordinator.box_device_id,
         )
 
     @property

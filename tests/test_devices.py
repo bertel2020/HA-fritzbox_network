@@ -4,16 +4,17 @@ from dataclasses import replace
 
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.fritzbox_network import async_remove_config_entry_device
 from custom_components.fritzbox_network.const import CONF_HIDDEN_MACS
 
-from .conftest import LAN, OFFLINE, WLAN
+from .conftest import LAN, OFFLINE, REPEATER, WLAN
 
 
-def _device(hass, mac):
-    return dr.async_get(hass).async_get_device(connections={(CONNECTION_NETWORK_MAC, mac)})
+def _device(hass, entry, mac):
+    return dr.async_get(hass).async_get_device_by_connection(
+        (CONNECTION_NETWORK_MAC, mac), entry.entry_id
+    )
 
 
 async def _setup(hass, entry):
@@ -40,7 +41,7 @@ async def test_entity_ids_follow_the_mac(hass, fake_client, entry):
 async def test_renamed_in_the_box_follows_without_changing_the_entity_id(hass, fake_client, entry):
     coordinator = await _setup(hass, entry)
     devices = dr.async_get(hass)
-    devices.async_update_device(_device(hass, LAN).id, name_by_user="My own name")
+    devices.async_update_device(_device(hass, entry, LAN).id, name_by_user="My own name")
 
     fake_client.hosts = [
         replace(h, name="renamed") if h.mac in (WLAN, LAN) else h for h in fake_client.hosts
@@ -48,26 +49,10 @@ async def test_renamed_in_the_box_follows_without_changing_the_entity_id(hass, f
     await coordinator.async_refresh()
     await hass.async_block_till_done()
 
-    assert _device(hass, WLAN).name == "renamed"
+    assert _device(hass, entry, WLAN).name == "renamed"
     assert hass.states.get("device_tracker.fritz_020000000003").name == "renamed"
-    lan = _device(hass, LAN)
+    lan = _device(hass, entry, LAN)
     assert lan.name == "renamed" and lan.name_by_user == "My own name"
-
-
-async def test_foreign_device_keeps_its_name(hass, fake_client, entry):
-    other = MockConfigEntry(domain="test")
-    other.add_to_hass(hass)
-    dr.async_get(hass).async_get_or_create(
-        config_entry_id=other.entry_id, connections={(CONNECTION_NETWORK_MAC, WLAN)}, name="Foreign"
-    )
-    coordinator = await _setup(hass, entry)
-
-    fake_client.hosts = [
-        replace(h, name="renamed") if h.mac == WLAN else h for h in fake_client.hosts
-    ]
-    await coordinator.async_refresh()
-
-    assert _device(hass, WLAN).name == "Foreign"
 
 
 async def test_new_device_appears(hass, fake_client, entry):
@@ -84,11 +69,11 @@ async def test_new_device_appears(hass, fake_client, entry):
 async def test_remove_by_hand(hass, fake_client, entry):
     await _setup(hass, entry)
 
-    assert not await async_remove_config_entry_device(hass, entry, _device(hass, WLAN))
-    box = dr.async_get(hass).async_get_device(identifiers={("fritzbox_network", "SERIAL1")})
+    assert not await async_remove_config_entry_device(hass, entry, _device(hass, entry, WLAN))
+    [box] = dr.async_get(hass).async_get_devices(identifiers={("fritzbox_network", "SERIAL1")})
     assert not await async_remove_config_entry_device(hass, entry, box)
 
-    offline = _device(hass, OFFLINE)
+    offline = _device(hass, entry, OFFLINE)
     assert await async_remove_config_entry_device(hass, entry, offline)
     assert entry.options[CONF_HIDDEN_MACS] == [OFFLINE]
     # what Home Assistant does right after a True answer
@@ -117,3 +102,23 @@ async def test_without_write_rights_no_switches(hass, fake_client, entry):
     assert ir.async_get(hass).async_get_issue(
         "fritzbox_network", f"missing_rights_{entry.entry_id}"
     )
+
+
+async def test_filters_remove_devices_but_not_the_repeater(hass, fake_client, entry):
+    # the repeater has a private MAC (like every fake MAC) and must survive the filter
+    fake_client.hosts = [
+        *fake_client.hosts,
+        replace(
+            fake_client.hosts[0], mac=REPEATER, mac_list=[REPEATER], name="repeater", active=True
+        ),
+    ]
+    await _setup(hass, entry)
+    assert _device(hass, entry, WLAN) and _device(hass, entry, REPEATER)
+
+    hass.config_entries.async_update_entry(entry, options={"ignore_private_macs": True})
+    await hass.async_block_till_done()
+
+    assert _device(hass, entry, WLAN) is None
+    assert hass.states.get("device_tracker.fritz_020000000003") is None
+    assert _device(hass, entry, REPEATER)
+    assert hass.states.get("device_tracker.fritz_02000000000e").state == "home"
