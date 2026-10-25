@@ -1,77 +1,78 @@
-# FRITZ!Box Network
+<p align="center">
+  <img src="https://raw.githubusercontent.com/bertel2020/HA-fritzbox_network/main/custom_components/fritzbox_network/brand/logo.png" alt="FRITZ!Box Network" width="160">
+</p>
 
-Home Assistant integration for the network devices of an AVM FRITZ!Box. Every
-device is tracked by its **MAC address**: entity ids never change, and the name
-follows the name in the FRITZ!Box automatically.
+<h1 align="center">FRITZ!Box Network</h1>
 
-[Deutsche Version](README.md)
+<p align="center">
+  The network devices of your FRITZ!Box in Home Assistant, tracked by MAC address: stable entity ids, names that follow the box, and the most useful info and actions per device.
+</p>
 
-Unofficial integration, not made by AVM. FRITZ!Box is a trademark of AVM GmbH.
+<p align="center">
+  <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg" alt="HACS Custom"></a>
+  <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-Custom%20Integration-18BCF2.svg?logo=home-assistant&logoColor=white" alt="Home Assistant"></a>
+  <a href="https://github.com/bertel2020/HA-fritzbox_network/releases"><img src="https://img.shields.io/github/v/release/bertel2020/HA-fritzbox_network?sort=semver&include_prereleases" alt="Release"></a>
+  <a href="https://github.com/bertel2020/HA-fritzbox_network/actions/workflows/tests.yml"><img src="https://github.com/bertel2020/HA-fritzbox_network/actions/workflows/tests.yml/badge.svg" alt="Tests"></a>
+  <a href="https://github.com/bertel2020/HA-fritzbox_network/actions/workflows/hassfest.yml"><img src="https://github.com/bertel2020/HA-fritzbox_network/actions/workflows/hassfest.yml/badge.svg" alt="Hassfest"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/bertel2020/HA-fritzbox_network" alt="License"></a>
+</p>
 
-## Features
+<p align="center">
+  <a href="https://buymeacoffee.com/bertel2020"><img src="https://img.shields.io/badge/Buy%20Me%20a%20Coffee-support-FFDD00?logo=buy-me-a-coffee&logoColor=black" alt="Buy Me a Coffee"></a>
+  <a href="https://ko-fi.com/bertel2020"><img src="https://img.shields.io/badge/Ko--fi-support-FF5E5B?logo=ko-fi&logoColor=white" alt="Ko-fi"></a>
+  <a href="https://paypal.me/RobertoMartins"><img src="https://img.shields.io/badge/PayPal-donate-00457C?logo=paypal&logoColor=white" alt="PayPal"></a>
+</p>
 
-- One device per network device, with presence (device tracker), IP address,
-  connection type (LAN/WLAN), access point and "last seen".
-- Entity ids by MAC, e.g. `device_tracker.fritz_3c2af4a1b2c3` and
-  `sensor.fritz_3c2af4a1b2c3_ip_address`. They stay the same when a device is renamed.
-- When the name changes in the FRITZ!Box, the device name in Home Assistant changes
-  with it. Names you set yourself in Home Assistant are kept.
-- Block or allow the internet access per device, Wake on LAN (button, disabled by
-  default).
-- Optional, off by default: signal strength (dBm), link rate (download/upload), Wi-Fi band
-  and network name per device, also for devices on a repeater. The values come from the
-  mesh data of the box, without an extra request. The signal strength is how the access
-  point sees the device.
-- Offline devices can be deleted by hand. Deleted devices stay hidden and can be
-  shown again in the options.
-- Filters for guest network devices, devices with a private MAC address and a
-  selection of single devices.
-- The box is asked only twice per poll (host list and mesh), never once per device.
+<p align="center"><em><a href="README.md">Deutsche Version</a></em></p>
 
-## Installation
+**FRITZ!Box Network** shows the devices of your home network in Home Assistant the way they are listed in the FRITZ!Box, and tracks every device by its **MAC address**. That is why entity ids never change, even when you rename a device in the box; the device name, on the other hand, follows the box. On top of that you get presence, connection data and actions such as blocking a device's internet access.
 
-### Via HACS (recommended)
+The integration works locally with the FRITZ!Box (TR-064) and makes no connections to the internet. It is an alternative to the device tracking of the core integration "AVM FRITZ!Box Tools", built from the ground up around MAC addresses.
 
-[![Open the HACS repository in My Home Assistant](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bertel2020&repository=HA-fritzbox_network&category=integration)
-[![Add FRITZ!Box Network to My Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=fritzbox_network)
+## Highlights
 
-1. Use the first button to open the FRITZ!Box Network repository in HACS.
-2. Download **FRITZ!Box Network** and restart Home Assistant.
-3. Use the second button to add the integration. Alternatively open **Settings →
-   Devices & services → Add integration → FRITZ!Box Network** in Home Assistant.
+- **Devices by MAC address**: One Home Assistant device per network device, with entity ids like `device_tracker.fritz_3c2af4a1b2c3`. They stay the same when a device is renamed.
+- **Names follow the box**: When the name changes in the FRITZ!Box, the device name in Home Assistant changes with it. Names you set yourself are never overwritten.
+- **Presence**: Device tracker with an adjustable wait before a device counts as away.
+- **Connection data per device**: IP address, LAN or Wi-Fi, access point and "last seen". Optional (off by default): signal strength, link rate (download/upload), Wi-Fi band, network name and a guest network flag.
+- **Actions**: Block and allow the internet access per device, Wake on LAN.
+- **Mesh**: The FRITZ!Box and its repeaters are devices of their own with model, firmware and the number of connected devices.
+- **Tidy**: Offline devices can be deleted by hand and stay hidden. Plus filters for the guest network, private MAC addresses and single devices, and an option not to create devices for offline hosts.
+- **Gentle**: Only two requests to the FRITZ!Box per poll (host list and mesh), never one per device.
+- **Easy setup**: A new address or a new password without setting up again, diagnostics to share.
 
-If the first button does not work, add `https://github.com/bertel2020/HA-fritzbox_network`
-in HACS under **Integrations → Custom repositories** with the category **Integration**.
+## Quick start
 
-### Manual
+1. **Prepare the FRITZ!Box**: Enable TR-064 (*Home Network → Network → Network Settings → "Allow access for applications"*) and create a dedicated user with the right "FRITZ!Box settings" (*System → FRITZ!Box Users*).
+2. **Install**: Open the integration in HACS with the button, download it and restart Home Assistant.
 
-Copy the directory `custom_components/fritzbox_network` to
-`/config/custom_components/fritzbox_network` and restart Home Assistant.
+   [![Open the HACS repository in My Home Assistant](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bertel2020&repository=HA-fritzbox_network&category=integration)
 
-## Setup
+3. **Add the integration**: *Settings → Devices & services → Add integration → FRITZ!Box Network* or with the button.
 
-1. In the FRITZ!Box, enable **Allow access for applications** under **Home Network →
-   Network → Network Settings** (TR-064).
-2. Create a dedicated user under **System → FRITZ!Box Users** with the right
-   **FRITZ!Box settings**, without access from the internet.
-   Without this right the devices are shown, but the internet access switches and
-   the Wake on LAN buttons are missing; a notice under **Settings → Repairs**
-   explains why.
-3. Add the integration and enter the credentials.
+   [![Add FRITZ!Box Network to My Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=fritzbox_network)
 
-## Notes
+**Home Assistant 2026.8 or newer** is required. Everything else (manual installation, options, entities, troubleshooting) is covered in the [user guide](docs/USER-GUIDE.md).
 
-- **Running next to the core integration "AVM FRITZ!Box Tools"** is possible but not
-  recommended: both report the same devices and ask the box twice. Turn off device
-  tracking in the core integration or remove it.
-- The box remembers devices that have been offline for a long time. All of them are
-  created; the device filter or deleting by hand keeps the list short.
-- A laptop on LAN and WLAN appears twice in the box (two MACs) and is therefore two
-  devices here.
-- The box can only block the internet access of devices that have an IPv4 address.
+## Privacy in short
 
-## Options
+- Communication with the FRITZ!Box stays on your local network. There is no connection to the internet.
+- MAC and IP addresses and device names appear as entity attributes in Home Assistant; whoever has access there can see them.
+- The diagnostics remove MAC and IP addresses, names, credentials and the address of the box.
 
-Polling interval, how long a device counts as home after going offline, take over
-names, ignore guest network and private MACs, device filter and the list of hidden
-devices.
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Changelog
+
+See [CHANGELOG.en.md](CHANGELOG.en.md).
+
+## Disclaimer
+
+FRITZ!Box Network is a privately developed, free open-source project provided without warranty. Use is at your own risk. The integration can change settings in the FRITZ!Box (for example block a device's internet access). It is an unofficial project and not affiliated with AVM; FRITZ! and FRITZ!Box are trademarks of their owners (see [trademark notice](docs/USER-GUIDE.md#trademark-notice)).
+
+## License
+
+This project is released under the [MIT License](LICENSE).
+Copyright 2026 bertel2020.
