@@ -21,3 +21,4 @@
 ### Fixed
 
 - "Last seen" survives a restart, also for devices that stayed online.
+- The internet access switch shows a change at once, even when the box reports it only after a minute, and allowing a device that is not blocked is no longer an error.

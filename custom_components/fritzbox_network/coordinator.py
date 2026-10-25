@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta
 import logging
 import time
@@ -43,6 +44,7 @@ from .const import (
     FILTER_EXCLUDE,
     FILTER_INCLUDE,
     MAX_BACKOFF_SECONDS,
+    WAN_OVERRIDE_SECONDS,
 )
 from .models import Host, MeshNode, MeshTopology, NetworkData, is_private_mac
 
@@ -81,6 +83,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.all_hosts: dict[str, Host] = {}
         self.last_active: dict[str, datetime] = {}
         self._failures = 0
+        # mac -> (allowed, monotonic deadline): see WAN_OVERRIDE_SECONDS
+        self._wan_override: dict[str, tuple[bool, float]] = {}
         # How long the last and the slowest poll took, shown in the diagnostics.
         self.last_fetch_seconds: float | None = None
         self.slowest_fetch_seconds: float = 0.0
@@ -119,6 +123,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._reset_failures()
         self.all_hosts = {h.mac: h for h in hosts}
         selected = self._apply_filters(hosts, mesh)
+        self._apply_wan_override(selected)
 
         now = dt_util.utcnow()
         for host in selected.values():
@@ -128,6 +133,15 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._remove_filtered_devices(selected)
         self._sync_names(selected)
         return NetworkData(hosts=selected, mesh=mesh)
+
+    def _apply_wan_override(self, hosts: dict[str, Host]) -> None:
+        now = time.monotonic()
+        for mac, (allowed, deadline) in list(self._wan_override.items()):
+            host = hosts.get(mac)
+            if host is None or host.wan_access == allowed or now > deadline:
+                del self._wan_override[mac]
+            else:
+                hosts[mac] = replace(host, wan_access=allowed)
 
     def _register_failure(self) -> None:
         self._failures += 1
@@ -241,6 +255,10 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
 
     async def async_set_internet_access(self, host: Host, allowed: bool) -> None:
         await self.hass.async_add_executor_job(self.client.set_internet_access, host.ip, allowed)
+        self._wan_override[host.mac] = (allowed, time.monotonic() + WAN_OVERRIDE_SECONDS)
+        hosts = dict(self.data.hosts)
+        self._apply_wan_override(hosts)
+        self.async_set_updated_data(NetworkData(hosts=hosts, mesh=self.data.mesh))
         await self.async_request_refresh()
 
     async def async_wake_on_lan(self, host: Host) -> None:

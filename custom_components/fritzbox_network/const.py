@@ -29,6 +29,9 @@ DEFAULT_SKIP_OFFLINE = False
 
 # After repeated failures the poll interval doubles, never beyond this.
 MAX_BACKOFF_SECONDS = 300
+# The box takes a while to show a changed internet access in its host list;
+# until then the switch shows what was just asked for.
+WAN_OVERRIDE_SECONDS = 120
 BACKOFF_AFTER_FAILURES = 3
 
 EVENT_DEVICE_RENAMED = f"{DOMAIN}_device_renamed"

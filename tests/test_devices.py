@@ -94,6 +94,9 @@ async def test_internet_switch(hass, fake_client, entry):
         blocking=True,
     )
     assert fake_client.calls[-1] == ("internet", "192.0.2.3", False)
+    # the box shows the change late: the switch shows what was asked for meanwhile
+    await hass.async_block_till_done()
+    assert hass.states.get("switch.fritz_020000000003_internet_access").state == "off"
 
 
 async def test_without_write_rights_no_switches(hass, fake_client, entry):

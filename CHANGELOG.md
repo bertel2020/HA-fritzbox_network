@@ -21,3 +21,4 @@
 ### Behoben
 
 - „Zuletzt gesehen“ bleibt nach einem Neustart erhalten, auch für Geräte, die online geblieben sind.
+- Der Schalter für den Internetzugang zeigt die Änderung sofort an, auch wenn die FRITZ!Box sie erst nach einer Minute meldet, und Freigeben eines nicht gesperrten Geräts ist kein Fehler mehr.

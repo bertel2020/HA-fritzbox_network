@@ -16,7 +16,11 @@ import re
 import threading
 
 from fritzconnection import FritzConnection
-from fritzconnection.core.exceptions import FritzActionError, FritzServiceError
+from fritzconnection.core.exceptions import (
+    FritzActionError,
+    FritzLookUpError,
+    FritzServiceError,
+)
 from homeassistant.helpers.device_registry import format_mac
 
 from .const import HOST_FILTER_SERVICE_PREFIX, HOSTS_SERVICE
@@ -137,12 +141,19 @@ class FritzNetworkClient:
             )
             if service is None:
                 raise FritzServiceError("The box provides no host filter service")
-            fc.call_action(
-                service,
-                "DisallowWANAccessByIP",
-                NewIPv4Address=ip,
-                NewDisallow=not allowed,
-            )
+            try:
+                fc.call_action(
+                    service,
+                    "DisallowWANAccessByIP",
+                    NewIPv4Address=ip,
+                    NewDisallow=not allowed,
+                )
+            except FritzLookUpError:
+                # Error 714: the box keeps blocked addresses in a list. Allowing
+                # an address that is not on it is already what was asked for.
+                if not allowed:
+                    raise
+                _LOGGER.debug("%s was not blocked, nothing to allow", ip)
 
     def wake_on_lan(self, mac: str) -> None:
         with self._lock:
