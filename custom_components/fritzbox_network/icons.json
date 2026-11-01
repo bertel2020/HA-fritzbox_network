@@ -65,6 +65,42 @@
       },
       "radio_noise": {
         "default": "mdi:waveform"
+      },
+      "internet_download": {
+        "default": "mdi:download-network"
+      },
+      "internet_upload": {
+        "default": "mdi:upload-network"
+      },
+      "internet_uptime": {
+        "default": "mdi:timer-outline"
+      },
+      "external_ipv4": {
+        "default": "mdi:ip-network-outline"
+      },
+      "dsl_rate_down": {
+        "default": "mdi:speedometer"
+      },
+      "dsl_rate_up": {
+        "default": "mdi:speedometer"
+      },
+      "dsl_noise_margin_down": {
+        "default": "mdi:sine-wave"
+      },
+      "dsl_noise_margin_up": {
+        "default": "mdi:sine-wave"
+      },
+      "dsl_attenuation_down": {
+        "default": "mdi:signal-distance-variant"
+      },
+      "dsl_attenuation_up": {
+        "default": "mdi:signal-distance-variant"
+      },
+      "dsl_fec_errors": {
+        "default": "mdi:alert-circle-outline"
+      },
+      "dsl_crc_errors": {
+        "default": "mdi:alert-circle-outline"
       }
     },
     "switch": {
@@ -92,6 +128,12 @@
     "binary_sensor": {
       "guest": {
         "default": "mdi:account-multiple-outline"
+      },
+      "internet_connected": {
+        "default": "mdi:web",
+        "state": {
+          "off": "mdi:web-off"
+        }
       }
     },
     "select": {

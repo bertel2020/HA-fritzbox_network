@@ -2,6 +2,7 @@
 
 from unittest.mock import patch
 
+from homeassistant.helpers import entity_registry as er
 import pytest
 
 from custom_components.fritzbox_network import coordinator as coordinator_module
@@ -147,3 +148,58 @@ async def test_a_box_without_wan_data_still_lists_its_devices(
 
     assert topology["internet"] is None
     assert topology["clients"]
+
+
+async def test_the_connection_and_the_throughput_are_sensors(hass, fake_client, entry):
+    coordinator = await _setup(hass, entry)
+    fake_client.internet_fast["GetTotalBytesReceived"]["NewTotalBytesReceived"] += 3_750_000
+    fake_client.internet_fast["GetTotalBytesSent"]["NewTotalBytesSent"] += 375_000
+    await _poll(hass, coordinator)
+
+    assert hass.states.get("binary_sensor.fritz_network_internet_connected").state == "on"
+    assert hass.states.get("sensor.fritz_network_internet_download").state == "1.0"
+    assert hass.states.get("sensor.fritz_network_internet_upload").state == "0.1"
+
+
+async def test_the_values_of_the_line_are_off_until_they_are_enabled(hass, fake_client, entry):
+    await _setup(hass, entry)
+    registry = er.async_get(hass)
+
+    for key in ("dsl_noise_margin_down", "dsl_rate_up", "dsl_crc_errors", "external_ipv4"):
+        reg = registry.async_get(f"sensor.fritz_network_{key}")
+        assert reg is not None, key
+        assert reg.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+    for key in ("internet_download", "internet_upload"):
+        assert registry.async_get(f"sensor.fritz_network_{key}").disabled_by is None
+    assert registry.async_get("binary_sensor.fritz_network_internet_connected").disabled_by is None
+
+
+async def test_a_box_without_a_dsl_line_has_no_line_sensors(hass, fake_client, entry):
+    del fake_client.internet_slow["X_AVM-DE_GetDSLInfo"]
+    await _setup(hass, entry)
+
+    registry = er.async_get(hass)
+    assert registry.async_get("sensor.fritz_network_dsl_noise_margin_down") is None
+    assert registry.async_get("sensor.fritz_network_internet_download") is not None
+
+
+async def test_a_box_that_tells_nothing_has_no_internet_sensors(hass, fake_client, entry):
+    fake_client.internet_fast = {}
+    await _setup(hass, entry)
+
+    registry = er.async_get(hass)
+    assert registry.async_get("sensor.fritz_network_internet_download") is None
+    assert registry.async_get("binary_sensor.fritz_network_internet_connected") is None
+
+
+async def test_the_sensors_come_when_the_box_starts_telling(hass, fake_client, entry):
+    saved, fake_client.internet_fast = fake_client.internet_fast, {}
+    coordinator = await _setup(hass, entry)
+    registry = er.async_get(hass)
+    assert registry.async_get("sensor.fritz_network_internet_download") is None
+
+    fake_client.internet_fast = saved
+    await _poll(hass, coordinator)
+
+    assert registry.async_get("sensor.fritz_network_internet_download") is not None
+    assert registry.async_get("sensor.fritz_network_dsl_noise_margin_down") is not None

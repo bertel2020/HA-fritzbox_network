@@ -119,6 +119,8 @@ The FRITZ!Box device also counts the devices of your network (after the filters)
 
 The box and every repeater also have diagnostic sensors for each of their Wi-Fi bands, off by default: **Channel**, **Channel utilization** (in percent, as the box reports it) and **Noise** (in dBm). They answer "why is the Wi-Fi bad tonight": a busy channel or a high noise level at the access point the device sits on. The guest network shares the radio and is not listed twice. They come from the mesh data that is polled anyway, so they cost no extra request.
 
+The box also has sensors for its **internet connection** once it reports one: the connection state (binary sensor "Internet connection") and the **throughput** for download and upload in Mbit/s, both on by default so the history in Home Assistant is there from the start. The throughput is worked out from the byte counters of the box between two updates. Off by default are the connection time, the external IPv4 address and, on DSL, line rate, noise margin, attenuation and FEC and CRC errors, each for download and upload. They let you build automations ("the address changed", "noise margin below 8 dB") and look at the course over days. They cost no extra request, the values come from the read behind the internet page.
+
 The box device also has three diagnostic, off by default: **Last update** (the last successful poll), **Failed polls** (how many polls in a row failed) and **Mesh status** (whether the mesh topology came with the last poll). They stay available while the box cannot be reached.
 
 ### Actions

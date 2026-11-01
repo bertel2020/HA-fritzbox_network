@@ -155,6 +155,42 @@
       },
       "radio_noise": {
         "name": "Noise {band}"
+      },
+      "internet_download": {
+        "name": "Internet download"
+      },
+      "internet_upload": {
+        "name": "Internet upload"
+      },
+      "internet_uptime": {
+        "name": "Internet connection time"
+      },
+      "external_ipv4": {
+        "name": "External IPv4 address"
+      },
+      "dsl_rate_down": {
+        "name": "DSL line rate download"
+      },
+      "dsl_rate_up": {
+        "name": "DSL line rate upload"
+      },
+      "dsl_noise_margin_down": {
+        "name": "DSL noise margin download"
+      },
+      "dsl_noise_margin_up": {
+        "name": "DSL noise margin upload"
+      },
+      "dsl_attenuation_down": {
+        "name": "DSL attenuation download"
+      },
+      "dsl_attenuation_up": {
+        "name": "DSL attenuation upload"
+      },
+      "dsl_fec_errors": {
+        "name": "DSL FEC errors"
+      },
+      "dsl_crc_errors": {
+        "name": "DSL CRC errors"
       }
     },
     "select": {
@@ -184,6 +220,9 @@
     "binary_sensor": {
       "guest": {
         "name": "Guest network"
+      },
+      "internet_connected": {
+        "name": "Internet connection"
       }
     }
   },

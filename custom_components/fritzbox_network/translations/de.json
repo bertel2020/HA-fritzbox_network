@@ -155,6 +155,42 @@
       },
       "radio_noise": {
         "name": "Rauschen {band}"
+      },
+      "internet_download": {
+        "name": "Internet Download"
+      },
+      "internet_upload": {
+        "name": "Internet Upload"
+      },
+      "internet_uptime": {
+        "name": "Internet-Verbindungszeit"
+      },
+      "external_ipv4": {
+        "name": "Externe IPv4-Adresse"
+      },
+      "dsl_rate_down": {
+        "name": "DSL-Leitungsrate Download"
+      },
+      "dsl_rate_up": {
+        "name": "DSL-Leitungsrate Upload"
+      },
+      "dsl_noise_margin_down": {
+        "name": "DSL-Störabstand Download"
+      },
+      "dsl_noise_margin_up": {
+        "name": "DSL-Störabstand Upload"
+      },
+      "dsl_attenuation_down": {
+        "name": "DSL-Dämpfung Download"
+      },
+      "dsl_attenuation_up": {
+        "name": "DSL-Dämpfung Upload"
+      },
+      "dsl_fec_errors": {
+        "name": "DSL-FEC-Fehler"
+      },
+      "dsl_crc_errors": {
+        "name": "DSL-CRC-Fehler"
       }
     },
     "select": {
@@ -184,6 +220,9 @@
     "binary_sensor": {
       "guest": {
         "name": "Gastnetz"
+      },
+      "internet_connected": {
+        "name": "Internetverbindung"
       }
     }
   },

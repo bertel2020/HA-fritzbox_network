@@ -14,9 +14,11 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import (
     PERCENTAGE,
+    SIGNAL_STRENGTH_DECIBELS,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
     UnitOfDataRate,
+    UnitOfTime,
 )
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
@@ -33,7 +35,19 @@ from .const import (
     KEY_DEVICES_OFFLINE,
     KEY_DEVICES_ONLINE,
     KEY_DEVICES_TOTAL,
+    KEY_DSL_ATTENUATION_DOWN,
+    KEY_DSL_ATTENUATION_UP,
+    KEY_DSL_CRC_ERRORS,
+    KEY_DSL_FEC_ERRORS,
+    KEY_DSL_NOISE_DOWN,
+    KEY_DSL_NOISE_UP,
+    KEY_DSL_RATE_DOWN,
+    KEY_DSL_RATE_UP,
+    KEY_EXTERNAL_IPV4,
     KEY_FAILED_POLLS,
+    KEY_INTERNET_DOWNLOAD,
+    KEY_INTERNET_UPLOAD,
+    KEY_INTERNET_UPTIME,
     KEY_IP_ADDRESS,
     KEY_LAST_ONLINE,
     KEY_LAST_UPDATE,
@@ -55,7 +69,7 @@ from .entity import (
     async_setup_client_entities,
     async_setup_node_entities,
 )
-from .models import ClientLink, Host, MeshNode, Radio
+from .models import ClientLink, Host, InternetInfo, MeshNode, Radio
 
 CONNECTION_LAN = "lan"
 CONNECTION_WLAN = "wlan"
@@ -118,6 +132,39 @@ async def async_setup_entry(
             FritzNetworkMeshStatus(coordinator),
         ]
     )
+    _async_setup_internet(coordinator, entry, async_add_entities)
+
+
+@callback
+def _async_setup_internet(
+    coordinator: FritzNetworkCoordinator,
+    entry: FritzNetworkConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    """The sensors of the internet connection, once the box has told about it.
+
+    Not every box does, and a DSL line only has the line values: what is missing at the start
+    is added when it shows up.
+    """
+    added: set[bool] = set()
+
+    @callback
+    def _add() -> None:
+        internet = coordinator.data.internet
+        if internet is None:
+            return
+        for dsl in (False, True):
+            if dsl in added or (dsl and internet.dsl is None):
+                continue
+            added.add(dsl)
+            async_add_entities(
+                FritzNetworkInternetSensor(coordinator, description)
+                for description in INTERNET_SENSORS
+                if description.dsl is dsl
+            )
+
+    _add()
+    entry.async_on_unload(coordinator.async_add_listener(_add))
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -435,6 +482,146 @@ class FritzNetworkDevicesTotal(_DeviceCount):
     @property
     def native_value(self) -> int:
         return len(self.coordinator.data.hosts)
+
+
+@dataclass(frozen=True, kw_only=True)
+class InternetSensorDescription(SensorEntityDescription):
+    """A value of the internet connection; ``dsl`` for the ones of the DSL line."""
+
+    value_fn: Callable[[FritzNetworkCoordinator, InternetInfo], str | float | int | None]
+    dsl: bool = False
+
+
+def _mbit(kbit: int | float | None) -> float | None:
+    return None if kbit is None else round(kbit / 1000, 3)
+
+
+def _measurement(key: str, **kwargs) -> dict:
+    return {
+        "key": key,
+        "translation_key": key,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "entity_category": EntityCategory.DIAGNOSTIC,
+        "entity_registry_enabled_default": False,
+        **kwargs,
+    }
+
+
+INTERNET_SENSORS = (
+    # the throughput is what the history is for: on from the start
+    InternetSensorDescription(
+        **_measurement(
+            KEY_INTERNET_DOWNLOAD,
+            device_class=SensorDeviceClass.DATA_RATE,
+            native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
+            entity_category=None,
+            entity_registry_enabled_default=True,
+        ),
+        value_fn=lambda c, i: _mbit(c.internet_rate[0]) if c.internet_rate else None,
+    ),
+    InternetSensorDescription(
+        **_measurement(
+            KEY_INTERNET_UPLOAD,
+            device_class=SensorDeviceClass.DATA_RATE,
+            native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
+            entity_category=None,
+            entity_registry_enabled_default=True,
+        ),
+        value_fn=lambda c, i: _mbit(c.internet_rate[1]) if c.internet_rate else None,
+    ),
+    InternetSensorDescription(
+        **_measurement(
+            KEY_INTERNET_UPTIME,
+            device_class=SensorDeviceClass.DURATION,
+            native_unit_of_measurement=UnitOfTime.SECONDS,
+        ),
+        value_fn=lambda c, i: i.uptime,
+    ),
+    InternetSensorDescription(
+        key=KEY_EXTERNAL_IPV4,
+        translation_key=KEY_EXTERNAL_IPV4,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda c, i: i.external_ipv4,
+    ),
+    InternetSensorDescription(
+        **_measurement(
+            KEY_DSL_RATE_DOWN,
+            device_class=SensorDeviceClass.DATA_RATE,
+            native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
+        ),
+        dsl=True,
+        value_fn=lambda c, i: _mbit(i.dsl.rate_down),
+    ),
+    InternetSensorDescription(
+        **_measurement(
+            KEY_DSL_RATE_UP,
+            device_class=SensorDeviceClass.DATA_RATE,
+            native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
+        ),
+        dsl=True,
+        value_fn=lambda c, i: _mbit(i.dsl.rate_up),
+    ),
+    InternetSensorDescription(
+        **_measurement(KEY_DSL_NOISE_DOWN, native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS),
+        dsl=True,
+        value_fn=lambda c, i: i.dsl.noise_margin_down,
+    ),
+    InternetSensorDescription(
+        **_measurement(KEY_DSL_NOISE_UP, native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS),
+        dsl=True,
+        value_fn=lambda c, i: i.dsl.noise_margin_up,
+    ),
+    InternetSensorDescription(
+        **_measurement(
+            KEY_DSL_ATTENUATION_DOWN, native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS
+        ),
+        dsl=True,
+        value_fn=lambda c, i: i.dsl.attenuation_down,
+    ),
+    InternetSensorDescription(
+        **_measurement(KEY_DSL_ATTENUATION_UP, native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS),
+        dsl=True,
+        value_fn=lambda c, i: i.dsl.attenuation_up,
+    ),
+    InternetSensorDescription(
+        **_measurement(KEY_DSL_FEC_ERRORS, state_class=SensorStateClass.TOTAL_INCREASING),
+        dsl=True,
+        value_fn=lambda c, i: i.dsl.fec_errors,
+    ),
+    InternetSensorDescription(
+        **_measurement(KEY_DSL_CRC_ERRORS, state_class=SensorStateClass.TOTAL_INCREASING),
+        dsl=True,
+        value_fn=lambda c, i: i.dsl.crc_errors,
+    ),
+)
+
+
+class FritzNetworkInternetSensor(_BoxSensor):
+    """A value of the internet connection of the box."""
+
+    entity_description: InternetSensorDescription
+
+    def __init__(
+        self, coordinator: FritzNetworkCoordinator, description: InternetSensorDescription
+    ) -> None:
+        super().__init__(coordinator, description.key)
+        self.entity_description = description
+
+    @property
+    def available(self) -> bool:
+        internet = self.coordinator.data.internet
+        has_line = internet is not None and (
+            internet.dsl is not None or not self.entity_description.dsl
+        )
+        return super().available and has_line
+
+    @property
+    def native_value(self) -> str | float | int | None:
+        internet = self.coordinator.data.internet
+        if internet is None or (self.entity_description.dsl and internet.dsl is None):
+            return None
+        return self.entity_description.value_fn(self.coordinator, internet)
 
 
 class _BoxDiagnostic(_BoxSensor):

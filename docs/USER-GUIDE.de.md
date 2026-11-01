@@ -119,6 +119,8 @@ Das Gerät der FRITZ!Box zählt außerdem die Geräte im Netz (nach den Filtern)
 
 Die Box und jeder Repeater haben außerdem Diagnose-Sensoren für jedes ihrer WLAN-Bänder, standardmäßig aus: **Kanal**, **Kanalauslastung** (in Prozent, wie die Box sie meldet) und **Rauschen** (in dBm). Sie beantworten „warum ist das WLAN heute Abend schlecht“: ein voller Kanal oder ein hoher Rauschpegel an dem Access Point, an dem das Gerät hängt. Das Gastnetz teilt sich die Funkeinheit und steht nicht doppelt da. Sie kommen aus den Mesh-Daten, die ohnehin abgerufen werden, kosten also keine zusätzliche Anfrage.
 
+Die Box hat außerdem Sensoren für ihre **Internetverbindung**, sobald sie diese meldet: den Verbindungsstatus (Binärsensor „Internetverbindung“) und den **Durchsatz** für Download und Upload in Mbit/s, beide standardmäßig an, damit der Verlauf in Home Assistant von Anfang an da ist. Der Durchsatz wird aus den Byte-Zählern der Box zwischen zwei Abfragen berechnet. Standardmäßig aus sind die Verbindungszeit, die externe IPv4-Adresse und bei DSL Leitungsrate, Störabstand, Dämpfung sowie FEC- und CRC-Fehler, je für Download und Upload. Damit lassen sich Automationen bauen („IP hat sich geändert“, „Störabstand unter 8 dB“) und Verläufe über Tage ansehen. Sie kosten keine zusätzliche Anfrage, die Werte kommen aus der Abfrage der Internet-Seite.
+
 Das Gerät der FRITZ!Box hat außerdem drei Diagnose-Sensoren, standardmäßig aus: **Letzte Aktualisierung** (die letzte erfolgreiche Abfrage), **Fehlgeschlagene Abfragen** (wie viele Abfragen in Folge scheiterten) und **Mesh-Status** (ob die Mesh-Topologie bei der letzten Abfrage mitkam). Sie bleiben verfügbar, auch wenn die Box nicht erreichbar ist.
 
 ### Aktionen
