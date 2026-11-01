@@ -40,6 +40,8 @@ MAX_BACKOFF_SECONDS = 300
 WAN_OVERRIDE_SECONDS = 120
 # The access profiles of the box rarely change: read them every n-th poll.
 FILTER_PROFILE_REFRESH_POLLS = 20
+# A new firmware is not urgent to the minute: ask for it every n-th poll (about an hour).
+FIRMWARE_REFRESH_POLLS = 120
 BACKOFF_AFTER_FAILURES = 3
 # The addresses, link rates and DSL line change rarely: read them every n-th poll, and at once
 # after the box reconnected.
@@ -77,6 +79,7 @@ KEY_DEVICES_OFFLINE = "devices_offline"
 KEY_DEVICES_TOTAL = "devices_total"
 
 # Keys of the internet connection of the box (device of the box).
+KEY_FIRMWARE = "firmware"
 KEY_GUEST_WIFI = "guest_wifi"
 KEY_INTERNET_CONNECTED = "internet_connected"
 KEY_INTERNET_DOWNLOAD = "internet_download"

@@ -9,7 +9,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import async_capture_events
 
 from custom_components.fritzbox_network import coordinator as coordinator_module
-from custom_components.fritzbox_network.models import parse_internet, spectrum
+from custom_components.fritzbox_network.models import parse_firmware, parse_internet, spectrum
 
 from .conftest import INTERNET_FAST, INTERNET_SLOW
 
@@ -389,3 +389,53 @@ async def test_a_refusal_of_the_box_is_an_error_not_a_changed_switch(hass, fake_
             "switch", "turn_on", {"entity_id": "switch.fritz_network_guest_wifi"}, blocking=True
         )
     assert hass.states.get("switch.fritz_network_guest_wifi").state == "off"
+
+
+def test_the_firmware_offer_is_read_from_the_answer():
+    assert parse_firmware({}) is None
+    assert parse_firmware({"NewUpgradeAvailable": None}) is None
+    none = parse_firmware({"NewUpgradeAvailable": False})
+    assert none.update_available is False and none.version is None
+    offer = parse_firmware(
+        {
+            "NewUpgradeAvailable": True,
+            "NewX_AVM-DE_Version": "154.08.00",
+            "NewX_AVM-DE_InfoURL": "https://example.org/info",
+        }
+    )
+    assert (offer.update_available, offer.version) == (True, "154.08.00")
+    assert offer.info_url == "https://example.org/info"
+
+
+async def test_a_newer_firmware_shows_as_an_update(hass, fake_client, entry):
+    fake_client.firmware = {"NewUpgradeAvailable": True, "NewX_AVM-DE_Version": "8.30"}
+    await _setup(hass, entry)
+    state = hass.states.get("update.fritz_network_firmware")
+    assert state.state == "on"
+    assert state.attributes["installed_version"] == "8.25"
+    assert state.attributes["latest_version"] == "8.30"
+
+
+async def test_without_a_newer_firmware_the_update_is_off(hass, fake_client, entry):
+    await _setup(hass, entry)
+    state = hass.states.get("update.fritz_network_firmware")
+    assert state.state == "off"
+    assert state.attributes["latest_version"] == state.attributes["installed_version"]
+
+
+async def test_a_box_that_does_not_answer_about_firmware_has_no_update_entity(
+    hass, fake_client, entry
+):
+    fake_client.firmware = {}
+    await _setup(hass, entry)
+    assert hass.states.get("update.fritz_network_firmware") is None
+
+
+async def test_the_topology_carries_the_firmware_offer(hass, hass_ws_client, fake_client, entry):
+    fake_client.firmware = {"NewUpgradeAvailable": True, "NewX_AVM-DE_Version": "8.30"}
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": COMMAND})
+    assert (await client.receive_json())["success"]
+    topology = (await client.receive_json())["event"]
+    assert topology["firmware"] == {"installed": "8.25", "latest": "8.30", "info_url": None}

@@ -44,6 +44,7 @@ from .const import (
     EVENT_INTERNET_RECONNECTED,
     EVENT_NEW_DEVICE,
     FILTER_PROFILE_REFRESH_POLLS,
+    FIRMWARE_REFRESH_POLLS,
     INTERNET_DETAIL_POLLS,
     INTERNET_EVENTS,
     INTERNET_HISTORY,
@@ -53,7 +54,16 @@ from .const import (
     WAN_OVERRIDE_SECONDS,
 )
 from .filters import select_hosts
-from .models import Host, InternetInfo, MeshNode, MeshTopology, NetworkData, parse_internet
+from .models import (
+    FirmwareInfo,
+    Host,
+    InternetInfo,
+    MeshNode,
+    MeshTopology,
+    NetworkData,
+    parse_firmware,
+    parse_internet,
+)
 from .vendor import vendor_of
 
 _LOGGER = logging.getLogger(__name__)
@@ -114,6 +124,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.internet_rate: tuple[float, float] | None = None
         # (value, monotonic deadline) of a guest Wi-Fi switch the box has not shown yet
         self._guest_override: tuple[bool, float] | None = None
+        # the firmware offer of the box, asked for now and then
+        self._firmware: FirmwareInfo | None = None
         # since when the noise margin of the DSL line has been below the limit
         self.internet_low_margin_since: datetime | None = None
         self.internet_samples: deque[tuple[float, float, float]] = deque(maxlen=INTERNET_HISTORY)
@@ -149,6 +161,18 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             return None
         return fast, slow
 
+    def _fetch_firmware(self) -> None:
+        """The firmware offer, now and then; what was known stays if the box does not answer."""
+        if self._polls % FIRMWARE_REFRESH_POLLS:
+            return
+        try:
+            offer = parse_firmware(self.client.get_firmware())
+        except (*_FETCH_ERRORS, TypeError) as err:
+            _LOGGER.debug("Firmware offer unavailable: %s", err)
+            return
+        if offer is not None:
+            self._firmware = offer
+
     def _fetch_guest_wifi(self) -> bool | None:
         try:
             return self.client.get_guest_wifi()
@@ -176,6 +200,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 _LOGGER.debug("Access profiles unavailable: %s", err)
         internet = self._fetch_internet()
         guest = self._fetch_guest_wifi()
+        self._fetch_firmware()
         self._polls += 1
         return hosts, mesh, internet, guest
 
@@ -212,6 +237,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             mesh=mesh,
             internet=self._update_internet(wan),
             guest_wifi=self._apply_guest_override(guest),
+            firmware=self._firmware,
         )
 
     def _apply_guest_override(self, polled: bool | None) -> bool | None:
@@ -511,6 +537,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 mesh=self.data.mesh,
                 internet=self.data.internet,
                 guest_wifi=self.data.guest_wifi,
+                firmware=self.data.firmware,
             )
         )
         await self.async_request_refresh()

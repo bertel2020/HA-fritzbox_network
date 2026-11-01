@@ -84,6 +84,18 @@ def _uplink(mesh: MeshTopology, node: MeshNode) -> dict[str, Any] | None:
     }
 
 
+def _firmware(coordinator: FritzNetworkCoordinator) -> dict[str, Any] | None:
+    """The firmware the box runs and the newer one it offers, if any."""
+    firmware = coordinator.data.firmware
+    if firmware is None:
+        return None
+    return {
+        "installed": coordinator.client.system_version,
+        "latest": firmware.version if firmware.update_available else None,
+        "info_url": firmware.info_url if firmware.update_available else None,
+    }
+
+
 def _internet(coordinator: FritzNetworkCoordinator) -> dict[str, Any] | None:
     """The internet connection as the panel draws it; None where the box tells nothing about it."""
     info = coordinator.data.internet
@@ -201,6 +213,7 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
             )
         ],
         "internet": _internet(coordinator),
+        "firmware": _firmware(coordinator),
         "nodes": nodes,
         "clients": clients,
     }

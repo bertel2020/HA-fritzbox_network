@@ -82,6 +82,7 @@ class FakeClient:
         self.internet_reads: list[bool] = []
         self.fail_actions = False
         self.guest_wifi: bool | None = False
+        self.firmware: dict = {"NewUpgradeAvailable": False}
         self.internet_fast: dict = {key: dict(value) for key, value in INTERNET_FAST.items()}
         self.internet_slow: dict = {key: dict(value) for key, value in INTERNET_SLOW.items()}
 
@@ -100,6 +101,9 @@ class FakeClient:
     def get_internet(self, details: bool):
         self.internet_reads.append(details)
         return self.internet_fast, self.internet_slow if details else {}
+
+    def get_firmware(self) -> dict:
+        return dict(self.firmware)
 
     def get_guest_wifi(self) -> bool | None:
         return self.guest_wifi

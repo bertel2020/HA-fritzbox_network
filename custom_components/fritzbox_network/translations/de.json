@@ -227,6 +227,11 @@
       "internet_connected": {
         "name": "Internetverbindung"
       }
+    },
+    "update": {
+      "firmware": {
+        "name": "Firmware"
+      }
     }
   },
   "exceptions": {

@@ -163,6 +163,14 @@ class FritzNetworkClient:
             slow = read(INTERNET_SLOW) if details else {}
         return fast, slow
 
+    def get_firmware(self) -> dict[str, Any]:
+        """What the box says about a newer firmware, as the action answers; empty if nothing."""
+        with self._lock:
+            try:
+                return self._connection.call_action("UserInterface1", "GetInfo")
+            except (FritzActionError, FritzServiceError, FritzAuthorizationError, KeyError):
+                return {}
+
     def _guest_wifi_service(self) -> str | None:
         """The service of the guest Wi-Fi: the one whose access point type says "guest"."""
         if not self._guest_searched:

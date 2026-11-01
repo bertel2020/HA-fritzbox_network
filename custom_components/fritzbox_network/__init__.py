@@ -52,6 +52,7 @@ PLATFORMS: list[Platform] = [
     Platform.SELECT,
     Platform.SENSOR,
     Platform.SWITCH,
+    Platform.UPDATE,
 ]
 
 ISSUE_MISSING_RIGHTS = "missing_rights"

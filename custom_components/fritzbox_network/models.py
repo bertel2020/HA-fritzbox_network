@@ -171,6 +171,26 @@ class InternetInfo:
     dsl: DslInfo | None
 
 
+@dataclass(frozen=True)
+class FirmwareInfo:
+    """Whether the box offers a newer firmware than the one it runs."""
+
+    update_available: bool
+    version: str | None
+    info_url: str | None
+
+
+def parse_firmware(result: dict[str, Any]) -> FirmwareInfo | None:
+    """The firmware offer from UserInterface1/GetInfo; None where the box gives no answer."""
+    if not result or result.get("NewUpgradeAvailable") is None:
+        return None
+    return FirmwareInfo(
+        update_available=bool(result["NewUpgradeAvailable"]),
+        version=_address(result.get("NewX_AVM-DE_Version")),
+        info_url=_address(result.get("NewX_AVM-DE_InfoURL")),
+    )
+
+
 @dataclass
 class NetworkData:
     """Result of one poll."""
@@ -180,6 +200,7 @@ class NetworkData:
     internet: InternetInfo | None = None
     # whether the guest Wi-Fi is on; None where the box has none
     guest_wifi: bool | None = None
+    firmware: FirmwareInfo | None = None
 
 
 def _text(item: ET.Element, tag: str) -> str | None:
