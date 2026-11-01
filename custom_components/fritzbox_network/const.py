@@ -35,6 +35,7 @@ WAN_OVERRIDE_SECONDS = 120
 BACKOFF_AFTER_FAILURES = 3
 
 EVENT_DEVICE_RENAMED = f"{DOMAIN}_device_renamed"
+EVENT_NEW_DEVICE = f"{DOMAIN}_new_device"
 
 # Keys of the entities per client device (also part of the unique id).
 KEY_TRACKER = "tracker"

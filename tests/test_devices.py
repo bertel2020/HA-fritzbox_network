@@ -9,6 +9,7 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
+    async_capture_events,
     mock_restore_cache_with_extra_data,
 )
 
@@ -339,3 +340,21 @@ async def test_box_diagnostic_sensors_are_off_by_default_and_report_failures(
 
     assert hass.states.get(ids["failed_polls"]).state == "1"
     assert hass.states.get(ids["mesh_status"]).state == "available"
+
+
+async def test_new_device_fires_an_event_but_not_at_startup(hass, fake_client, entry):
+    events = async_capture_events(hass, "fritzbox_network_new_device")
+    coordinator = await _setup(hass, entry)
+    assert events == []
+
+    new_mac = "02:00:00:00:00:99"
+    fake_client.hosts = [
+        *fake_client.hosts,
+        replace(fake_client.hosts[0], mac=new_mac, mac_list=[new_mac], name="newcomer"),
+    ]
+    await coordinator.async_refresh()
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert [e.data["mac"] for e in events] == [new_mac]
+    assert events[0].data["name"] == "newcomer"

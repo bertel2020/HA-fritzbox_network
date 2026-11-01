@@ -111,6 +111,8 @@ Das Gerät der FRITZ!Box hat außerdem drei Diagnose-Sensoren, standardmäßig a
 
 Wird ein Gerät in der Box umbenannt, löst Home Assistant das Ereignis `fritzbox_network_device_renamed` aus, mit `mac`, `old_name` und `new_name`.
 
+Listet die Box ein Gerät, das sie vorher nicht gelistet hat, löst Home Assistant das Ereignis `fritzbox_network_new_device` aus, mit `mac`, `name` und `ip`. Damit lässt sich eine Benachrichtigung über neue Geräte im Netz bauen. Was die Box beim Start listet, gilt nicht als neu: Geräte, die dazukamen, während Home Assistant aus war, werden nicht gemeldet, ebenso wenig Geräte, die ein Filter ausschließt.
+
 ## Namen und Entity-IDs
 
 Die Entity-ID entsteht einmal, beim Anlegen, aus der MAC-Adresse ohne Doppelpunkte:

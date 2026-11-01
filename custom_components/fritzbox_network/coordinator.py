@@ -41,6 +41,7 @@ from .const import (
     DEFAULT_SKIP_OFFLINE,
     DOMAIN,
     EVENT_DEVICE_RENAMED,
+    EVENT_NEW_DEVICE,
     FILTER_EXCLUDE,
     FILTER_INCLUDE,
     MAX_BACKOFF_SECONDS,
@@ -81,6 +82,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.box_device_id = box_device_id
         # Unfiltered host list: the options flow offers it for selection.
         self.all_hosts: dict[str, Host] = {}
+        # None until the first poll: what the box lists then is not new.
+        self._known_macs: set[str] | None = None
         self.last_active: dict[str, datetime] = {}
         self._failures = 0
         self.last_success: datetime | None = None
@@ -125,6 +128,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.last_success = dt_util.utcnow()
         self.all_hosts = {h.mac: h for h in hosts}
         selected = self._apply_filters(hosts, mesh)
+        self._fire_new_devices(selected)
         self._apply_wan_override(selected)
 
         now = dt_util.utcnow()
@@ -229,6 +233,22 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 # a device of another integration with the same MAC stays
                 registry.async_update_device(
                     device.id, remove_config_entry_id=self.config_entry.entry_id
+                )
+
+    def _fire_new_devices(self, selected: dict[str, Host]) -> None:
+        """Announce hosts the box lists for the first time since the integration runs.
+
+        Hosts a filter excludes are not announced, and not again if they get
+        selected later; devices that joined while Home Assistant was down are not
+        announced either.
+        """
+        known, self._known_macs = self._known_macs, set(self.all_hosts)
+        if known is None:
+            return
+        for mac in self._known_macs - known:
+            if (host := selected.get(mac)) is not None:
+                self.hass.bus.async_fire(
+                    EVENT_NEW_DEVICE, {"mac": mac, "name": host.name, "ip": host.ip}
                 )
 
     def _sync_names(self, hosts: dict[str, Host]) -> None:

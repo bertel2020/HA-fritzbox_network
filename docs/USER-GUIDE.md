@@ -111,6 +111,8 @@ The FRITZ!Box device also has three diagnostic sensors, off by default: **Last u
 
 When a device is renamed in the box, Home Assistant fires the event `fritzbox_network_device_renamed` with `mac`, `old_name` and `new_name`.
 
+When the box lists a device it did not list before, Home Assistant fires the event `fritzbox_network_new_device` with `mac`, `name` and `ip`. Use it to be notified about new devices in your network. What the box lists at startup is not new, so devices that joined while Home Assistant was down are not announced, and neither are devices a filter excludes.
+
 ## Names and entity ids
 
 The entity id is created once, when the device is added, from the MAC address without colons:
