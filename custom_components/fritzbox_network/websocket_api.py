@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import Any
 
+from fritzconnection.core.exceptions import FritzConnectionException
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import (
@@ -43,6 +44,8 @@ ENTRIES_COMMAND = f"{DOMAIN}/entries"
 CLEANUP_LIST_COMMAND = f"{DOMAIN}/cleanup/list"
 HIDE_COMMAND = f"{DOMAIN}/devices/hide"
 UNHIDE_COMMAND = f"{DOMAIN}/devices/unhide"
+RECONNECT_COMMAND = f"{DOMAIN}/internet/reconnect"
+REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
 FILTER_PREVIEW_COMMAND = f"{DOMAIN}/filter/preview"
 FILTER_APPLY_COMMAND = f"{DOMAIN}/filter/apply"
 ERR_CHANGED = "changed"
@@ -416,6 +419,55 @@ def ws_unhide_devices(
     connection.send_result(msg["id"], {"unhidden": sorted(back)})
 
 
+async def _box_action(
+    hass: HomeAssistant,
+    connection: websocket_api.ActiveConnection,
+    msg: dict[str, Any],
+    method: str,
+) -> None:
+    """Run an action on the box that interrupts the network, for the user's rights only."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    _, coordinator = found
+    if not coordinator.can_write:
+        connection.send_error(
+            msg["id"], websocket_api.ERR_UNAUTHORIZED, "No right to change settings"
+        )
+        return
+    try:
+        await hass.async_add_executor_job(getattr(coordinator.client, method))
+    except FritzConnectionException as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    # the box needs a moment: the next poll shows the new state
+    coordinator.async_update_listeners()
+    connection.send_result(msg["id"], {})
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): RECONNECT_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_reconnect(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Hang up and dial in again. Only the panel offers it, behind a confirmation."""
+    await _box_action(hass, connection, msg, "reconnect")
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): REBOOT_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_reboot(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Restart the box. Only the panel offers it, behind a confirmation."""
+    await _box_action(hass, connection, msg, "reboot")
+
+
 def _filter_preview(
     entry: FritzNetworkConfigEntry,
     coordinator: FritzNetworkCoordinator,
@@ -506,5 +558,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_cleanup_list)
     websocket_api.async_register_command(hass, ws_hide_devices)
     websocket_api.async_register_command(hass, ws_unhide_devices)
+    websocket_api.async_register_command(hass, ws_reconnect)
+    websocket_api.async_register_command(hass, ws_reboot)
     websocket_api.async_register_command(hass, ws_filter_preview)
     websocket_api.async_register_command(hass, ws_filter_apply)

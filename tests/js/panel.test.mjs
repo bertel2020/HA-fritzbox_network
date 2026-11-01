@@ -616,3 +616,15 @@ test("the access type is named in the language of the page, an unknown one as th
   assert.match(html, /Glasfaser/);
   assert.doesNotMatch(html, /Leitungsqualität/);
 });
+
+test("the internet page offers to reconnect and restart, and says why it cannot", () => {
+  const t = texts.panelTexts("en");
+  const page = (canWrite) => internetPage.renderInternet(internet, { t, language: "en", now: Date.now(), canWrite });
+  const allowed = page(true);
+  assert.match(allowed, /data-act="reconnect" data-k="reconnect">Reconnect/);
+  assert.match(allowed, /data-act="reboot"[^>]*>Restart the box/);
+  assert.doesNotMatch(allowed, /data-act="reboot"[^>]*disabled/);
+  const refused = page(false);
+  assert.match(refused, /data-act="reboot"[^>]*disabled/);
+  assert.match(refused, /may not change settings/);
+});

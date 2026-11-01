@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from unittest.mock import patch
 
+from fritzconnection.core.exceptions import FritzActionError
 import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -79,6 +80,7 @@ class FakeClient:
         self.profiles = {"filtprof1": "Standard", "filtprof2": "Kids"}
         self.calls: list[tuple] = []
         self.internet_reads: list[bool] = []
+        self.fail_actions = False
         self.internet_fast: dict = {key: dict(value) for key, value in INTERNET_FAST.items()}
         self.internet_slow: dict = {key: dict(value) for key, value in INTERNET_SLOW.items()}
 
@@ -97,6 +99,16 @@ class FakeClient:
     def get_internet(self, details: bool):
         self.internet_reads.append(details)
         return self.internet_fast, self.internet_slow if details else {}
+
+    def reconnect(self) -> None:
+        self.calls.append(("reconnect",))
+        if self.fail_actions:
+            raise FritzActionError("refused")
+
+    def reboot(self) -> None:
+        self.calls.append(("reboot",))
+        if self.fail_actions:
+            raise FritzActionError("refused")
 
     def get_host_ip(self, mac: str) -> str | None:
         return next((h.ip for h in self.hosts if h.mac == mac), None)

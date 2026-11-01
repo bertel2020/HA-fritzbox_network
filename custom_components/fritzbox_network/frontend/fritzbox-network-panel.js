@@ -555,7 +555,12 @@ class FritzboxNetworkPanel extends HTMLElement {
     const language = this._hass?.language;
     this._set(
       "internet-view",
-      renderInternet(this._state.data?.internet ?? null, { t: this._t, language, now: Date.now() })
+      renderInternet(this._state.data?.internet ?? null, {
+        t: this._t,
+        language,
+        now: Date.now(),
+        canWrite: Boolean(this._state.data?.can_write),
+      })
     );
   }
 
@@ -790,6 +795,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._openedHere = true;
       globalThis.location.hash = "#/internet";
       return;
+    } else if (ds.act === "reconnect" || ds.act === "reboot") {
+      return this._interrupt(ds.act);
     } else if (ds.act === "back") {
       this._leaveDevice();
       return;
@@ -830,6 +837,25 @@ class FritzboxNetworkPanel extends HTMLElement {
       return;
     }
     this._update();
+  }
+
+  /** An action that interrupts the network: it asks first and says what the box answered. */
+  async _interrupt(kind) {
+    const t = this._t;
+    const a = t.inet.actions;
+    const ok = await openDialog(this.shadowRoot, t, {
+      title: a[`${kind}Title`],
+      body: a[`${kind}Body`],
+      ok: a[`${kind}Ok`],
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      await this._ws(kind === "reconnect" ? "internet/reconnect" : "box/reboot");
+      showToast(this.shadowRoot, a[kind === "reconnect" ? "toastReconnect" : "toastReboot"]);
+    } catch (err) {
+      showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
+    }
   }
 
   async _hide() {

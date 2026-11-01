@@ -160,6 +160,16 @@ class FritzNetworkClient:
             slow = read(INTERNET_SLOW) if details else {}
         return fast, slow
 
+    def reconnect(self) -> None:
+        """Hang up and dial in again, which usually brings a new external address."""
+        with self._lock:
+            self._connection.call_action("WANIPConn1", "ForceTermination")
+
+    def reboot(self) -> None:
+        """Restart the box."""
+        with self._lock:
+            self._connection.call_action("DeviceConfig1", "Reboot")
+
     def get_host_ip(self, mac: str) -> str | None:
         """The IPv4 address the box has for this MAC now; None if it has none or no entry.
 

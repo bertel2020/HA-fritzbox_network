@@ -252,3 +252,56 @@ async def test_the_first_reading_announces_nothing(hass, fake_client, entry):
     events = async_capture_events(hass, "fritzbox_network_internet_ip_changed")
     await _setup(hass, entry)
     assert not events
+
+
+async def test_the_panel_can_reconnect_and_restart_the_box(
+    hass, hass_ws_client, fake_client, entry
+):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id(
+        {"type": "fritzbox_network/internet/reconnect", "entry_id": entry.entry_id}
+    )
+    assert (await client.receive_json())["success"]
+    await client.send_json_auto_id(
+        {"type": "fritzbox_network/box/reboot", "entry_id": entry.entry_id}
+    )
+    assert (await client.receive_json())["success"]
+    assert ("reconnect",) in fake_client.calls and ("reboot",) in fake_client.calls
+
+
+async def test_a_user_without_the_right_cannot_interrupt_the_network(
+    hass, hass_ws_client, fake_client, entry
+):
+    fake_client.writable = False
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id(
+        {"type": "fritzbox_network/internet/reconnect", "entry_id": entry.entry_id}
+    )
+    result = await client.receive_json()
+    assert not result["success"] and result["error"]["code"] == "unauthorized"
+    assert ("reconnect",) not in fake_client.calls
+
+
+async def test_a_refusal_of_the_box_goes_back_to_the_panel(
+    hass, hass_ws_client, fake_client, entry
+):
+    await _setup(hass, entry)
+    fake_client.fail_actions = True
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id(
+        {"type": "fritzbox_network/box/reboot", "entry_id": entry.entry_id}
+    )
+    result = await client.receive_json()
+    assert not result["success"] and "refused" in result["error"]["message"]
+
+
+async def test_an_unknown_box_is_refused(hass, hass_ws_client, fake_client, entry):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": "fritzbox_network/box/reboot", "entry_id": "nope"})
+    assert (await client.receive_json())["error"]["code"] == "not_found"

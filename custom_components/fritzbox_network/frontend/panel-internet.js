@@ -167,9 +167,20 @@ function hintsHtml(internet, t, now) {
     .join("")}</section>`;
 }
 
+/** The two actions that interrupt the network; without the right to change settings they say why they are off. */
+function actions(canWrite, t) {
+  const a = t.inet.actions;
+  const off = canWrite ? "" : " disabled";
+  return `<section class="card sec"><span class="label">${escapeHtml(a.title)}</span>
+    <div class="btn-row tight">
+      <button class="btn" data-act="reconnect" data-k="reconnect"${off}>${escapeHtml(a.reconnect)}</button>
+      <button class="btn dp" data-act="reboot" data-k="reboot"${off}>${escapeHtml(a.reboot)}</button></div>
+    <p class="hint">${escapeHtml(canWrite ? a.hint : a.noRights)}</p></section>`;
+}
+
 /** The whole page. Without data from the box it says so and offers the way back. */
 export function renderInternet(internet, ctx) {
-  const { t, language, now } = ctx;
+  const { t, language, now, canWrite } = ctx;
   const i = t.inet;
   const back = `<div class="dhead"><button class="back" data-act="back" data-k="back">${ic("back")}${escapeHtml(t.tabs.net)}</button>
     <h1 id="dtitle" tabindex="-1">${escapeHtml(i.title)}</h1></div>`;
@@ -204,5 +215,6 @@ export function renderInternet(internet, ctx) {
       ${chart(internet, language, t)}
       <p class="hint">${escapeHtml(i.measureNote)}</p></section>
     ${internet.dsl ? lineQuality(internet.dsl, language, t) : ""}
-    ${events(internet, t, now)}`;
+    ${events(internet, t, now)}
+    ${actions(canWrite, t)}`;
 }
