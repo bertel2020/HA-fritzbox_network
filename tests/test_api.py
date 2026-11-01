@@ -2,9 +2,13 @@
 
 import threading
 import time
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
-from fritzconnection.core.exceptions import FritzLookUpError, FritzServiceError
+from fritzconnection.core.exceptions import (
+    FritzActionError,
+    FritzLookUpError,
+    FritzServiceError,
+)
 import pytest
 
 from custom_components.fritzbox_network.api import REQUEST_TIMEOUT, FritzNetworkClient
@@ -169,4 +173,113 @@ def test_set_friendly_name_by_mac():
         "X_AVM-DE_SetFriendlyNameByMAC",
         NewMACAddress="02:00:00:00:00:03".upper(),
         **{"NewX_AVM-DE_FriendlyName": "TV"},
+    )
+
+
+def test_connect_opens_the_connection_with_a_timeout():
+    client = FritzNetworkClient("192.168.178.1", 49000, "user", "secret", use_tls=True)
+    with patch("custom_components.fritzbox_network.api.FritzConnection") as connection:
+        client.connect()
+
+    assert connection.call_args.kwargs["timeout"] == REQUEST_TIMEOUT
+    assert connection.call_args.kwargs["use_tls"] is True
+    assert client.model_name == connection.return_value.modelname
+    assert client.system_version == connection.return_value.system_version
+
+
+def test_using_the_client_before_connecting_is_an_error():
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    with pytest.raises(RuntimeError):
+        _ = client.model_name
+
+
+def test_serial_number_is_none_when_empty():
+    client = _client()
+    client._fc.call_action.side_effect = None
+    client._fc.call_action.return_value = {"NewSerialNumber": ""}
+    assert client.serial_number is None
+    client._fc.call_action.return_value = {"NewSerialNumber": "ABC"}
+    assert client.serial_number == "ABC"
+
+
+def test_can_write_needs_readwrite_box_admin():
+    client = _client()
+    client._fc.call_action.side_effect = None
+    with patch("custom_components.fritzbox_network.api.parse_rights") as rights:
+        rights.return_value = {"BoxAdmin": "readwrite"}
+        assert client.can_write() is True
+        rights.return_value = {"BoxAdmin": "readonly"}
+        assert client.can_write() is False
+
+    client._fc.call_action.side_effect = FritzActionError("denied")
+    assert client.can_write() is False
+
+
+def test_mesh_is_none_when_the_box_has_none():
+    client = _client()
+    client._fc.call_action.side_effect = FritzServiceError("no")
+    assert client.get_mesh() is None
+
+
+def test_mesh_is_downloaded_and_parsed():
+    client = _client()
+    client._fc.call_action.side_effect = None
+    client._fc.call_action.return_value = {"NewX_AVM-DE_MeshListPath": "/mesh.json"}
+    client._fc.session.get.return_value.__enter__.return_value.text = '{"nodes": []}'
+
+    assert client.get_mesh() is not None
+
+
+@pytest.mark.parametrize(
+    ("serial", "role", "expected"),
+    [("ABC", "master", False), ("", "slave", False), ("021234567890", "slave", True)],
+)
+def test_repeater_is_found_by_the_serial_number(serial, role, expected):
+    client = _client()
+    node = MagicMock(macs=["02:12:34:56:78:90"], role=role)
+    with (
+        patch.object(
+            FritzNetworkClient, "serial_number", new_callable=lambda: property(lambda s: serial)
+        ),
+        patch.object(FritzNetworkClient, "get_mesh", return_value=MagicMock(nodes={"n": node})),
+    ):
+        assert client.is_mesh_repeater() is expected
+
+
+def test_no_mesh_means_no_repeater():
+    client = _client()
+    with (
+        patch.object(
+            FritzNetworkClient,
+            "serial_number",
+            new_callable=lambda: property(lambda s: "021234567890"),
+        ),
+        patch.object(FritzNetworkClient, "get_mesh", return_value=None),
+    ):
+        assert client.is_mesh_repeater() is False
+
+
+def test_filter_profiles_are_empty_when_the_action_fails():
+    client = _client()
+    client._fc.call_action.side_effect = FritzActionError("no")
+    assert client.get_filter_profiles() == {}
+
+
+def test_setting_a_filter_profile_needs_the_service():
+    client = _client()
+    client._fc.services = {}
+    with pytest.raises(FritzServiceError):
+        client.set_filter_profile("192.0.2.1", "p1")
+    with pytest.raises(FritzServiceError):
+        client.set_internet_access("192.0.2.1", True)
+
+
+def test_wake_on_lan_by_mac():
+    client = _client()
+    client._fc.call_action.side_effect = None
+
+    client.wake_on_lan("02:00:00:00:00:03")
+
+    client._fc.call_action.assert_called_once_with(
+        "Hosts1", "X_AVM-DE_WakeOnLANByMACAddress", NewMACAddress="02:00:00:00:00:03".upper()
     )

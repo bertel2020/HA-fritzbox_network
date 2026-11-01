@@ -14,6 +14,8 @@ from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import FritzNetworkClientEntity, async_setup_client_entities
 from .models import Host
 
+PARALLEL_UPDATES = 0
+
 
 async def async_setup_entry(
     hass: HomeAssistant,

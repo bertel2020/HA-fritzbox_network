@@ -63,6 +63,9 @@ MESH_AVAILABLE = "available"
 MESH_UNAVAILABLE = "unavailable"
 
 
+PARALLEL_UPDATES = 0
+
+
 async def async_setup_entry(
     hass: HomeAssistant,
     entry: FritzNetworkConfigEntry,
