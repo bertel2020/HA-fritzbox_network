@@ -255,3 +255,88 @@ test("the editors of the other cards name every option", async () => {
 test("names are escaped", () => {
   assert.equal(card.escapeHtml('<b>"x"&'), "&lt;b&gt;&quot;x&quot;&amp;");
 });
+
+const NOW = Date.parse("2026-11-01T12:00:00Z");
+const day = (n) => new Date(NOW - n * 86400000).toISOString();
+const panelData = {
+  nodes: [
+    { mac: "aa", name: "Box", role: "master", radios: {} },
+    { mac: "bb", name: "Repeater", role: "slave", radios: {} },
+  ],
+  clients: [
+    { mac: "01", id: "01", name: "tv", online: true, ap_mac: "aa", link_type: "lan", rate_download: 1000, created_at: day(100) },
+    { mac: "02", id: "02", name: "phone", online: true, ap_mac: "bb", link_type: "wlan", band: "5ghz", signal_dbm: -50, rate_download: 30, rate_max_download: 150, created_at: day(2), wan_access: false },
+    { mac: "03", id: "03", name: "guest", online: true, ap_mac: "bb", link_type: "wlan", band: "2_4ghz", signal_dbm: -70, guest: true, created_at: day(1) },
+    { mac: "04", id: "04", name: "old", online: false, ap_mac: null, link_type: null, last_online: day(60), created_at: day(300) },
+    { mac: "05", id: "05", name: "recent", online: false, ap_mac: "aa", link_type: "lan", last_online: day(3), created_at: day(300) },
+    { mac: "06", id: "06", name: "unknown", online: false, ap_mac: "aa", link_type: "lan", created_at: day(300) },
+  ],
+};
+
+test("days since a time, and none for an unknown one", () => {
+  assert.equal(card.daysSince(day(3), NOW), 3);
+  assert.equal(card.daysSince(day(0), NOW), 0);
+  assert.equal(card.daysSince(null, NOW), null);
+  assert.equal(card.daysSince("garbage", NOW), null);
+});
+
+test("the panel filters count what they would show", () => {
+  const counts = card.panelCounts(panelData, NOW);
+  assert.deepEqual(counts, {
+    all: 6, online: 3, offline: 3, wlan: 2, lan: 3, guest: 1, blocked: 1, weak: 1, new: 2, stale: 1, unassigned: 1,
+  });
+});
+
+test("a device the box says nothing about is not blocked", () => {
+  assert.equal(card.isBlocked({ wan_access: false }), true);
+  assert.equal(card.isBlocked({ wan_access: true }), false);
+  assert.equal(card.isBlocked({ wan_access: null }), false);
+  assert.equal(card.isBlocked({}), false);
+});
+
+test("a device is stale only when its time online is known and old enough", () => {
+  const names = (f) => card.panelClients(panelData, { filter: f, now: NOW }).map((c) => c.name);
+  assert.deepEqual(names("stale"), ["old"]);
+  assert.deepEqual(names("new"), ["guest", "phone"]);
+});
+
+test("the list sorts online devices first, then by the chosen key", () => {
+  const names = (sort) => card.panelClients(panelData, { sort, now: NOW }).map((c) => c.name);
+  assert.deepEqual(names("name"), ["guest", "phone", "tv", "old", "recent", "unknown"]);
+  assert.deepEqual(names("signal"), ["phone", "guest", "tv", "old", "recent", "unknown"]);
+  assert.deepEqual(names("rate").slice(0, 3), ["tv", "phone", "guest"]);
+  assert.deepEqual(names("last").slice(3), ["recent", "old", "unknown"]);
+});
+
+test("the search works on top of the filter", () => {
+  const found = card.panelClients(panelData, { filter: "online", query: "PHO", now: NOW });
+  assert.deepEqual(found.map((c) => c.name), ["phone"]);
+});
+
+test("groups by access point keep empty ones only while nothing narrows the list", () => {
+  const all = card.panelClients(panelData, { now: NOW });
+  assert.deepEqual(card.panelGroups(panelData, all).map((g) => g.key), ["aa", "bb", "none"]);
+  const narrow = card.panelClients(panelData, { filter: "guest", now: NOW });
+  assert.deepEqual(card.panelGroups(panelData, narrow, "ap", true).map((g) => g.key), ["bb"]);
+  const lonely = { ...panelData, clients: [panelData.clients[0]] };
+  assert.deepEqual(card.panelGroups(lonely, lonely.clients).map((g) => g.key), ["aa", "bb"]);
+});
+
+test("groups by band and a flat list", () => {
+  const all = card.panelClients(panelData, { now: NOW });
+  assert.deepEqual(card.panelGroups(panelData, all, "band").map((g) => g.key), ["lan", "2_4ghz", "5ghz", "none"]);
+  assert.deepEqual(card.panelGroups(panelData, all, "flat").map((g) => g.clients.length), [6]);
+});
+
+test("the head of an access point sums up its online devices", () => {
+  assert.deepEqual(card.apSummary(panelData, panelData.nodes[1]), { wlan: 2, lan: 0, minRate: 30 });
+  assert.deepEqual(card.apSummary(panelData, panelData.nodes[0]), { wlan: 0, lan: 1, minRate: 1000 });
+  assert.deepEqual(card.apSummary({ clients: [] }, panelData.nodes[0]), { wlan: 0, lan: 0, minRate: null });
+});
+
+test("the route names a device only for a valid hash", () => {
+  assert.equal(card.deviceFromHash("#/device/3c2af4a1b2c3"), "3c2af4a1b2c3");
+  assert.equal(card.deviceFromHash("#/device/<script>"), null);
+  assert.equal(card.deviceFromHash("#/other"), null);
+  assert.equal(card.deviceFromHash(""), null);
+});

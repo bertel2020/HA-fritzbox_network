@@ -16,6 +16,7 @@ The integration works locally with the FRITZ!Box and makes no connections to the
 - [Names and entity ids](#names-and-entity-ids)
 - [Deleting and hiding devices](#deleting-and-hiding-devices)
 - [Topology card](#topology-card) with the [Wi-Fi card](#wi-fi-card) and the [devices card](#devices-card)
+- [Side panel](#side-panel)
 - [Blueprints](#blueprints)
 - [Next to the core integration](#next-to-the-core-integration)
 - [Privacy and security](#privacy-and-security)
@@ -228,6 +229,30 @@ entities:
 | `hide_rate`, `hide_signal` | Hide the rate or the signal (default `false`) |
 
 A tap on the name opens the device. Both cards need an administrator account like the topology card and load themselves.
+
+## Side panel
+
+The integration adds a **FRITZ!Box Network** entry to the sidebar. It shows the whole network on one page and is only visible to administrators. The panel gets its data over the same connection as the dashboard cards and does not query the box additionally.
+
+**Network.** At the top are the status filters with the number of devices they would find: All, Online, Offline, Wi-Fi, LAN, Guest, Blocked, Weak link, New (7 days), Long offline and No access point. A filter with no match stays away unless you chose it. Below are the search (name, IP, MAC or vendor; the `/` key jumps into it) and a choice each for sorting (name, signal, rate, last online) and grouping (access point, band / LAN, flat). Every access point is a card with a summary ("1 Wi-Fi · 3 LAN · min. 52 Mbit/s"), channel, load and noise of its radios and the devices. Online devices come first.
+
+- **New (7 days)** and **Long offline** (30 days) are only known to Home Assistant: "New" counts from when the device was created in Home Assistant, "Long offline" only counts devices whose last time online is known. After a fresh install everything is new at first.
+- **Blocked** means the box reports no internet access for the device. When it reports nothing, the device does not count as blocked.
+
+**Device.** A tap on a device opens its page (address `#/device/<MAC without colons>`, the back button of the browser works). On wide screens it sits to the right of the list, on a phone it replaces the list. It shows rate, highest rate, signal and band (the port for LAN), the master data and the actions:
+
+| Action | Note |
+|--------|------|
+| Internet access | Switch, without a question: blocking and allowing can be undone at any time |
+| Priority | Switch |
+| Access profile | Choice among the profiles of the box, when the box supplies profiles |
+| Wake on LAN | only for devices that are offline |
+| Rename | Dialog; calls the `set_name` action |
+| In Home Assistant | opens the device in the settings |
+
+An action is off and says why when the box user lacks the "FRITZ!Box settings" right, when the device has no IPv4 address or when its entity is not enabled (access profile and priority are off by default). With more than one box you pick the box at the top right.
+
+The panel follows the look of the author's other panels, follows the light and dark theme of Home Assistant and needs no sideways scrolling down to 360 px wide.
 
 ## Blueprints
 

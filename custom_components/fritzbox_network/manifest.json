@@ -1,7 +1,7 @@
 {
   "domain": "fritzbox_network",
   "name": "FRITZ!Box Netzwerk",
-  "after_dependencies": ["frontend", "http"],
+  "after_dependencies": ["frontend", "http", "panel_custom"],
   "codeowners": ["@bertel2020"],
   "config_flow": true,
   "documentation": "https://github.com/bertel2020/HA-fritzbox_network",

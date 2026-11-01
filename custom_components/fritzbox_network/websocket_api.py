@@ -6,26 +6,37 @@ from typing import Any
 
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 import voluptuous as vol
 
-from .const import DOMAIN, KEY_INTERNET_ACCESS, KEY_PRIORITY, KEY_WAKE_ON_LAN
+from .const import (
+    DOMAIN,
+    KEY_ACCESS_PROFILE,
+    KEY_INTERNET_ACCESS,
+    KEY_PRIORITY,
+    KEY_WAKE_ON_LAN,
+)
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
-from .models import mac_id
+from .models import is_private_mac, mac_id
+from .repairs import last_online
 
 COMMAND = f"{DOMAIN}/subscribe_topology"
+ENTRIES_COMMAND = f"{DOMAIN}/entries"
 
 # The actions of a device the card offers: name in the topology, platform, entity key.
 DEVICE_ACTIONS = {
     "internet_access": ("switch", KEY_INTERNET_ACCESS),
     "priority": ("switch", KEY_PRIORITY),
     "wake_on_lan": ("button", KEY_WAKE_ON_LAN),
+    "access_profile": ("select", KEY_ACCESS_PROFILE),
 }
 
 
 def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) -> dict[str, Any]:
     """The access points and the devices at them, as the card draws them."""
     registry = er.async_get(hass)
+    devices = dr.async_get(hass)
     mesh = coordinator.data.mesh
     nodes = []
     if mesh:
@@ -59,6 +70,8 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
             for name, (platform, key) in DEVICE_ACTIONS.items()
             if (entity_id := registry.async_get_entity_id(platform, DOMAIN, f"{host.mac}_{key}"))
         }
+        device = devices.async_get_device(connections={(CONNECTION_NETWORK_MAC, host.mac)})
+        last = last_online(hass, host)
         clients.append(
             {
                 "mac": host.mac,
@@ -72,6 +85,17 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
                 "ap_mac": link.ap_mac if link else None,
                 "link_type": link.link_type.lower() if link else None,
                 "band": link.band if link else None,
+                "ssid": link.ssid if link else None,
+                "port": host.port,
+                "speed": host.speed,
+                "vpn": host.vpn,
+                "wan_access": host.wan_access,
+                "priority": host.priority,
+                "filter_profile": coordinator.filter_profiles.get(host.filter_profile or ""),
+                "private_mac": is_private_mac(host.mac),
+                "device_id": device.id if device else None,
+                "last_online": last.isoformat() if last else None,
+                "created_at": device.created_at.isoformat() if device else None,
                 "actions": actions,
                 "signal_dbm": link.signal_dbm if link else None,
                 "rate_download": link.rate_download if link else None,
@@ -80,7 +104,12 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
                 "rate_max_upload": link.max_rate_upload if link else None,
             }
         )
-    return {"nodes": nodes, "clients": clients}
+    return {
+        "entry_id": coordinator.config_entry.entry_id,
+        "can_write": coordinator.can_write,
+        "nodes": nodes,
+        "clients": clients,
+    }
 
 
 @websocket_api.websocket_command({vol.Required("type"): COMMAND, vol.Optional("entry_id"): str})
@@ -111,5 +140,22 @@ def ws_subscribe_topology(
     _send()
 
 
+@websocket_api.websocket_command({vol.Required("type"): ENTRIES_COMMAND})
+@websocket_api.require_admin
+@callback
+def ws_entries(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The boxes the panel can show, so it can offer a choice when there are several."""
+    connection.send_result(
+        msg["id"],
+        [
+            {"entry_id": entry.entry_id, "title": entry.title}
+            for entry in hass.config_entries.async_loaded_entries(DOMAIN)
+        ],
+    )
+
+
 def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_subscribe_topology)
+    websocket_api.async_register_command(hass, ws_entries)

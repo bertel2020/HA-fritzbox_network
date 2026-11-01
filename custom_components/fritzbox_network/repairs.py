@@ -29,7 +29,7 @@ from .models import Host
 ISSUE_STALE_DEVICES = "stale_devices"
 
 
-def _last_online(hass: HomeAssistant, host: Host) -> datetime | None:
+def last_online(hass: HomeAssistant, host: Host) -> datetime | None:
     """When the device was last online, from its "Last online" sensor; None if unknown."""
     registry = er.async_get(hass)
     entity_id = registry.async_get_entity_id("sensor", DOMAIN, f"{host.mac}_{KEY_LAST_ONLINE}")
@@ -50,7 +50,7 @@ def stale_hosts(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> list[tup
     for host in coordinator.data.hosts.values():
         if coordinator.is_connected(host) or (mesh and mesh.node_of(host)):
             continue
-        last = _last_online(hass, host)
+        last = last_online(hass, host)
         if last is not None and now - last > limit:
             stale.append((host, last))
     stale.sort(key=lambda item: item[1])

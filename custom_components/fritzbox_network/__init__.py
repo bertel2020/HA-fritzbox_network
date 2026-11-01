@@ -32,7 +32,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
-from .panel import CARD_FILE, FRONTEND_DIR, STATIC_ROOT, frontend_version
+from .panel import async_drop_panel, async_ensure_panel, async_serve_frontend
 from .repairs import async_remove_stale_issue, async_update_stale_issue
 from .services import async_register as async_register_services
 from .vendor import async_load as async_load_vendors
@@ -61,23 +61,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register what is shared by all entries: the topology command and card."""
     async_register_websocket(hass)
     async_register_services(hass)
-    await _async_register_card(hass)
+    await async_serve_frontend(hass)
     return True
-
-
-async def _async_register_card(hass: HomeAssistant) -> None:
-    """Serve the frontend files and load the dashboard cards in the frontend.
-
-    Skipped where there is no frontend (tests, headless installs).
-    """
-    if getattr(hass, "http", None) is None or "frontend" not in hass.config.components:
-        return
-    from homeassistant.components.frontend import add_extra_js_url  # noqa: PLC0415
-    from homeassistant.components.http import StaticPathConfig  # noqa: PLC0415
-
-    base = f"{STATIC_ROOT}/{await hass.async_add_executor_job(frontend_version)}"
-    await hass.http.async_register_static_paths([StaticPathConfig(base, str(FRONTEND_DIR), True)])
-    add_extra_js_url(hass, f"{base}/{CARD_FILE.name}")
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> bool:
@@ -126,6 +111,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    await async_ensure_panel(hass)
     _setup_stale_check(hass, entry)
     return True
 
@@ -184,7 +170,12 @@ async def _async_update_listener(hass: HomeAssistant, entry: FritzNetworkConfigE
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> bool:
-    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unloaded and not any(
+        e.entry_id != entry.entry_id for e in hass.config_entries.async_loaded_entries(DOMAIN)
+    ):
+        async_drop_panel(hass)
+    return unloaded
 
 
 async def async_remove_config_entry_device(

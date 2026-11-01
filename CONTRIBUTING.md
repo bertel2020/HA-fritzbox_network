@@ -18,8 +18,15 @@ python3 -m venv .venv
 .venv/bin/ruff check custom_components tests tools
 .venv/bin/ruff format --check custom_components tests tools
 .venv/bin/pytest
-node --test tests/js/*.test.mjs   # the logic of the topology card, needs Node.js
+node --test tests/js/*.test.mjs   # the logic of the cards and the panel, needs Node.js
 ```
+
+The frontend (cards and side panel) has no build step: plain ES modules in
+`custom_components/fritzbox_network/frontend/`, served under a URL with a hash of all files.
+The tests cover the logic and the HTML the panel draws, not how it looks. After a change to the
+panel, check by hand in a browser: no sideways scrolling at 360 and 768 px width, the dark theme,
+the dialog (focus, Escape, Tab stays inside), the back button after opening a device, and that
+scroll position and the open device stay put when new data arrives every 30 seconds.
 
 Home Assistant 2026.8 and newer need Python 3.14. The tests run against a fake
 client fed with anonymised captures in `tests/fixtures/`; no FRITZ!Box is needed.

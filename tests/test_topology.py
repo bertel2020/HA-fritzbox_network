@@ -2,7 +2,7 @@
 
 from dataclasses import replace
 
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from custom_components.fritzbox_network.const import DOMAIN
 
@@ -188,3 +188,57 @@ async def test_topology_carries_the_radios_and_the_band(hass, hass_ws_client, fa
     for radio in radios[BOX].values():
         assert set(radio) == {"channel", "utilization", "noise_dbm"}
     assert all("band" in c for c in topology["clients"])
+
+
+async def test_topology_carries_what_the_panel_shows(hass, hass_ws_client, fake_client, entry):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    topology = await _subscribe(client)
+
+    assert topology["entry_id"] == entry.entry_id
+    assert topology["can_write"] is True
+    lan = {c["mac"]: c for c in topology["clients"]}[LAN]
+    for field in (
+        "ssid",
+        "port",
+        "speed",
+        "vpn",
+        "wan_access",
+        "priority",
+        "filter_profile",
+        "private_mac",
+        "device_id",
+        "last_online",
+        "created_at",
+    ):
+        assert field in lan
+    registry = dr.async_get(hass)
+    assert registry.async_get(lan["device_id"]).connections == {("mac", LAN)}
+    assert lan["private_mac"] is True  # the fake MACs are locally administered
+    assert lan["created_at"]
+
+
+async def test_entries_lists_the_boxes(hass, hass_ws_client, fake_client, entry):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id({"type": "fritzbox_network/entries"})
+    result = await client.receive_json()
+
+    assert result["success"]
+    assert result["result"] == [{"entry_id": entry.entry_id, "title": entry.title}]
+
+
+async def test_entries_needs_an_administrator(
+    hass, hass_ws_client, hass_admin_user, fake_client, entry
+):
+    await _setup(hass, entry)
+    hass_admin_user.groups = []
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id({"type": "fritzbox_network/entries"})
+    result = await client.receive_json()
+
+    assert not result["success"]
+    assert result["error"]["code"] == "unauthorized"

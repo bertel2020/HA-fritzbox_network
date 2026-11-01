@@ -16,6 +16,7 @@ Die Integration arbeitet lokal mit der FRITZ!Box und baut keine Internetverbindu
 - [Namen und Entity-IDs](#namen-und-entity-ids)
 - [Geräte löschen und ausblenden](#geräte-löschen-und-ausblenden)
 - [Topologie-Karte](#topologie-karte) mit [Funk-Karte](#funk-karte) und [Geräte-Karte](#geräte-karte)
+- [Seitenpanel](#seitenpanel)
 - [Blueprints](#blueprints)
 - [Zusammen mit der Core-Integration](#zusammen-mit-der-core-integration)
 - [Datenschutz und Sicherheit](#datenschutz-und-sicherheit)
@@ -228,6 +229,30 @@ entities:
 | `hide_rate`, `hide_signal` | Rate oder Signal ausblenden (Standard `false`) |
 
 Ein Tipp auf den Namen öffnet das Gerät. Beide Karten brauchen wie die Topologie-Karte ein Administratorkonto und laden sich selbst.
+
+## Seitenpanel
+
+Mit der Integration kommt ein Eintrag **FRITZ!Box Netzwerk** in der Seitenleiste. Er zeigt das ganze Netz auf einer Seite und ist nur für Administratoren sichtbar. Das Panel holt seine Daten über dieselbe Verbindung wie die Dashboard-Karten und fragt die Box nicht zusätzlich ab.
+
+**Netzwerk.** Oben stehen die Statusfilter mit der Zahl der Geräte, die sie finden würden: Alle, Online, Offline, WLAN, LAN, Gast, Gesperrt, Schwach, Neu (7 Tage), Lange offline und Ohne Access Point. Ein Filter ohne Treffer bleibt weg, solange du ihn nicht gewählt hast. Darunter stehen die Suche (Name, IP, MAC oder Hersteller; die Taste `/` springt hinein) und je ein Auswahlfeld zum Sortieren (Name, Signal, Rate, Zuletzt online) und Gruppieren (Access Point, Band / LAN, Flach). Jeder Access Point ist eine Karte mit einer Zusammenfassung („1 WLAN · 3 LAN · min. 52 Mbit/s“), Kanal, Auslastung und Rauschen seiner Funkbänder und den Geräten. Online-Geräte stehen oben.
+
+- **Neu (7 Tage)** und **Lange offline** (30 Tage) kennt nur Home Assistant: „Neu“ zählt ab dem Anlegen des Geräts in Home Assistant, „Lange offline“ nur Geräte, deren letzte Online-Zeit bekannt ist. Nach einer Neuinstallation ist deshalb zunächst alles neu.
+- **Gesperrt** heißt: Die Box meldet für das Gerät keinen Internetzugang. Meldet sie nichts, zählt das Gerät nicht als gesperrt.
+
+**Gerät.** Ein Tipp auf ein Gerät öffnet seine Seite (Adresse `#/device/<MAC ohne Doppelpunkte>`, der Zurück-Knopf des Browsers funktioniert). Auf breiten Bildschirmen steht sie rechts neben der Liste, auf dem Handy ersetzt sie die Liste. Sie zeigt Rate, höchste Rate, Signal und Band (bei LAN den Anschluss), die Stammdaten und die Aktionen:
+
+| Aktion | Hinweis |
+|--------|---------|
+| Internetzugang | Schalter, ohne Rückfrage: Sperren und Freigeben lässt sich jederzeit umkehren |
+| Priorisierung | Schalter |
+| Zugangsprofil | Auswahl der Profile der Box, wenn die Box Profile liefert |
+| Wake on LAN | nur für Geräte, die offline sind |
+| Umbenennen | Dialog; ruft die Aktion `set_name` auf |
+| In Home Assistant | öffnet das Gerät in den Einstellungen |
+
+Eine Aktion ist aus und nennt den Grund, wenn dem Box-Benutzer das Recht „FRITZ!Box Einstellungen“ fehlt, wenn das Gerät keine IPv4-Adresse hat oder wenn die Entität dazu nicht aktiviert ist (Zugangsprofil und Priorisierung sind standardmäßig aus). Gibt es mehrere Boxen, wählst du oben rechts die Box.
+
+Das Panel ist dem Look der anderen Panels des Autors nachempfunden, folgt dem hellen und dunklen Theme von Home Assistant und kommt ohne waagerechtes Scrollen bis 360 px Breite aus.
 
 ## Blueprints
 

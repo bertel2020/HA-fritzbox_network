@@ -36,6 +36,7 @@ The integration works locally with the FRITZ!Box (TR-064) and makes no connectio
 - **Presence**: Device tracker with an adjustable wait before a device counts as away.
 - **Connection data per device**: IP address, LAN or Wi-Fi, access point, "online since" and "last online". Optional (off by default): signal strength, link rate (download/upload), Wi-Fi band, network name and a guest network flag.
 - **Actions**: Block and allow the internet access per device, Wake on LAN.
+- **Side panel** (administrators only): The whole network in the sidebar, with status filters, search, grouping by access point, radio data and a detail page per device with all actions.
 - **Dashboard cards**: The topology card (devices by access point, with search, filters and actions per device), a Wi-Fi card (channel, load and noise per radio) and a devices card (chosen devices with block/allow internet).
 - **Mesh**: The FRITZ!Box and its repeaters are devices of their own with model, firmware and the number of connected devices.
 - **Tidy**: Offline devices can be deleted by hand and stay hidden. Plus filters for the guest network, private MAC addresses and single devices, and an option not to create devices for offline hosts.
@@ -63,7 +64,7 @@ The integration works locally with the FRITZ!Box (TR-064) and makes no connectio
 
 ## Roadmap
 
-- **Side panel** in the Home Assistant sidebar: the network as a tree by access point with search and filters, a detail view per device and the actions block/allow internet and Wake on LAN. It builds on the topology card. Later, only if it is needed: bulk clean-up of long-offline devices, a preview for the device filters, groups such as kids and guests, and a history of roaming and signal.
+- **Side panel, next steps**: Bulk clean-up of long-offline devices and a preview for the device filters (with a check before anything is deleted). Later, only if it is needed: groups such as kids and guests through Home Assistant labels.
 
 ## Contributing
 

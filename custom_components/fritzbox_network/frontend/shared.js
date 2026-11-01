@@ -154,3 +154,135 @@ export function signalHtml(client) {
 export function linkIcon(client) {
   return client.link_type === "lan" ? "mdi:ethernet-cable" : client.link_type === "wlan" ? "mdi:wifi" : "mdi:help";
 }
+
+/* What the panel needs on top of the cards: filters with a number, sorting, grouping. */
+
+export const NEW_DAYS = 7;
+export const STALE_DAYS = 30;
+export const PANEL_FILTERS = [
+  "all",
+  "online",
+  "offline",
+  "wlan",
+  "lan",
+  "guest",
+  "blocked",
+  "weak",
+  "new",
+  "stale",
+  "unassigned",
+];
+
+const DAY = 86400000;
+
+/** Whole days between a time and now; null where the time is not known. */
+export function daysSince(iso, now = Date.now()) {
+  const time = iso ? Date.parse(iso) : NaN;
+  return Number.isNaN(time) ? null : Math.max(0, Math.floor((now - time) / DAY));
+}
+
+/** Only a device the box says is blocked; one it says nothing about is not. */
+export function isBlocked(client) {
+  return client.wan_access === false;
+}
+
+export function panelMatches(client, filter, now = Date.now(), threshold = WEAK_LINK_RATIO) {
+  switch (filter) {
+    case "online":
+      return Boolean(client.online);
+    case "offline":
+      return !client.online;
+    case "wlan":
+      return client.link_type === "wlan";
+    case "lan":
+      return client.link_type === "lan";
+    case "guest":
+      return Boolean(client.guest);
+    case "blocked":
+      return isBlocked(client);
+    case "weak":
+      return isWeak(client, threshold);
+    case "new":
+      return (daysSince(client.created_at, now) ?? Infinity) < NEW_DAYS;
+    case "stale":
+      return !client.online && (daysSince(client.last_online, now) ?? -1) >= STALE_DAYS;
+    case "unassigned":
+      return !client.ap_mac;
+    default:
+      return true;
+  }
+}
+
+export function panelCounts(data, now = Date.now(), threshold = WEAK_LINK_RATIO) {
+  const clients = data?.clients ?? [];
+  return Object.fromEntries(
+    PANEL_FILTERS.map((f) => [f, clients.filter((c) => panelMatches(c, f, now, threshold)).length])
+  );
+}
+
+const SORTS = {
+  name: (a, b) => a.name.localeCompare(b.name),
+  signal: (a, b) => (b.signal_dbm ?? -999) - (a.signal_dbm ?? -999),
+  rate: (a, b) => (b.rate_download ?? -1) - (a.rate_download ?? -1),
+  last: (a, b) => Date.parse(b.last_online ?? 0) - Date.parse(a.last_online ?? 0),
+};
+
+/** Online devices first, then by the chosen key. */
+export function sortClients(clients, sort = "name") {
+  const key = SORTS[sort] ?? SORTS.name;
+  return [...clients].sort((a, b) => Number(Boolean(b.online)) - Number(Boolean(a.online)) || key(a, b));
+}
+
+/** The clients the panel shows: the filter, the search, the sorting. */
+export function panelClients(data, { filter = "all", query = "", sort = "name", now = Date.now(), threshold } = {}) {
+  return sortClients(
+    (data?.clients ?? []).filter(
+      (c) => panelMatches(c, filter, now, threshold) && matches(c, "all", query)
+    ),
+    sort
+  );
+}
+
+/**
+ * The groups of the list: by access point (the box first, those without one last),
+ * by band or cable, or one flat list. A group without devices only stays for an access point
+ * when nothing narrows the list.
+ */
+export function panelGroups(data, clients, mode = "ap", narrowed = false) {
+  if (mode === "flat") return [{ key: "flat", node: null, clients }];
+  if (mode === "band") {
+    const by = (key, pred) => ({ key, node: null, clients: clients.filter(pred) });
+    return [
+      by("lan", (c) => c.link_type === "lan"),
+      by("2_4ghz", (c) => c.band === "2_4ghz"),
+      by("5ghz", (c) => c.band === "5ghz"),
+      by("6ghz", (c) => c.band === "6ghz"),
+      by("none", (c) => !c.link_type),
+    ].filter((g) => g.clients.length);
+  }
+  const groups = (data?.nodes ?? []).map((node) => ({
+    key: node.mac,
+    node,
+    clients: clients.filter((c) => c.ap_mac === node.mac),
+  }));
+  const known = new Set(groups.map((g) => g.key));
+  groups.push({ key: "none", node: null, clients: clients.filter((c) => !known.has(c.ap_mac)) });
+  return groups.filter((g) => g.clients.length || (g.node && !narrowed));
+}
+
+/** Numbers for the head of an access point: devices online by link, the lowest rate among them. */
+export function apSummary(data, node) {
+  const online = (data?.clients ?? []).filter((c) => c.online && c.ap_mac === node.mac);
+  const rates = online.map((c) => c.rate_download).filter((r) => typeof r === "number" && r > 0);
+  return {
+    wlan: online.filter((c) => c.link_type === "wlan").length,
+    lan: online.filter((c) => c.link_type === "lan").length,
+    minRate: rates.length ? Math.round(Math.min(...rates)) : null,
+  };
+}
+
+/** The part of a #/device/<id> route that names the device; null for any other route. */
+export function deviceFromHash(hash) {
+  const match = /^#\/device\/([0-9a-f]{12})$/.exec(hash ?? "");
+  return match ? match[1] : null;
+}
