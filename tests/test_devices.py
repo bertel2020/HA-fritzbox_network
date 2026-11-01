@@ -5,7 +5,10 @@ from dataclasses import replace
 from homeassistant.core import State
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
-from pytest_homeassistant_custom_component.common import mock_restore_cache_with_extra_data
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    mock_restore_cache_with_extra_data,
+)
 
 from custom_components.fritzbox_network import async_remove_config_entry_device
 from custom_components.fritzbox_network.const import CONF_HIDDEN_MACS
@@ -128,6 +131,23 @@ async def test_filters_remove_devices_but_not_the_repeater(hass, fake_client, en
     assert hass.states.get("device_tracker.fritz_020000000003") is None
     assert _device(hass, entry, REPEATER)
     assert hass.states.get("device_tracker.fritz_02000000000e").state == "home"
+
+
+async def test_filters_keep_a_device_another_integration_shares(hass, fake_client, entry):
+    await _setup(hass, entry)
+    other = MockConfigEntry(domain="other", entry_id="other-entry")
+    other.add_to_hass(hass)
+    registry = dr.async_get(hass)
+    device = _device(hass, entry, WLAN)
+    registry.async_update_device(device.id, add_config_entry_id=other.entry_id)
+
+    hass.config_entries.async_update_entry(entry, options={"ignore_private_macs": True})
+    await hass.async_block_till_done()
+
+    kept = registry.async_get(device.id)
+    assert kept is not None
+    assert kept.config_entries == {other.entry_id}
+    assert hass.states.get("device_tracker.fritz_020000000003") is None
 
 
 async def test_last_seen_survives_a_restart(hass, fake_client, entry):

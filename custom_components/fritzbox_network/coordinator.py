@@ -219,7 +219,10 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 (m for kind, m in device.connections if kind == CONNECTION_NETWORK_MAC), None
             )
             if mac in self.all_hosts and mac not in selected:
-                registry.async_remove_device(device.id)
+                # a device of another integration with the same MAC stays
+                registry.async_update_device(
+                    device.id, remove_config_entry_id=self.config_entry.entry_id
+                )
 
     def _sync_names(self, hosts: dict[str, Host]) -> None:
         """Carry names changed in the box over to the device registry.
