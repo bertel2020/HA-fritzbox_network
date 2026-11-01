@@ -358,3 +358,41 @@ def test_the_port_mappings_are_read_until_the_box_runs_out():
     assert [e["external_port"] for e in entries] == [443, 1]
     assert entries[0]["description"] == "Web" and entries[0]["client"] == "192.0.2.10"
     assert entries[1]["description"] is None and entries[1]["enabled"] is False
+
+
+def _internet_client(answers: dict[str, dict]) -> tuple[FritzNetworkClient, list[str]]:
+    """A box that answers the actions named in ``answers`` and refuses all others."""
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    client._fc = MagicMock()
+    asked: list[str] = []
+
+    def call(service, action, **args):
+        asked.append(action)
+        if action not in answers:
+            raise FritzActionError("401")
+        return answers[action]
+
+    client._fc.call_action.side_effect = call
+    return client, asked
+
+
+def test_the_add_on_info_replaces_the_two_counter_actions():
+    client, asked = _internet_client(
+        {"GetStatusInfo": {"NewUptime": 1}, "GetAddonInfos": {"NewX_AVM_DE_TotalBytesSent64": 7}}
+    )
+    fast, slow = client.get_internet(details=False)
+    assert set(fast) == {"GetStatusInfo", "GetAddonInfos"} and slow == {}
+    assert "GetTotalBytesSent" not in asked
+
+
+def test_a_box_without_the_add_on_info_is_asked_for_the_counters():
+    client, asked = _internet_client(
+        {
+            "GetStatusInfo": {"NewUptime": 1},
+            "GetTotalBytesSent": {"NewTotalBytesSent": 1},
+            "GetTotalBytesReceived": {"NewTotalBytesReceived": 2},
+        }
+    )
+    fast, _ = client.get_internet(details=False)
+    assert set(fast) == {"GetStatusInfo", "GetTotalBytesSent", "GetTotalBytesReceived"}
+    assert asked.count("GetAddonInfos") == 1

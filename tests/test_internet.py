@@ -503,3 +503,22 @@ async def test_the_diagnostics_have_the_connection_without_its_addresses(hass, f
     assert internet["events"] == ["reconnected"]
     assert result["guest_wifi"] is False
     assert result["firmware"]["update_available"] is False
+
+
+def test_the_byte_counters_prefer_the_64_bit_ones_of_the_add_on_info():
+    addon = {
+        "NewTotalBytesSent": 10,
+        "NewTotalBytesReceived": 20,
+        "NewX_AVM_DE_TotalBytesSent64": 5_000_000_000,
+        "NewX_AVM_DE_TotalBytesReceived64": 9_000_000_000,
+    }
+    status = INTERNET_FAST["GetStatusInfo"]
+    info = parse_internet({"GetStatusInfo": status, "GetAddonInfos": addon}, INTERNET_SLOW)
+    assert (info.bytes_sent, info.bytes_received) == (5_000_000_000, 9_000_000_000)
+    # without the 64 bit ones the add-on's own counters count, then the separate actions
+    plain = {k: v for k, v in addon.items() if "64" not in k}
+    info = parse_internet({"GetStatusInfo": status, "GetAddonInfos": plain}, INTERNET_SLOW)
+    assert (info.bytes_sent, info.bytes_received) == (10, 20)
+    info = parse_internet(INTERNET_FAST, INTERNET_SLOW)
+    assert (info.bytes_sent, info.bytes_received) == (1_000_000, 5_000_000)
+    assert parse_internet({"GetStatusInfo": status}, {}).bytes_sent is None

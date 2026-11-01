@@ -42,6 +42,10 @@ DEVICEINFO_SERVICE = "DeviceInfo1"
 # the actions that read the internet connection: (service, action), at every poll or now and then
 INTERNET_FAST = (
     ("WANIPConn1", "GetStatusInfo"),
+    # the byte counters, 64 bit on most boxes; where this action is missing the two below do
+    ("WANCommonIFC1", "GetAddonInfos"),
+)
+INTERNET_COUNTERS = (
     ("WANCommonIFC1", "GetTotalBytesSent"),
     ("WANCommonIFC1", "GetTotalBytesReceived"),
 )
@@ -164,6 +168,8 @@ class FritzNetworkClient:
 
         with self._lock:
             fast = read(INTERNET_FAST)
+            if "GetAddonInfos" not in fast:
+                fast.update(read(INTERNET_COUNTERS))
             slow = read(INTERNET_SLOW) if details else {}
         return fast, slow
 

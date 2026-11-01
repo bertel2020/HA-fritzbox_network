@@ -503,6 +503,20 @@ def _dsl(result: dict[str, Any]) -> DslInfo | None:
     )
 
 
+def _counter(fast: dict[str, dict[str, Any]], direction: str) -> int | None:
+    """The byte counter of a direction: the 64 bit one of the add-on info, else the plain ones."""
+    addon = fast.get("GetAddonInfos", {})
+    plain = fast.get(f"GetTotalBytes{direction}", {})
+    for value in (
+        addon.get(f"NewX_AVM_DE_TotalBytes{direction}64"),
+        addon.get(f"NewTotalBytes{direction}"),
+        plain.get(f"NewTotalBytes{direction}"),
+    ):
+        if (number := _number(value)) is not None:
+            return number
+    return None
+
+
 def parse_internet(
     fast: dict[str, dict[str, Any]], slow: dict[str, dict[str, Any]]
 ) -> InternetInfo | None:
@@ -548,7 +562,7 @@ def parse_internet(
         ipv6_prefix=_address(prefix.get("NewIPv6Prefix")),
         ipv6_prefix_length=_number(prefix.get("NewPrefixLength")),
         dns=tuple(dns),
-        bytes_sent=_number(fast.get("GetTotalBytesSent", {}).get("NewTotalBytesSent")),
-        bytes_received=_number(fast.get("GetTotalBytesReceived", {}).get("NewTotalBytesReceived")),
+        bytes_sent=_counter(fast, "Sent"),
+        bytes_received=_counter(fast, "Received"),
         dsl=dsl,
     )
