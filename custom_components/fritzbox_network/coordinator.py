@@ -54,6 +54,7 @@ from .const import (
     WAN_OVERRIDE_SECONDS,
 )
 from .filters import select_hosts
+from .history import DeviceHistory
 from .models import (
     FirmwareInfo,
     Host,
@@ -89,6 +90,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         serial: str,
         can_write: bool,
         box_device_id: str,
+        history: DeviceHistory | None = None,
     ) -> None:
         self._base_interval = entry.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL)
         super().__init__(
@@ -102,6 +104,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.serial = serial
         self.can_write = can_write
         self.box_device_id = box_device_id
+        self.history = history
         # Unfiltered host list: the options flow offers it for selection.
         self.all_hosts: dict[str, Host] = {}
         # None until the first poll: what the box lists then is not new.
@@ -230,6 +233,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             if host.active:
                 self.last_active[host.mac] = now
 
+        self._record_history(selected, mesh)
         self._remove_filtered_devices(selected)
         self._sync_names(selected)
         return NetworkData(
@@ -239,6 +243,23 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             guest_wifi=self._apply_guest_override(guest),
             firmware=self._firmware,
         )
+
+    def _record_history(self, selected: dict[str, Host], mesh: MeshTopology | None) -> None:
+        """Note online, signal and rate of every device for the sparklines."""
+        if self.history is None:
+            return
+        now = dt_util.utcnow().timestamp()
+        for host in selected.values():
+            link = mesh.links.get(host.mac) if mesh else None
+            rate = link.rate_download if link and link.rate_download else host.speed
+            self.history.record(
+                now,
+                host.mac,
+                self.is_connected(host),
+                link.signal_dbm if link else None,
+                rate or None,
+            )
+        self.history.prune(now)
 
     def _apply_guest_override(self, polled: bool | None) -> bool | None:
         """Show a guest Wi-Fi switch just made until the box shows it too."""

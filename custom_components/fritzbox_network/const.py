@@ -48,6 +48,13 @@ BACKOFF_AFTER_FAILURES = 3
 INTERNET_DETAIL_POLLS = 10
 # How many throughput samples and events of the internet connection are kept in memory.
 INTERNET_HISTORY = 240
+
+# the history of the devices: a day in steps of five minutes, a week in hours
+HISTORY_FINE_SECONDS = 300
+HISTORY_OFFLINE_SECONDS = 1800
+HISTORY_COARSE_SECONDS = 3600
+HISTORY_DAYS = 7
+HISTORY_SAVE_DELAY = 300
 INTERNET_EVENTS = 20
 # What counts as a problem worth a repair: a noise margin below this many dB for this many seconds,
 # or this many new connections within a day.

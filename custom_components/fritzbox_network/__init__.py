@@ -32,6 +32,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
+from .history import DeviceHistory
 from .panel import async_drop_panel, async_ensure_panel, async_serve_frontend
 from .repairs import (
     async_remove_internet_issues,
@@ -111,10 +112,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
     if entry.options.get(CONF_SHOW_VENDOR):
         await async_load_vendors()
 
-    coordinator = FritzNetworkCoordinator(hass, entry, client, serial, can_write, box.id)
+    history = await DeviceHistory.async_load(hass, entry.entry_id)
+    coordinator = FritzNetworkCoordinator(hass, entry, client, serial, can_write, box.id, history)
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
+    entry.async_on_unload(history.async_flush)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     entry.async_on_unload(
         coordinator.async_add_listener(lambda: async_update_internet_issues(hass, entry))

@@ -1,0 +1,113 @@
+"""The recent past of the devices: online, signal and rate, kept over restarts."""
+
+from __future__ import annotations
+
+from typing import Any
+
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.storage import Store
+
+from .const import (
+    DOMAIN,
+    HISTORY_COARSE_SECONDS,
+    HISTORY_DAYS,
+    HISTORY_FINE_SECONDS,
+    HISTORY_OFFLINE_SECONDS,
+    HISTORY_SAVE_DELAY,
+)
+
+STORAGE_VERSION = 1
+
+_HOUR = 3600
+_DAY = 86400
+
+# one point: [epoch seconds, online 0..1, signal in dBm or None, rate in Mbit/s or None]
+type Point = list[float | None]
+
+
+def _mean(values: list[float]) -> float | None:
+    return round(sum(values) / len(values), 2) if values else None
+
+
+def _aggregate(points: list[Point], ts: float) -> Point:
+    """One point for a stretch of points: the share of time online and the means."""
+    return [
+        ts,
+        _mean([p[1] for p in points if p[1] is not None]),
+        _mean([p[2] for p in points if p[2] is not None]),
+        _mean([p[3] for p in points if p[3] is not None]),
+    ]
+
+
+class DeviceHistory:
+    """A day in small steps and a week in hours, per device.
+
+    A device that is offline is noted only now and then: it would fill the file with nothing.
+    """
+
+    def __init__(self, store: Store, data: dict[str, dict[str, list[Point]]]) -> None:
+        self._store = store
+        self._data = data
+
+    @classmethod
+    async def async_load(cls, hass: HomeAssistant, entry_id: str) -> DeviceHistory:
+        store: Store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.history.{entry_id}")
+        stored = await store.async_load()
+        data = stored.get("devices") if isinstance(stored, dict) else None
+        return cls(store, data if isinstance(data, dict) else {})
+
+    def record(
+        self, now: float, mac: str, online: bool, signal: float | None, rate: float | None
+    ) -> None:
+        """Note the state of a device, unless a point of it is recent enough."""
+        series = self._data.setdefault(mac, {"f": [], "c": []})
+        fine, coarse = series["f"], series["c"]
+        step = HISTORY_FINE_SECONDS if online else HISTORY_OFFLINE_SECONDS
+        # a device that just went offline is noted at once, so the end of its time online shows
+        changed = bool(fine) and bool(fine[-1][1]) != online
+        if fine and now - fine[-1][0] < step and not changed:
+            return
+        fine.append([now, 1.0 if online else 0.0, signal, rate])
+        del fine[: next((i for i, p in enumerate(fine) if p[0] >= now - _DAY), len(fine))]
+        if not coarse or now - coarse[-1][0] >= HISTORY_COARSE_SECONDS:
+            since = coarse[-1][0] if coarse else 0
+            coarse.append(_aggregate([p for p in fine if p[0] > since], now))
+            limit = now - HISTORY_DAYS * _DAY
+            del coarse[: next((i for i, p in enumerate(coarse) if p[0] >= limit), len(coarse))]
+        self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
+
+    def _snapshot(self) -> dict[str, Any]:
+        return {"devices": self._data}
+
+    async def async_flush(self) -> None:
+        await self._store.async_save(self._snapshot())
+
+    def prune(self, now: float) -> None:
+        """Forget devices that have not been noted for the whole period."""
+        limit = now - HISTORY_DAYS * _DAY
+        for mac in [m for m, s in self._data.items() if not s["f"] or s["f"][-1][0] < limit]:
+            del self._data[mac]
+
+    def forget(self, mac: str) -> None:
+        if self._data.pop(mac, None) is not None:
+            self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
+
+    def device(self, mac: str) -> dict[str, list[Point]]:
+        """The points of one device: the day in small steps and the week in hours."""
+        series = self._data.get(mac) or {}
+        return {"day": series.get("f", []), "week": series.get("c", [])}
+
+    def summary(self, now: float, buckets: int = 24) -> dict[str, dict[str, list[float | None]]]:
+        """Per device the last day in hours: share online, signal and rate (None: no data)."""
+        result: dict[str, dict[str, list[float | None]]] = {}
+        for mac, series in self._data.items():
+            slots: list[list[Point]] = [[] for _ in range(buckets)]
+            for point in series["f"]:
+                age = int((now - point[0]) // _HOUR)
+                if 0 <= age < buckets:
+                    slots[buckets - 1 - age].append(point)
+            result[mac] = {
+                key: [_aggregate(slot, 0)[i] for slot in slots]
+                for key, i in (("online", 1), ("signal", 2), ("rate", 3))
+            }
+        return result

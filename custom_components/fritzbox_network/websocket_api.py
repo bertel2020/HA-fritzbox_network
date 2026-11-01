@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import time
 from typing import Any
 
 from fritzconnection.core.exceptions import FritzConnectionException
@@ -47,6 +48,8 @@ UNHIDE_COMMAND = f"{DOMAIN}/devices/unhide"
 RECONNECT_COMMAND = f"{DOMAIN}/internet/reconnect"
 REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
 PORTS_COMMAND = f"{DOMAIN}/ports/list"
+HISTORY_COMMAND = f"{DOMAIN}/history/summary"
+HISTORY_DEVICE_COMMAND = f"{DOMAIN}/history/device"
 FILTER_PREVIEW_COMMAND = f"{DOMAIN}/filter/preview"
 FILTER_APPLY_COMMAND = f"{DOMAIN}/filter/apply"
 ERR_CHANGED = "changed"
@@ -462,6 +465,40 @@ async def ws_ports(
     connection.send_result(msg["id"], {"entries": entries})
 
 
+@websocket_api.websocket_command(
+    {vol.Required("type"): HISTORY_COMMAND, vol.Required("entry_id"): str}
+)
+@callback
+def ws_history_summary(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The last day of every device in hours, for the sparklines of the list."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    history = found[1].history
+    connection.send_result(msg["id"], {"devices": history.summary(time.time()) if history else {}})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): HISTORY_DEVICE_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("mac"): str,
+    }
+)
+@callback
+def ws_history_device(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """One device: the day in small steps and the week in hours."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    history = found[1].history
+    connection.send_result(
+        msg["id"], history.device(format_mac(msg["mac"])) if history else {"day": [], "week": []}
+    )
+
+
 async def _box_action(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
@@ -602,6 +639,8 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_hide_devices)
     websocket_api.async_register_command(hass, ws_unhide_devices)
     websocket_api.async_register_command(hass, ws_ports)
+    websocket_api.async_register_command(hass, ws_history_summary)
+    websocket_api.async_register_command(hass, ws_history_device)
     websocket_api.async_register_command(hass, ws_reconnect)
     websocket_api.async_register_command(hass, ws_reboot)
     websocket_api.async_register_command(hass, ws_filter_preview)
