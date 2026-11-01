@@ -352,3 +352,117 @@ export function filterChanged(current, draft) {
     (draft.filter_mode !== "all" && sorted(current.filter_devices) !== sorted(draft.filter_devices))
   );
 }
+
+/* The filter menu, the map and the paging of the device page of the panel. */
+
+// always shown as chips; every other filter and the groups are in the "More" menu
+export const PRIMARY_FILTERS = ["all", "online", "offline"];
+
+/**
+ * What the filter row offers: the fixed chips, the other filters and the groups with something
+ * to show (or chosen), and the chosen one when it is not a fixed chip.
+ */
+export function filterMenu(data, filter, now = Date.now(), threshold = WEAK_LINK_RATIO) {
+  const counts = panelCounts(data, now, threshold);
+  const others = PANEL_FILTERS.filter((f) => !PRIMARY_FILTERS.includes(f))
+    .filter((f) => counts[f] || f === filter)
+    .map((id) => ({ id, count: counts[id] }));
+  const labels = labelCounts(data);
+  const chosenLabel = filter.startsWith("label:") ? filter.slice(6) : null;
+  if (chosenLabel && !labels.some((l) => l.id === chosenLabel)) {
+    const label = (data?.labels ?? []).find((l) => l.id === chosenLabel);
+    if (label) labels.push({ id: label.id, name: label.name, count: 0 });
+  }
+  return {
+    primary: PRIMARY_FILTERS.map((id) => ({ id, count: counts[id] })),
+    others,
+    labels,
+    // how many choices the menu has besides the fixed chips
+    available: others.filter((o) => o.count).length + labels.filter((l) => l.count).length,
+    active: PRIMARY_FILTERS.includes(filter) ? null : filter,
+  };
+}
+
+// the lines of an access point in the map, in this order
+export const MAP_BUSES = ["lan", "5ghz", "6ghz", "2_4ghz", "wlan", "none"];
+
+/** Which line of the map a device hangs on: the cable, a Wi-Fi band, Wi-Fi without band, or none. */
+export function busOf(client) {
+  if (client.link_type === "lan") return "lan";
+  if (client.link_type === "wlan") return ["2_4ghz", "5ghz", "6ghz"].includes(client.band) ? client.band : "wlan";
+  return "none";
+}
+
+/** The lines of one access point with their devices, online first and then by name; empty lines stay away. */
+export function mapBuses(clients) {
+  return MAP_BUSES.map((key) => ({
+    key,
+    type: key === "lan" ? "lan" : key === "none" ? "none" : "wlan",
+    clients: clients
+      .filter((c) => busOf(c) === key)
+      .sort((a, b) => Number(Boolean(b.online)) - Number(Boolean(a.online)) || a.name.localeCompare(b.name)),
+  })).filter((bus) => bus.clients.length);
+}
+
+/**
+ * The islands of the map: the box and every repeater with the shown devices on their lines and
+ * how many the filter hides there, then the devices without a known access point, if there are any.
+ */
+export function mapIslands(data, shown) {
+  const all = data?.clients ?? [];
+  const visible = new Set(shown.map((c) => c.id));
+  const nodes = data?.nodes ?? [];
+  const known = new Set(nodes.map((n) => n.mac));
+  const island = (node, at) => {
+    const here = all.filter(at);
+    const kept = here.filter((c) => visible.has(c.id));
+    return { key: node?.mac ?? "none", node, buses: mapBuses(kept), shown: kept.length, hidden: here.length - kept.length };
+  };
+  const islands = nodes.map((node) => island(node, (c) => c.ap_mac === node.mac));
+  const lost = island(null, (c) => !known.has(c.ap_mac));
+  if (lost.shown || lost.hidden) islands.push(lost);
+  return islands;
+}
+
+/** How the line between the box and a repeater looks: cable, Wi-Fi, or unknown where the mesh says nothing. */
+export function uplinkStyle(node) {
+  const type = node?.uplink?.type;
+  return type === "lan" || type === "wlan" ? type : "unknown";
+}
+
+/** The devices in the order the page shows them, each once: this is the order for paging. */
+export function browseOrder(groups) {
+  const seen = new Set();
+  const out = [];
+  for (const group of groups) {
+    for (const client of group.clients ?? group.buses?.flatMap((b) => b.clients) ?? []) {
+      if (seen.has(client.id)) continue;
+      seen.add(client.id);
+      out.push(client);
+    }
+  }
+  return out;
+}
+
+/** Where a device is in that order, and its neighbours; index -1 when the filter hides it. */
+export function pagerFor(list, id) {
+  const index = list.findIndex((c) => c.id === id);
+  return {
+    index,
+    total: list.length,
+    prev: index > 0 ? list[index - 1] : null,
+    next: index >= 0 && index < list.length - 1 ? list[index + 1] : null,
+  };
+}
+
+/** Up to two letters for the node of a device in the map: the first of the first two words. */
+export function initials(name) {
+  return String(name ?? "")
+    .replace(/[^\p{L}\p{N} ]/gu, " ")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => [...word][0])
+    .join("")
+    .toUpperCase();
+}

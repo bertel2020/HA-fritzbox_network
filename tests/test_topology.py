@@ -54,6 +54,44 @@ async def test_topology_groups_the_devices_by_access_point(
     assert devices[WLAN]["entity_id"] == tracker == "device_tracker.fritz_020000000003"
 
 
+async def test_topology_says_how_a_repeater_reaches_the_box(
+    hass, hass_ws_client, fake_client, entry
+):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    nodes = {n["mac"]: n for n in (await _subscribe(client))["nodes"]}
+
+    assert nodes[BOX]["uplink"] is None
+    # the repeater of the capture hangs on a cable
+    assert nodes[REPEATER]["uplink"] == {"type": "lan", "band": None, "signal_dbm": None}
+
+
+async def test_topology_gives_band_and_signal_of_a_wifi_backhaul(
+    hass, hass_ws_client, fake_client, entry
+):
+    links = fake_client.mesh.links
+    links[REPEATER] = replace(links[REPEATER], link_type="WLAN", band="5ghz", signal_dbm=-58)
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    nodes = {n["mac"]: n for n in (await _subscribe(client))["nodes"]}
+
+    assert nodes[REPEATER]["uplink"] == {"type": "wlan", "band": "5ghz", "signal_dbm": -58}
+
+
+async def test_a_repeater_without_a_known_link_has_no_uplink(
+    hass, hass_ws_client, fake_client, entry
+):
+    del fake_client.mesh.links[REPEATER]
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    nodes = {n["mac"]: n for n in (await _subscribe(client))["nodes"]}
+
+    assert nodes[REPEATER]["uplink"] is None
+
+
 async def test_topology_is_sent_again_after_an_update(hass, hass_ws_client, fake_client, entry):
     coordinator = await _setup(hass, entry)
     client = await hass_ws_client(hass)

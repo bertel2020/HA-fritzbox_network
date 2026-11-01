@@ -10,6 +10,8 @@ const texts = await import(`${base}texts.js`);
 const cleanup = await import(`${base}panel-cleanup.js`);
 const filter = await import(`${base}panel-filter.js`);
 const panel = await import(`${base}fritzbox-network-panel.js`);
+const map = await import(`${base}panel-map.js`);
+const shared = await import(`${base}shared.js`);
 
 const t = texts.panelTexts("de");
 const NOW = Date.parse("2026-11-01T12:00:00Z");
@@ -48,12 +50,44 @@ test("the when text says today, yesterday, days or unknown", () => {
   assert.equal(network.whenText(null, NOW, t), "unbekannt");
 });
 
-test("the chips show a number and leave out filters with nothing to show", () => {
+test("the filter row has three fixed chips with a number and the button for the menu", () => {
   const html = network.renderChips(state, t, NOW);
   assert.match(html, /data-filter="all"[^>]*>Alle<b>2<\/b>/);
-  assert.match(html, /data-filter="blocked"[^>]*>Gesperrt<b>1<\/b>/);
+  assert.match(html, /data-filter="online"[^>]*>Online<b>1<\/b>/);
+  assert.match(html, /data-filter="offline"[^>]*>Offline<b>1<\/b>/);
+  assert.doesNotMatch(html, /data-filter="blocked"/);
+  // LAN, blocked, no access point; "new" needs a time on record, which "old" lacks
+  assert.match(html, /id="morebtn"[^>]*aria-expanded="false"[^>]*aria-label="Weitere Filter, 3 verfügbar"/);
+  assert.equal(network.renderFilterMenu(state, t, NOW), "");
+});
+
+test("the menu offers the other filters with something to show, and the chosen one", () => {
+  const html = network.renderFilterMenu({ ...state, menu: true }, t, NOW);
+  assert.match(html, /role="menu"/);
+  assert.match(html, /role="menuitemradio" aria-checked="false" data-filter="blocked"[^>]*>.*Gesperrt<\/span><b>1<\/b>/);
   assert.doesNotMatch(html, /data-filter="guest"/);
-  assert.match(network.renderChips({ ...state, filter: "guest" }, t, NOW), /data-filter="guest"/);
+  assert.doesNotMatch(html, /data-filter="online"/);
+  const chosen = network.renderFilterMenu({ ...state, menu: true, filter: "guest" }, t, NOW);
+  assert.match(chosen, /aria-checked="true" data-filter="guest"/);
+});
+
+test("a chosen other filter stands as a chip with ×, which goes back to all", () => {
+  const html = network.renderChips({ ...state, filter: "blocked" }, t, NOW);
+  assert.match(html, /data-filter="all" data-k="f-active" aria-pressed="true" aria-label="Filter Gesperrt entfernen">Gesperrt<b>1<\/b><span class="x">/);
+  assert.match(html, /data-filter="all" data-k="f-all" aria-pressed="false"/);
+});
+
+test("the menu logic counts what is on offer and keeps a chosen group without devices", () => {
+  const menu = shared.filterMenu(groupData, "label:gone", NOW);
+  assert.deepEqual(menu.primary.map((f) => f.id), ["all", "online", "offline"]);
+  assert.deepEqual(menu.others.map((f) => f.id), ["lan", "blocked", "unassigned"]);
+  assert.equal(menu.active, "label:gone");
+  assert.deepEqual(menu.labels.map((l) => [l.id, l.count]), [["kids", 1]]);
+  assert.equal(menu.available, 4);
+  const kept = shared.filterMenu({ ...groupData, labels: [...groupData.labels, { id: "gone", name: "Gone" }] }, "label:gone", NOW);
+  assert.deepEqual(kept.labels.map((l) => [l.id, l.count]), [["kids", 1], ["gone", 0]]);
+  assert.equal(kept.available, 4);
+  assert.equal(shared.filterMenu(groupData, "online", NOW).active, null);
 });
 
 test("the groups show access points with radios, names are escaped", () => {
@@ -82,7 +116,10 @@ test("an action needs the right, an IP address and its entity", () => {
   const client = data.clients[0];
   assert.equal(device.actionStatus(client, "internet_access", hass, false).reason, "noRights");
   assert.equal(device.actionStatus({ ...client, ip: null }, "internet_access", hass, true).reason, "noIp");
-  assert.equal(device.actionStatus(client, "priority", { states: {} }, true).reason, "noEntity");
+  // the device has the entity, Home Assistant shows no state: it is switched off in the registry
+  assert.equal(device.actionStatus(client, "priority", { states: {} }, true).reason, "disabled");
+  assert.equal(device.actionStatus(client, "priority", { states: { "switch.tv_p": { state: "unavailable" } } }, true).reason, "noEntity");
+  assert.equal(device.actionStatus({ ...client, actions: {} }, "priority", hass, true).reason, "noEntity");
   assert.equal(device.actionStatus(client, "priority", hass, true).reason, null);
   assert.equal(
     device.actionStatus({ ...client, ip: null }, "wake_on_lan", hass, true, { needsIp: false }).reason,
@@ -93,7 +130,7 @@ test("an action needs the right, an IP address and its entity", () => {
 
 test("the device page shows the data and the actions", () => {
   const html = device.renderDevice(data.clients[0], { t, now: NOW, data, hass, threshold: 1 / 3 });
-  assert.match(html, /<h1>tv &lt;b&gt;<\/h1>/);
+  assert.match(html, /<h1 id="dtitle" tabindex="-1">tv &lt;b&gt;<\/h1>/);
   assert.match(html, /Gesperrt: das Gerät kommt nicht ins Internet/);
   assert.match(html, /data-sw="internet_access" data-entity="switch.tv_i"/);
   assert.match(html, /aria-checked="false"[^>]*data-sw="internet_access"/);
@@ -116,8 +153,69 @@ test("only an offline device can be woken", () => {
   assert.doesNotMatch(device.renderDevice(offline, ctx), /data-act="wol"[^>]*disabled/);
 });
 
-test("no device selected shows a hint", () => {
-  assert.match(device.renderDevice(null, { t, now: NOW, data, hass }), /Kein Gerät gewählt/);
+test("an unknown device shows a hint and the way back", () => {
+  const html = device.renderDevice(null, { t, now: NOW, data, hass, view: "map" });
+  assert.match(html, /Gerät nicht gefunden/);
+  assert.match(html, /data-act="back"[^>]*>.*Netzkarte<\/button>/);
+});
+
+test("the device page is a page of its own: back to where it came from, paging, the connection path", () => {
+  const pager = shared.pagerFor(data.clients, "000000000001");
+  const html = device.renderDevice(data.clients[0], { t, now: NOW, data, hass, threshold: 1 / 3, pager, view: "list" });
+  assert.match(html, /data-act="back"[^>]*>.*Liste<\/button>/);
+  assert.match(html, /<span aria-hidden="true">1 \/ 2<\/span>/);
+  assert.match(html, /data-go="" data-k="prev"[^>]*disabled/);
+  assert.match(html, /data-go="000000000002" data-k="next" aria-label="Nächstes Gerät: old"/);
+  assert.match(html, /class="path" role="img" aria-label="Verbindungsweg: Internet, Box, tv &lt;b&gt; über LAN"/);
+  assert.match(html, /data-act="show-map"/);
+});
+
+test("the connection path goes through the repeater with the line of its uplink", () => {
+  const nodes = [data.nodes[0], { ...data.nodes[1], uplink: { type: "wlan", band: "5ghz", signal_dbm: -58 } }];
+  const client = { ...data.clients[0], ap_mac: "bb", link_type: "wlan", band: "2_4ghz", signal_dbm: -70 };
+  const steps = device.connectionPath(client, { nodes }, t, 1 / 3);
+  assert.deepEqual(steps.filter((s) => s.kind).map((s) => s.name), ["Internet", "Box", "Repeater", "tv <b>"]);
+  assert.deepEqual(steps.filter((s) => !s.kind).map((s) => [s.style, s.text]), [
+    ["plain", ""],
+    ["wlan", "WLAN 5 GHz · -58 dBm"],
+    ["wlan", "WLAN 2,4 GHz · -70 dBm"],
+  ]);
+  const unknown = device.connectionPath(client, data, t, 1 / 3);
+  assert.deepEqual(unknown[3], { style: "unknown", text: "unbekannt" });
+  const offline = device.connectionPath({ ...client, online: false }, data, t, 1 / 3);
+  assert.equal(offline.at(-2).text, "offline");
+});
+
+test("an action off in Home Assistant shows the known value and offers to switch it on", () => {
+  const off = { states: { "switch.tv_i": { state: "off" } } };
+  const client = { ...data.clients[0], priority: true, filter_profile: "Kinder" };
+  const html = device.renderDevice(client, { t, now: NOW, data, hass: off, threshold: 1 / 3 });
+  assert.match(html, /Zugangsprofil<span class="val-line">Kinder<\/span><small>Ausgeschaltet in Home Assistant<\/small>/);
+  assert.match(html, /Priorisierung<span class="val-line">An<\/span>/);
+  assert.match(html, /data-enable="select.tv_s"[^>]*>Einschalten/);
+  assert.doesNotMatch(html, /<select/);
+  assert.match(html, /3 Aktionen sind in Home Assistant ausgeschaltet/);
+  assert.match(html, /data-enable="all"[^>]*>Alle einschalten/);
+  const busy = device.renderDevice(client, {
+    t, now: NOW, data, hass: off, threshold: 1 / 3, enabling: new Set(["select.tv_s", "switch.tv_p"]),
+  });
+  assert.match(busy, /Wird eingeschaltet/);
+  assert.match(busy, /data-enable="select.tv_s"[^>]*disabled/);
+  // one left to switch on: no button for all
+  assert.doesNotMatch(busy, /data-enable="all"/);
+});
+
+test("the plan to switch on lists only what is off, can be written and is not under way", () => {
+  const client = data.clients[0];
+  const off = { states: { "switch.tv_i": { state: "off" } } };
+  assert.deepEqual(device.enablePlan(client, off, true), ["switch.tv_p", "select.tv_s", "button.tv_w"]);
+  assert.deepEqual(device.enablePlan(client, off, true, new Set(["switch.tv_p"])), ["select.tv_s", "button.tv_w"]);
+  assert.deepEqual(device.enablePlan(client, hass, true), []);
+  // without the right of the box user nothing would work after switching on
+  assert.deepEqual(device.enablePlan(client, off, false), []);
+  // without an IPv4 address only Wake on LAN is left
+  assert.deepEqual(device.enablePlan({ ...client, ip: null }, off, true), ["button.tv_w"]);
+  assert.deepEqual(device.enablePlan(null, off, true), []);
 });
 
 test("the texts are complete in both languages", () => {
@@ -210,10 +308,13 @@ const groupData = {
 };
 const groupState = { ...state, data: groupData, filter: "label:kids" };
 
-test("a group shows as a chip with its count, and as a bar when it is the filter", () => {
+test("a group shows in the menu with its count, and as a chip and a bar when it is the filter", () => {
+  const menu = network.renderFilterMenu({ ...groupState, menu: true }, t, NOW);
+  assert.match(menu, /aria-checked="true" data-filter="label:kids"/);
+  assert.match(menu, /Kinder &lt;i&gt;<\/span><b>1<\/b>/);
   const chips = network.renderChips(groupState, t, NOW);
-  assert.match(chips, /data-filter="label:kids" aria-pressed="true"/);
-  assert.match(chips, /Kinder &lt;i&gt;/);
+  assert.match(chips, /aria-label="Filter Kinder &lt;i&gt; entfernen">/);
+  assert.match(chips, /Kinder &lt;i&gt;<b>1<\/b>/);
   const bar = network.renderGroupBar(groupState, t, hass);
   assert.match(bar, /Kinder &lt;i&gt;/);
   assert.match(bar, /1 Geräte/);
@@ -249,4 +350,88 @@ test("the groups are a way to group the list", () => {
   const html = network.renderGroups({ ...groupState, filter: "all", group: "label" }, t, NOW);
   assert.match(html, /Kinder &lt;i&gt;/);
   assert.match(html, /Ohne Gruppe/);
+});
+
+const mapData = {
+  can_write: true,
+  nodes: [
+    { mac: "aa", name: "Box", role: "master", radios: { "5ghz": { channel: 36, utilization: 80 } } },
+    { mac: "bb", name: "Repeater", role: "slave", radios: {}, uplink: { type: "wlan", band: "5ghz", signal_dbm: -58 } },
+    { mac: "cc", name: "Garden", role: "slave", radios: {}, uplink: null },
+  ],
+  labels: [],
+  clients: [
+    { id: "000000000011", mac: "11", name: "Zeta TV", online: true, ap_mac: "aa", link_type: "lan" },
+    { id: "000000000012", mac: "12", name: "alpha phone", online: false, ap_mac: "aa", link_type: "wlan", band: "5ghz", last_online: day(2) },
+    { id: "000000000013", mac: "13", name: "Beta phone", online: true, ap_mac: "aa", link_type: "wlan", band: "5ghz", signal_dbm: -71, rate_download: 10, rate_max_download: 400 },
+    { id: "000000000014", mac: "14", name: "Plug", online: true, ap_mac: "bb", link_type: "wlan", band: "2_4ghz", signal_dbm: -60, wan_access: false },
+    { id: "000000000015", mac: "15", name: "Mystery", online: false, ap_mac: null, link_type: null },
+    { id: "000000000016", mac: "16", name: "Odd", online: true, ap_mac: "aa", link_type: "wlan", band: null },
+  ],
+};
+const mapState = { data: mapData, filter: "all", query: "", sort: "name", group: "ap", closed: new Set(), threshold: 1 / 3, names: true, view: "map" };
+
+test("an access point has a line for the cable and each band, online devices first", () => {
+  const atBox = mapData.clients.filter((c) => c.ap_mac === "aa");
+  const buses = shared.mapBuses(atBox);
+  assert.deepEqual(buses.map((b) => [b.key, b.type]), [["lan", "lan"], ["5ghz", "wlan"], ["wlan", "wlan"]]);
+  assert.deepEqual(buses[1].clients.map((c) => c.name), ["Beta phone", "alpha phone"]);
+  assert.equal(shared.busOf({ link_type: "wlan", band: "6ghz" }), "6ghz");
+  assert.equal(shared.busOf({ link_type: null }), "none");
+});
+
+test("the islands keep their access point and count what the filter hides", () => {
+  const shown = mapData.clients.filter((c) => c.online);
+  const islands = shared.mapIslands(mapData, shown);
+  assert.deepEqual(islands.map((i) => [i.key, i.shown, i.hidden]), [["aa", 3, 1], ["bb", 1, 0], ["cc", 0, 0], ["none", 0, 1]]);
+  // nobody without an access point at all: no island for them
+  const placed = { ...mapData, clients: mapData.clients.filter((c) => c.ap_mac) };
+  assert.deepEqual(shared.mapIslands(placed, placed.clients).map((i) => i.key), ["aa", "bb", "cc"]);
+});
+
+test("paging follows the order of the view and skips nothing, each device once", () => {
+  const order = map.mapOrder(mapData, mapData.clients).map((c) => c.name);
+  assert.deepEqual(order, ["Zeta TV", "Beta phone", "alpha phone", "Odd", "Plug", "Mystery"]);
+  const list = network.listOrder({ ...mapState, group: "label", data: { ...mapData, labels: [{ id: "a", name: "A" }, { id: "b", name: "B" }], clients: mapData.clients.map((c, i) => ({ ...c, labels: i < 2 ? ["a", "b"] : [] })) } }, NOW);
+  assert.equal(list.length, mapData.clients.length);
+  const pager = shared.pagerFor(map.mapOrder(mapData, mapData.clients), "000000000012");
+  assert.equal(pager.index, 2);
+  assert.equal(pager.prev.name, "Beta phone");
+  assert.equal(pager.next.name, "Odd");
+  assert.deepEqual(shared.pagerFor([], "x"), { index: -1, total: 0, prev: null, next: null });
+});
+
+test("the line to a repeater is drawn by its uplink, and neutral without one", () => {
+  assert.equal(shared.uplinkStyle(mapData.nodes[1]), "wlan");
+  assert.equal(shared.uplinkStyle({ uplink: { type: "lan" } }), "lan");
+  assert.equal(shared.uplinkStyle(mapData.nodes[2]), "unknown");
+  assert.equal(shared.uplinkStyle({}), "unknown");
+});
+
+test("a node has initials and says everything for a screen reader", () => {
+  assert.equal(shared.initials("iPad Ben"), "IB");
+  assert.equal(shared.initials("Ökö-Gerät 2"), "ÖG");
+  assert.equal(shared.initials("NAS"), "N");
+  assert.equal(shared.initials(""), "");
+  assert.equal(map.nodeLabel(mapData.clients[2], t, NOW, 1 / 3), "Beta phone, online, WLAN 5 GHz, -71 dBm, schwache Verbindung");
+  assert.equal(map.nodeLabel(mapData.clients[1], t, NOW, 1 / 3), "alpha phone, offline, zuletzt online vor 2 Tagen, WLAN 5 GHz");
+  assert.equal(map.nodeLabel(mapData.clients[3], t, NOW, 1 / 3), "Plug, online, WLAN 2,4 GHz, -60 dBm, Internet gesperrt");
+});
+
+test("the map draws islands with real buttons, the uplink, hidden devices and the legend", () => {
+  const shown = mapData.clients.filter((c) => c.online);
+  const html = map.renderMap({ ...mapState, hl: "000000000013" }, t, NOW, shown);
+  assert.match(html, /class="isle root" data-node="aa" data-up=""/);
+  assert.match(html, /class="isle " data-node="bb" data-up="wlan"/);
+  assert.match(html, /class="isle " data-node="cc" data-up="unknown"/);
+  assert.match(html, /Angebunden per WLAN 5 GHz, -58 dBm/);
+  assert.match(html, /<button class="nd lan" data-dev="000000000011" aria-label="Zeta TV, online, LAN"/);
+  assert.match(html, /class="nd weak hl" data-dev="000000000013"/);
+  assert.match(html, /class="nd blk" data-dev="000000000014"[^>]*><span class="c" aria-hidden="true">P<span class="bd">⦸/);
+  assert.match(html, /1 durch den Filter ausgeblendet/);
+  assert.match(html, /5 GHz · Kanal 36 · 80 %/);
+  assert.match(html, /class="load busy"/);
+  assert.match(html, /Legende/);
+  assert.match(html, /data-act="names"[^>]*>Namen ausblenden/);
+  assert.match(map.renderMap({ ...mapState, names: false }, t, NOW, shown), /class="isl compact"/);
 });

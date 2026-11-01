@@ -3,16 +3,15 @@
 import {
   BANDS,
   BUSY_UTILIZATION,
-  PANEL_FILTERS,
   bulkPlan,
   apSummary,
+  browseOrder,
   daysSince,
   escapeHtml,
+  filterMenu,
   isBlocked,
   isWeak,
-  labelCounts,
   panelClients,
-  panelCounts,
   panelGroups,
   rateText,
   signalBars,
@@ -29,18 +28,48 @@ export function whenText(iso, now, t) {
   return fill(t.daysAgo, { n: days });
 }
 
-/** The status filters; those with nothing to show stay away unless chosen. */
+/** The name of a filter or of a group in the filter row. */
+export function filterName(filter, data, t) {
+  if (!filter.startsWith("label:")) return t.filters[filter] ?? filter;
+  const id = filter.slice(6);
+  return (data?.labels ?? []).find((l) => l.id === id)?.name ?? id;
+}
+
+/**
+ * The filter row: three fixed chips, the chosen other filter as a chip with ×, and the button
+ * for the menu with the rest. It wraps when it must and never scrolls sideways.
+ */
 export function renderChips(state, t, now) {
-  const counts = panelCounts(state.data, now, state.threshold);
-  const fixed = PANEL_FILTERS.filter((f) => f === "all" || counts[f] || f === state.filter).map(
+  const menu = filterMenu(state.data, state.filter, now, state.threshold);
+  const fixed = menu.primary.map(
     (f) =>
-      `<button class="fchip" data-filter="${f}" aria-pressed="${f === state.filter}">${escapeHtml(t.filters[f])}<b>${counts[f]}</b></button>`
+      `<button class="fchip" data-filter="${f.id}" data-k="f-${f.id}" aria-pressed="${f.id === state.filter}">${escapeHtml(t.filters[f.id])}<b>${f.count}</b></button>`
   );
-  const groups = labelCounts(state.data).map(
-    (label) =>
-      `<button class="fchip" data-filter="label:${escapeHtml(label.id)}" aria-pressed="${state.filter === `label:${label.id}`}">${ic("tag")}${escapeHtml(label.name)}<b>${label.count}</b></button>`
-  );
-  return [...fixed, ...groups].join("");
+  let active = "";
+  if (menu.active) {
+    const name = filterName(menu.active, state.data, t);
+    const count = menu.active.startsWith("label:")
+      ? (menu.labels.find((l) => `label:${l.id}` === menu.active)?.count ?? 0)
+      : (menu.others.find((o) => o.id === menu.active)?.count ?? 0);
+    active = `<button class="fchip" data-filter="all" data-k="f-active" aria-pressed="true" aria-label="${escapeHtml(fill(t.removeFilter, { name }))}">${menu.active.startsWith("label:") ? ic("tag") : ""}${escapeHtml(name)}<b>${count}</b><span class="x">${ic("close")}</span></button>`;
+  }
+  const more = `<button class="fchip more" id="morebtn" data-act="menu" data-k="more" aria-haspopup="menu" aria-expanded="${Boolean(state.menu)}" aria-controls="fmenu" aria-label="${escapeHtml(fill(t.moreLabel, { n: menu.available }))}">${ic("filter")}${escapeHtml(t.more)}<b>${menu.available}</b>${ic("chev")}</button>`;
+  return [...fixed, active, more].join("");
+}
+
+/** The menu behind "More": the other filters and the groups, each with its count. */
+export function renderFilterMenu(state, t, now) {
+  if (!state.menu) return "";
+  const menu = filterMenu(state.data, state.filter, now, state.threshold);
+  const item = (filter, name, count, icon = "") =>
+    `<button role="menuitemradio" aria-checked="${state.filter === filter}" data-filter="${escapeHtml(filter)}" tabindex="-1"><span class="ck">${state.filter === filter ? ic("check") : ""}</span>${icon}<span class="t">${escapeHtml(name)}</span><b>${count}</b></button>`;
+  const others = menu.others.map((o) => item(o.id, t.filters[o.id], o.count)).join("");
+  const labels = menu.labels.map((l) => item(`label:${l.id}`, l.name, l.count, ic("tag"))).join("");
+  return `<div class="sheet-scrim" data-act="menu-close"></div>
+    <div class="fmenu" id="fmenu" role="menu" aria-label="${escapeHtml(fill(t.moreLabel, { n: menu.available }))}">
+      ${others ? `<span class="label" aria-hidden="true">${escapeHtml(t.menuStatus)}</span>${others}` : ""}
+      ${labels ? `<span class="label" aria-hidden="true">${escapeHtml(t.menuGroups)}</span>${labels}` : ""}
+    </div>`;
 }
 
 /** The switches of the "Internet access" entities of the devices in a group. */
@@ -166,10 +195,19 @@ function weakPercent(client) {
 
 export { weakPercent };
 
-export function renderGroups(state, t, now) {
-  const clients = visibleClients(state, now);
+/** The groups of the list as the page shows them, for the list and for paging on the device page. */
+export function listGroups(state, now) {
   const narrowed = state.filter !== "all" || Boolean(state.query);
-  const groups = panelGroups(state.data, clients, state.group, narrowed);
+  return panelGroups(state.data, visibleClients(state, now), state.group, narrowed);
+}
+
+/** The devices in the order of the list: the order for paging when the device was opened there. */
+export function listOrder(state, now) {
+  return browseOrder(listGroups(state, now));
+}
+
+export function renderGroups(state, t, now) {
+  const groups = listGroups(state, now);
   if (!groups.length) {
     return `<div class="card empty">${ic("search")}<b>${escapeHtml(t.emptyTitle)}</b><span>${escapeHtml(t.emptyHint)}</span></div>`;
   }

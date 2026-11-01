@@ -4,6 +4,7 @@ import {
   WEAK_LINK_RATIO,
   escapeHtml,
   filterChanged,
+  pagerFor,
   panelCounts,
   routeFromHash,
   toggleMac,
@@ -13,19 +14,24 @@ import { PANEL_CSS } from "./panel-styles.js";
 import { ic } from "./icons.js";
 import {
   groupPlan,
+  listOrder,
   renderChips,
+  renderFilterMenu,
   renderGroupBar,
   renderGroups,
   renderMeta,
   visibleClients,
 } from "./panel-network.js";
-import { renderDevice, entityState } from "./panel-device.js";
+import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
+import { enablePlan, renderDevice, entityState } from "./panel-device.js";
 import { openDialog, showToast } from "./panel-dialogs.js";
 import { pickedMacs, renderHidden, renderStale, staleList } from "./panel-cleanup.js";
 import { renderFilterControls, renderPicker, renderPreview } from "./panel-filter.js";
 
 const DOMAIN = "fritzbox_network";
 const BOX_KEY = `${DOMAIN}_panel_box`;
+const VIEW_KEY = `${DOMAIN}_panel_view`;
+const VIEWS = ["list", "map"];
 
 function remembered() {
   try {
@@ -41,6 +47,34 @@ function remember(entryId) {
   } catch {
     // a private window may refuse; the choice then only lasts until the next reload
   }
+}
+
+/** The view chosen last in this browser, list or map; the list the first time. */
+function rememberedView() {
+  try {
+    const view = localStorage.getItem(VIEW_KEY);
+    return VIEWS.includes(view) ? view : "list";
+  } catch {
+    return "list";
+  }
+}
+
+function rememberView(view) {
+  try {
+    localStorage.setItem(VIEW_KEY, view);
+  } catch {
+    // without storage the panel starts with the list next time
+  }
+}
+
+/** The element that scrolls the panel: the panel itself, an ancestor of it in Home Assistant, or the page. */
+function scrollerOf(el) {
+  for (let node = el; node; node = node.parentElement ?? node.getRootNode?.().host ?? null) {
+    if (node.nodeType !== 1) continue;
+    const overflow = getComputedStyle(node).overflowY;
+    if (/(auto|scroll)/.test(overflow) && node.scrollHeight > node.clientHeight) return node;
+  }
+  return document.scrollingElement ?? document.documentElement;
 }
 
 /** The pages of the panel as tabs; the clean-up tab says how many devices have been gone for long. */
@@ -69,7 +103,17 @@ class FritzboxNetworkPanel extends HTMLElement {
       closed: new Set(),
       sel: route.device,
       threshold: WEAK_LINK_RATIO,
+      view: rememberedView(),
+      menu: false,
+      names: true,
+      // the device "In the network map" points at
+      hl: null,
+      // entities switched on in the registry, until Home Assistant shows their state
+      enabling: new Set(),
     };
+    // the device page was opened from the list or the map: back is a step back in the history
+    this._openedHere = false;
+    this._listScroll = 0;
     this._html = {};
     this._entries = [];
     this._entryId = null;
@@ -77,22 +121,24 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._unsub = null;
     this._updatedAt = 0;
     this._onHash = () => {
+      const state = this._state;
       const next = routeFromHash(globalThis.location.hash);
-      const entered = next.tab !== this._state.tab;
-      this._state.tab = next.tab;
-      this._state.sel = next.device;
+      const entered = next.tab !== state.tab;
+      const was = state.sel;
+      state.tab = next.tab;
+      state.sel = next.device;
+      state.menu = false;
+      if (!next.device) this._openedHere = false;
       if (entered) this._enterTab();
       this._update();
+      if (state.sel && state.sel !== was) this._showDevicePage();
+      else if (!state.sel && was) this._backToList(was);
     };
+    this._resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => this._drawLinks());
     this.shadowRoot.addEventListener("click", (event) => this._onClick(event));
     this.shadowRoot.addEventListener("input", (event) => this._onInput(event));
     this.shadowRoot.addEventListener("change", (event) => this._onChange(event));
-    this.shadowRoot.addEventListener("keydown", (event) => {
-      if (event.key === "/" && !/INPUT|SELECT/.test(this.shadowRoot.activeElement?.tagName ?? "")) {
-        event.preventDefault();
-        this.shadowRoot.querySelector("#q")?.focus();
-      }
-    });
+    this.shadowRoot.addEventListener("keydown", (event) => this._onKey(event));
   }
 
   set hass(hass) {
@@ -122,12 +168,15 @@ class FritzboxNetworkPanel extends HTMLElement {
   connectedCallback() {
     globalThis.addEventListener("hashchange", this._onHash);
     this._clock = setInterval(() => this._tick(), 5000);
+    this._resize?.observe(this);
     if (this._hass && !this._started) this._start();
   }
 
   disconnectedCallback() {
     globalThis.removeEventListener("hashchange", this._onHash);
     clearInterval(this._clock);
+    clearTimeout(this._enableTimer);
+    this._resize?.disconnect();
     this._stop();
   }
 
@@ -275,6 +324,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     this._state.data = null;
     this._state.sel = null;
+    this._state.enabling = new Set();
     this._state.cleanup = null;
     this._state.cleanupDays = null;
     this._state.picked = new Set();
@@ -284,6 +334,9 @@ class FritzboxNetworkPanel extends HTMLElement {
   }
 
   _onHass() {
+    const enabling = this._state.enabling;
+    // the entities just switched on are back once Home Assistant shows their state after the reload
+    if (enabling.size && [...enabling].every((id) => this._hass.states?.[id])) this._enabled();
     // the switches of the open device and of a group move on their own: draw them again when one did
     const signature = this._actionStates();
     if (signature !== this._signature) {
@@ -307,7 +360,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     return clients
       .flatMap((c) => Object.values(c?.actions ?? {}))
-      .map((id) => `${id}=${entityState(this._hass, id)?.state}`)
+      .map((id) => `${id}=${this._hass?.states?.[id]?.state ?? "-"}`)
       .join(",");
   }
 
@@ -340,6 +393,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         .groupbar .who small { color: var(--muted); font-size: 12px; }
         .fchip svg.i { width: 14px; height: 14px; }
         label.search { display: block; }
+        .tools.map .list-only { display: none; }
       </style>
       <div class="app">
         <header class="header">
@@ -356,22 +410,24 @@ class FritzboxNetworkPanel extends HTMLElement {
         </header>
         <main>
           <div id="note"></div>
-          <div class="split" id="split" hidden>
-            <div class="list-col">
-              <div class="card toolbar">
-                <div class="chips" id="chips" role="group" aria-label="${t.filterGroup}"></div>
-                <div class="fields">
-                  <label class="search"><span class="sr">${t.search}</span>${ic("search")}<input type="search" id="q" placeholder="${t.search}" title="${t.searchTitle}" aria-label="${t.searchTitle}" value="${escapeHtml(state.query)}"><kbd>/</kbd></label>
-                  <label><span class="sr">${t.sort}</span><select id="sort">${Object.entries(t.sorts).map(([k, v]) => `<option value="${k}" ${k === state.sort ? "selected" : ""}>${v}</option>`).join("")}</select></label>
-                  <label><span class="sr">${t.group}</span><select id="group">${Object.entries(t.groups).map(([k, v]) => `<option value="${k}" ${k === state.group ? "selected" : ""}>${v}</option>`).join("")}</select></label>
-                </div>
-                <div class="meta" id="meta"></div>
+          <div id="net-view" hidden>
+            <div class="card toolbar">
+              <div class="tools" id="tools">
+                <label class="search"><span class="sr">${t.search}</span>${ic("search")}<input type="search" id="q" placeholder="${t.search}" title="${t.searchTitle}" aria-label="${t.searchTitle}" aria-describedby="meta" value="${escapeHtml(state.query)}"><kbd aria-hidden="true">/</kbd></label>
+                <label class="list-only"><span class="sr">${t.sort}</span><select id="sort">${Object.entries(t.sorts).map(([k, v]) => `<option value="${k}" ${k === state.sort ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+                <label class="list-only"><span class="sr">${t.group}</span><select id="group">${Object.entries(t.groups).map(([k, v]) => `<option value="${k}" ${k === state.group ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+                <div class="seg viewsw" role="group" aria-label="${t.viewLabel}">${VIEWS.map((v) => `<button data-view="${v}" aria-pressed="${state.view === v}">${ic(v)}${t.views[v]}</button>`).join("")}</div>
               </div>
-              <div id="groupbar"></div>
-              <div id="groups"></div>
+              <div class="chipwrap">
+                <div class="chips" id="chips" role="group" aria-label="${t.filterGroup}"></div>
+                <div id="menuhost"></div>
+              </div>
+              <div class="meta" id="meta" aria-live="polite"></div>
             </div>
-            <aside class="detail-col" id="detail"></aside>
+            <div id="groupbar"></div>
+            <div id="body"></div>
           </div>
+          <div id="device-view" hidden></div>
           <div class="two" id="cleanup-view" hidden>
             <section class="card pad">
               <h2>${t.cleanup.title}</h2><p class="lead">${t.cleanup.lead}</p>
@@ -402,16 +458,24 @@ class FritzboxNetworkPanel extends HTMLElement {
       menu.narrow = this._narrow;
     }
     this._html = {};
+    this._resize?.observe(this.shadowRoot.querySelector("#body"));
     this._renderBox();
     this._update();
   }
 
-  /** Writes HTML into a part only when it changed, so a poll does not flicker or lose the scroll. */
+  /**
+   * Writes HTML into a part only when it changed, so a poll does not flicker or lose the scroll.
+   * A control that had the focus gets it back in the new HTML.
+   */
   _set(id, html) {
     const el = this.shadowRoot.querySelector(`#${id}`);
     if (!el || this._html[id] === html) return;
     this._html[id] = html;
+    const active = this.shadowRoot.activeElement;
+    const ds = active && el.contains(active) ? active.dataset : null;
+    const again = ds?.k ? `[data-k="${CSS.escape(ds.k)}"]` : ds?.dev ? `[data-dev="${CSS.escape(ds.dev)}"]` : null;
     el.innerHTML = html;
+    if (again) el.querySelector(again)?.focus({ preventScroll: true });
   }
 
   _renderBox() {
@@ -439,10 +503,12 @@ class FritzboxNetworkPanel extends HTMLElement {
     const note = this._error ? `<div class="card note-card"><div class="empty"><b>${t[this._error]}</b></div></div>` : "";
     const ready = Boolean(state.data) && !this._error;
     this._set("note", note || (state.data ? "" : `<div class="card"><div class="empty"><span>${t.loading}</span></div></div>`));
-    const split = root.querySelector("#split");
-    if (!split) return;
+    const netView = root.querySelector("#net-view");
+    if (!netView) return;
     const tab = state.tab;
-    split.hidden = !ready || tab !== "net";
+    const onDevice = tab === "net" && Boolean(state.sel);
+    netView.hidden = !ready || tab !== "net" || onDevice;
+    root.querySelector("#device-view").hidden = !ready || !onDevice;
     root.querySelector("#cleanup-view").hidden = !ready || tab !== "cleanup";
     root.querySelector("#filter-view").hidden = !ready || tab !== "filter";
     root.querySelector("#live-chip").hidden = !ready;
@@ -455,12 +521,26 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._tick();
     if (tab === "cleanup") return this._renderCleanup();
     if (tab === "filter") return this._renderFilter();
-    split.classList.toggle("detail-open", Boolean(this._selected()));
+    if (onDevice) return this._renderDetail();
+    const map = state.view === "map";
+    root.querySelector("#tools").classList.toggle("map", map);
+    for (const button of root.querySelectorAll(".viewsw [data-view]")) {
+      button.setAttribute("aria-pressed", String(button.dataset.view === state.view));
+    }
+    const shown = visibleClients(state, now);
     this._set("chips", renderChips(state, t, now));
-    this._set("meta", renderMeta(state, t, visibleClients(state, now).length));
+    this._set("menuhost", renderFilterMenu(state, t, now));
+    this._set("meta", renderMeta(state, t, shown.length));
     this._set("groupbar", renderGroupBar(state, t, this._hass));
-    this._set("groups", renderGroups(state, t, now));
-    this._renderDetail();
+    this._set("body", map ? renderMap(state, t, now, shown) : renderGroups(state, t, now));
+    this._drawLinks();
+  }
+
+  /** The lines of the map follow the islands: after each drawing and when the width changes. */
+  _drawLinks() {
+    const state = this._state;
+    if (state.view !== "map" || state.sel || state.tab !== "net") return;
+    drawLinks(this.shadowRoot);
   }
 
   _renderCleanup() {
@@ -484,18 +564,130 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._set("f-preview", renderPreview(page, t));
   }
 
+  /** The devices in the order of the view the device was opened from: the order for paging. */
+  _order() {
+    const state = this._state;
+    const now = Date.now();
+    return state.view === "map" ? mapOrder(state.data, visibleClients(state, now)) : listOrder(state, now);
+  }
+
   _renderDetail() {
     const state = this._state;
+    if (!state.sel || !state.data) return;
     this._set(
-      "detail",
+      "device-view",
       renderDevice(this._selected(), {
         t: this._t,
         now: Date.now(),
         data: state.data,
         hass: this._hass,
         threshold: state.threshold,
+        pager: pagerFor(this._order(), state.sel),
+        view: state.view,
+        enabling: state.enabling,
       })
     );
+  }
+
+  /** A device page was opened or paged to: from the top, with the focus on its name. */
+  _showDevicePage() {
+    const scroller = scrollerOf(this);
+    if (scroller) scroller.scrollTop = 0;
+    this.shadowRoot.querySelector("#dtitle")?.focus({ preventScroll: true });
+  }
+
+  /** Back from a device: the list or the map where it was, the focus on the device last open. */
+  _backToList(was) {
+    const root = this.shadowRoot;
+    if (this._reveal) {
+      const node = root.querySelector(`.nd[data-dev="${CSS.escape(this._reveal)}"]`);
+      this._reveal = null;
+      node?.scrollIntoView?.({ block: "center" });
+      node?.focus({ preventScroll: true });
+      return;
+    }
+    const scroller = scrollerOf(this);
+    if (scroller) scroller.scrollTop = this._listScroll;
+    if (this._afterBack === "search") {
+      this._afterBack = null;
+      root.querySelector("#q")?.focus();
+      return;
+    }
+    root.querySelector(`#body [data-dev="${CSS.escape(was)}"]`)?.focus({ preventScroll: true });
+  }
+
+  _openDevice(id) {
+    this._listScroll = scrollerOf(this)?.scrollTop ?? 0;
+    this._state.hl = null;
+    this._openedHere = true;
+    globalThis.location.hash = `#/device/${id}`;
+  }
+
+  /** Esc closes the menu or the device, the arrows go through the menu, j and k page, / searches. */
+  _onKey(event) {
+    const root = this.shadowRoot;
+    const state = this._state;
+    if (root.querySelector("#backdrop")?.classList.contains("open")) return;
+    const target = event.target;
+    const menu = root.querySelector("#fmenu");
+    if (state.menu && menu?.contains(target)) {
+      const items = [...menu.querySelectorAll('[role="menuitemradio"]')];
+      const at = items.indexOf(target);
+      const to = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 }[event.key];
+      if (to !== undefined && items.length) {
+        event.preventDefault();
+        items[(to + items.length) % items.length].focus();
+        return;
+      }
+      if (event.key === "Tab") {
+        this._setMenu(false, false);
+        return;
+      }
+    }
+    if (event.key === "Escape") {
+      if (state.menu) {
+        event.preventDefault();
+        this._setMenu(false);
+        return;
+      }
+      if (state.sel && state.tab === "net" && !/SELECT/.test(target.tagName)) {
+        event.preventDefault();
+        this._leaveDevice();
+        return;
+      }
+    }
+    if (event.key === "ArrowDown" && target.id === "morebtn") {
+      event.preventDefault();
+      this._setMenu(true);
+      return;
+    }
+    if (/INPUT|SELECT|TEXTAREA/.test(target.tagName) || event.ctrlKey || event.metaKey || event.altKey) return;
+    if (event.key === "/" && state.tab === "net") {
+      event.preventDefault();
+      if (state.sel) {
+        this._afterBack = "search";
+        this._leaveDevice();
+      } else root.querySelector("#q")?.focus();
+      return;
+    }
+    if (state.sel && (event.key === "j" || event.key === "k")) {
+      const button = root.querySelector(`#device-view [data-k="${event.key === "j" ? "next" : "prev"}"]`);
+      if (button && !button.disabled) {
+        event.preventDefault();
+        globalThis.location.replace(`#/device/${button.dataset.go}`);
+      }
+    }
+  }
+
+  /** Opens or closes the "More" menu; open, the focus goes to the chosen item or the first. */
+  _setMenu(open, focus = true) {
+    this._state.menu = open;
+    this._update();
+    if (!focus) return;
+    const root = this.shadowRoot;
+    if (open) {
+      (root.querySelector('#fmenu [aria-checked="true"]') ?? root.querySelector('#fmenu [role="menuitemradio"]'))?.focus();
+    } else root.querySelector("#morebtn")?.focus();
   }
 
   _onChange(event) {
@@ -532,18 +724,44 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _onClick(event) {
     const t = this._t;
-    const target = event.target.closest("button, [data-filter], [data-ap], [data-dev]");
-    if (!target) return;
+    const target = event.target.closest("button, [data-filter], [data-ap], [data-dev], [data-act]");
+    if (!target || target.disabled) return;
     const ds = target.dataset;
     const state = this._state;
     if (ds.filter) {
+      const fromMenu = Boolean(target.closest("#fmenu"));
       state.filter = ds.filter;
+      state.menu = false;
+      this._update();
+      const root = this.shadowRoot;
+      (fromMenu ? root.querySelector("#morebtn") : root.querySelector(`#chips [data-k="f-${CSS.escape(ds.filter)}"]`))?.focus();
+      return;
+    } else if (ds.act === "menu") {
+      return this._setMenu(!state.menu);
+    } else if (ds.act === "menu-close") {
+      return this._setMenu(false);
+    } else if (ds.view) {
+      state.view = ds.view;
+      state.hl = null;
+      state.menu = false;
+      rememberView(ds.view);
+      this._update();
+      this.shadowRoot.querySelector(`.viewsw [data-view="${ds.view}"]`)?.focus();
+      return;
+    } else if (ds.act === "names") {
+      state.names = !state.names;
     } else if (ds.ap) {
       if (state.closed.has(ds.ap)) state.closed.delete(ds.ap);
       else state.closed.add(ds.ap);
     } else if (ds.dev) {
-      globalThis.location.hash = `#/device/${ds.dev}`;
+      return this._openDevice(ds.dev);
+    } else if (ds.go) {
+      globalThis.location.replace(`#/device/${ds.go}`);
       return;
+    } else if (ds.enable) {
+      return this._enable(ds.enable);
+    } else if (ds.act === "show-map") {
+      return this._showInMap();
     } else if (ds.act === "back") {
       this._leaveDevice();
       return;
@@ -655,10 +873,71 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _leaveDevice() {
     // without a history entry of our own (opened by link) back would leave the panel
-    if (globalThis.history.length > 1 && globalThis.location.hash) globalThis.history.back();
-    else globalThis.location.hash = "";
-    this._state.sel = null;
-    this._update();
+    if (this._openedHere) globalThis.history.back();
+    else globalThis.location.hash = "#/";
+  }
+
+  /** Back to the map with the device marked; a filter that hides it is lifted first. */
+  _showInMap() {
+    const state = this._state;
+    const id = state.sel;
+    if (!id) return;
+    state.view = "map";
+    rememberView("map");
+    state.hl = id;
+    if (!visibleClients(state, Date.now()).some((c) => c.id === id)) {
+      state.filter = "all";
+      state.query = "";
+      const q = this.shadowRoot.querySelector("#q");
+      if (q) q.value = "";
+    }
+    this._reveal = id;
+    this._leaveDevice();
+  }
+
+  /**
+   * Switches entities of the device on in the registry. Home Assistant reloads the integration
+   * after a short delay; until their state shows, the rows say so, then the panel subscribes again.
+   */
+  async _enable(which) {
+    const t = this._t;
+    const state = this._state;
+    const entities =
+      which === "all"
+        ? enablePlan(this._selected(), this._hass, Boolean(state.data?.can_write), state.enabling)
+        : [which];
+    if (!entities.length) return;
+    for (const entity of entities) state.enabling.add(entity);
+    this._renderDetail();
+    let delay = 30;
+    try {
+      for (const entity of entities) {
+        const result = await this._hass.callWS({
+          type: "config/entity_registry/update",
+          entity_id: entity,
+          disabled_by: null,
+        });
+        if (typeof result?.reload_delay === "number") delay = result.reload_delay;
+      }
+    } catch (err) {
+      for (const entity of entities) state.enabling.delete(entity);
+      this._renderDetail();
+      showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
+      return;
+    }
+    showToast(this.shadowRoot, fill(t.toastEnabled, { s: delay }));
+    // should the states never show, the panel still takes up the subscription again
+    clearTimeout(this._enableTimer);
+    this._enableTimer = setTimeout(() => this._enabled(), (delay + 60) * 1000);
+  }
+
+  /** The integration is back after switching entities on: the subscription of the old one is gone. */
+  _enabled() {
+    clearTimeout(this._enableTimer);
+    this._state.enabling = new Set();
+    this._signature = null;
+    this._resubscribeAfterReload();
+    this._renderDetail();
   }
 
   async _toggle(kind, entityId) {

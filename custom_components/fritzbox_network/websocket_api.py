@@ -34,7 +34,7 @@ from .const import (
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .filters import FILTER_OPTIONS, select_hosts
-from .models import is_private_mac, mac_id
+from .models import MeshNode, MeshTopology, is_private_mac, mac_id
 from .repairs import async_update_stale_issue, last_online
 
 COMMAND = f"{DOMAIN}/subscribe_topology"
@@ -64,6 +64,22 @@ DEVICE_ACTIONS = {
 }
 
 
+def _uplink(mesh: MeshTopology, node: MeshNode) -> dict[str, Any] | None:
+    """How a repeater reaches the mesh: by cable or Wi-Fi, with band and signal.
+
+    None for the box itself and where the mesh names no link for the node.
+    """
+    if node.role == "master" or (link := mesh.links.get(node.mac)) is None:
+        return None
+    if link.ap_mac == node.mac:
+        return None
+    return {
+        "type": link.link_type.lower(),
+        "band": link.band,
+        "signal_dbm": link.signal_dbm,
+    }
+
+
 def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) -> dict[str, Any]:
     """The access points and the devices at them, as the card draws them."""
     registry = er.async_get(hass)
@@ -85,6 +101,7 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
                     }
                     for band, radio in n.radios.items()
                 },
+                "uplink": _uplink(mesh, n),
             }
             for n in mesh.nodes.values()
         ]
