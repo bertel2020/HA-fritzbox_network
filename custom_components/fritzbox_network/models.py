@@ -61,6 +61,7 @@ class Host:
     friendly_name: str | None
     mac_list: list[str] = field(default_factory=list)
     device_class: str | None = None
+    filter_profile: str | None = None
 
     @property
     def is_ethernet(self) -> bool:
@@ -169,6 +170,7 @@ def parse_hosts(xml: str | bytes) -> list[Host]:
                 ]
                 or [mac],
                 device_class=_text(item, "X_AVM-DE_DeviceClass"),
+                filter_profile=_text(item, "X_AVM-DE_FilterProfileID"),
             )
         )
     return hosts
@@ -285,6 +287,28 @@ def parse_mesh(raw: str | bytes) -> MeshTopology:
                     band=_band(ap_side) if link.get("type") == "WLAN" else None,
                 )
     return topology
+
+
+def parse_filter_profiles(xml: str | None) -> dict[str, str]:
+    """Parse ``NewFilterProfileList`` into {profile id: name}.
+
+    The layout of the list is read loosely: an element with a child whose tag ends
+    in "id" is a profile, the first child with "name" in its tag is its name.
+    """
+    if not xml:
+        return {}
+    try:
+        root = ET.fromstring(xml)
+    except ET.ParseError:
+        return {}
+    profiles: dict[str, str] = {}
+    for element in root.iter():
+        fields = {c.tag.lower(): (c.text or "").strip() for c in element if len(c) == 0}
+        profile_id = next((v for k, v in fields.items() if k.endswith("id") and v), None)
+        if profile_id is None:
+            continue
+        profiles[profile_id] = next((v for k, v in fields.items() if "name" in k and v), profile_id)
+    return profiles
 
 
 def parse_rights(xml: str | None) -> dict[str, str]:

@@ -393,3 +393,40 @@ async def test_refresh_button_polls_the_box_even_without_write_rights(hass, fake
 
     assert coordinator.last_update_success
     assert polls >= 1
+
+
+def _enable(hass, entity_id):
+    er.async_get(hass).async_update_entity(entity_id, disabled_by=None)
+
+
+async def test_access_profile_select_lists_the_profiles_and_sets_one(hass, fake_client, entry):
+    await _setup(hass, entry)
+    entity_id = "select.fritz_020000000003_access_profile"
+    registry = er.async_get(hass)
+    assert registry.async_get(entity_id).disabled_by is not None
+
+    _enable(hass, entity_id)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    state = hass.states.get(entity_id)
+    assert state.attributes["options"] == ["Standard", "Kids"]
+    assert state.state == "Standard"
+
+    await hass.services.async_call(
+        "select", "select_option", {"entity_id": entity_id, "option": "Kids"}, blocking=True
+    )
+    assert fake_client.calls[-1] == ("profile", "192.0.2.3", "filtprof2")
+    await hass.async_block_till_done()
+    assert hass.states.get(entity_id).state == "Kids"
+
+
+async def test_no_access_profile_select_without_profiles_or_rights(hass, fake_client, entry):
+    fake_client.profiles = {}
+    await _setup(hass, entry)
+    assert (
+        er.async_get(hass).async_get_entity_id(
+            "select", "fritzbox_network", f"{WLAN}_access_profile"
+        )
+        is None
+    )

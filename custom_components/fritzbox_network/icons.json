@@ -78,6 +78,11 @@
       "guest": {
         "default": "mdi:account-multiple-outline"
       }
+    },
+    "select": {
+      "access_profile": {
+        "default": "mdi:shield-account-outline"
+      }
     }
   }
 }

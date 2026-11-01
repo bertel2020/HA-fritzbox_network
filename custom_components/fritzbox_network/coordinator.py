@@ -6,6 +6,7 @@ from dataclasses import replace
 from datetime import datetime, timedelta
 import logging
 import time
+from typing import Any
 from xml.etree import ElementTree as ET
 
 from fritzconnection.core.exceptions import (
@@ -44,6 +45,7 @@ from .const import (
     EVENT_NEW_DEVICE,
     FILTER_EXCLUDE,
     FILTER_INCLUDE,
+    FILTER_PROFILE_REFRESH_POLLS,
     MAX_BACKOFF_SECONDS,
     WAN_OVERRIDE_SECONDS,
 )
@@ -87,8 +89,11 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.last_active: dict[str, datetime] = {}
         self._failures = 0
         self.last_success: datetime | None = None
-        # mac -> (allowed, monotonic deadline): see WAN_OVERRIDE_SECONDS
-        self._wan_override: dict[str, tuple[bool, float]] = {}
+        # (mac, Host field) -> (value, monotonic deadline): see WAN_OVERRIDE_SECONDS
+        self._overrides: dict[tuple[str, str], tuple[Any, float]] = {}
+        # id -> name of the access profiles of the box, read now and then
+        self.filter_profiles: dict[str, str] = {}
+        self._polls = 0
         # How long the last and the slowest poll took, shown in the diagnostics.
         self.last_fetch_seconds: float | None = None
         self.slowest_fetch_seconds: float = 0.0
@@ -109,6 +114,14 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         except _FETCH_ERRORS as err:
             _LOGGER.debug("Mesh topology unavailable: %s", err)
             mesh = None
+        if self.can_write and self._polls % FILTER_PROFILE_REFRESH_POLLS == 0:
+            try:
+                self.filter_profiles = self.client.get_filter_profiles()
+            except FritzAuthorizationError:
+                raise
+            except _FETCH_ERRORS as err:
+                _LOGGER.debug("Access profiles unavailable: %s", err)
+        self._polls += 1
         return hosts, mesh
 
     async def _async_update_data(self) -> NetworkData:
@@ -129,7 +142,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.all_hosts = {h.mac: h for h in hosts}
         selected = self._apply_filters(hosts, mesh)
         self._fire_new_devices(selected)
-        self._apply_wan_override(selected)
+        self._apply_overrides(selected)
 
         now = dt_util.utcnow()
         for host in selected.values():
@@ -140,14 +153,15 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._sync_names(selected)
         return NetworkData(hosts=selected, mesh=mesh)
 
-    def _apply_wan_override(self, hosts: dict[str, Host]) -> None:
+    def _apply_overrides(self, hosts: dict[str, Host]) -> None:
+        """Show what was just asked for until the box shows it too."""
         now = time.monotonic()
-        for mac, (allowed, deadline) in list(self._wan_override.items()):
+        for (mac, attr), (value, deadline) in list(self._overrides.items()):
             host = hosts.get(mac)
-            if host is None or host.wan_access == allowed or now > deadline:
-                del self._wan_override[mac]
+            if host is None or getattr(host, attr) == value or now > deadline:
+                del self._overrides[(mac, attr)]
             else:
-                hosts[mac] = replace(host, wan_access=allowed)
+                hosts[mac] = replace(host, **{attr: value})
 
     @property
     def failed_polls(self) -> int:
@@ -283,18 +297,29 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         grace = self._options.get(CONF_CONSIDER_HOME, DEFAULT_CONSIDER_HOME)
         return (dt_util.utcnow() - last).total_seconds() < grace
 
-    async def async_set_internet_access(self, host: Host, allowed: bool) -> None:
-        # The box blocks by IPv4 address: if DHCP gave the address to another device
-        # since the last poll, blocking it would hit the wrong one. A small window
-        # between this check and the action remains.
+    async def _async_set_by_ip(self, host: Host, attr: str, value: Any, action: Any) -> None:
+        """Run an action the box takes by IPv4 address and show its result at once.
+
+        If DHCP gave the address to another device since the last poll, the action
+        would hit the wrong one. A small window between this check and the action
+        remains.
+        """
         if await self.hass.async_add_executor_job(self.client.get_host_ip, host.mac) != host.ip:
             raise HomeAssistantError(translation_domain=DOMAIN, translation_key="ip_changed")
-        await self.hass.async_add_executor_job(self.client.set_internet_access, host.ip, allowed)
-        self._wan_override[host.mac] = (allowed, time.monotonic() + WAN_OVERRIDE_SECONDS)
+        await self.hass.async_add_executor_job(action, host.ip, value)
+        self._overrides[(host.mac, attr)] = (value, time.monotonic() + WAN_OVERRIDE_SECONDS)
         hosts = dict(self.data.hosts)
-        self._apply_wan_override(hosts)
+        self._apply_overrides(hosts)
         self.async_set_updated_data(NetworkData(hosts=hosts, mesh=self.data.mesh))
         await self.async_request_refresh()
+
+    async def async_set_internet_access(self, host: Host, allowed: bool) -> None:
+        await self._async_set_by_ip(host, "wan_access", allowed, self.client.set_internet_access)
+
+    async def async_set_filter_profile(self, host: Host, profile_id: str) -> None:
+        await self._async_set_by_ip(
+            host, "filter_profile", profile_id, self.client.set_filter_profile
+        )
 
     async def async_wake_on_lan(self, host: Host) -> None:
         await self.hass.async_add_executor_job(self.client.wake_on_lan, host.mac)

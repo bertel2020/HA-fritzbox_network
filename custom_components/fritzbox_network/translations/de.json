@@ -143,6 +143,11 @@
         }
       }
     },
+    "select": {
+      "access_profile": {
+        "name": "Zugangsprofil"
+      }
+    },
     "switch": {
       "internet_access": {
         "name": "Internetzugang"
@@ -165,6 +170,9 @@
   "exceptions": {
     "no_ipv4_address": {
       "message": "Das Gerät hat keine IPv4-Adresse, sein Internetzugang lässt sich nicht schalten."
+    },
+    "unknown_profile": {
+      "message": "Das Zugangsprofil ist der Box nicht bekannt."
     },
     "ip_changed": {
       "message": "Die Adresse des Geräts hat sich geändert. Sein Internetzugang wurde nicht geschaltet, versuche es nach der nächsten Aktualisierung erneut."

@@ -32,6 +32,8 @@ MAX_BACKOFF_SECONDS = 300
 # The box takes a while to show a changed internet access in its host list;
 # until then the switch shows what was just asked for.
 WAN_OVERRIDE_SECONDS = 120
+# The access profiles of the box rarely change: read them every n-th poll.
+FILTER_PROFILE_REFRESH_POLLS = 20
 BACKOFF_AFTER_FAILURES = 3
 
 EVENT_DEVICE_RENAMED = f"{DOMAIN}_device_renamed"
@@ -57,6 +59,7 @@ KEY_MESH_STATUS = "mesh_status"
 KEY_REFRESH = "refresh"
 KEY_INTERNET_ACCESS = "internet_access"
 KEY_WAKE_ON_LAN = "wake_on_lan"
+KEY_ACCESS_PROFILE = "access_profile"
 KEY_CLIENTS = "clients"
 KEY_GUEST = "guest"
 KEY_SIGNAL_STRENGTH = "signal_strength"

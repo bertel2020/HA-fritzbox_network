@@ -86,3 +86,30 @@ def test_host_ip_is_none_without_an_address_or_an_entry():
 
     client._fc.call_action.side_effect = FritzLookUpError("714")
     assert client.get_host_ip("02:00:00:00:00:03") is None
+
+
+def test_filter_profiles_and_setting_one():
+    client = _client()
+    client._fc.services = {"X_AVM-DE_HostFilter1": object()}
+    client._fc.call_action.side_effect = None
+    client._fc.call_action.return_value = {
+        "NewFilterProfileList": (
+            "<List><Item><ProfileID>p1</ProfileID><Name>Kids</Name></Item></List>"
+        )
+    }
+
+    assert client.get_filter_profiles() == {"p1": "Kids"}
+    client.set_filter_profile("192.0.2.1", "p1")
+    client._fc.call_action.assert_called_with(
+        "X_AVM-DE_HostFilter1",
+        "AddHostEntryToFilterProfile",
+        NewIPv4Address="192.0.2.1",
+        NewFilterProfileID="p1",
+    )
+
+
+def test_no_filter_profiles_without_the_service():
+    client = _client()
+    client._fc.services = {}
+
+    assert client.get_filter_profiles() == {}

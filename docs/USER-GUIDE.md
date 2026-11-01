@@ -94,6 +94,7 @@ The box itself and its **repeaters** are never filtered.
 | Sensor | Online since | on | Timestamp of going online; unknown while the device is offline. Changes only when going online and survives a restart |
 | Sensor | Last online | on | Timestamp of the last poll that saw the device; unknown while it is online. Changes only when going offline and survives a restart |
 | Switch | Internet access | on | On = may use the internet. Only with the right "FRITZ!Box settings" and only for devices with an IPv4 address. The box sometimes reports the change only after about a minute; the switch shows it at once until then. |
+| Select | Access profile | off | The access profile of the box the device is in, for example "Kids". Only with the right and when the box lists profiles. Set by IPv4 address like the internet access; the profile names are read from the box every 20th poll. The box layout of the list is not verified against every firmware yet |
 | Button | Refresh | on | On the box device: polls the box now instead of at the next interval |
 | Button | Wake on LAN | off | Only with the right; not for devices known to be on Wi-Fi |
 | Binary sensor | Guest network | on for guest devices only | Diagnostic |

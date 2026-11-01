@@ -32,6 +32,7 @@ class FakeClient:
         self.mesh = parse_mesh((FIXTURES / "mesh.json").read_text())
         self.writable = True
         self.repeater = False
+        self.profiles = {"filtprof1": "Standard", "filtprof2": "Kids"}
         self.calls: list[tuple] = []
 
     def connect(self) -> None:
@@ -57,6 +58,12 @@ class FakeClient:
 
     def wake_on_lan(self, mac: str) -> None:
         self.calls.append(("wol", mac))
+
+    def get_filter_profiles(self) -> dict[str, str]:
+        return dict(self.profiles)
+
+    def set_filter_profile(self, ip: str, profile_id: str) -> None:
+        self.calls.append(("profile", ip, profile_id))
 
 
 @pytest.fixture(autouse=True)

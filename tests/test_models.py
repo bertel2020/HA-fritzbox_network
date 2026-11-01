@@ -6,6 +6,7 @@ import pytest
 
 from custom_components.fritzbox_network.models import (
     is_private_mac,
+    parse_filter_profiles,
     parse_hosts,
     parse_mesh,
     parse_rights,
@@ -113,3 +114,28 @@ def test_mesh_link_to_a_client_with_an_invalid_mac_is_dropped():
             node["device_mac_address"] = "junk"
 
     assert WLAN not in parse_mesh(json.dumps(raw)).links
+
+
+def test_filter_profiles_are_read_loosely():
+    xml = (
+        "<List><Item><ProfileID>filtprof1</ProfileID><ProfileName>Standard</ProfileName></Item>"
+        "<Item><ProfileID>filtprof2</ProfileID><Name>Kids</Name></Item>"
+        "<Item><ID>filtprof3</ID></Item><Item><Other>x</Other></Item></List>"
+    )
+
+    assert parse_filter_profiles(xml) == {
+        "filtprof1": "Standard",
+        "filtprof2": "Kids",
+        "filtprof3": "filtprof3",
+    }
+    assert parse_filter_profiles("") == {}
+    assert parse_filter_profiles("not xml") == {}
+
+
+def test_hosts_carry_their_access_profile():
+    hosts = parse_hosts(
+        "<List><Item><MACAddress>02:00:00:00:00:01</MACAddress>"
+        "<X_AVM-DE_FilterProfileID>filtprof2</X_AVM-DE_FilterProfileID></Item></List>"
+    )
+
+    assert hosts[0].filter_profile == "filtprof2"

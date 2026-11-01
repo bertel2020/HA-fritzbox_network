@@ -143,6 +143,11 @@
         }
       }
     },
+    "select": {
+      "access_profile": {
+        "name": "Access profile"
+      }
+    },
     "switch": {
       "internet_access": {
         "name": "Internet access"
@@ -165,6 +170,9 @@
   "exceptions": {
     "no_ipv4_address": {
       "message": "The device has no IPv4 address, its internet access cannot be switched."
+    },
+    "unknown_profile": {
+      "message": "The access profile is not known to the box."
     },
     "ip_changed": {
       "message": "The address of the device changed. Its internet access was not switched, try again after the next update."

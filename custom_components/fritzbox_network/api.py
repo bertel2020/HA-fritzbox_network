@@ -24,7 +24,14 @@ from fritzconnection.core.exceptions import (
 from homeassistant.helpers.device_registry import format_mac
 
 from .const import HOST_FILTER_SERVICE_PREFIX, HOSTS_SERVICE
-from .models import Host, MeshTopology, parse_hosts, parse_mesh, parse_rights
+from .models import (
+    Host,
+    MeshTopology,
+    parse_filter_profiles,
+    parse_hosts,
+    parse_mesh,
+    parse_rights,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -149,13 +156,41 @@ class FritzNetworkClient:
         node = next((n for n in mesh.nodes.values() if mac in n.macs), None)
         return node is not None and node.role == "slave"
 
+    def _host_filter_service(self) -> str | None:
+        return next(
+            (n for n in self._connection.services if n.startswith(HOST_FILTER_SERVICE_PREFIX)),
+            None,
+        )
+
+    def get_filter_profiles(self) -> dict[str, str]:
+        """The access profiles of the box as {id: name}; empty if it has none to offer."""
+        with self._lock:
+            if (service := self._host_filter_service()) is None:
+                return {}
+            try:
+                result = self._connection.call_action(service, "GetFilterProfiles")
+            except (FritzActionError, FritzServiceError):
+                _LOGGER.debug("The box provides no access profiles")
+                return {}
+        return parse_filter_profiles(result.get("NewFilterProfileList"))
+
+    def set_filter_profile(self, ip: str, profile_id: str) -> None:
+        """Put the host with this IPv4 address into an access profile."""
+        with self._lock:
+            if (service := self._host_filter_service()) is None:
+                raise FritzServiceError("The box provides no host filter service")
+            self._connection.call_action(
+                service,
+                "AddHostEntryToFilterProfile",
+                NewIPv4Address=ip,
+                NewFilterProfileID=profile_id,
+            )
+
     def set_internet_access(self, ip: str, allowed: bool) -> None:
         """Allow or block the internet access of the host with this IPv4 address."""
         with self._lock:
             fc = self._connection
-            service = next(
-                (n for n in fc.services if n.startswith(HOST_FILTER_SERVICE_PREFIX)), None
-            )
+            service = self._host_filter_service()
             if service is None:
                 raise FritzServiceError("The box provides no host filter service")
             try:
