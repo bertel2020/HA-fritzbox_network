@@ -110,3 +110,21 @@ def test_the_card_is_shipped_with_the_integration():
 
     assert CARD_FILE.is_file()
     assert CARD_URL.endswith(CARD_FILE.name)
+
+
+async def test_topology_carries_the_vendor_when_the_option_is_on(
+    hass, hass_ws_client, fake_client, entry
+):
+    fake_client.hosts = [
+        replace(fake_client.hosts[0], mac="24:0a:c4:00:00:01", mac_list=["24:0a:c4:00:00:01"]),
+        *fake_client.hosts[1:],
+    ]
+    hass.config_entries.async_update_entry(entry, options={"show_vendor": True})
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    topology = await _subscribe(client)
+
+    vendors = {c["mac"]: c["vendor"] for c in topology["clients"]}
+    assert vendors["24:0a:c4:00:00:01"] == "Espressif Inc."
+    assert vendors[WLAN] is None  # a private fake MAC

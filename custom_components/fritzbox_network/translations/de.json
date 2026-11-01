@@ -51,6 +51,7 @@
           "scan_interval": "Abfrageintervall (Sekunden)",
           "consider_home": "Als anwesend werten für (Sekunden)",
           "adopt_names": "Gerätenamen aus der FRITZ!Box übernehmen",
+          "show_vendor": "Hersteller eines Geräts anzeigen",
           "ignore_guests": "Geräte im Gastnetz ignorieren",
           "ignore_private_macs": "Geräte mit privater (zufälliger) MAC-Adresse ignorieren",
           "filter_mode": "Gerätefilter",
@@ -61,6 +62,7 @@
         "data_description": {
           "consider_home": "Wie lange ein Gerät nach dem Offline-Gehen noch als anwesend gilt.",
           "adopt_names": "Namen, die du in Home Assistant selbst vergibst, werden nie überschrieben.",
+          "show_vendor": "Der Hersteller stammt aus der MAC-Adresse, aus einer Liste, die mit Home Assistant mitkommt; es wird nichts verschickt. Er erscheint als Hersteller des Geräts, im Ereignis für neue Geräte und in der Topologie-Karte. Private (zufällige) Adressen haben keinen. Schaltest du das aus, bleibt ein bereits eingetragener Hersteller stehen.",
           "hidden_macs": "Von Hand entfernte Geräte stehen hier. Abwählen blendet ein Gerät wieder ein.",
           "skip_offline": "Die Box merkt sich jedes Gerät, das sie je gesehen hat. Ein Gerät, das offline ist und noch kein Gerät in Home Assistant hat, wird angelegt, sobald es online kommt. Vorhandene Geräte bleiben."
         }

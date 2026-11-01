@@ -72,6 +72,7 @@ Host (Standard `192.168.178.1`), Benutzer und Kennwort eingeben, optional Port u
 |--------|----------|-----------|
 | Abfrageintervall | 30 s (15–300) | Wie oft die Box gefragt wird. Pro Abfrage zwei Anfragen (Geräteliste, Mesh). Bei wiederholten Fehlern verdoppelt sich das Intervall bis höchstens 5 Minuten. |
 | Als anwesend werten für | 180 s (0–900) | Wie lange ein Gerät nach dem Offline-Gehen noch als anwesend gilt. |
+| Hersteller eines Geräts anzeigen | aus | Der Hersteller stammt aus der MAC-Adresse, aus einer Liste, die mit Home Assistant mitkommt; es wird nichts verschickt. Er erscheint als Hersteller des Geräts, im Ereignis für neue Geräte (`vendor`) und in der Topologie-Karte. Private (zufällige) Adressen haben keinen. Schaltest du das aus, bleibt ein bereits eingetragener Hersteller stehen. |
 | Gerätenamen übernehmen | an | Der Name aus der Box wird zum Gerätenamen. Namen, die du in Home Assistant selbst vergibst, werden nie überschrieben. |
 | Für Offline-Geräte keine Geräte anlegen | aus | Die Box merkt sich jedes Gerät, das sie je gesehen hat. Mit dieser Option entsteht ein Gerät erst, wenn das Gerät online kommt. Vorhandene Geräte bleiben. |
 | Geräte im Gastnetz ignorieren | aus | Gastnetz-Geräte werden nicht angelegt (vorhandene werden entfernt). |
@@ -119,7 +120,7 @@ Es hat außerdem drei Diagnose-Sensoren, standardmäßig aus: **Letzte Aktualisi
 
 Wird ein Gerät in der Box umbenannt, löst Home Assistant das Ereignis `fritzbox_network_device_renamed` aus, mit `mac`, `old_name` und `new_name`.
 
-Listet die Box ein Gerät, das sie vorher nicht gelistet hat, löst Home Assistant das Ereignis `fritzbox_network_new_device` aus, mit `mac`, `name` und `ip`. Damit lässt sich eine Benachrichtigung über neue Geräte im Netz bauen. Was die Box beim Start listet, gilt nicht als neu: Geräte, die dazukamen, während Home Assistant aus war, werden nicht gemeldet, ebenso wenig Geräte, die ein Filter ausschließt.
+Listet die Box ein Gerät, das sie vorher nicht gelistet hat, löst Home Assistant das Ereignis `fritzbox_network_new_device` aus, mit `mac`, `name`, `ip` und `vendor` (leer, solange die Hersteller-Option aus ist). Damit lässt sich eine Benachrichtigung über neue Geräte im Netz bauen. Was die Box beim Start listet, gilt nicht als neu: Geräte, die dazukamen, während Home Assistant aus war, werden nicht gemeldet, ebenso wenig Geräte, die ein Filter ausschließt.
 
 ## Namen und Entity-IDs
 

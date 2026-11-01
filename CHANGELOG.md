@@ -15,4 +15,5 @@ Erste Version.
   - Die FRITZ!Box und ihre Repeater als eigene Geräte mit Modell, Firmware und der Anzahl verbundener Geräte.
 - Geräte aufräumen: Offline-Geräte von Hand löschen (sie bleiben ausgeblendet), Filter für Gastnetz, private MAC-Adressen und einzelne Geräte, und eine Option, für Offline-Geräte keine Geräte anzulegen. Repeater werden nie gefiltert.
 - Topologie-Karte für das Dashboard: die Geräte nach Access Point, mit Suche, Filtern und Signal. Sie lädt sich selbst und braucht ein Administratorkonto.
+- Weitere Schalter und Auswahl, standardmäßig aus: Zugangsprofil, Priorisierung und automatisches Wake on LAN pro Gerät. Optional der Hersteller aus der MAC-Adresse, ohne Netzwerkzugriff.
 - Einrichtung: neue Adresse und neues Kennwort ohne Neueinrichtung, ein Mesh-Repeater wird abgewiesen, Diagnosedaten mit Abfragedauer.

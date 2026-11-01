@@ -72,6 +72,7 @@ Update through HACS and restart Home Assistant. Entity ids do not change.
 |--------|---------|---------|
 | Polling interval | 30 s (15–300) | How often the box is asked. Two requests per poll (host list, mesh). After repeated failures the interval doubles, up to 5 minutes. |
 | Consider home for | 180 s (0–900) | How long a device still counts as home after going offline. |
+| Show the vendor of a device | off | The vendor comes from the MAC address, from a list that ships with Home Assistant; nothing is sent anywhere. It shows as the manufacturer of the device, in the new device event (`vendor`) and in the topology card. Private (randomized) addresses have none. Turning it off does not remove a manufacturer already entered. |
 | Take over device names | on | The name from the box becomes the device name. Names you set yourself in Home Assistant are never overwritten. |
 | Do not create devices for offline hosts | off | The box remembers every device it ever saw. With this option a device is created only when it comes online. Existing devices stay. |
 | Ignore devices in the guest network | off | Guest network devices are not created (existing ones are removed). |
@@ -119,7 +120,7 @@ It also has three diagnostic sensors, off by default: **Last update** (the last 
 
 When a device is renamed in the box, Home Assistant fires the event `fritzbox_network_device_renamed` with `mac`, `old_name` and `new_name`.
 
-When the box lists a device it did not list before, Home Assistant fires the event `fritzbox_network_new_device` with `mac`, `name` and `ip`. Use it to be notified about new devices in your network. What the box lists at startup is not new, so devices that joined while Home Assistant was down are not announced, and neither are devices a filter excludes.
+When the box lists a device it did not list before, Home Assistant fires the event `fritzbox_network_new_device` with `mac`, `name`, `ip` and `vendor` (empty unless the vendor option is on). Use it to be notified about new devices in your network. What the box lists at startup is not new, so devices that joined while Home Assistant was down are not announced, and neither are devices a filter excludes.
 
 ## Names and entity ids
 

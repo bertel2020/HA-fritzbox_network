@@ -55,6 +55,12 @@ test("the search looks at name, IP and MAC", () => {
   assert.deepEqual(names("04"), ["lost"]);
 });
 
+test("the search also looks at the vendor", () => {
+  const withVendor = { ...data, clients: [{ ...data.clients[0], vendor: "Espressif Inc." }, data.clients[1]] };
+  const names = card.groupTopology(withVendor, "all", "espressif").flatMap((g) => g.clients.map((c) => c.name));
+  assert.deepEqual(names, ["tv"]);
+});
+
 test("the group without an access point only exists when needed", () => {
   const groups = card.groupTopology({ nodes: data.nodes, clients: [data.clients[0]] });
   assert.equal(groups.length, 2);

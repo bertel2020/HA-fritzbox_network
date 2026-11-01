@@ -51,6 +51,7 @@
           "scan_interval": "Polling interval (seconds)",
           "consider_home": "Consider home for (seconds)",
           "adopt_names": "Take over device names from the FRITZ!Box",
+          "show_vendor": "Show the vendor of a device",
           "ignore_guests": "Ignore devices in the guest network",
           "ignore_private_macs": "Ignore devices with a private (randomized) MAC address",
           "filter_mode": "Device filter",
@@ -61,6 +62,7 @@
         "data_description": {
           "consider_home": "How long an offline device still counts as home.",
           "adopt_names": "Names you set yourself in Home Assistant are never overwritten.",
+          "show_vendor": "The vendor comes from the MAC address, from a list that ships with Home Assistant; nothing is sent anywhere. It shows as the manufacturer of the device, in the new device event and in the topology card. Private (randomized) addresses have none. Turning this off does not remove a manufacturer already entered.",
           "hidden_macs": "Devices removed by hand are listed here. Deselect one to show it again.",
           "skip_offline": "The box remembers every device it ever saw. A host that is offline and has no device yet gets one when it first comes online. Existing devices are kept."
         }

@@ -33,12 +33,14 @@ from .const import (
     CONF_IGNORE_GUESTS,
     CONF_IGNORE_PRIVATE_MACS,
     CONF_SCAN_INTERVAL,
+    CONF_SHOW_VENDOR,
     CONF_SKIP_OFFLINE,
     DEFAULT_ADOPT_NAMES,
     DEFAULT_CONSIDER_HOME,
     DEFAULT_IGNORE_GUESTS,
     DEFAULT_IGNORE_PRIVATE_MACS,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_SHOW_VENDOR,
     DEFAULT_SKIP_OFFLINE,
     DOMAIN,
     EVENT_DEVICE_RENAMED,
@@ -50,6 +52,7 @@ from .const import (
     WAN_OVERRIDE_SECONDS,
 )
 from .models import Host, MeshNode, MeshTopology, NetworkData, is_private_mac
+from .vendor import vendor_of
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -209,6 +212,12 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             selected[host.mac] = host
         return selected
 
+    def vendor(self, mac: str) -> str | None:
+        """The vendor of a MAC address, if the option to show it is on."""
+        if not self._options.get(CONF_SHOW_VENDOR, DEFAULT_SHOW_VENDOR):
+            return None
+        return vendor_of(mac)
+
     def node_name(self, node: MeshNode) -> str:
         """The name of a mesh node: the one its host entry has, else the mesh name."""
         for host in self.all_hosts.values():
@@ -262,7 +271,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         for mac in self._known_macs - known:
             if (host := selected.get(mac)) is not None:
                 self.hass.bus.async_fire(
-                    EVENT_NEW_DEVICE, {"mac": mac, "name": host.name, "ip": host.ip}
+                    EVENT_NEW_DEVICE,
+                    {"mac": mac, "name": host.name, "ip": host.ip, "vendor": self.vendor(mac)},
                 )
 
     def _sync_names(self, hosts: dict[str, Host]) -> None:

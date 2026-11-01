@@ -42,6 +42,8 @@ class FritzNetworkClientEntity(CoordinatorEntity[FritzNetworkCoordinator]):
             model=host.model,
             via_device_id=coordinator.box_device_id,
         )
+        if vendor := coordinator.vendor(host.mac):
+            info["manufacturer"] = vendor
         mesh = coordinator.data.mesh
         if mesh and (node := mesh.node_of(host)) is not None:
             # a repeater is one device: its host entry and its mesh node meet here

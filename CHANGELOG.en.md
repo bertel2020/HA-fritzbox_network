@@ -15,4 +15,5 @@ First version.
   - The FRITZ!Box and its repeaters as devices of their own with model, firmware and the number of connected devices.
 - Tidying up: delete offline devices by hand (they stay hidden), filters for the guest network, private MAC addresses and single devices, and an option not to create devices for offline hosts. Repeaters are never filtered.
 - Topology card for the dashboard: the devices by access point, with search, filters and signal. It loads itself and needs an administrator account.
+- More switches and a select, off by default: access profile, priority and automatic Wake on LAN per device. Optional: the vendor from the MAC address, without any network access.
 - Setup: a new address and a new password without setting up again, a mesh repeater is refused, diagnostics with the poll duration.

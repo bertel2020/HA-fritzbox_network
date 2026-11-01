@@ -23,8 +23,9 @@ from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
 
 from .api import FritzNetworkClient
-from .const import CONF_HIDDEN_MACS, CONF_USE_TLS, DOMAIN
+from .const import CONF_HIDDEN_MACS, CONF_SHOW_VENDOR, CONF_USE_TLS, DOMAIN
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
+from .vendor import async_load as async_load_vendors
 from .websocket_api import async_register as async_register_websocket
 
 _LOGGER = logging.getLogger(__name__)
@@ -104,6 +105,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
         serial_number=serial,
         configuration_url=f"http://{entry.data[CONF_HOST]}",
     )
+
+    if entry.options.get(CONF_SHOW_VENDOR):
+        await async_load_vendors()
 
     coordinator = FritzNetworkCoordinator(hass, entry, client, serial, can_write, box.id)
     await coordinator.async_config_entry_first_refresh()

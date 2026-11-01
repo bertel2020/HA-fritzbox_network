@@ -10,7 +10,7 @@ const TEXT = {
     wifi: "Wi-Fi",
     lan: "LAN",
     offline: "Offline",
-    search: "Search name, IP or MAC",
+    search: "Search name, IP, MAC or vendor",
     unassigned: "Without access point",
     empty: "No devices match.",
     loading: "Loading…",
@@ -24,7 +24,7 @@ const TEXT = {
     wifi: "WLAN",
     lan: "LAN",
     offline: "Offline",
-    search: "Name, IP oder MAC suchen",
+    search: "Name, IP, MAC oder Hersteller suchen",
     unassigned: "Ohne Access Point",
     empty: "Keine passenden Geräte.",
     loading: "Lädt…",
@@ -43,7 +43,7 @@ function escapeHtml(value) {
 
 function matches(client, filter, query) {
   if (query) {
-    const haystack = `${client.name} ${client.ip ?? ""} ${client.mac}`.toLowerCase();
+    const haystack = `${client.name} ${client.ip ?? ""} ${client.mac} ${client.vendor ?? ""}`.toLowerCase();
     if (!haystack.includes(query.toLowerCase())) return false;
   }
   if (filter === "wifi") return client.link_type === "wlan";
@@ -289,7 +289,7 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
       <div class="row${client.entity_id ? " click" : ""}"${entity}>
         <span class="dot${client.online ? " on" : ""}"></span>
         <ha-icon class="link" icon="${icon}"></ha-icon>
-        <span class="name">${escapeHtml(client.name)}${client.guest ? `<small>${escapeHtml(t.guest)}</small>` : ""}</span>
+        <span class="name">${escapeHtml(client.name)}${client.vendor ? `<small>${escapeHtml(client.vendor)}</small>` : ""}${client.guest ? `<small>${escapeHtml(t.guest)}</small>` : ""}</span>
         <span class="rate">${escapeHtml(rateText(client))}</span>
         ${signal}
       </div>`;
