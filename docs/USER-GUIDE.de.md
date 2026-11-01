@@ -159,7 +159,7 @@ Die Integration enthält ein eigenes Symbol im von Home Assistant unterstützten
 | Ein Gerät fehlt | Gerätefilter, Gastnetz, private MACs und die Option für Offline-Geräte prüfen; unter „Ausgeblendete Geräte“ nachsehen |
 | Ein gelöschtes Gerät kommt zurück | Es war online, oder es wurde in den Optionen wieder eingeblendet |
 | Der Schalter für den Internetzugang zeigt den alten Zustand | Die Box meldet Änderungen manchmal erst nach etwa einer Minute; der Schalter zeigt die neue Stellung bis dahin sofort |
-| Internetzugang lässt sich nicht schalten | Das Gerät braucht eine IPv4-Adresse; reine IPv6-Geräte lassen sich nicht sperren |
+| Internetzugang lässt sich nicht schalten | Das Gerät braucht eine IPv4-Adresse; reine IPv6-Geräte lassen sich nicht sperren. Die Box sperrt über die Adresse: Hat sie sich seit der letzten Aktualisierung geändert, lehnt der Schalter ab und funktioniert nach der nächsten Aktualisierung wieder |
 | Ein Gerät steht doppelt | Es hat zwei MAC-Adressen (LAN und WLAN), oder eine private MAC hat gewechselt; das überzählige Gerät löschen oder per Filter ausblenden |
 | Zu viele Entitäten | Option „Für Offline-Geräte keine Geräte anlegen“ einschalten, Filter nutzen |
 

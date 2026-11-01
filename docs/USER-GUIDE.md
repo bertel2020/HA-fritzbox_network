@@ -159,7 +159,7 @@ The integration ships its own icon in the local directory `custom_components/fri
 | A device is missing | Check the device filter, guest network, private MACs and the option for offline devices; look under "Hidden devices" |
 | A deleted device comes back | It was online, or it was shown again in the options |
 | The internet access switch shows the old state | The box sometimes reports changes only after about a minute; the switch shows the new position at once until then |
-| Internet access cannot be switched | The device needs an IPv4 address; IPv6-only devices cannot be blocked |
+| Internet access cannot be switched | The device needs an IPv4 address; IPv6-only devices cannot be blocked. The box blocks by address: if the address changed since the last update, the switch refuses and works again after the next update |
 | A device appears twice | It has two MAC addresses (LAN and WLAN), or a private MAC has changed; delete the extra device or hide it with the filter |
 | Too many entities | Turn on "Do not create devices for offline hosts", use the filter |
 
