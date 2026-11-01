@@ -194,6 +194,68 @@ test("the detail line has IP, MAC, band and signal as far as known", () => {
   assert.equal(card.detailText({ ip: null, mac: "aa:bb" }), "aa:bb");
 });
 
+test("the radio rows count the online devices on each band", () => {
+  const radios = {
+    nodes: [
+      { mac: "aa", name: "Box", role: "master", radios: { "5ghz": { channel: 100, utilization: 40, noise_dbm: -90 }, "2_4ghz": { channel: 1 } } },
+      { mac: "bb", name: "Repeater", role: "slave", radios: {} },
+    ],
+    clients: [
+      { mac: "01", online: true, ap_mac: "aa", band: "5ghz" },
+      { mac: "02", online: true, ap_mac: "aa", band: "5ghz" },
+      { mac: "03", online: false, ap_mac: "aa", band: "5ghz" },
+      { mac: "04", online: true, ap_mac: "bb", band: "5ghz" },
+    ],
+  };
+  const rows = card.radioRows(radios);
+  assert.deepEqual(rows.map((r) => r.node.name), ["Box"]);
+  assert.deepEqual(rows[0].bands.map((b) => [b.label, b.channel, b.utilization, b.noise_dbm, b.clients]), [
+    ["5 GHz", 100, 40, -90, 2],
+    ["2.4 GHz", 1, null, null, 0],
+  ]);
+  assert.deepEqual(card.radioRows(null), []);
+});
+
+test("the chosen devices keep the order of the config and show the missing ones", () => {
+  const found = card.devicesFor(
+    { clients: [{ entity_id: "device_tracker.a", name: "a" }, { entity_id: "device_tracker.b", name: "b" }] },
+    ["device_tracker.b", "device_tracker.x", "device_tracker.a"]
+  );
+  assert.deepEqual(found.map((d) => d.client?.name ?? null), ["b", null, "a"]);
+  assert.deepEqual(card.devicesFor(null, ["device_tracker.a"]), [{ entity: "device_tracker.a", client: null }]);
+});
+
+test("the button for all devices blocks when all are online-capable, else allows", () => {
+  const on = (state) => ({ state });
+  assert.deepEqual(card.bulkPlan(["a", "b"], { a: on("on"), b: on("on") }), { block: true, entities: ["a", "b"] });
+  assert.deepEqual(card.bulkPlan(["a", "b"], { a: on("on"), b: on("off") }), { block: false, entities: ["b"] });
+  assert.deepEqual(card.bulkPlan(["a", "b"], { a: on("unavailable"), b: on("on") }), { block: true, entities: ["b"] });
+  assert.deepEqual(card.bulkPlan(["a"], {}), { block: false, entities: [] });
+});
+
+test("the configs of the radio and the device card", () => {
+  assert.deepEqual(card.normalizeRadioConfig({ hide_noise: 1, title: "" }), {
+    title: undefined,
+    entry_id: undefined,
+    hide_noise: true,
+    hide_clients: false,
+  });
+  assert.deepEqual(card.normalizeDeviceConfig({ entities: "device_tracker.a" }).entities, ["device_tracker.a"]);
+  assert.deepEqual(card.normalizeDeviceConfig({ entities: ["device_tracker.a", "", 5] }).entities, ["device_tracker.a"]);
+  assert.deepEqual(card.normalizeDeviceConfig().entities, []);
+});
+
+test("the editors of the other cards name every option", async () => {
+  for (const [form, config] of [
+    [await card.FritzboxNetworkRadioCard.getConfigForm(), card.normalizeRadioConfig()],
+    [await card.FritzboxNetworkDeviceCard.getConfigForm(), card.normalizeDeviceConfig()],
+  ]) {
+    const names = form.schema.flatMap((item) => (item.schema ? item.schema : [item])).map((item) => item.name);
+    assert.deepEqual(names.sort(), Object.keys(config).sort());
+    for (const name of names) assert.notEqual(form.computeLabel({ name }), name);
+  }
+});
+
 test("names are escaped", () => {
   assert.equal(card.escapeHtml('<b>"x"&'), "&lt;b&gt;&quot;x&quot;&amp;");
 });

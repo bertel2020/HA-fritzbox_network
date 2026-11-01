@@ -15,7 +15,7 @@ The integration works locally with the FRITZ!Box and makes no connections to the
 - [Entities](#entities)
 - [Names and entity ids](#names-and-entity-ids)
 - [Deleting and hiding devices](#deleting-and-hiding-devices)
-- [Topology card](#topology-card)
+- [Topology card](#topology-card) with the [Wi-Fi card](#wi-fi-card) and the [devices card](#devices-card)
 - [Blueprints](#blueprints)
 - [Next to the core integration](#next-to-the-core-integration)
 - [Privacy and security](#privacy-and-security)
@@ -190,6 +190,44 @@ All options are also in the visual editor of the card. The Offline and Weak filt
 The card has a search (name, IP, MAC or vendor) and the filters All, Wi-Fi, LAN, Offline and Weak. A device is on a weak link when it is online and its current rate is below a third (adjustable with `weak_threshold`) of the highest rate its link can do, in one direction or the other; the card marks it with a warning icon that shows the percentage. A device that is idle can run at a lower rate for a while, so read the mark as a hint, not as a fault. The numbers next to an access point are shown / total. Devices the box does not assign to an access point are listed at the end. Without a mesh topology there are no access points and all devices sit in that group.
 
 The card needs an administrator account because it shows MAC and IP addresses. It loads automatically, a hard refresh of the browser after the update brings the new version.
+
+### Wi-Fi card
+
+The Wi-Fi card shows, per access point and band, the channel, the load as a bar (in the warning color from 70 %), the noise and the number of devices that are online on that band right now. It shows which radio is overloaded or sits on a noisy channel. The data come from the mesh topology of the box; you do not have to enable the radio sensors.
+
+```yaml
+type: custom:fritzbox-network-radio-card
+```
+
+| Option | Meaning |
+|--------|---------|
+| `title` | Heading of the card |
+| `entry_id` | Only needed with more than one box: the id of the config entry |
+| `hide_noise` | Hide the noise (default `false`) |
+| `hide_clients` | Hide the number of devices (default `false`) |
+
+The box does not report load and noise for every band; missing values stay empty. Without a mesh topology the card says that the box reports no radio data.
+
+### Devices card
+
+The devices card shows chosen devices with status, access point, link rate and signal, and the actions **block or allow internet**, priority and Wake on LAN. With two or more devices that have an internet switch there is one more button that blocks them all at once (when all may go online) or allows them (otherwise the blocked ones). The actions are the same switches and buttons as on the device and need the same "FRITZ!Box settings" permission; an action only shows when its entity exists and is enabled.
+
+```yaml
+type: custom:fritzbox-network-device-card
+title: Kids
+entities:
+  - device_tracker.fritz_3c2af4a1b2c3
+  - device_tracker.fritz_3c2af4a1b2c4
+```
+
+| Option | Meaning |
+|--------|---------|
+| `entities` | The device trackers of the devices, in the order of the card. A picker in the editor. A device that no longer exists shows as "Unknown device" |
+| `title` | Heading of the card |
+| `entry_id` | Only needed with more than one box |
+| `hide_rate`, `hide_signal` | Hide the rate or the signal (default `false`) |
+
+A tap on the name opens the device. Both cards need an administrator account like the topology card and load themselves.
 
 ## Blueprints
 

@@ -15,7 +15,7 @@ Die Integration arbeitet lokal mit der FRITZ!Box und baut keine Internetverbindu
 - [Entitäten](#entitäten)
 - [Namen und Entity-IDs](#namen-und-entity-ids)
 - [Geräte löschen und ausblenden](#geräte-löschen-und-ausblenden)
-- [Topologie-Karte](#topologie-karte)
+- [Topologie-Karte](#topologie-karte) mit [Funk-Karte](#funk-karte) und [Geräte-Karte](#geräte-karte)
 - [Blueprints](#blueprints)
 - [Zusammen mit der Core-Integration](#zusammen-mit-der-core-integration)
 - [Datenschutz und Sicherheit](#datenschutz-und-sicherheit)
@@ -190,6 +190,44 @@ Alle Optionen stehen auch im visuellen Editor der Karte. Die Filter Offline und 
 Die Karte hat eine Suche (Name, IP, MAC oder Hersteller) und die Filter Alle, WLAN, LAN, Offline und Schwach (schwache Verbindung). Ein Gerät hängt an einer schwachen Verbindung, wenn es online ist und seine aktuelle Rate unter einem Drittel (einstellbar mit `weak_threshold`) der höchsten Rate liegt, die seine Verbindung kann, in einer der beiden Richtungen; die Karte markiert es mit einem Warnsymbol, das den Prozentwert zeigt. Ein Gerät im Leerlauf kann eine Weile mit niedrigerer Rate laufen, lies die Markierung also als Hinweis und nicht als Fehler. Die Zahlen neben einem Access Point sind angezeigt / gesamt. Geräte, die die Box keinem Access Point zuordnet, stehen am Ende. Ohne Mesh-Topologie gibt es keine Access Points, und alle Geräte stehen in dieser Gruppe.
 
 Die Karte braucht ein Administratorkonto, weil sie MAC- und IP-Adressen zeigt. Sie lädt sich selbst; nach dem Update bringt ein harter Reload des Browsers die neue Version.
+
+### Funk-Karte
+
+Die Funk-Karte zeigt pro Access Point und Band den Kanal, die Auslastung als Balken (ab 70 % in Warnfarbe), das Rauschen und die Zahl der Geräte, die gerade online auf diesem Band sind. Damit siehst du, welches Funkmodul überlastet ist oder auf einem lauten Kanal sitzt. Die Daten kommen aus der Mesh-Topologie der Box; die Funk-Sensoren musst du dafür nicht aktivieren.
+
+```yaml
+type: custom:fritzbox-network-radio-card
+```
+
+| Option | Bedeutung |
+|--------|-----------|
+| `title` | Überschrift der Karte |
+| `entry_id` | Nur bei mehr als einer Box nötig: die ID des Config-Eintrags |
+| `hide_noise` | Rauschen ausblenden (Standard `false`) |
+| `hide_clients` | Anzahl der Geräte ausblenden (Standard `false`) |
+
+Die Box meldet nicht für jedes Band Auslastung und Rauschen; fehlende Werte bleiben leer. Ohne Mesh-Topologie zeigt die Karte „Die Box meldet keine Funkdaten.“
+
+### Geräte-Karte
+
+Die Geräte-Karte zeigt ausgewählte Geräte mit Status, Access Point, Link-Rate und Signal und den Aktionen **Internet sperren oder freigeben**, Priorisierung und Wake on LAN. Bei zwei oder mehr Geräten mit Internetschalter kommt ein Knopf dazu, der alle auf einmal sperrt (wenn alle online dürfen) oder freigibt (sonst die gesperrten). Die Aktionen sind dieselben Schalter und Buttons wie am Gerät und brauchen dasselbe Recht „FRITZ!Box Einstellungen“; eine Aktion erscheint nur, wenn ihre Entität existiert und aktiviert ist.
+
+```yaml
+type: custom:fritzbox-network-device-card
+title: Kinder
+entities:
+  - device_tracker.fritz_3c2af4a1b2c3
+  - device_tracker.fritz_3c2af4a1b2c4
+```
+
+| Option | Bedeutung |
+|--------|-----------|
+| `entities` | Die Device Tracker der Geräte, in der Reihenfolge der Karte. Im Editor als Auswahl. Ein Gerät, das es nicht mehr gibt, steht als „Unbekanntes Gerät“ da |
+| `title` | Überschrift der Karte |
+| `entry_id` | Nur bei mehr als einer Box nötig |
+| `hide_rate`, `hide_signal` | Rate oder Signal ausblenden (Standard `false`) |
+
+Ein Tipp auf den Namen öffnet das Gerät. Beide Karten brauchen wie die Topologie-Karte ein Administratorkonto und laden sich selbst.
 
 ## Blueprints
 
