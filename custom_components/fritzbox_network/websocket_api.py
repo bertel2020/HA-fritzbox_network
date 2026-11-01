@@ -7,22 +7,49 @@ from typing import Any
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import device_registry as dr, entity_registry as er
-from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
+from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
+from homeassistant.util import dt as dt_util
 import voluptuous as vol
 
 from .const import (
+    CONF_FILTER_DEVICES,
+    CONF_FILTER_MODE,
+    CONF_HIDDEN_MACS,
+    CONF_IGNORE_GUESTS,
+    CONF_IGNORE_PRIVATE_MACS,
+    CONF_STALE_DAYS,
+    DEFAULT_STALE_DAYS,
     DOMAIN,
+    FILTER_ALL,
+    FILTER_EXCLUDE,
+    FILTER_INCLUDE,
     KEY_ACCESS_PROFILE,
     KEY_INTERNET_ACCESS,
     KEY_PRIORITY,
     KEY_WAKE_ON_LAN,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
+from .filters import FILTER_OPTIONS, select_hosts
 from .models import is_private_mac, mac_id
-from .repairs import last_online
+from .repairs import async_update_stale_issue, last_online
 
 COMMAND = f"{DOMAIN}/subscribe_topology"
 ENTRIES_COMMAND = f"{DOMAIN}/entries"
+CLEANUP_LIST_COMMAND = f"{DOMAIN}/cleanup/list"
+HIDE_COMMAND = f"{DOMAIN}/devices/hide"
+UNHIDE_COMMAND = f"{DOMAIN}/devices/unhide"
+FILTER_PREVIEW_COMMAND = f"{DOMAIN}/filter/preview"
+FILTER_APPLY_COMMAND = f"{DOMAIN}/filter/apply"
+ERR_CHANGED = "changed"
+
+FILTER_OPTIONS_SCHEMA = vol.Schema(
+    {
+        vol.Optional(CONF_FILTER_MODE): vol.In([FILTER_ALL, FILTER_INCLUDE, FILTER_EXCLUDE]),
+        vol.Optional(CONF_FILTER_DEVICES): [str],
+        vol.Optional(CONF_IGNORE_GUESTS): bool,
+        vol.Optional(CONF_IGNORE_PRIVATE_MACS): bool,
+    }
+)
 
 # The actions of a device the card offers: name in the topology, platform, entity key.
 DEVICE_ACTIONS = {
@@ -156,6 +183,242 @@ def ws_entries(
     )
 
 
+def _loaded_coordinator(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> tuple[FritzNetworkConfigEntry, FritzNetworkCoordinator] | None:
+    """The box the command is about; an error goes back to the caller when there is none."""
+    for entry in hass.config_entries.async_loaded_entries(DOMAIN):
+        if entry.entry_id == msg["entry_id"]:
+            return entry, entry.runtime_data
+    connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "No such FRITZ!Box")
+    return None
+
+
+def _mesh_macs(coordinator: FritzNetworkCoordinator) -> set[str]:
+    """The MACs of the box and the repeaters: they are never offered for cleaning up."""
+    mesh = coordinator.data.mesh
+    if not mesh:
+        return set()
+    return {
+        mac for host in coordinator.all_hosts.values() if mesh.node_of(host) for mac in [host.mac]
+    }
+
+
+def _device(host: Any) -> dict[str, Any]:
+    return {
+        "mac": host.mac,
+        "id": mac_id(host.mac),
+        "name": host.name,
+        "guest": host.guest,
+        "private_mac": is_private_mac(host.mac),
+    }
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): CLEANUP_LIST_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@callback
+def ws_cleanup_list(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The offline devices with the time they were last online, and the hidden ones.
+
+    The panel narrows the list by days itself, so the slider needs no round trip.
+    """
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    entry, coordinator = found
+    nodes = _mesh_macs(coordinator)
+    now = dt_util.utcnow()
+    stale = []
+    for host in coordinator.data.hosts.values():
+        if host.mac in nodes or coordinator.is_connected(host):
+            continue
+        last = last_online(hass, host)
+        if last is None:
+            continue
+        stale.append(
+            {
+                **_device(host),
+                "vendor": coordinator.vendor(host.mac),
+                "last_online": last.isoformat(),
+                "days": max(0, (now - last).days),
+            }
+        )
+    stale.sort(key=lambda d: d["last_online"])
+    hidden = [
+        {
+            "mac": mac,
+            "id": mac_id(mac),
+            "name": host.name if (host := coordinator.all_hosts.get(mac)) else mac,
+        }
+        for mac in entry.options.get(CONF_HIDDEN_MACS, [])
+    ]
+    connection.send_result(
+        msg["id"],
+        {
+            "days": entry.options.get(CONF_STALE_DAYS, DEFAULT_STALE_DAYS),
+            "devices": stale,
+            "hidden": hidden,
+        },
+    )
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): HIDE_COMMAND, vol.Required("entry_id"): str, vol.Required("macs"): [str]}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_hide_devices(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Hide devices: they leave Home Assistant with their entities.
+
+    Only offline devices that are not the box or a repeater: an online one would be back with
+    the next poll. The server checks this again, whatever the panel showed.
+    """
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    entry, coordinator = found
+    nodes = _mesh_macs(coordinator)
+    hidden = list(entry.options.get(CONF_HIDDEN_MACS, []))
+    done: list[str] = []
+    refused: list[dict[str, str]] = []
+    for mac in dict.fromkeys(format_mac(m) for m in msg["macs"]):
+        host = coordinator.all_hosts.get(mac)
+        if host is None:
+            refused.append({"mac": mac, "reason": "unknown"})
+        elif mac in nodes:
+            refused.append({"mac": mac, "reason": "node"})
+        elif coordinator.is_connected(host):
+            refused.append({"mac": mac, "reason": "online"})
+        else:
+            if mac not in hidden:
+                hidden.append(mac)
+            done.append(mac)
+    if done:
+        hass.config_entries.async_update_entry(
+            entry, options={**entry.options, CONF_HIDDEN_MACS: sorted(hidden)}
+        )
+        await coordinator.async_request_refresh()
+        await async_update_stale_issue(hass, entry)
+    connection.send_result(msg["id"], {"hidden": done, "refused": refused})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): UNHIDE_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("macs"): [str],
+    }
+)
+@websocket_api.require_admin
+@callback
+def ws_unhide_devices(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Show hidden devices again. The entry reloads: the options shrank."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    entry, _ = found
+    back = {format_mac(m) for m in msg["macs"]}
+    hidden = [m for m in entry.options.get(CONF_HIDDEN_MACS, []) if m not in back]
+    hass.config_entries.async_update_entry(
+        entry, options={**entry.options, CONF_HIDDEN_MACS: hidden}
+    )
+    connection.send_result(msg["id"], {"unhidden": sorted(back)})
+
+
+def _filter_preview(
+    entry: FritzNetworkConfigEntry,
+    coordinator: FritzNetworkCoordinator,
+    changes: dict[str, Any],
+) -> dict[str, Any]:
+    """What the filters would do with these changes compared with what they do now."""
+    mesh = coordinator.data.mesh
+    hosts = list(coordinator.all_hosts.values())
+    current = {**entry.options}
+    wanted = {**current, **changes}
+    now = select_hosts(hosts, mesh, current)
+    then = select_hosts(hosts, mesh, wanted)
+    nodes = _mesh_macs(coordinator)
+    hidden = set(wanted.get(CONF_HIDDEN_MACS, []))
+    return {
+        "options": {
+            CONF_FILTER_MODE: wanted.get(CONF_FILTER_MODE, FILTER_ALL),
+            CONF_FILTER_DEVICES: list(wanted.get(CONF_FILTER_DEVICES, [])),
+            CONF_IGNORE_GUESTS: bool(wanted.get(CONF_IGNORE_GUESTS, False)),
+            CONF_IGNORE_PRIVATE_MACS: bool(wanted.get(CONF_IGNORE_PRIVATE_MACS, False)),
+        },
+        "keep": [_device(h) for m, h in then.items() if m in now],
+        "add": [_device(h) for m, h in then.items() if m not in now],
+        "remove": [_device(h) for m, h in now.items() if m not in then],
+        "devices": sorted(
+            (_device(h) for m, h in coordinator.all_hosts.items() if m not in nodes | hidden),
+            key=lambda d: d["name"].lower(),
+        ),
+    }
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): FILTER_PREVIEW_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Optional("options", default=dict): FILTER_OPTIONS_SCHEMA,
+    }
+)
+@websocket_api.require_admin
+@callback
+def ws_filter_preview(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Which devices the filters keep, add and remove with these options; nothing is written."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    entry, coordinator = found
+    connection.send_result(msg["id"], _filter_preview(entry, coordinator, msg["options"]))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): FILTER_APPLY_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("options"): FILTER_OPTIONS_SCHEMA,
+        vol.Required("expected_remove"): [str],
+    }
+)
+@websocket_api.require_admin
+@callback
+def ws_filter_apply(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Save the filters, if they remove exactly the devices the caller was shown.
+
+    Removing a device drops it with its entities for good. If the list changed meanwhile
+    (a device went online, the box listed another), nothing is written.
+    """
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    entry, coordinator = found
+    preview = _filter_preview(entry, coordinator, msg["options"])
+    if sorted(d["mac"] for d in preview["remove"]) != sorted(
+        format_mac(m) for m in msg["expected_remove"]
+    ):
+        connection.send_error(msg["id"], ERR_CHANGED, "The devices that would be removed changed")
+        return
+    options = {**entry.options}
+    for key in FILTER_OPTIONS:
+        options[key] = preview["options"][key]
+    hass.config_entries.async_update_entry(entry, options=options)
+    connection.send_result(msg["id"], {})
+
+
 def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_subscribe_topology)
     websocket_api.async_register_command(hass, ws_entries)
+    websocket_api.async_register_command(hass, ws_cleanup_list)
+    websocket_api.async_register_command(hass, ws_hide_devices)
+    websocket_api.async_register_command(hass, ws_unhide_devices)
+    websocket_api.async_register_command(hass, ws_filter_preview)
+    websocket_api.async_register_command(hass, ws_filter_apply)

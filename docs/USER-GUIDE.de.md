@@ -252,6 +252,10 @@ Mit der Integration kommt ein Eintrag **FRITZ!Box Netzwerk** in der Seitenleiste
 
 Eine Aktion ist aus und nennt den Grund, wenn dem Box-Benutzer das Recht „FRITZ!Box Einstellungen“ fehlt, wenn das Gerät keine IPv4-Adresse hat oder wenn die Entität dazu nicht aktiviert ist (Zugangsprofil und Priorisierung sind standardmäßig aus). Gibt es mehrere Boxen, wählst du oben rechts die Box.
 
+**Aufräumen.** Die Box merkt sich jedes Gerät, das sie je gesehen hat. Hier stehen die Offline-Geräte, deren letzte Online-Zeit bekannt ist, mit einem Regler für die Tage (vorbelegt mit der Option „Tage offline, bis ein Gerät als weg gilt“, 7 bis 365). Wähle Geräte aus oder alle und tippe auf „N Geräte ausblenden“: Ein Dialog nennt die Namen und die Folgen, erst dann werden sie ausgeblendet und mit ihren Entitäten aus Home Assistant entfernt. Online-Geräte, die Box und Repeater lehnt der Server ab, auch wenn das Panel sie anbieten würde. Darunter steht die Liste **Ausgeblendet** mit „Einblenden“; das lädt die Integration neu. Das ist dieselbe Liste wie die ausgeblendeten Geräte in den Optionen und die Reparatur für lange offline Geräte.
+
+**Filter.** Der Gerätefilter der Optionen (Alle Geräte, Nur ausgewählte, Alle außer ausgewählten, Gastnetz und private MAC-Adressen ignorieren) mit einer **Vorschau**: Sie zeigt, welche Geräte bleiben, dazukommen oder **samt Entitäten entfernt werden**, bevor etwas geschrieben wird. „Filter anwenden“ fragt mit den Namen der Geräte nach, die verschwinden. Das Panel schickt dabei die Liste mit, die du gesehen hast: Hat sich die Liste inzwischen geändert (ein Gerät ging online, die Box listet ein anderes), schreibt der Server nichts und du siehst die neue Vorschau. Entfernte Geräte verlieren ihre eigenen Namen, ihre Entitäts-IDs und ihren Verlauf; Bezüge in Automationen zeigen danach ins Leere. „Für Offline-Geräte keine Geräte anlegen“ gibt es weiter nur in den Optionen.
+
 Das Panel ist dem Look der anderen Panels des Autors nachempfunden, folgt dem hellen und dunklen Theme von Home Assistant und kommt ohne waagerechtes Scrollen bis 360 px Breite aus.
 
 ## Blueprints

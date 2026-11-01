@@ -7,6 +7,8 @@ const base = "../../custom_components/fritzbox_network/frontend/";
 const network = await import(`${base}panel-network.js`);
 const device = await import(`${base}panel-device.js`);
 const texts = await import(`${base}texts.js`);
+const cleanup = await import(`${base}panel-cleanup.js`);
+const filter = await import(`${base}panel-filter.js`);
 const panel = await import(`${base}fritzbox-network-panel.js`);
 
 const t = texts.panelTexts("de");
@@ -128,4 +130,72 @@ test("the texts are complete in both languages", () => {
 
 test("the panel element is defined for Home Assistant", () => {
   assert.equal(typeof panel.FritzboxNetworkPanel, "function");
+});
+
+const cleanupState = {
+  cleanup: {
+    days: 30,
+    devices: [
+      { mac: "a", name: "old <i>", vendor: "ACME", last_online: day(200), days: 200 },
+      { mac: "b", name: "mid", vendor: null, last_online: day(60), days: 60 },
+      { mac: "c", name: "fresh", vendor: null, last_online: day(35), days: 35 },
+    ],
+    hidden: [{ mac: "z", name: "gone" }],
+  },
+  cleanupDays: 50,
+  picked: new Set(["a", "c"]),
+};
+
+test("the clean-up page offers the devices gone for long enough, names are escaped", () => {
+  const html = cleanup.renderStale(cleanupState, t, NOW);
+  assert.match(html, /old &lt;i&gt;/);
+  assert.match(html, /mid/);
+  assert.doesNotMatch(html, /fresh/);
+  assert.match(html, /1 ausgewählt/);
+  assert.match(html, /1 Geräte ausblenden/);
+});
+
+test("a device that fell out of the offer is no longer picked", () => {
+  assert.deepEqual(cleanup.pickedMacs(cleanupState), ["a"]);
+  assert.match(cleanup.renderStale({ ...cleanupState, picked: new Set() }, t, NOW), /data-act="hide"[^>]*disabled/);
+});
+
+test("the clean-up page says when all is tidy, and lists the hidden devices", () => {
+  assert.match(cleanup.renderStale({ ...cleanupState, cleanupDays: 365 }, t, NOW), /Alles aufgeräumt/);
+  assert.match(cleanup.renderStale({ cleanup: null, picked: new Set() }, t, NOW), /Lädt/);
+  assert.match(cleanup.renderHidden(cleanupState, t), /data-unhide="z"/);
+  assert.match(cleanup.renderHidden({ cleanup: { hidden: [] } }, t), /Nichts ausgeblendet/);
+});
+
+const page = {
+  current: { filter_mode: "all", filter_devices: [], ignore_guests: false, ignore_private_macs: false },
+  draft: { filter_mode: "include", filter_devices: ["x"], ignore_guests: false, ignore_private_macs: false },
+  preview: {
+    keep: [{ mac: "x", name: "kept" }],
+    add: [],
+    remove: [{ mac: "y", name: "lost <b>" }],
+    devices: [
+      { mac: "x", name: "kept" },
+      { mac: "y", name: "lost <b>" },
+    ],
+  },
+  search: "",
+};
+
+test("the filter page shows the mode and the picker only when needed", () => {
+  assert.match(filter.renderFilterControls(page, t), /data-mode="include" aria-pressed="true"/);
+  assert.match(filter.renderPicker(page, t), /data-fpick="x" checked/);
+  assert.match(filter.renderPicker(page, t), /lost &lt;b&gt;/);
+  assert.equal(filter.renderPicker({ ...page, draft: { ...page.draft, filter_mode: "all" } }, t), "");
+  assert.doesNotMatch(filter.renderPicker({ ...page, search: "zzz" }, t), /data-fpick/);
+});
+
+test("the preview says what is removed, and applying needs a change", () => {
+  const html = filter.renderPreview(page, t);
+  assert.match(html, /Wird samt Entitäten entfernt: lost &lt;b&gt;/);
+  assert.match(html, /data-act="apply" >/);
+  const same = filter.renderPreview({ ...page, draft: page.current }, t);
+  assert.match(same, /Mit diesem Filter ändert sich nichts/);
+  assert.match(same, /data-act="apply"[^>]*disabled/);
+  assert.match(filter.renderPreview({ ...page, preview: null }, t), /Lädt/);
 });

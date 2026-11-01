@@ -286,3 +286,34 @@ export function deviceFromHash(hash) {
   const match = /^#\/device\/([0-9a-f]{12})$/.exec(hash ?? "");
   return match ? match[1] : null;
 }
+
+/** Which page a #/… route shows: the network (also for a device), the clean-up or the filter. */
+export function routeFromHash(hash) {
+  const device = deviceFromHash(hash);
+  if (device) return { tab: "net", device };
+  if (hash === "#/cleanup") return { tab: "cleanup", device: null };
+  if (hash === "#/filter") return { tab: "filter", device: null };
+  return { tab: "net", device: null };
+}
+
+/** The offline devices that have been gone for at least this many days. */
+export function staleSince(devices, days) {
+  return (devices ?? []).filter((d) => d.days >= days);
+}
+
+/** Adds a MAC to a list or takes it out, whichever applies. */
+export function toggleMac(list, mac) {
+  return list.includes(mac) ? list.filter((m) => m !== mac) : [...list, mac];
+}
+
+/** Whether the draft of the filter differs from the filter in force; the order of devices does not count. */
+export function filterChanged(current, draft) {
+  if (!current || !draft) return false;
+  const sorted = (list) => [...(list ?? [])].sort().join(",");
+  return (
+    current.filter_mode !== draft.filter_mode ||
+    Boolean(current.ignore_guests) !== Boolean(draft.ignore_guests) ||
+    Boolean(current.ignore_private_macs) !== Boolean(draft.ignore_private_macs) ||
+    (draft.filter_mode !== "all" && sorted(current.filter_devices) !== sorted(draft.filter_devices))
+  );
+}

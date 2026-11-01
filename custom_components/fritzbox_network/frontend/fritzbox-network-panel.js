@@ -1,12 +1,21 @@
 /* FRITZ!Box Network panel: the whole network in the sidebar, for administrators. */
 
-import { WEAK_LINK_RATIO, deviceFromHash, escapeHtml } from "./shared.js";
+import {
+  WEAK_LINK_RATIO,
+  escapeHtml,
+  filterChanged,
+  panelCounts,
+  routeFromHash,
+  toggleMac,
+} from "./shared.js";
 import { fill, panelTexts } from "./texts.js";
 import { PANEL_CSS } from "./panel-styles.js";
 import { ic } from "./icons.js";
 import { renderChips, renderGroups, renderMeta, visibleClients } from "./panel-network.js";
 import { renderDevice, entityState } from "./panel-device.js";
 import { openDialog, showToast } from "./panel-dialogs.js";
+import { pickedMacs, renderHidden, renderStale, staleList } from "./panel-cleanup.js";
+import { renderFilterControls, renderPicker, renderPreview } from "./panel-filter.js";
 
 const DOMAIN = "fritzbox_network";
 const BOX_KEY = `${DOMAIN}_panel_box`;
@@ -27,18 +36,31 @@ function remember(entryId) {
   }
 }
 
+/** The pages of the panel as tabs; the clean-up tab says how many devices have been gone for long. */
+function renderNav(state, t, stale) {
+  const tab = (id, badge) =>
+    `<button role="tab" data-tab="${id}" aria-selected="${state.tab === id}">${escapeHtml(t.tabs[id])}${badge ? `<em>${badge}</em>` : ""}</button>`;
+  return `${tab("net")}${tab("cleanup", stale)}${tab("filter")}`;
+}
+
 class FritzboxNetworkPanel extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
+    const route = routeFromHash(globalThis.location?.hash);
     this._state = {
+      tab: route.tab,
+      cleanup: null,
+      cleanupDays: null,
+      picked: new Set(),
+      filterPage: null,
       data: null,
       filter: "all",
       query: "",
       sort: "name",
       group: "ap",
       closed: new Set(),
-      sel: deviceFromHash(globalThis.location?.hash),
+      sel: route.device,
       threshold: WEAK_LINK_RATIO,
     };
     this._html = {};
@@ -48,16 +70,15 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._unsub = null;
     this._updatedAt = 0;
     this._onHash = () => {
-      this._state.sel = deviceFromHash(globalThis.location.hash);
+      const next = routeFromHash(globalThis.location.hash);
+      const entered = next.tab !== this._state.tab;
+      this._state.tab = next.tab;
+      this._state.sel = next.device;
+      if (entered) this._enterTab();
       this._update();
     };
     this.shadowRoot.addEventListener("click", (event) => this._onClick(event));
-    this.shadowRoot.addEventListener("input", (event) => {
-      if (event.target.id === "q") {
-        this._state.query = event.target.value;
-        this._update();
-      }
-    });
+    this.shadowRoot.addEventListener("input", (event) => this._onInput(event));
     this.shadowRoot.addEventListener("change", (event) => this._onChange(event));
     this.shadowRoot.addEventListener("keydown", (event) => {
       if (event.key === "/" && !/INPUT|SELECT/.test(this.shadowRoot.activeElement?.tagName ?? "")) {
@@ -126,10 +147,11 @@ class FritzboxNetworkPanel extends HTMLElement {
       ? saved
       : this._entries[0].entry_id;
     this._renderBox();
-    await this._subscribe();
+    if (await this._subscribe()) this._enterTab();
   }
 
-  async _subscribe() {
+  /** Subscribes to the topology of the chosen box; quiet: a failure is the caller's to handle. */
+  async _subscribe({ quiet = false } = {}) {
     try {
       this._unsub = await this._hass.connection.subscribeMessage(
         (data) => {
@@ -137,9 +159,87 @@ class FritzboxNetworkPanel extends HTMLElement {
           this._error = null;
           this._updatedAt = Date.now();
           this._update();
+          if (this._state.tab === "cleanup") this._loadCleanup();
         },
         { type: `${DOMAIN}/subscribe_topology`, entry_id: this._entryId }
       );
+      return true;
+    } catch (err) {
+      if (!quiet) this._fail(err);
+      return false;
+    }
+  }
+
+  /**
+   * The entry reloads after some changes of the options (showing devices again, the filter) and
+   * the subscription belongs to the coordinator that is gone: take it up again once the box is back.
+   */
+  async _resubscribeAfterReload() {
+    if (this._unsub) {
+      this._unsub();
+      this._unsub = null;
+    }
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+      if (await this._subscribe({ quiet: true })) return true;
+    }
+    this._fail({});
+    return false;
+  }
+
+  /** Fetches what the page just opened needs. */
+  _enterTab() {
+    if (this._state.tab === "cleanup") this._loadCleanup();
+    else if (this._state.tab === "filter") this._loadFilter();
+  }
+
+  _ws(type, extra = {}) {
+    return this._hass.callWS({ type: `${DOMAIN}/${type}`, entry_id: this._entryId, ...extra });
+  }
+
+  async _loadCleanup() {
+    try {
+      const result = await this._ws("cleanup/list");
+      const state = this._state;
+      state.cleanup = result;
+      state.cleanupDays ??= result.days;
+      const offered = new Set(result.devices.map((d) => d.mac));
+      state.picked = new Set([...state.picked].filter((mac) => offered.has(mac)));
+      this._update();
+    } catch (err) {
+      this._fail(err);
+    }
+  }
+
+  async _loadFilter() {
+    try {
+      const result = await this._ws("filter/preview");
+      this._state.filterPage = {
+        current: result.options,
+        draft: { ...result.options, filter_devices: [...result.options.filter_devices] },
+        preview: result,
+        search: "",
+      };
+      this._update();
+    } catch (err) {
+      this._fail(err);
+    }
+  }
+
+  _schedulePreview() {
+    clearTimeout(this._previewTimer);
+    this._previewTimer = setTimeout(() => this._runPreview(), 150);
+  }
+
+  async _runPreview() {
+    const page = this._state.filterPage;
+    if (!page) return;
+    const seq = (this._previewSeq = (this._previewSeq ?? 0) + 1);
+    try {
+      const result = await this._ws("filter/preview", { options: page.draft });
+      if (seq !== this._previewSeq) return; // a newer choice has been sent since
+      page.preview = result;
+      this._renderFilter();
     } catch (err) {
       this._fail(err);
     }
@@ -168,8 +268,12 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     this._state.data = null;
     this._state.sel = null;
+    this._state.cleanup = null;
+    this._state.cleanupDays = null;
+    this._state.picked = new Set();
+    this._state.filterPage = null;
     this._update();
-    await this._subscribe();
+    if (await this._subscribe()) this._enterTab();
   }
 
   _onHass() {
@@ -197,6 +301,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const state = this._state;
     this.shadowRoot.innerHTML = `
       <style>${PANEL_CSS}
+        [hidden] { display: none !important; }
         .busyText { color: var(--warn); }
         .warnIcon { color: var(--warn); display: inline-flex; }
         .hint { margin: 12px 0 0; font-size: 12px; color: var(--muted); }
@@ -206,6 +311,14 @@ class FritzboxNetworkPanel extends HTMLElement {
         .action select { width: auto; max-width: 55%; }
         .note.big { margin: 16px 0; }
         #box { width: auto; max-width: 220px; height: 36px; }
+        .btn-row.tight { margin-top: 0; }
+        .muted.spaced { margin: 12px 0 0; }
+        .note.bad { background: var(--bad-soft); color: var(--bad); }
+        .seg-wrap { margin: 8px 0; }
+        .picker { max-height: 320px; overflow: auto; margin-top: 8px; }
+        label.row { cursor: pointer; }
+        .pickhead { margin-top: 16px; }
+        label.search { display: block; }
       </style>
       <div class="app">
         <header class="header">
@@ -214,6 +327,7 @@ class FritzboxNetworkPanel extends HTMLElement {
             <span class="logo">${ic("router")}</span>
             <div><b>${t.title}</b><small id="sub"></small></div>
           </div>
+          <nav role="tablist" id="nav" aria-label="${t.navLabel}"></nav>
           <div class="header-end">
             <select id="box" aria-label="${t.box}" hidden></select>
             <span class="chip ok live" id="live-chip" hidden><span class="dot on"></span><span class="t" id="live"></span></span>
@@ -235,6 +349,26 @@ class FritzboxNetworkPanel extends HTMLElement {
               <div id="groups"></div>
             </div>
             <aside class="detail-col" id="detail"></aside>
+          </div>
+          <div class="two" id="cleanup-view" hidden>
+            <section class="card pad">
+              <h2>${t.cleanup.title}</h2><p class="lead">${t.cleanup.lead}</p>
+              <div class="range"><label for="days">${t.cleanup.since}</label><input type="range" id="days" min="7" max="365" value="${state.cleanupDays ?? 30}"><b id="days-label"></b></div>
+              <div id="stale"></div>
+            </section>
+            <section class="card pad"><h2>${t.cleanup.hiddenTitle}</h2><p class="lead">${t.cleanup.hiddenLead}</p><div id="hidden"></div></section>
+          </div>
+          <div class="two" id="filter-view" hidden>
+            <section class="card pad">
+              <h2>${t.filter.title}</h2><p class="lead">${t.filter.lead}</p>
+              <div id="f-controls"></div>
+              <div id="f-picker-wrap" hidden>
+                <h2 class="pickhead">${t.filter.pickTitle}</h2>
+                <label class="search"><span class="sr">${t.filter.pickSearch}</span>${ic("search")}<input type="search" id="f-search" placeholder="${t.filter.pickSearch}" aria-label="${t.filter.pickSearch}"></label>
+                <div id="f-picker"></div>
+              </div>
+            </section>
+            <section class="card pad"><h2>${t.filter.preview}</h2><p class="lead">${t.filter.previewLead}</p><div id="f-preview"></div></section>
           </div>
         </main>
       </div>
@@ -285,18 +419,46 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._set("note", note || (state.data ? "" : `<div class="card"><div class="empty"><span>${t.loading}</span></div></div>`));
     const split = root.querySelector("#split");
     if (!split) return;
-    split.hidden = !ready;
+    const tab = state.tab;
+    split.hidden = !ready || tab !== "net";
+    root.querySelector("#cleanup-view").hidden = !ready || tab !== "cleanup";
+    root.querySelector("#filter-view").hidden = !ready || tab !== "filter";
     root.querySelector("#live-chip").hidden = !ready;
+    const stale = ready ? panelCounts(state.data, Date.now(), state.threshold).stale : 0;
+    this._set("nav", ready ? renderNav(state, t, stale) : "");
     if (!ready) return;
     const now = Date.now();
     const master = (state.data.nodes ?? []).find((n) => n.role === "master");
     root.querySelector("#sub").textContent = master ? [master.name, master.model].filter(Boolean).join(" · ") : "";
+    this._tick();
+    if (tab === "cleanup") return this._renderCleanup();
+    if (tab === "filter") return this._renderFilter();
     split.classList.toggle("detail-open", Boolean(this._selected()));
     this._set("chips", renderChips(state, t, now));
     this._set("meta", renderMeta(state, t, visibleClients(state, now).length));
     this._set("groups", renderGroups(state, t, now));
     this._renderDetail();
-    this._tick();
+  }
+
+  _renderCleanup() {
+    const state = this._state;
+    const t = this._t;
+    const days = state.cleanupDays ?? 30;
+    const range = this.shadowRoot.querySelector("#days");
+    if (range && Number(range.value) !== days) range.value = days;
+    this.shadowRoot.querySelector("#days-label").textContent = fill(t.cleanup.days, { n: days });
+    this._set("stale", renderStale(state, t, Date.now()));
+    this._set("hidden", renderHidden(state, t));
+  }
+
+  _renderFilter() {
+    const page = this._state.filterPage;
+    const t = this._t;
+    this._set("f-controls", renderFilterControls(page, t));
+    const wrap = this.shadowRoot.querySelector("#f-picker-wrap");
+    if (wrap) wrap.hidden = !page || page.draft.filter_mode === "all";
+    this._set("f-picker", renderPicker(page, t));
+    this._set("f-preview", renderPreview(page, t));
   }
 
   _renderDetail() {
@@ -319,7 +481,30 @@ class FritzboxNetworkPanel extends HTMLElement {
     else if (el.id === "group") this._state.group = el.value;
     else if (el.id === "box") return this._switchBox(el.value);
     else if (el.matches("[data-profile]")) return this._call("select", "select_option", { option: el.value }, el.dataset.entity, this._t.toastProfile);
+    else if (el.dataset.pick) {
+      const picked = this._state.picked;
+      if (picked.has(el.dataset.pick)) picked.delete(el.dataset.pick);
+      else picked.add(el.dataset.pick);
+    } else if (el.dataset.fpick) {
+      const page = this._state.filterPage;
+      page.draft.filter_devices = toggleMac(page.draft.filter_devices, el.dataset.fpick);
+      this._schedulePreview();
+    }
     this._update();
+  }
+
+  _onInput(event) {
+    const el = event.target;
+    if (el.id === "q") {
+      this._state.query = el.value;
+      this._update();
+    } else if (el.id === "days") {
+      this._state.cleanupDays = Number(el.value);
+      this._renderCleanup();
+    } else if (el.id === "f-search" && this._state.filterPage) {
+      this._state.filterPage.search = el.value;
+      this._renderFilter();
+    }
   }
 
   _onClick(event) {
@@ -347,10 +532,94 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._rename();
     } else if (ds.act === "ha") {
       return this._openInHa();
+    } else if (ds.tab) {
+      globalThis.location.hash = ds.tab === "net" ? "#/" : `#/${ds.tab}`;
+      return;
+    } else if (ds.act === "pick-all") {
+      for (const d of staleList(state)) state.picked.add(d.mac);
+    } else if (ds.act === "hide") {
+      return this._hide();
+    } else if (ds.unhide) {
+      return this._unhide(ds.unhide);
+    } else if (ds.mode) {
+      state.filterPage.draft.filter_mode = ds.mode;
+      this._schedulePreview();
+    } else if (ds.ft) {
+      state.filterPage.draft[ds.ft] = !state.filterPage.draft[ds.ft];
+      this._schedulePreview();
+    } else if (ds.act === "apply") {
+      return this._applyFilter();
     } else {
       return;
     }
     this._update();
+  }
+
+  async _hide() {
+    const t = this._t;
+    const state = this._state;
+    const macs = pickedMacs(state);
+    if (!macs.length) return;
+    const names = staleList(state).filter((d) => macs.includes(d.mac)).map((d) => d.name);
+    const ok = await openDialog(this.shadowRoot, t, {
+      title: fill(t.cleanup.hideTitle, { n: macs.length }),
+      body: t.cleanup.hideBody,
+      list: names,
+      ok: fill(t.cleanup.hide, { n: macs.length }),
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      const result = await this._ws("devices/hide", { macs });
+      for (const mac of result.hidden) state.picked.delete(mac);
+      showToast(this.shadowRoot, fill(t.cleanup.toastHidden, { n: result.hidden.length }));
+      if (result.refused.length) {
+        showToast(this.shadowRoot, fill(t.cleanup.toastRefused, { n: result.refused.length }));
+      }
+      await this._loadCleanup();
+    } catch (err) {
+      showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
+    }
+  }
+
+  async _unhide(mac) {
+    const t = this._t;
+    try {
+      await this._ws("devices/unhide", { macs: [mac] });
+      showToast(this.shadowRoot, t.cleanup.toastUnhidden);
+      // the entry reloads: the subscription must be taken up again before the list is read
+      if (await this._resubscribeAfterReload()) await this._loadCleanup();
+    } catch (err) {
+      showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
+    }
+  }
+
+  async _applyFilter() {
+    const t = this._t;
+    const page = this._state.filterPage;
+    if (!page?.preview || !filterChanged(page.current, page.draft)) return;
+    const { remove, add } = page.preview;
+    const ok = await openDialog(this.shadowRoot, t, {
+      title: t.filter.applyTitle,
+      body: fill(t.filter.applyBody, { remove: remove.length, add: add.length }),
+      list: remove.map((d) => d.name),
+      ok: t.filter.apply,
+      danger: remove.length > 0,
+    });
+    if (!ok) return;
+    try {
+      await this._ws("filter/apply", { options: page.draft, expected_remove: remove.map((d) => d.mac) });
+    } catch (err) {
+      if (err?.code === "changed") {
+        showToast(this.shadowRoot, t.filter.toastChanged);
+        await this._runPreview();
+      } else {
+        showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
+      }
+      return;
+    }
+    showToast(this.shadowRoot, t.filter.toastApplied);
+    if (await this._resubscribeAfterReload()) await this._loadFilter();
   }
 
   _leaveDevice() {

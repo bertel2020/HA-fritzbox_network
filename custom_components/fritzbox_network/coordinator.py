@@ -27,18 +27,11 @@ from .const import (
     BACKOFF_AFTER_FAILURES,
     CONF_ADOPT_NAMES,
     CONF_CONSIDER_HOME,
-    CONF_FILTER_DEVICES,
-    CONF_FILTER_MODE,
-    CONF_HIDDEN_MACS,
-    CONF_IGNORE_GUESTS,
-    CONF_IGNORE_PRIVATE_MACS,
     CONF_SCAN_INTERVAL,
     CONF_SHOW_VENDOR,
     CONF_SKIP_OFFLINE,
     DEFAULT_ADOPT_NAMES,
     DEFAULT_CONSIDER_HOME,
-    DEFAULT_IGNORE_GUESTS,
-    DEFAULT_IGNORE_PRIVATE_MACS,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SHOW_VENDOR,
     DEFAULT_SKIP_OFFLINE,
@@ -46,14 +39,13 @@ from .const import (
     EVENT_DEVICE_RENAMED,
     EVENT_DEVICE_ROAMED,
     EVENT_NEW_DEVICE,
-    FILTER_EXCLUDE,
-    FILTER_INCLUDE,
     FILTER_PROFILE_REFRESH_POLLS,
     MAX_BACKOFF_SECONDS,
     ROAM_CONFIRM_POLLS,
     WAN_OVERRIDE_SECONDS,
 )
-from .models import Host, MeshNode, MeshTopology, NetworkData, is_private_mac
+from .filters import select_hosts
+from .models import Host, MeshNode, MeshTopology, NetworkData
 from .vendor import vendor_of
 
 _LOGGER = logging.getLogger(__name__)
@@ -190,33 +182,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             self.update_interval = timedelta(seconds=self._base_interval)
 
     def _apply_filters(self, hosts: list[Host], mesh: MeshTopology | None) -> dict[str, Host]:
-        options = self._options
-        hidden = set(options.get(CONF_HIDDEN_MACS, []))
-        mode = options.get(CONF_FILTER_MODE)
-        selection = set(options.get(CONF_FILTER_DEVICES, []))
-        ignore_guests = options.get(CONF_IGNORE_GUESTS, DEFAULT_IGNORE_GUESTS)
-        ignore_private = options.get(CONF_IGNORE_PRIVATE_MACS, DEFAULT_IGNORE_PRIVATE_MACS)
-        box = mesh.master if mesh else None
-
-        selected: dict[str, Host] = {}
-        for host in hosts:
-            node = mesh.node_of(host) if mesh else None
-            if host.mac in hidden or (node is not None and node is box):
-                continue
-            if node is not None:
-                # repeaters are part of the network, no filter hides them
-                selected[host.mac] = host
-                continue
-            if ignore_guests and host.guest:
-                continue
-            if ignore_private and is_private_mac(host.mac):
-                continue
-            if mode == FILTER_INCLUDE and host.mac not in selection:
-                continue
-            if mode == FILTER_EXCLUDE and host.mac in selection:
-                continue
-            selected[host.mac] = host
-        return selected
+        return select_hosts(hosts, mesh, self._options)
 
     def vendor(self, mac: str) -> str | None:
         """The vendor of a MAC address, if the option to show it is on."""

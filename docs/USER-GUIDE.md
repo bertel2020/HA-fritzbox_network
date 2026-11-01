@@ -252,6 +252,10 @@ The integration adds a **FRITZ!Box Network** entry to the sidebar. It shows the 
 
 An action is off and says why when the box user lacks the "FRITZ!Box settings" right, when the device has no IPv4 address or when its entity is not enabled (access profile and priority are off by default). With more than one box you pick the box at the top right.
 
+**Clean up.** The box remembers every device it has ever seen. Here are the offline devices whose last time online is known, with a slider for the days (preset with the option "Days offline until a device counts as gone", 7 to 365). Pick devices or all of them and tap "Hide N devices": a dialog names the devices and the consequences, and only then are they hidden and removed from Home Assistant with their entities. The server refuses online devices, the box and repeaters, even if the panel offered them. Below is the **Hidden** list with "Show again", which reloads the integration. It is the same list as the hidden devices in the options and the repair for long-offline devices.
+
+**Filter.** The device filter of the options (all devices, only selected, all except selected, ignore guest network and private MAC addresses) with a **preview**: it shows which devices stay, come back or are **removed with their entities** before anything is written. "Apply filter" asks again with the names of the devices that disappear. The panel sends the list you saw: if it changed meanwhile (a device went online, the box lists another one), the server writes nothing and you see the new preview. Removed devices lose their own names, their entity ids and their history; references in automations then point nowhere. "Do not create devices for offline devices" stays in the options only.
+
 The panel follows the look of the author's other panels, follows the light and dark theme of Home Assistant and needs no sideways scrolling down to 360 px wide.
 
 ## Blueprints

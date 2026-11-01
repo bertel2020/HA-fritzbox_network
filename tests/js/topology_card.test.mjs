@@ -340,3 +340,35 @@ test("the route names a device only for a valid hash", () => {
   assert.equal(card.deviceFromHash("#/other"), null);
   assert.equal(card.deviceFromHash(""), null);
 });
+
+test("the route names the page", () => {
+  assert.deepEqual(card.routeFromHash(""), { tab: "net", device: null });
+  assert.deepEqual(card.routeFromHash("#/cleanup"), { tab: "cleanup", device: null });
+  assert.deepEqual(card.routeFromHash("#/filter"), { tab: "filter", device: null });
+  assert.deepEqual(card.routeFromHash("#/device/3c2af4a1b2c3"), { tab: "net", device: "3c2af4a1b2c3" });
+  assert.deepEqual(card.routeFromHash("#/nonsense"), { tab: "net", device: null });
+});
+
+test("the clean-up slider keeps the devices gone for at least that long", () => {
+  const devices = [{ days: 10 }, { days: 30 }, { days: 200 }];
+  assert.deepEqual(card.staleSince(devices, 30).map((d) => d.days), [30, 200]);
+  assert.deepEqual(card.staleSince(devices, 365), []);
+  assert.deepEqual(card.staleSince(null, 30), []);
+});
+
+test("a MAC is added to a list or taken out of it", () => {
+  assert.deepEqual(card.toggleMac(["a"], "b"), ["a", "b"]);
+  assert.deepEqual(card.toggleMac(["a", "b"], "a"), ["b"]);
+});
+
+test("the filter draft counts as changed only when it differs from the filter in force", () => {
+  const current = { filter_mode: "include", filter_devices: ["a", "b"], ignore_guests: false, ignore_private_macs: false };
+  assert.equal(card.filterChanged(current, { ...current, filter_devices: ["b", "a"] }), false);
+  assert.equal(card.filterChanged(current, { ...current, filter_devices: ["a"] }), true);
+  assert.equal(card.filterChanged(current, { ...current, ignore_guests: true }), true);
+  assert.equal(card.filterChanged(current, { ...current, filter_mode: "exclude" }), true);
+  // with "all" the list of devices does not matter
+  const all = { ...current, filter_mode: "all" };
+  assert.equal(card.filterChanged(all, { ...all, filter_devices: [] }), false);
+  assert.equal(card.filterChanged(null, all), false);
+});
