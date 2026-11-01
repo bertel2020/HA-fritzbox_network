@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FRITZ!Box Netzwerk: Seitenpanel (Mockup)</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#f4f6f9, #0f1216);
+    --surface: light-dark(#fff, #1b1f24);
+    --soft: light-dark(#f5f7f9, #22272e);
+    --line: light-dark(#e1e5ea, #2d333b);
+    --line-2: light-dark(#eef0f3, #262c33);
+    --input-line: light-dark(#c3cbd5, #3a424c);
+    --text: light-dark(#1b1f24, #e6e9ed);
+    --muted: light-dark(#5b6270, #9aa4b1);
+    --accent: light-dark(#0a6aa8, #5bb2ea);
+    --accent-hover: light-dark(#07507f, #8ccaf2);
+    --accent-soft: light-dark(#eaf3fa, #16324a);
+    --on-accent: light-dark(#fff, #0b1a26);
+    --focus: #7db8e0;
+    --ok: light-dark(#1e6b34, #7fd49a);
+    --ok-soft: light-dark(#e6f4ea, #173a24);
+    --warn: light-dark(#8a4b00, #f2c27a);
+    --warn-soft: light-dark(#fff1de, #3a2a12);
+    --bad: light-dark(#a1261b, #f2a29a);
+    --bad-soft: light-dark(#fdecea, #3d1c19);
+    --neutral-soft: light-dark(#eef1f4, #2a3038);
+    --radius: 18px;
+    --shadow-c: light-dark(rgb(16 24 40 / 14%), rgb(0 0 0 / 40%));
+    --shadow: 0 1px 2px var(--shadow-c), 0 6px 18px -10px var(--shadow-c);
+  }
+  :root[data-scheme="light"] { color-scheme: light; }
+  :root[data-scheme="dark"] { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 Roboto, "Noto Sans", system-ui, sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; background: none; border: 0; padding: 0; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+  /* the frame lets the mockup show the phone width without a real phone */
+  .stage { display: flex; justify-content: center; }
+  .frame { width: 100%; }
+  .frame.phone { width: 390px; margin: 16px 0; border: 1px solid var(--line); border-radius: 28px; overflow: hidden; box-shadow: var(--shadow); }
+  .app { container: app / inline-size; background: var(--bg); min-height: 100vh; }
+  .phone .app { min-height: 780px; }
+
+  /* header */
+  .header { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 0 24px; padding: 0 max(16px, calc((100% - 1200px) / 2 + 24px)); }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 10px 0; min-height: 60px; min-width: 0; }
+  .menu { display: none; width: 40px; height: 40px; margin-left: -10px; place-items: center; border-radius: 50%; color: var(--text); }
+  .menu:hover { background: var(--neutral-soft); }
+  .logo { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); border: 1px solid var(--line); }
+  .brand b { display: block; font-size: 18px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+  .brand small { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  nav { display: flex; gap: 4px; padding: 8px 0; }
+  nav button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border-radius: 20px; font-weight: 500; color: var(--muted); white-space: nowrap; transition: background .15s, color .15s; }
+  nav button:hover { color: var(--text); background: var(--neutral-soft); }
+  nav button[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
+  nav em { font-style: normal; font-size: 11px; font-weight: 600; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--warn-soft); color: var(--warn); }
+  .header-end { display: flex; align-items: center; gap: 8px; }
+  @container app (max-width: 900px) {
+    .header { gap: 0; }
+    nav { order: 3; width: 100%; padding-top: 0; }
+    nav button { flex: 1; justify-content: center; padding: 0 8px; }
+  }
+  @container app (max-width: 760px) { .menu { display: grid; } .header-end .chip.live span.t { display: none; } }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; }
+  @container app (max-width: 600px) { main { padding: 16px 16px 56px; } }
+
+  /* shared bits */
+  .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 11px; border-radius: 13px; background: var(--neutral-soft); color: var(--muted); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .chip.ok { background: var(--ok-soft); color: var(--ok); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); }
+  .chip.info { background: var(--accent-soft); color: var(--accent-hover); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--input-line); flex: none; }
+  .dot.on { background: var(--ok); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  .card + .card { margin-top: 16px; }
+  h2 { font-size: 16px; font-weight: 500; margin: 0; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .muted { color: var(--muted); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 18px; border-radius: 20px; font-weight: 500; white-space: nowrap; border: 1px solid var(--input-line); background: var(--surface); }
+  .btn:hover { background: var(--soft); }
+  .btn.p { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn.p:hover { background: var(--accent-hover); }
+  .btn.d { color: var(--bad); border-color: transparent; background: none; }
+  .btn.d:hover { background: var(--bad-soft); }
+  .btn.dp { background: var(--bad); border-color: var(--bad); color: var(--surface); }
+  .btn[disabled] { opacity: .55; cursor: default; }
+  .bars { display: inline-flex; gap: 2px; align-items: flex-end; height: 14px; width: 20px; flex: none; }
+  .bars i { width: 3px; background: var(--line); border-radius: 1px; }
+  .bars i.on { background: var(--ok); }
+  .bars.mid i.on { background: var(--warn); }
+  .bars.low i.on { background: var(--bad); }
+
+  /* network tab */
+  .split { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+  .list-col, .detail-col { min-width: 0; }
+  @container app (min-width: 900px) { .split.has-detail-col { grid-template-columns: minmax(0, 1fr) 390px; } }
+  @container app (max-width: 899px) {
+    .split.detail-open .list-col { display: none; }
+    .split:not(.detail-open) .detail-col { display: none; }
+  }
+  .toolbar { padding: 16px; display: grid; gap: 12px; }
+  .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+  .chips::-webkit-scrollbar { display: none; }
+  .fchip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 14px; border-radius: 20px; border: 1px solid var(--line); color: var(--muted); font-weight: 500; white-space: nowrap; }
+  .fchip b { font-weight: 600; font-size: 12px; }
+  .fchip:hover { color: var(--text); background: var(--soft); }
+  .fchip[aria-pressed="true"] { color: var(--accent-hover); border-color: var(--accent); background: var(--accent-soft); }
+  .fields { display: grid; grid-template-columns: minmax(0, 1fr) 170px 170px; gap: 8px; }
+  @container app (max-width: 700px) { .fields { grid-template-columns: 1fr 1fr; } .fields .search { grid-column: 1 / -1; } }
+  .search { position: relative; }
+  .search svg { position: absolute; left: 12px; top: 12px; color: var(--muted); }
+  .search kbd { position: absolute; right: 10px; top: 9px; font: 12px monospace; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+  input[type="search"], select { width: 100%; height: 42px; border-radius: 10px; border: 1px solid var(--input-line); background: var(--surface); padding: 0 12px; }
+  input[type="search"] { padding-left: 38px; }
+  .meta { color: var(--muted); font-size: 12px; padding: 0 4px; }
+
+  .ap { margin-top: 16px; overflow: hidden; }
+  .ap-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; text-align: left; min-width: 0; }
+  .ap-head .ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); flex: none; }
+  .ap-head .who { flex: 1; min-width: 0; }
+  .ap-head .who b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ap-head .who small { display: block; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ap-head .count { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .ap-head .chev { color: var(--muted); transition: transform .15s; }
+  .ap.closed .chev { transform: rotate(-90deg); }
+  .ap.closed .ap-body { display: none; }
+  .radios { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; padding: 0 16px 12px; }
+  .radios::-webkit-scrollbar { display: none; }
+  .radio { flex: none; background: var(--soft); border-radius: 12px; padding: 8px 12px; min-width: 150px; }
+  .radio .top { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+  .radio .top b { font-weight: 500; }
+  .meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 6px; }
+  .meter i { display: block; height: 100%; background: var(--ok); }
+  .meter i.busy { background: var(--warn); }
+  .dev { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 16px; border-top: 1px solid var(--line); text-align: left; min-width: 0; }
+  .dev:hover { background: color-mix(in srgb, var(--soft) 60%, transparent); }
+  .dev[aria-current="true"] { background: var(--accent-soft); }
+  .dev .who { flex: 1; min-width: 0; }
+  .dev .who b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dev .who small { display: block; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .dev .end { display: flex; align-items: center; gap: 10px; flex: none; color: var(--muted); font-size: 12px; }
+  .dev .link { color: var(--muted); }
+  .dev.off .who b { color: var(--muted); }
+  @container app (max-width: 480px) { .dev .rate { display: none; } }
+  .empty { display: grid; justify-items: center; gap: 6px; padding: 48px 16px; text-align: center; color: var(--muted); }
+  .empty b { color: var(--text); font-weight: 500; }
+
+  /* detail */
+  .detail-col { position: sticky; top: 76px; }
+  @container app (max-width: 899px) { .detail-col { position: static; } }
+  .detail { padding: 20px; }
+  .back { display: none; align-items: center; gap: 6px; color: var(--accent-hover); font-weight: 500; margin: 0 0 12px -6px; min-height: 40px; padding: 0 8px; border-radius: 20px; }
+  .back:hover { background: var(--accent-soft); }
+  @container app (max-width: 899px) { .back { display: inline-flex; } }
+  .detail h1 { font-size: 22px; font-weight: 500; margin: 0 0 8px; letter-spacing: -.01em; overflow-wrap: anywhere; }
+  .chips-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 16px; }
+  .tile { background: var(--soft); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+  .tile b { display: block; font-size: 20px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .section { margin-top: 20px; }
+  .section > .label { display: block; margin-bottom: 8px; }
+  dl { margin: 0; display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px 12px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  .mono { font-family: var(--code-font-family, ui-monospace, monospace); font-size: 13px; }
+  .action { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-2); }
+  .action:first-of-type { border-top: 0; }
+  .action div small { display: block; color: var(--muted); font-size: 12px; }
+  .switch { position: relative; width: 52px; height: 32px; border-radius: 16px; background: #aeb6c1; flex: none; transition: background .15s; }
+  .switch::after { content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .switch[aria-checked="true"] { background: var(--accent); }
+  .switch[aria-checked="true"]::after { transform: translateX(20px); }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+  /* cleanup + filter */
+  .pad { padding: 20px; }
+  .lead { color: var(--muted); margin: 4px 0 16px; max-width: 70ch; }
+  .range { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 8px; }
+  .range label { flex: 1 1 100%; }
+  input[type="range"] { flex: 1 1 140px; min-width: 0; accent-color: var(--accent); }
+  .row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-2); min-width: 0; }
+  .row .who { flex: 1; min-width: 0; }
+  .row .who b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .who small { display: block; color: var(--muted); font-size: 12px; }
+  input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
+  .selbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 12px 16px; border-radius: 12px; background: var(--accent-soft); }
+  .seg { display: inline-grid; grid-auto-flow: column; border: 1px solid var(--input-line); border-radius: 10px; overflow: hidden; max-width: 100%; }
+  .seg button { padding: 0 14px; min-height: 40px; font-weight: 500; color: var(--muted); border-left: 1px solid var(--input-line); white-space: nowrap; }
+  .seg button:first-child { border-left: 0; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+  @container app (max-width: 600px) { .seg { grid-auto-flow: row; width: 100%; } .seg button { border-left: 0; border-top: 1px solid var(--input-line); text-align: left; } .seg button:first-child { border-top: 0; } }
+  .opts { margin: 16px 0; }
+  .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .stat { border-radius: 12px; padding: 12px; background: var(--soft); }
+  .stat b { display: block; font-size: 22px; font-weight: 500; }
+  .stat.bad { background: var(--bad-soft); color: var(--bad); }
+  .stat.ok { background: var(--ok-soft); color: var(--ok); }
+  .note { border-radius: 12px; padding: 12px 14px; margin-top: 12px; background: var(--warn-soft); color: var(--warn); }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+  @container app (min-width: 900px) { .two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .two .card + .card { margin-top: 0; } }
+
+  /* dialog + toast */
+  .backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 40%); display: none; place-items: center; z-index: 20; padding: 16px; }
+  .backdrop.open { display: grid; }
+  .dialog { width: min(440px, 100%); background: var(--surface); border-radius: 16px; padding: 24px; box-shadow: 0 6px 24px rgb(0 0 0 / 28%); max-height: 90vh; overflow: auto; }
+  .dialog h2 { margin-bottom: 8px; }
+  .dialog ul { margin: 8px 0; padding-left: 20px; max-height: 140px; overflow: auto; }
+  .dialog .btn-row { justify-content: flex-end; margin-top: 20px; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; transition: .2s; background: var(--text); color: var(--surface); padding: 10px 18px; border-radius: 12px; max-width: min(560px, calc(100vw - 32px)); z-index: 30; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* mockup helper, not part of the panel */
+  .tools { position: fixed; right: 12px; bottom: 12px; z-index: 40; display: flex; gap: 6px; padding: 6px; border-radius: 22px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); }
+  .tools button { min-height: 32px; padding: 0 12px; border-radius: 16px; font-size: 12px; font-weight: 500; color: var(--muted); }
+  .tools button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent-hover); }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="stage"><div class="frame" id="frame"><div class="app" id="app"></div></div></div>
+<div class="backdrop" id="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-title" id="dialog"></div></div>
+<div class="toast" id="toast" role="status"></div>
+<div class="tools" aria-label="Mockup-Werkzeuge">
+  <button id="t-phone" aria-pressed="false">Handy</button>
+  <button id="t-dark" aria-pressed="false">Dunkel</button>
+</div>
+
+<script>
+const ICONS = {
+  wifi: '<path d="M5 12.55a11 11 0 0 1 14 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><circle cx="12" cy="20" r="1"/>',
+  lan: '<path d="M9 2v6M15 2v6M7 8h10v4a5 5 0 0 1-10 0z"/><path d="M12 17v5"/>',
+  router: '<rect x="3" y="14" width="18" height="7" rx="2"/><path d="M7 17.5h.01M11 17.5h.01M12 14V9"/><path d="M8.5 6.5a5 5 0 0 1 7 0"/>',
+  ap: '<circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/>',
+  menu: '<path d="M3 6h18M3 12h18M3 18h18"/>',
+  chev: '<path d="m6 9 6 6 6-6"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+  back: '<path d="M19 12H5M12 19l-7-7 7-7"/>',
+  alert: '<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>',
+  eye: '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8S1 12 1 12z"/><circle cx="12" cy="12" r="3"/>',
+  external: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/>',
+};
+const ic = (n) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${ICONS[n]}</svg>`;
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+const BANDS = { "2_4ghz": "2,4 GHz", "5ghz": "5 GHz" };
+const NODES = [
+  { mac: "aa", name: "FRITZ-RM", model: "FRITZ!Box 7590 AX", role: "master", radios: { "2_4ghz": { ch: 1, load: 12, noise: -90 }, "5ghz": { ch: 100, load: 85, noise: -95 } } },
+  { mac: "bb", name: "FRITZ!Repeater 1200 AX", model: "FRITZ!Repeater 1200 AX", role: "slave", radios: { "5ghz": { ch: 36, load: 20, noise: -93 } } },
+];
+// d: down, u: up, md/mu: highest rates; last: days offline; fresh: days since first seen
+const D = [
+  { id: "d1", name: "amazon-echo-schlafzimmer", ip: "192.168.178.31", mac: "3C:2A:F4:A1:B2:C3", vendor: "Amazon Technologies", ap: "aa", type: "wlan", band: "2_4ghz", sig: -71, d: 43, u: 72, md: 150, mu: 150, on: true, ssid: "Heimnetz" },
+  { id: "d2", name: "bluetooth-proxy-treppe", ip: "192.168.178.32", mac: "48:27:E2:10:55:01", vendor: "Espressif Inc.", ap: "aa", type: "wlan", band: "2_4ghz", sig: -52, d: 90, u: 150, md: 150, mu: 150, on: true, ssid: "Heimnetz", fresh: 3 },
+  { id: "d3", name: "Enocean-GW", ip: "192.168.178.40", mac: "02:11:22:33:44:01", ap: "aa", type: "lan", d: 100, u: 100, md: 100, mu: 100, on: true, port: "LAN 2, 100 Mbit/s" },
+  { id: "d4", name: "NTT-FGYF9Y3", ip: "192.168.178.41", mac: "02:11:22:33:44:02", ap: "aa", type: "lan", d: 1000, u: 1000, md: 1000, mu: 1000, on: true, port: "LAN 1, 1 Gbit/s" },
+  { id: "d5", name: "QNAP01", ip: "192.168.178.50", mac: "24:5E:BE:0A:0B:0C", vendor: "QNAP Systems", ap: "aa", type: "lan", d: 1000, u: 1000, md: 1000, mu: 1000, on: true, port: "LAN 3, 1 Gbit/s" },
+  { id: "d6", name: "Shelly-Pro3EM", ip: "192.168.178.60", mac: "34:94:54:77:88:99", vendor: "Shelly Group", ap: "aa", type: "wlan", band: "2_4ghz", sig: -58, d: 65, u: 59, md: 72, mu: 72, on: true, ssid: "Heimnetz" },
+  { id: "d7", name: "Kinder-Tablet", ip: "192.168.178.71", mac: "A6:11:22:33:44:55", ap: "bb", type: "wlan", band: "5ghz", sig: -49, d: 433, u: 390, md: 866, mu: 866, on: true, blocked: true, profile: "Kinder", priv: true, ssid: "Heimnetz" },
+  { id: "d8", name: "Waschmaschine", ip: "192.168.178.72", mac: "5C:CF:7F:00:11:22", vendor: "Miele", ap: "bb", type: "wlan", band: "5ghz", sig: -77, d: 18, u: 12, md: 150, mu: 150, on: true, ssid: "Heimnetz" },
+  { id: "d9", name: "ShellyPlus1PM-Eltako", ip: "192.168.178.73", mac: "34:94:54:AA:BB:CC", vendor: "Shelly Group", ap: "bb", type: "wlan", band: "5ghz", sig: -60, d: 30, u: 135, md: 150, mu: 150, on: true, ssid: "Heimnetz" },
+  { id: "d10", name: "iPhone-von-Gast", ip: "192.168.179.20", mac: "F2:11:22:33:AA:BB", ap: "bb", type: "wlan", band: "5ghz", sig: -63, d: 200, u: 180, md: 433, mu: 433, on: true, guest: true, priv: true, ssid: "Gäste", fresh: 1 },
+  { id: "d11", name: "Drucker-Buero", ip: "192.168.178.80", mac: "00:1B:A9:12:34:56", vendor: "Brother Industries", ap: "aa", type: "lan", d: 100, u: 100, md: 100, mu: 100, on: false, last: 2 },
+  { id: "d12", name: "alter-laptop", ip: null, mac: "60:6C:66:99:88:77", ap: null, type: null, on: false, last: 212 },
+  { id: "d13", name: "Fire-TV-Wohnzimmer", ip: null, mac: "A0:D0:DC:11:22:33", vendor: "Amazon Technologies", ap: null, type: null, on: false, last: 140 },
+  { id: "d14", name: "ESP-Test-01", ip: null, mac: "48:3F:DA:00:00:01", vendor: "Espressif Inc.", ap: null, type: null, on: false, last: 96 },
+  { id: "d15", name: "Handy-Besuch", ip: null, mac: "DA:11:22:33:44:55", ap: null, type: null, on: false, last: 61, guest: true, priv: true },
+  { id: "d16", name: "Dell-Monitor-Hub", ip: null, mac: "F8:B4:6A:01:02:03", vendor: "Dell", ap: null, type: null, on: false, last: 45 },
+];
+const T = {
+  Alle: () => true, Online: (d) => d.on, Offline: (d) => !d.on, WLAN: (d) => d.type === "wlan", LAN: (d) => d.type === "lan",
+  Gast: (d) => d.guest, Gesperrt: (d) => d.blocked, Schwach: (d) => weak(d), "Neu (7 Tage)": (d) => d.fresh != null && d.fresh <= 7,
+  "Lange offline": (d) => !d.on && d.last >= 30, "Ohne Access Point": (d) => !d.ap,
+};
+const ratio = (d) => (d.on && d.md ? Math.min(d.d / d.md, d.u / d.mu) : null);
+const weak = (d) => ratio(d) !== null && d.type === "wlan" && ratio(d) < 1 / 3;
+const barsOf = (s) => (s > -55 ? 4 : s > -65 ? 3 : s > -75 ? 2 : 1);
+
+const S = { tab: "net", filter: "Alle", q: "", sort: "Name", group: "Access Point", sel: null, closed: new Set(), days: 30, picked: new Set(), hidden: [],
+  mode: "Alle Geräte", ignGuest: false, ignPriv: false, skipOff: false, applied: { mode: "Alle Geräte", ignGuest: false, ignPriv: false, skipOff: false } };
+const $ = (s, r = document) => r.querySelector(s);
+const app = $("#app");
+
+function rate(d) { return d.on && d.d ? `${d.d} / ${d.u} Mbit/s` : ""; }
+function ago(days) { return days < 1 ? "heute" : days === 1 ? "gestern" : `vor ${days} Tagen`; }
+function visible() {
+  const q = S.q.toLowerCase();
+  const list = D.filter((d) => !S.hidden.includes(d.id) && T[S.filter](d) && (!q || `${d.name} ${d.ip ?? ""} ${d.mac} ${d.vendor ?? ""}`.toLowerCase().includes(q)));
+  const key = { Name: (a, b) => a.name.localeCompare(b.name), Signal: (a, b) => (b.sig ?? -999) - (a.sig ?? -999), Rate: (a, b) => (b.d ?? -1) - (a.d ?? -1), "Zuletzt online": (a, b) => (a.last ?? 0) - (b.last ?? 0) }[S.sort];
+  return list.sort((a, b) => Number(b.on) - Number(a.on) || key(a, b));
+}
+function groups(list) {
+  if (S.group === "Flach") return [{ key: "flat", title: "Alle Geräte", ico: "ap", sub: "", items: list }];
+  const by = (pred, key, title, ico, sub) => ({ key, title, ico, sub, items: list.filter(pred) });
+  if (S.group === "Band / LAN") {
+    return [by((d) => d.type === "lan", "lan", "LAN", "lan", "Kabel"), by((d) => d.band === "2_4ghz", "b24", "2,4 GHz", "wifi", "Funk"), by((d) => d.band === "5ghz", "b5", "5 GHz", "wifi", "Funk"), by((d) => !d.type, "none", "Ohne Verbindung", "help", "")].filter((g) => g.items.length);
+  }
+  const out = NODES.map((n) => ({ key: n.mac, node: n, title: n.name, ico: n.role === "master" ? "router" : "ap", items: list.filter((d) => d.ap === n.mac) }));
+  out.push({ key: "none", title: "Ohne Access Point", ico: "help", sub: "Die Box ordnet diese Geräte keinem Access Point zu", items: list.filter((d) => !d.ap) });
+  return out.filter((g) => g.items.length || (g.node && S.filter === "Alle" && !S.q));
+}
+function summary(g) {
+  if (!g.node) return g.sub;
+  const all = D.filter((d) => d.ap === g.node.mac && d.on);
+  const w = all.filter((d) => d.type === "wlan"), l = all.filter((d) => d.type === "lan");
+  const min = Math.min(...all.map((d) => d.d ?? Infinity));
+  return [`${w.length} WLAN`, `${l.length} LAN`, Number.isFinite(min) ? `min. ${min} Mbit/s` : ""].filter(Boolean).join(" · ");
+}
+
+function header() {
+  const stale = D.filter((d) => !S.hidden.includes(d.id) && !d.on && d.last >= S.days).length;
+  const tab = (id, label, badge) => `<button role="tab" data-tab="${id}" aria-selected="${S.tab === id}">${label}${badge ? `<em>${badge}</em>` : ""}</button>`;
+  return `<header class="header"><div class="brand"><button class="menu" aria-label="Seitenleiste" data-act="menu">${ic("menu")}</button>
+    <span class="logo">${ic("router")}</span><div><b>FRITZ!Box Netzwerk</b><small>FRITZ-RM · FRITZ!Box 7590 AX</small></div></div>
+    <nav role="tablist">${tab("net", "Netzwerk")}${tab("clean", "Aufräumen", stale)}${tab("filter", "Filter")}</nav>
+    <div class="header-end"><span class="chip ok live"><span class="dot on"></span><span class="t">aktualisiert vor 12 s</span></span></div></header>`;
+}
+
+function netView() {
+  const all = D.filter((d) => !S.hidden.includes(d.id));
+  const chips = Object.keys(T).map((k) => ({ k, n: all.filter(T[k]).length })).filter(({ k, n }) => n || k === S.filter || k === "Alle");
+  const list = visible();
+  const gs = groups(list);
+  const on = list.filter((d) => d.on).length;
+  const body = gs.length ? gs.map((g) => {
+    const open = !S.closed.has(g.key);
+    const radios = g.node ? Object.entries(g.node.radios).map(([b, r]) => `<div class="radio"><div class="top"><b>${BANDS[b]}</b><span class="muted">Kanal ${r.ch}</span></div>
+      <div class="meter" role="progressbar" aria-valuenow="${r.load}" aria-valuemin="0" aria-valuemax="100"><i class="${r.load >= 70 ? "busy" : ""}" style="width:${r.load}%"></i></div>
+      <div class="top" style="margin-top:4px"><span class="${r.load >= 70 ? "" : "muted"}" style="${r.load >= 70 ? "color:var(--warn)" : ""}">${r.load} % Auslastung</span><span class="muted">${r.noise} dBm</span></div></div>`).join("") : "";
+    return `<section class="card ap ${open ? "" : "closed"}"><button class="ap-head" data-ap="${g.key}" aria-expanded="${open}"><span class="ico">${ic(g.ico)}</span>
+      <span class="who"><b>${esc(g.title)}</b><small>${esc(summary(g))}</small></span><span class="count">${g.items.length}</span><span class="chev">${ic("chev")}</span></button>
+      <div class="ap-body">${radios ? `<div class="radios">${radios}</div>` : ""}${g.items.map(devRow).join("") || `<div class="empty"><span>Keine passenden Geräte</span></div>`}</div></section>`;
+  }).join("") : `<div class="card empty" style="margin-top:16px">${ic("search")}<b>Keine passenden Geräte</b><span>Ändere die Suche oder den Filter.</span></div>`;
+  return `<div class="split has-detail-col ${S.sel ? "detail-open" : ""}"><div class="list-col">
+    <div class="card toolbar"><div class="chips" role="group" aria-label="Statusfilter">${chips.map(({ k, n }) => `<button class="fchip" data-filter="${k}" aria-pressed="${k === S.filter}">${k}<b>${n}</b></button>`).join("")}</div>
+      <div class="fields"><label class="search"><span class="sr">Suchen</span>${ic("search")}<input type="search" id="q" placeholder="Suchen…" title="Name, IP, MAC oder Hersteller" value="${esc(S.q)}"><kbd>/</kbd></label>
+        <label><span class="sr">Sortieren</span><select id="sort">${["Name", "Signal", "Rate", "Zuletzt online"].map((o) => `<option ${o === S.sort ? "selected" : ""}>${o}</option>`).join("")}</select></label>
+        <label><span class="sr">Gruppieren</span><select id="group">${["Access Point", "Band / LAN", "Flach"].map((o) => `<option ${o === S.group ? "selected" : ""}>${o}</option>`).join("")}</select></label></div>
+      <div class="meta">${all.length} Geräte · ${all.filter((d) => d.on).length} online · ${all.filter((d) => d.blocked).length} gesperrt · ${list.length} angezeigt (${on} online)</div></div>${body}</div>
+    <aside class="detail-col">${detailView()}</aside></div>`;
+}
+function devRow(d) {
+  const w = weak(d);
+  const line2 = d.on ? [d.ip, d.vendor].filter(Boolean).join(" · ") : `zuletzt online ${ago(d.last)}`;
+  const sig = d.type === "wlan" ? `<span class="bars ${d.sig > -65 ? "" : d.sig > -75 ? "mid" : "low"}" title="${d.sig} dBm">${[1, 2, 3, 4].map((i) => `<i class="${i <= barsOf(d.sig) ? "on" : ""}" style="height:${3 + i * 3}px"></i>`).join("")}</span>` : "";
+  return `<button class="dev ${d.on ? "" : "off"}" data-dev="${d.id}" ${S.sel === d.id ? 'aria-current="true"' : ""}><span class="dot ${d.on ? "on" : ""}"></span>
+    <span class="link">${ic(d.type === "lan" ? "lan" : d.type === "wlan" ? "wifi" : "help")}</span>
+    <span class="who"><b>${esc(d.name)}</b><small>${esc(line2)}</small></span>
+    <span class="end">${d.blocked ? '<span class="chip bad">Gesperrt</span>' : ""}${d.guest ? '<span class="chip info">Gast</span>' : ""}<span class="rate">${esc(rate(d))}</span>${w ? `<span style="color:var(--warn)" title="Schwache Verbindung">${ic("alert")}</span>` : ""}${sig}</span></button>`;
+}
+function detailView() {
+  const d = D.find((x) => x.id === S.sel);
+  if (!d) return `<div class="card empty">${ic("wifi")}<b>Kein Gerät gewählt</b><span>Wähle links ein Gerät, um Details und Aktionen zu sehen.</span></div>`;
+  const node = NODES.find((n) => n.mac === d.ap);
+  const r = ratio(d);
+  const sw = (id, label, hint, on, off) => `<div class="action"><div>${label}<small>${hint}</small></div><button class="switch" role="switch" aria-checked="${on}" aria-label="${label}" data-sw="${id}" ${off ? "disabled" : ""}></button></div>`;
+  return `<div class="card detail"><button class="back" data-act="back">${ic("back")}Netzwerk</button>
+    <h1>${esc(d.name)}</h1><div class="chips-row"><span class="chip ${d.on ? "ok" : ""}"><span class="dot ${d.on ? "on" : ""}"></span>${d.on ? "Online" : `Offline, ${ago(d.last)}`}</span>
+      ${d.type ? `<span class="chip">${d.type === "wlan" ? "WLAN" : "LAN"}</span>` : ""}${d.guest ? '<span class="chip info">Gast</span>' : ""}${d.blocked ? '<span class="chip bad">Internet gesperrt</span>' : ""}${weak(d) ? `<span class="chip warn">Schwache Verbindung, ${Math.round(r * 100)} % der Rate</span>` : ""}${d.priv ? '<span class="chip">Private MAC</span>' : ""}</div>
+    ${d.on && d.d ? `<div class="tiles"><div class="tile"><span class="label">Rate ↓ / ↑</span><b>${d.d} / ${d.u}</b></div><div class="tile"><span class="label">Höchste Rate</span><b>${d.md} / ${d.mu}</b></div>
+      ${d.type === "wlan" ? `<div class="tile"><span class="label">Signal</span><b>${d.sig} dBm</b></div><div class="tile"><span class="label">Band</span><b>${BANDS[d.band]}</b></div>` : `<div class="tile" style="grid-column:1/-1"><span class="label">Anschluss</span><b>${esc(d.port)}</b></div>`}</div>` : ""}
+    <div class="section"><span class="label">Stammdaten</span><dl><dt>MAC</dt><dd class="mono">${esc(d.mac)}</dd><dt>IP-Adresse</dt><dd class="mono">${esc(d.ip ?? "unbekannt")}</dd><dt>Hersteller</dt><dd>${esc(d.vendor ?? "unbekannt")}</dd>
+      <dt>Access Point</dt><dd>${esc(node?.name ?? "nicht zugeordnet")}</dd>${d.ssid ? `<dt>Netzwerk</dt><dd>${esc(d.ssid)}</dd>` : ""}${d.profile ? `<dt>Zugangsprofil</dt><dd>${esc(d.profile)}</dd>` : ""}</dl></div>
+    <div class="section"><span class="label">Aktionen</span>
+      ${sw("blocked", "Internetzugang", d.blocked ? "Gesperrt: das Gerät kommt nicht ins Internet" : "Erlaubt", !d.blocked, !d.ip)}
+      ${sw("prio", "Priorisierung", "Der Router bevorzugt das Gerät bei voller Leitung", !!d.prio, !d.ip)}
+      <div class="btn-row"><button class="btn" data-act="wol" ${d.on ? "disabled" : ""}>Wake on LAN</button><button class="btn" data-act="rename">Umbenennen</button><button class="btn" data-act="ha">${ic("external")}In Home Assistant</button></div>
+      ${d.on ? '<p class="muted" style="margin:12px 0 0;font-size:12px">Wake on LAN weckt nur Geräte, die offline sind.</p>' : ""}</div></div>`;
+}
+
+function cleanView() {
+  const stale = D.filter((d) => !S.hidden.includes(d.id) && !d.on && d.last >= S.days).sort((a, b) => b.last - a.last);
+  const hidden = D.filter((d) => S.hidden.includes(d.id));
+  const n = [...S.picked].filter((id) => stale.some((d) => d.id === id)).length;
+  return `<div class="two"><section class="card pad"><h2>Lange offline</h2><p class="lead">Die Box merkt sich jedes Gerät, das sie je gesehen hat. Blende hier Geräte aus, die lange nicht mehr online waren.</p>
+    <div class="range"><label for="days">Offline seit mindestens</label><input type="range" id="days" min="7" max="365" value="${S.days}"><b style="min-width:72px;text-align:right">${S.days} Tage</b></div>
+    ${stale.length ? `<div>${stale.map((d) => `<label class="row"><input type="checkbox" data-pick="${d.id}" ${S.picked.has(d.id) ? "checked" : ""}><span class="who"><b>${esc(d.name)}</b><small>${esc(d.vendor ?? d.mac)} · zuletzt online ${ago(d.last)}</small></span></label>`).join("")}</div>
+      <div class="selbar"><span><b>${n}</b> ausgewählt</span><span style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn" data-act="pick-all">Alle wählen</button><button class="btn p" data-act="hide" ${n ? "" : "disabled"}>${n} Geräte ausblenden</button></span></div>`
+      : `<div class="empty">${ic("eye")}<b>Alles aufgeräumt</b><span>Kein Gerät ist so lange offline.</span></div>`}</section>
+    <section class="card pad"><h2>Ausgeblendet</h2><p class="lead">Ausgeblendete Geräte tauchen in Home Assistant nicht mehr auf. Hier holst du sie zurück.</p>
+    ${hidden.length ? hidden.map((d) => `<div class="row"><span class="who"><b>${esc(d.name)}</b><small>${esc(d.mac)}</small></span><button class="btn" data-unhide="${d.id}">Einblenden</button></div>`).join("") : `<div class="empty"><b>Nichts ausgeblendet</b><span>Geräte, die du ausblendest, stehen hier.</span></div>`}</section></div>`;
+}
+
+function filterResult(o) {
+  const all = D.filter((d) => !S.hidden.includes(d.id));
+  const gone = (d) => (o.ignGuest && d.guest) || (o.ignPriv && d.priv) || (o.skipOff && !d.on) || (o.mode === "Nur ausgewählte" && !["d1", "d3", "d5"].includes(d.id)) || (o.mode === "Alle außer ausgewählten" && ["d1", "d3", "d5"].includes(d.id));
+  const nowGone = (d) => (S.applied.ignGuest && d.guest) || (S.applied.ignPriv && d.priv) || (S.applied.skipOff && !d.on) || (S.applied.mode === "Nur ausgewählte" && !["d1", "d3", "d5"].includes(d.id)) || (S.applied.mode === "Alle außer ausgewählten" && ["d1", "d3", "d5"].includes(d.id));
+  return { keep: all.filter((d) => !gone(d) && !nowGone(d)), add: all.filter((d) => !gone(d) && nowGone(d)), remove: all.filter((d) => gone(d) && !nowGone(d)) };
+}
+function filterView() {
+  const r = filterResult(S);
+  const tog = (id, label, hint, on) => `<div class="action"><div>${label}<small>${hint}</small></div><button class="switch" role="switch" aria-checked="${on}" aria-label="${label}" data-ft="${id}"></button></div>`;
+  return `<div class="two"><section class="card pad"><h2>Gerätefilter</h2><p class="lead">Lege fest, für welche Geräte Home Assistant Geräte und Entitäten anlegt. Die Vorschau zeigt vorher, was sich ändert.</p>
+    <span class="label">Modus</span><div style="margin:8px 0"><div class="seg" role="group">${["Alle Geräte", "Nur ausgewählte", "Alle außer ausgewählten"].map((m) => `<button data-mode="${m}" aria-pressed="${S.mode === m}">${m}</button>`).join("")}</div></div>
+    ${S.mode !== "Alle Geräte" ? '<p class="muted" style="font-size:12px;margin:4px 0 0">Mockup: Als Auswahl dienen amazon-echo-schlafzimmer, Enocean-GW und QNAP01.</p>' : ""}
+    <div class="opts">${tog("ignGuest", "Geräte im Gastnetz ignorieren", "Gastnetz-Geräte werden nicht angelegt", S.ignGuest)}${tog("ignPriv", "Geräte mit privater MAC-Adresse ignorieren", "Zufällige MAC-Adressen werden nicht angelegt", S.ignPriv)}${tog("skipOff", "Für Offline-Geräte keine Geräte anlegen", "Ein Gerät entsteht erst, wenn es online kommt", S.skipOff)}</div></section>
+    <section class="card pad"><h2>Vorschau</h2><p class="lead">Was passiert, wenn du den Filter anwendest.</p>
+    <div class="stats"><div class="stat"><span class="label">Bleibt</span><b>${r.keep.length}</b></div><div class="stat ok"><span class="label">Kommt dazu</span><b>${r.add.length}</b></div><div class="stat ${r.remove.length ? "bad" : ""}"><span class="label">Wird entfernt</span><b>${r.remove.length}</b></div></div>
+    ${r.remove.length ? `<div class="note" style="background:var(--bad-soft);color:var(--bad)"><b>Wird samt Entitäten entfernt:</b> ${r.remove.map((d) => esc(d.name)).join(", ")}. Eigene Namen und Bezüge in Automationen gehen dabei verloren.</div>` : ""}
+    ${r.add.length ? `<p class="muted" style="margin:12px 0 0">Kommt dazu: ${r.add.map((d) => esc(d.name)).join(", ")}</p>` : ""}
+    <div class="btn-row"><button class="btn p" data-act="apply" ${r.remove.length || r.add.length ? "" : "disabled"}>Filter anwenden</button></div></section></div>`;
+}
+
+function render() {
+  const keep = { x: window.scrollX, y: window.scrollY };
+  const focusId = document.activeElement?.id;
+  app.innerHTML = header() + `<main>${{ net: netView, clean: cleanView, filter: filterView }[S.tab]()}</main>`;
+  if (focusId) $(`#${focusId}`)?.focus();
+  window.scrollTo(keep.x, keep.y);
+}
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 3200); }
+function confirmDialog({ title, body, list, ok, danger }) {
+  return new Promise((resolve) => {
+    const dlg = $("#dialog"), bd = $("#backdrop"), prev = document.activeElement;
+    dlg.innerHTML = `<h2 id="dlg-title">${esc(title)}</h2><div>${body}</div>${list ? `<ul>${list.map((n) => `<li>${esc(n)}</li>`).join("")}</ul>` : ""}<div class="btn-row"><button class="btn" id="dlg-no">Abbrechen</button><button class="btn ${danger ? "dp" : "p"}" id="dlg-yes">${esc(ok)}</button></div>`;
+    bd.classList.add("open"); $("#dlg-no").focus();
+    const done = (v) => { bd.classList.remove("open"); document.removeEventListener("keydown", key); prev?.focus?.(); resolve(v); };
+    const key = (e) => { if (e.key === "Escape") done(false); if (e.key === "Tab") { const b = [$("#dlg-no"), $("#dlg-yes")]; const i = b.indexOf(document.activeElement); e.preventDefault(); b[(i + (e.shiftKey ? -1 : 1) + 2) % 2].focus(); } };
+    document.addEventListener("keydown", key);
+    $("#dlg-no").onclick = () => done(false); $("#dlg-yes").onclick = () => done(true);
+  });
+}
+
+app.addEventListener("click", async (e) => {
+  const t = e.target.closest("button, input[data-pick]"); if (!t) return;
+  const ds = t.dataset;
+  if (ds.tab) { S.tab = ds.tab; S.sel = null; }
+  else if (ds.filter) S.filter = ds.filter;
+  else if (ds.ap) { S.closed.has(ds.ap) ? S.closed.delete(ds.ap) : S.closed.add(ds.ap); }
+  else if (ds.dev) S.sel = ds.dev;
+  else if (ds.act === "back") S.sel = null;
+  else if (ds.act === "menu") toast("Öffnet die Seitenleiste von Home Assistant");
+  else if (ds.act === "wol") toast("Wake-on-LAN-Paket gesendet");
+  else if (ds.act === "rename") toast("Umbenennen öffnet einen kleinen Dialog");
+  else if (ds.act === "ha") toast("Öffnet das Gerät in Home Assistant");
+  else if (ds.sw) { const d = D.find((x) => x.id === S.sel); if (ds.sw === "blocked") { d.blocked = !d.blocked; toast(d.blocked ? `Internet für ${d.name} gesperrt` : `Internet für ${d.name} freigegeben`); } else { d.prio = !d.prio; toast(d.prio ? "Priorisierung an" : "Priorisierung aus"); } }
+  else if (ds.pick) { S.picked.has(ds.pick) ? S.picked.delete(ds.pick) : S.picked.add(ds.pick); }
+  else if (ds.act === "pick-all") { D.filter((d) => !S.hidden.includes(d.id) && !d.on && d.last >= S.days).forEach((d) => S.picked.add(d.id)); }
+  else if (ds.act === "hide") {
+    const items = D.filter((d) => S.picked.has(d.id) && !d.on && d.last >= S.days);
+    if (await confirmDialog({ title: `${items.length} Geräte ausblenden?`, body: "Die Geräte und ihre Entitäten werden aus Home Assistant entfernt. Du kannst sie unter „Ausgeblendet“ zurückholen. Namen, die du in Home Assistant vergeben hast, und Verläufe der alten Entitäten gehen dabei verloren.", list: items.map((d) => d.name), ok: `${items.length} Geräte ausblenden`, danger: true })) {
+      items.forEach((d) => { S.hidden.push(d.id); S.picked.delete(d.id); }); toast(`${items.length} Geräte ausgeblendet`);
+    }
+  } else if (ds.unhide) { S.hidden = S.hidden.filter((id) => id !== ds.unhide); toast("Gerät wieder eingeblendet"); }
+  else if (ds.mode) S.mode = ds.mode;
+  else if (ds.ft) S[ds.ft] = !S[ds.ft];
+  else if (ds.act === "apply") {
+    const r = filterResult(S);
+    if (await confirmDialog({ title: "Filter anwenden?", body: `${r.remove.length} Geräte werden samt Entitäten aus Home Assistant entfernt, ${r.add.length} kommen dazu. Hat sich die Liste inzwischen geändert, wird nichts geschrieben und du siehst die neue Vorschau.`, list: r.remove.map((d) => d.name), ok: "Filter anwenden", danger: r.remove.length > 0 })) {
+      S.applied = { mode: S.mode, ignGuest: S.ignGuest, ignPriv: S.ignPriv, skipOff: S.skipOff }; toast("Filter angewendet");
+    }
+  } else return;
+  render();
+});
+app.addEventListener("input", (e) => {
+  if (e.target.id === "q") { S.q = e.target.value; render(); const q = $("#q"); q.focus(); q.setSelectionRange(q.value.length, q.value.length); }
+  if (e.target.id === "days") { S.days = Number(e.target.value); render(); $("#days").focus(); }
+});
+app.addEventListener("change", (e) => { if (e.target.id === "sort") S.sort = e.target.value; if (e.target.id === "group") S.group = e.target.value; render(); });
+document.addEventListener("keydown", (e) => { if (e.key === "/" && S.tab === "net" && !/INPUT|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); $("#q")?.focus(); } });
+
+$("#t-phone").onclick = (e) => { const on = e.currentTarget.getAttribute("aria-pressed") !== "true"; e.currentTarget.setAttribute("aria-pressed", on); $("#frame").classList.toggle("phone", on); };
+$("#t-dark").onclick = (e) => { const on = e.currentTarget.getAttribute("aria-pressed") !== "true"; e.currentTarget.setAttribute("aria-pressed", on); document.documentElement.dataset.scheme = on ? "dark" : "light"; };
+S.sel = "d1";
+render();
+</script>
+</body>
+</html>
