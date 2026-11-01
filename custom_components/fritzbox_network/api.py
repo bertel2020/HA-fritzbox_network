@@ -32,6 +32,9 @@ DEVICEINFO_SERVICE = "DeviceInfo1"
 SECURITY_SERVICE = "LANConfigSecurity1"
 RIGHT_ADMIN = "BoxAdmin"
 
+# seconds for connecting and for each read, also of the direct list downloads
+REQUEST_TIMEOUT = 10
+
 
 class FritzNetworkClient:
     """Thin wrapper around fritzconnection."""
@@ -61,7 +64,7 @@ class FritzNetworkClient:
                 user=self._username,
                 password=self._password,
                 use_tls=self._use_tls,
-                timeout=10,
+                timeout=REQUEST_TIMEOUT,
                 use_cache=True,
             )
 
@@ -97,7 +100,7 @@ class FritzNetworkClient:
 
     def _download(self, path: str) -> str:
         fc = self._connection
-        with fc.session.get(f"{fc.address}:{fc.port}{path}") as response:
+        with fc.session.get(f"{fc.address}:{fc.port}{path}", timeout=REQUEST_TIMEOUT) as response:
             response.raise_for_status()
             return response.text
 
