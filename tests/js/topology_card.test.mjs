@@ -372,3 +372,56 @@ test("the filter draft counts as changed only when it differs from the filter in
   assert.equal(card.filterChanged(all, { ...all, filter_devices: [] }), false);
   assert.equal(card.filterChanged(null, all), false);
 });
+
+const labelled = {
+  labels: [
+    { id: "kids", name: "Kinder" },
+    { id: "guests", name: "Gäste" },
+    { id: "unused", name: "Leer" },
+  ],
+  nodes: [],
+  clients: [
+    { mac: "01", id: "01", name: "tablet", online: true, entity_id: "device_tracker.tablet", labels: ["kids"] },
+    { mac: "02", id: "02", name: "console", online: true, entity_id: "device_tracker.console", labels: ["kids", "guests"] },
+    { mac: "03", id: "03", name: "tv", online: true, entity_id: "device_tracker.tv", labels: [] },
+    { mac: "04", id: "04", name: "bare", online: true, entity_id: "device_tracker.bare" },
+  ],
+};
+
+test("a group filter keeps the devices with that label", () => {
+  const names = (filter) => card.panelClients(labelled, { filter, now: NOW }).map((c) => c.name);
+  assert.deepEqual(names("label:kids"), ["console", "tablet"]);
+  assert.deepEqual(names("label:guests"), ["console"]);
+  assert.deepEqual(names("label:none-such"), []);
+});
+
+test("only groups with devices are offered, with their count", () => {
+  assert.deepEqual(card.labelCounts(labelled), [
+    { id: "kids", name: "Kinder", count: 2 },
+    { id: "guests", name: "Gäste", count: 1 },
+  ]);
+  assert.deepEqual(card.labelCounts({}), []);
+});
+
+test("grouping by label puts a device in each of its groups and the rest last", () => {
+  const all = card.panelClients(labelled, { now: NOW });
+  const groups = card.panelGroups(labelled, all, "label");
+  assert.deepEqual(groups.map((g) => g.key), ["label:kids", "label:guests", "none"]);
+  assert.deepEqual(groups[0].clients.map((c) => c.name), ["console", "tablet"]);
+  assert.deepEqual(groups[2].clients.map((c) => c.name), ["bare", "tv"]);
+});
+
+test("the devices card adds the devices of its group after the named ones", () => {
+  const found = card.devicesFor(labelled, ["device_tracker.tv"], "kids");
+  assert.deepEqual(found.map((d) => d.client?.name), ["tv", "console", "tablet"]);
+  // a device that is named and in the group shows once
+  const twice = card.devicesFor(labelled, ["device_tracker.tablet"], "kids");
+  assert.deepEqual(twice.map((d) => d.client?.name), ["tablet", "console"]);
+  assert.deepEqual(card.devicesFor(labelled, ["device_tracker.tv"]).map((d) => d.client?.name), ["tv"]);
+});
+
+test("the group of the devices card is read from the config", () => {
+  assert.equal(card.normalizeDeviceConfig({ label: "kids" }).label, "kids");
+  assert.equal(card.normalizeDeviceConfig({ label: 5 }).label, "");
+  assert.equal(card.normalizeDeviceConfig().label, "");
+});

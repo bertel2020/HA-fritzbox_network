@@ -125,10 +125,20 @@ export function radioRows(data) {
     .filter((row) => row.bands.length);
 }
 
-/** The chosen devices in the order of the config; null where the integration has no such device. */
-export function devicesFor(data, entities) {
-  const byEntity = new Map((data?.clients ?? []).map((c) => [c.entity_id, c]));
-  return entities.map((entity) => ({ entity, client: byEntity.get(entity) ?? null }));
+/**
+ * The chosen devices in the order of the config, null where the integration has no such device,
+ * then the devices of a group (a label) that were not named, by name.
+ */
+export function devicesFor(data, entities, label = "") {
+  const clients = data?.clients ?? [];
+  const byEntity = new Map(clients.map((c) => [c.entity_id, c]));
+  const named = entities.map((entity) => ({ entity, client: byEntity.get(entity) ?? null }));
+  if (!label) return named;
+  const members = clients
+    .filter((c) => c.entity_id && c.labels?.includes(label) && !entities.includes(c.entity_id))
+    .sort((a, b) => a.name.localeCompare(b.name))
+    .map((client) => ({ entity: client.entity_id, client }));
+  return [...named, ...members];
 }
 
 /**
@@ -187,6 +197,7 @@ export function isBlocked(client) {
 }
 
 export function panelMatches(client, filter, now = Date.now(), threshold = WEAK_LINK_RATIO) {
+  if (filter.startsWith("label:")) return Boolean(client.labels?.includes(filter.slice(6)));
   switch (filter) {
     case "online":
       return Boolean(client.online);
@@ -218,6 +229,18 @@ export function panelCounts(data, now = Date.now(), threshold = WEAK_LINK_RATIO)
   return Object.fromEntries(
     PANEL_FILTERS.map((f) => [f, clients.filter((c) => panelMatches(c, f, now, threshold)).length])
   );
+}
+
+/** The groups (labels) that have at least one device, with how many. */
+export function labelCounts(data) {
+  const clients = data?.clients ?? [];
+  return (data?.labels ?? [])
+    .map((label) => ({
+      id: label.id,
+      name: label.name,
+      count: clients.filter((c) => c.labels?.includes(label.id)).length,
+    }))
+    .filter((label) => label.count);
 }
 
 const SORTS = {
@@ -259,6 +282,18 @@ export function panelGroups(data, clients, mode = "ap", narrowed = false) {
       by("6ghz", (c) => c.band === "6ghz"),
       by("none", (c) => !c.link_type),
     ].filter((g) => g.clients.length);
+  }
+  if (mode === "label") {
+    const byLabel = (data?.labels ?? [])
+      .map((label) => ({
+        key: `label:${label.id}`,
+        node: null,
+        label,
+        clients: clients.filter((c) => c.labels?.includes(label.id)),
+      }))
+      .filter((g) => g.clients.length);
+    const without = clients.filter((c) => !(c.labels ?? []).length);
+    return [...byLabel, { key: "none", node: null, clients: without }].filter((g) => g.clients.length);
   }
   const groups = (data?.nodes ?? []).map((node) => ({
     key: node.mac,

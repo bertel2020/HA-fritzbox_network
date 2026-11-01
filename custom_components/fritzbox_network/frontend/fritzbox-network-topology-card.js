@@ -75,6 +75,8 @@ const TEXT = {
       hide_radio: "Hide channel and load of the access points",
       entities: "Devices",
       entities_help: "Devices of the FRITZ!Box Network integration.",
+      label: "Group (label)",
+      label_help: "Also shows every device of this group, not only the ones named above.",
       hide_noise: "Hide the noise",
       hide_clients: "Hide the number of devices",
       tap_action: "Tap on a device",
@@ -133,6 +135,8 @@ const TEXT = {
       hide_radio: "Kanal und Auslastung der Access Points ausblenden",
       entities: "Geräte",
       entities_help: "Geräte der Integration FRITZ!Box Netzwerk.",
+      label: "Gruppe (Label)",
+      label_help: "Zeigt zusätzlich jedes Gerät dieser Gruppe, nicht nur die oben genannten.",
       hide_noise: "Rauschen ausblenden",
       hide_clients: "Anzahl der Geräte ausblenden",
       tap_action: "Tippen auf ein Gerät",
@@ -205,6 +209,7 @@ function normalizeDeviceConfig(config = {}) {
     title: config.title || undefined,
     entry_id: config.entry_id || undefined,
     entities,
+    label: typeof config.label === "string" ? config.label : "",
     hide_rate: Boolean(config.hide_rate),
     hide_signal: Boolean(config.hide_signal),
   };
@@ -780,7 +785,7 @@ class FritzboxNetworkDeviceCard extends FritzboxNetworkCardBase {
   }
 
   getCardSize() {
-    return 1 + this._config.entities.length * 2;
+    return 1 + Math.max(this._config.entities.length, 1) * 2;
   }
 
   getGridOptions() {
@@ -798,6 +803,7 @@ class FritzboxNetworkDeviceCard extends FritzboxNetworkCardBase {
         name: "entities",
         selector: { entity: { multiple: true, filter: { integration: INTEGRATION, domain: "device_tracker" } } },
       },
+      { name: "label", selector: { label: {} } },
       { name: "entry_id", selector: configEntry },
       {
         type: "grid",
@@ -829,7 +835,7 @@ class FritzboxNetworkDeviceCard extends FritzboxNetworkCardBase {
   /** The device list is the one place where the state of the switches shows: redraw when one moves. */
   _switchStates() {
     const states = this._hass?.states ?? {};
-    return devicesFor(this._data, this._config.entities)
+    return devicesFor(this._data, this._config.entities, this._config.label)
       .flatMap(({ client }) => Object.values(client?.actions ?? {}))
       .map((id) => `${id}=${states[id]?.state}`)
       .join(",");
@@ -868,7 +874,7 @@ class FritzboxNetworkDeviceCard extends FritzboxNetworkCardBase {
   }
 
   _bulk() {
-    const switches = devicesFor(this._data, this._config.entities)
+    const switches = devicesFor(this._data, this._config.entities, this._config.label)
       .map(({ client }) => client?.actions?.internet_access)
       .filter(Boolean);
     return bulkPlan(switches, this._hass?.states ?? {});
@@ -878,7 +884,7 @@ class FritzboxNetworkDeviceCard extends FritzboxNetworkCardBase {
     const list = this.shadowRoot?.querySelector(".list");
     if (!list) return;
     const t = this._t;
-    if (!this._config.entities.length) {
+    if (!this._config.entities.length && !this._config.label) {
       list.innerHTML = `<div class="note">${escapeHtml(t.noDevices)}</div>`;
       return;
     }
@@ -887,7 +893,7 @@ class FritzboxNetworkDeviceCard extends FritzboxNetworkCardBase {
       return;
     }
     const nodes = new Map((this._data.nodes ?? []).map((n) => [n.mac, n.name]));
-    const devices = devicesFor(this._data, this._config.entities);
+    const devices = devicesFor(this._data, this._config.entities, this._config.label);
     const rows = devices
       .map(({ entity, client }) => {
         if (!client) {

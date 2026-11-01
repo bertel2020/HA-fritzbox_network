@@ -6,7 +6,11 @@ from typing import Any
 
 from homeassistant.components import websocket_api
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers import device_registry as dr, entity_registry as er
+from homeassistant.helpers import (
+    device_registry as dr,
+    entity_registry as er,
+    label_registry as lr,
+)
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
 from homeassistant.util import dt as dt_util
 import voluptuous as vol
@@ -97,6 +101,11 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
             for name, (platform, key) in DEVICE_ACTIONS.items()
             if (entity_id := registry.async_get_entity_id(platform, DOMAIN, f"{host.mac}_{key}"))
         }
+        # a group is a label on the "Internet access" switch, not on the device: a label on
+        # the device would also reach its priority switch
+        internet = (
+            registry.async_get(actions["internet_access"]) if "internet_access" in actions else None
+        )
         device = devices.async_get_device(connections={(CONNECTION_NETWORK_MAC, host.mac)})
         last = last_online(hass, host)
         clients.append(
@@ -124,6 +133,7 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
                 "last_online": last.isoformat() if last else None,
                 "created_at": device.created_at.isoformat() if device else None,
                 "actions": actions,
+                "labels": sorted(internet.labels) if internet else [],
                 "signal_dbm": link.signal_dbm if link else None,
                 "rate_download": link.rate_download if link else None,
                 "rate_upload": link.rate_upload if link else None,
@@ -134,6 +144,12 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
     return {
         "entry_id": coordinator.config_entry.entry_id,
         "can_write": coordinator.can_write,
+        "labels": [
+            {"id": label.label_id, "name": label.name, "icon": label.icon, "color": label.color}
+            for label in sorted(
+                lr.async_get(hass).async_list_labels(), key=lambda label: label.name.lower()
+            )
+        ],
         "nodes": nodes,
         "clients": clients,
     }
@@ -162,7 +178,29 @@ def ws_subscribe_topology(
             websocket_api.event_message(msg["id"], build_topology(hass, coordinator))
         )
 
-    connection.subscriptions[msg["id"]] = coordinator.async_add_listener(_send)
+    @callback
+    def _on_entity_registry(event: Any) -> None:
+        entry = er.async_get(hass).async_get(event.data["entity_id"])
+        if entry is not None and entry.platform == DOMAIN:
+            _send()
+
+    @callback
+    def _on_label_registry(event: Any) -> None:
+        _send()
+
+    # a label put on a device or created is shown at once, not with the next poll
+    unsubs = [
+        coordinator.async_add_listener(_send),
+        hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, _on_entity_registry),
+        hass.bus.async_listen(lr.EVENT_LABEL_REGISTRY_UPDATED, _on_label_registry),
+    ]
+
+    @callback
+    def _unsubscribe() -> None:
+        for unsub in unsubs:
+            unsub()
+
+    connection.subscriptions[msg["id"]] = _unsubscribe
     connection.send_result(msg["id"])
     _send()
 

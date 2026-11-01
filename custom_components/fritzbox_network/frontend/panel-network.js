@@ -4,11 +4,13 @@ import {
   BANDS,
   BUSY_UTILIZATION,
   PANEL_FILTERS,
+  bulkPlan,
   apSummary,
   daysSince,
   escapeHtml,
   isBlocked,
   isWeak,
+  labelCounts,
   panelClients,
   panelCounts,
   panelGroups,
@@ -30,12 +32,43 @@ export function whenText(iso, now, t) {
 /** The status filters; those with nothing to show stay away unless chosen. */
 export function renderChips(state, t, now) {
   const counts = panelCounts(state.data, now, state.threshold);
-  return PANEL_FILTERS.filter((f) => f === "all" || counts[f] || f === state.filter)
-    .map(
-      (f) =>
-        `<button class="fchip" data-filter="${f}" aria-pressed="${f === state.filter}">${escapeHtml(t.filters[f])}<b>${counts[f]}</b></button>`
-    )
-    .join("");
+  const fixed = PANEL_FILTERS.filter((f) => f === "all" || counts[f] || f === state.filter).map(
+    (f) =>
+      `<button class="fchip" data-filter="${f}" aria-pressed="${f === state.filter}">${escapeHtml(t.filters[f])}<b>${counts[f]}</b></button>`
+  );
+  const groups = labelCounts(state.data).map(
+    (label) =>
+      `<button class="fchip" data-filter="label:${escapeHtml(label.id)}" aria-pressed="${state.filter === `label:${label.id}`}">${ic("tag")}${escapeHtml(label.name)}<b>${label.count}</b></button>`
+  );
+  return [...fixed, ...groups].join("");
+}
+
+/** The switches of the "Internet access" entities of the devices in a group. */
+export function groupMembers(data, labelId) {
+  return (data?.clients ?? []).filter((c) => c.labels?.includes(labelId) && c.actions?.internet_access);
+}
+
+/** What the button of a group does now: block all of them if every one may go online, else allow. */
+export function groupPlan(data, labelId, hass) {
+  const members = groupMembers(data, labelId);
+  const plan = bulkPlan(members.map((c) => c.actions.internet_access), hass?.states ?? {});
+  const names = new Map(members.map((c) => [c.actions.internet_access, c.name]));
+  return { ...plan, names: plan.entities.map((entity) => names.get(entity)) };
+}
+
+/** Above the list while a group is the filter: its name and the button for all its devices. */
+export function renderGroupBar(state, t, hass) {
+  if (!state.filter.startsWith("label:")) return "";
+  const id = state.filter.slice(6);
+  const label = (state.data?.labels ?? []).find((l) => l.id === id);
+  if (!label) return "";
+  const count = (state.data?.clients ?? []).filter((c) => c.labels?.includes(id)).length;
+  const plan = groupPlan(state.data, id, hass);
+  const button = plan.entities.length
+    ? `<button class="btn ${plan.block ? "d" : "p"}" data-act="group-bulk">${escapeHtml(plan.block ? t.groupBlockAll : t.groupAllowAll)}</button>`
+    : "";
+  return `<div class="card groupbar"><span class="ico">${ic("tag")}</span>
+    <span class="who"><b>${escapeHtml(label.name)}</b><small>${escapeHtml(fill(t.groupCount, { n: count }))}</small></span>${button}</div>`;
 }
 
 export function visibleClients(state, now) {
@@ -87,6 +120,11 @@ function groupHead(group, state, t) {
     };
   }
   if (state.group === "flat") return { icon: "ap", title: t.flat, sub: "" };
+  if (state.group === "label") {
+    return group.label
+      ? { icon: "tag", title: group.label.name, sub: "" }
+      : { icon: "help", title: t.groupNone, sub: "" };
+  }
   if (state.group === "ap") return { icon: "help", title: t.unassigned, sub: t.unassignedHint };
   return {
     icon: group.key === "lan" ? "lan" : group.key === "none" ? "help" : "wifi",

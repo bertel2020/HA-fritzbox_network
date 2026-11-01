@@ -114,5 +114,30 @@ export function renderDevice(client, ctx) {
         <button class="btn" data-act="rename" ${client.entity_id ? "" : "disabled"}>${escapeHtml(t.rename)}</button>
         <button class="btn" data-act="ha" ${client.device_id ? "" : "disabled"}>${ic("external")}${escapeHtml(t.openInHa)}</button>
       </div>
-      <p class="hint">${escapeHtml(t.wolHint)}</p></div></div>`;
+      <p class="hint">${escapeHtml(t.wolHint)}</p></div>
+    ${groupsSection(client, data, t)}
+    ${historySection(client, t)}</div>`;
+}
+
+/** The groups of a device: the labels of Home Assistant, put on its "Internet access" entity. */
+function groupsSection(client, data, t) {
+  const labels = data?.labels ?? [];
+  const body = client.actions?.internet_access
+    ? `<div class="chips-row">${labels
+        .map(
+          (l) =>
+            `<button class="fchip" data-label="${escapeHtml(l.id)}" aria-pressed="${(client.labels ?? []).includes(l.id)}">${escapeHtml(l.name)}</button>`
+        )
+        .join("")}<button class="fchip" data-act="new-group">+ ${escapeHtml(t.newGroup)}</button></div>
+      <p class="hint">${escapeHtml(t.groupsHint)}</p>`
+    : `<p class="hint">${escapeHtml(t.noGroupEntity)}</p>`;
+  return `<div class="section"><span class="label">${escapeHtml(t.groupsTitle)}</span>${body}</div>`;
+}
+
+/** Links to what Home Assistant already records about the device. */
+function historySection(client, t) {
+  if (!client.entity_id) return "";
+  return `<div class="section"><span class="label">${escapeHtml(t.historyTitle)}</span>
+    <div class="btn-row"><button class="btn" data-act="logbook">${escapeHtml(t.logbook)}</button><button class="btn" data-act="history">${escapeHtml(t.history)}</button></div>
+    <p class="hint">${escapeHtml(t.historyHint)}</p></div>`;
 }

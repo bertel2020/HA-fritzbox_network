@@ -11,7 +11,14 @@ import {
 import { fill, panelTexts } from "./texts.js";
 import { PANEL_CSS } from "./panel-styles.js";
 import { ic } from "./icons.js";
-import { renderChips, renderGroups, renderMeta, visibleClients } from "./panel-network.js";
+import {
+  groupPlan,
+  renderChips,
+  renderGroupBar,
+  renderGroups,
+  renderMeta,
+  visibleClients,
+} from "./panel-network.js";
 import { renderDevice, entityState } from "./panel-device.js";
 import { openDialog, showToast } from "./panel-dialogs.js";
 import { pickedMacs, renderHidden, renderStale, staleList } from "./panel-cleanup.js";
@@ -277,11 +284,14 @@ class FritzboxNetworkPanel extends HTMLElement {
   }
 
   _onHass() {
-    // the switches of the open device move on their own: draw it again when one did
+    // the switches of the open device and of a group move on their own: draw them again when one did
     const signature = this._actionStates();
     if (signature !== this._signature) {
       this._signature = signature;
       this._renderDetail();
+      if (this._state.data && this._state.tab === "net") {
+        this._set("groupbar", renderGroupBar(this._state, this._t, this._hass));
+      }
     }
   }
 
@@ -290,8 +300,13 @@ class FritzboxNetworkPanel extends HTMLElement {
   }
 
   _actionStates() {
-    const client = this._selected();
-    return Object.values(client?.actions ?? {})
+    const state = this._state;
+    const clients = [this._selected()];
+    if (state.filter.startsWith("label:")) {
+      clients.push(...(state.data?.clients ?? []).filter((c) => c.labels?.includes(state.filter.slice(6))));
+    }
+    return clients
+      .flatMap((c) => Object.values(c?.actions ?? {}))
       .map((id) => `${id}=${entityState(this._hass, id)?.state}`)
       .join(",");
   }
@@ -318,6 +333,12 @@ class FritzboxNetworkPanel extends HTMLElement {
         .picker { max-height: 320px; overflow: auto; margin-top: 8px; }
         label.row { cursor: pointer; }
         .pickhead { margin-top: 16px; }
+        .groupbar { margin-top: 16px; display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+        .groupbar .ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); flex: none; }
+        .groupbar .who { flex: 1; min-width: 0; }
+        .groupbar .who b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .groupbar .who small { color: var(--muted); font-size: 12px; }
+        .fchip svg.i { width: 14px; height: 14px; }
         label.search { display: block; }
       </style>
       <div class="app">
@@ -346,6 +367,7 @@ class FritzboxNetworkPanel extends HTMLElement {
                 </div>
                 <div class="meta" id="meta"></div>
               </div>
+              <div id="groupbar"></div>
               <div id="groups"></div>
             </div>
             <aside class="detail-col" id="detail"></aside>
@@ -436,6 +458,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     split.classList.toggle("detail-open", Boolean(this._selected()));
     this._set("chips", renderChips(state, t, now));
     this._set("meta", renderMeta(state, t, visibleClients(state, now).length));
+    this._set("groupbar", renderGroupBar(state, t, this._hass));
     this._set("groups", renderGroups(state, t, now));
     this._renderDetail();
   }
@@ -532,6 +555,14 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._rename();
     } else if (ds.act === "ha") {
       return this._openInHa();
+    } else if (ds.label) {
+      return this._toggleLabel(ds.label);
+    } else if (ds.act === "new-group") {
+      return this._newGroup();
+    } else if (ds.act === "group-bulk") {
+      return this._groupBulk();
+    } else if (ds.act === "logbook" || ds.act === "history") {
+      return this._navigate(`/${ds.act}?entity_id=${encodeURIComponent(this._selected()?.entity_id ?? "")}`);
     } else if (ds.tab) {
       globalThis.location.hash = ds.tab === "net" ? "#/" : `#/${ds.tab}`;
       return;
@@ -661,9 +692,75 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _openInHa() {
     const client = this._selected();
-    if (!client?.device_id) return;
-    globalThis.history.pushState(null, "", `/config/devices/device/${client.device_id}`);
+    if (client?.device_id) this._navigate(`/config/devices/device/${client.device_id}`);
+  }
+
+  _navigate(path) {
+    globalThis.history.pushState(null, "", path);
     globalThis.dispatchEvent(new CustomEvent("location-changed"));
+  }
+
+  /** Puts the device in a group or takes it out: the label on its "Internet access" entity. */
+  async _toggleLabel(labelId) {
+    const client = this._selected();
+    const entity = client?.actions?.internet_access;
+    if (!entity) return;
+    await this._setLabels(entity, toggleMac(client.labels ?? [], labelId), this._t.toastGroupChanged);
+  }
+
+  async _setLabels(entityId, labels, success) {
+    try {
+      await this._hass.callWS({ type: "config/entity_registry/update", entity_id: entityId, labels });
+      showToast(this.shadowRoot, success);
+    } catch (err) {
+      showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
+    }
+  }
+
+  async _newGroup() {
+    const t = this._t;
+    const client = this._selected();
+    const entity = client?.actions?.internet_access;
+    if (!entity) return;
+    const name = await openDialog(this.shadowRoot, t, {
+      title: t.newGroupTitle,
+      body: t.newGroupBody,
+      field: { label: t.newGroupField, value: "" },
+      ok: t.newGroupOk,
+    });
+    if (name === null) return;
+    try {
+      const label = await this._hass.callWS({ type: "config/label_registry/create", name });
+      await this._setLabels(entity, toggleMac(client.labels ?? [], label.label_id), fill(t.toastGroupCreated, { name }));
+    } catch (err) {
+      showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
+    }
+  }
+
+  /** Blocks or allows every device of the group at once, after naming them. */
+  async _groupBulk() {
+    const t = this._t;
+    const state = this._state;
+    if (!state.filter.startsWith("label:")) return;
+    const plan = groupPlan(state.data, state.filter.slice(6), this._hass);
+    if (!plan.entities.length) return;
+    const n = plan.entities.length;
+    const ok = await openDialog(this.shadowRoot, t, {
+      title: fill(plan.block ? t.bulkBlockTitle : t.bulkAllowTitle, { n }),
+      body: plan.block ? t.bulkBlockBody : t.bulkAllowBody,
+      list: plan.names,
+      ok: plan.block ? t.groupBlockAll : t.groupAllowAll,
+      danger: plan.block,
+    });
+    if (!ok) return;
+    try {
+      await this._hass.callService("switch", plan.block ? "turn_off" : "turn_on", {
+        entity_id: plan.entities,
+      });
+      showToast(this.shadowRoot, fill(plan.block ? t.toastBulkBlocked : t.toastBulkAllowed, { n }));
+    } catch (err) {
+      showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
+    }
   }
 
   /** One call to Home Assistant; a refusal shows as a toast with what Home Assistant says. */

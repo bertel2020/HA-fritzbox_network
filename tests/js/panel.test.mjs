@@ -199,3 +199,54 @@ test("the preview says what is removed, and applying needs a change", () => {
   assert.match(same, /data-act="apply"[^>]*disabled/);
   assert.match(filter.renderPreview({ ...page, preview: null }, t), /Lädt/);
 });
+
+const groupData = {
+  ...data,
+  labels: [{ id: "kids", name: "Kinder <i>" }],
+  clients: [
+    { ...data.clients[0], labels: ["kids"] },
+    { ...data.clients[1], labels: [] },
+  ],
+};
+const groupState = { ...state, data: groupData, filter: "label:kids" };
+
+test("a group shows as a chip with its count, and as a bar when it is the filter", () => {
+  const chips = network.renderChips(groupState, t, NOW);
+  assert.match(chips, /data-filter="label:kids" aria-pressed="true"/);
+  assert.match(chips, /Kinder &lt;i&gt;/);
+  const bar = network.renderGroupBar(groupState, t, hass);
+  assert.match(bar, /Kinder &lt;i&gt;/);
+  assert.match(bar, /1 Geräte/);
+  assert.equal(network.renderGroupBar({ ...groupState, filter: "all" }, t, hass), "");
+});
+
+test("the group button blocks when every device may go online, else allows", () => {
+  const allowed = { states: { "switch.tv_i": { state: "on" } } };
+  assert.match(network.renderGroupBar(groupState, t, allowed), /class="btn d" data-act="group-bulk">Alle sperren/);
+  assert.match(network.renderGroupBar(groupState, t, hass), /class="btn p" data-act="group-bulk">Alle freigeben/);
+  const plan = network.groupPlan(groupData, "kids", hass);
+  assert.equal(plan.block, false);
+  assert.deepEqual(plan.entities, ["switch.tv_i"]);
+  assert.deepEqual(plan.names, ["tv <b>"]);
+  assert.deepEqual(network.groupPlan(groupData, "kids", { states: {} }).entities, []);
+});
+
+test("the device page offers the groups and the links to the history", () => {
+  const html = device.renderDevice(groupData.clients[0], { t, now: NOW, data: groupData, hass, threshold: 1 / 3 });
+  assert.match(html, /data-label="kids" aria-pressed="true"/);
+  assert.match(html, /data-act="new-group"/);
+  assert.match(html, /data-act="logbook"/);
+  assert.match(html, /data-act="history"/);
+  const bare = { ...groupData.clients[0], actions: {} };
+  const without = device.renderDevice(bare, { t, now: NOW, data: groupData, hass, threshold: 1 / 3 });
+  assert.match(without, /Gruppen brauchen die Entität/);
+  assert.doesNotMatch(without, /data-label=/);
+  const noTracker = { ...groupData.clients[0], entity_id: null };
+  assert.doesNotMatch(device.renderDevice(noTracker, { t, now: NOW, data: groupData, hass, threshold: 1 / 3 }), /data-act="logbook"/);
+});
+
+test("the groups are a way to group the list", () => {
+  const html = network.renderGroups({ ...groupState, filter: "all", group: "label" }, t, NOW);
+  assert.match(html, /Kinder &lt;i&gt;/);
+  assert.match(html, /Ohne Gruppe/);
+});

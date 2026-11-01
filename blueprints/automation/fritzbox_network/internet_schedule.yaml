@@ -15,12 +15,24 @@ blueprint:
   input:
     devices:
       name: Devices
-      description: The "Internet access" switches of the devices to schedule.
+      description: >-
+        The "Internet access" switches of the devices to schedule. Leave it empty
+        if you use a group below.
+      default: []
       selector:
         entity:
           domain: switch
           integration: fritzbox_network
           multiple: true
+    group:
+      name: Group (label)
+      description: >-
+        A label that you put on the "Internet access" switches, for example "Kids".
+        Every such switch of this integration is scheduled, also ones you add later.
+        You can set groups in the side panel of the integration.
+      default: ""
+      selector:
+        label:
     block_time:
       name: Block at
       default: "21:00:00"
@@ -50,6 +62,14 @@ blueprint:
 mode: queued
 max: 4
 
+variables:
+  device_switches: !input devices
+  group_label: !input group
+  # the chosen switches and every "Internet access" switch with the label, once each
+  switches: >-
+    {% set labelled = label_entities(group_label) if group_label else [] %}
+    {{ (device_switches + (labelled | select('in', integration_entities('fritzbox_network')) | select('match', 'switch\\.') | list)) | unique | list }}
+
 triggers:
   - trigger: time
     at: !input block_time
@@ -68,13 +88,17 @@ actions:
           - condition: trigger
             id: block
         sequence:
+          - condition: template
+            value_template: "{{ switches | count > 0 }}"
           - action: switch.turn_off
             target:
-              entity_id: !input devices
+              entity_id: "{{ switches }}"
       - conditions:
           - condition: trigger
             id: allow
         sequence:
+          - condition: template
+            value_template: "{{ switches | count > 0 }}"
           - action: switch.turn_on
             target:
-              entity_id: !input devices
+              entity_id: "{{ switches }}"

@@ -225,6 +225,7 @@ entities:
 |--------|-----------|
 | `entities` | Die Device Tracker der Geräte, in der Reihenfolge der Karte. Im Editor als Auswahl. Ein Gerät, das es nicht mehr gibt, steht als „Unbekanntes Gerät“ da |
 | `title` | Überschrift der Karte |
+| `label` | Eine Gruppe (Label): zeigt zusätzlich jedes Gerät dieser Gruppe, auch später hinzugefügte |
 | `entry_id` | Nur bei mehr als einer Box nötig |
 | `hide_rate`, `hide_signal` | Rate oder Signal ausblenden (Standard `false`) |
 
@@ -252,6 +253,10 @@ Mit der Integration kommt ein Eintrag **FRITZ!Box Netzwerk** in der Seitenleiste
 
 Eine Aktion ist aus und nennt den Grund, wenn dem Box-Benutzer das Recht „FRITZ!Box Einstellungen“ fehlt, wenn das Gerät keine IPv4-Adresse hat oder wenn die Entität dazu nicht aktiviert ist (Zugangsprofil und Priorisierung sind standardmäßig aus). Gibt es mehrere Boxen, wählst du oben rechts die Box.
 
+**Gruppen.** Eine Gruppe ist ein **Label** von Home Assistant, gesetzt auf dem Schalter „Internetzugang“ des Geräts (nicht auf dem Gerät: Ein Label am Gerät träfe auch den Prioritäts-Schalter). Auf der Geräteseite setzt du Gruppen mit einem Tipp oder legst eine neue an; das Label ist danach auch in Home Assistant selbst sichtbar und nutzbar. Im Netzwerk erscheint jede Gruppe mit Geräten als Filter mit Zähler und als Gruppierung „Gruppe“. Ist eine Gruppe der Filter, steht oben ein Knopf **Alle sperren** (wenn alle online dürfen) oder **Alle freigeben** (sonst die gesperrten): Er nennt vorher die Geräte, und der Server schaltet genau diese Schalter, nicht „alles mit dem Label“. Dieselbe Gruppe geht in der Geräte-Karte (Option `label`) und im Zeitplan-Blueprint (Eingabe „Gruppe“). Ein Gerät ohne die Entität „Internetzugang“ kann in keiner Gruppe sein.
+
+**Verlauf.** Die Geräteseite führt mit zwei Knöpfen ins Logbuch und in den Verlauf von Home Assistant für das Gerät. Dort stehen Roaming und Online-Zeiten. Das Panel führt keinen eigenen Verlauf: Signal und Rate haben nur dann einen, wenn du ihre Sensoren in den Geräteeinstellungen aktivierst (sie sind standardmäßig aus).
+
 **Aufräumen.** Die Box merkt sich jedes Gerät, das sie je gesehen hat. Hier stehen die Offline-Geräte, deren letzte Online-Zeit bekannt ist, mit einem Regler für die Tage (vorbelegt mit der Option „Tage offline, bis ein Gerät als weg gilt“, 7 bis 365). Wähle Geräte aus oder alle und tippe auf „N Geräte ausblenden“: Ein Dialog nennt die Namen und die Folgen, erst dann werden sie ausgeblendet und mit ihren Entitäten aus Home Assistant entfernt. Online-Geräte, die Box und Repeater lehnt der Server ab, auch wenn das Panel sie anbieten würde. Darunter steht die Liste **Ausgeblendet** mit „Einblenden“; das lädt die Integration neu. Das ist dieselbe Liste wie die ausgeblendeten Geräte in den Optionen und die Reparatur für lange offline Geräte.
 
 **Filter.** Der Gerätefilter der Optionen (Alle Geräte, Nur ausgewählte, Alle außer ausgewählten, Gastnetz und private MAC-Adressen ignorieren) mit einer **Vorschau**: Sie zeigt, welche Geräte bleiben, dazukommen oder **samt Entitäten entfernt werden**, bevor etwas geschrieben wird. „Filter anwenden“ fragt mit den Namen der Geräte nach, die verschwinden. Das Panel schickt dabei die Liste mit, die du gesehen hast: Hat sich die Liste inzwischen geändert (ein Gerät ging online, die Box listet ein anderes), schreibt der Server nichts und du siehst die neue Vorschau. Entfernte Geräte verlieren ihre eigenen Namen, ihre Entitäts-IDs und ihren Verlauf; Bezüge in Automationen zeigen danach ins Leere. „Für Offline-Geräte keine Geräte anlegen“ gibt es weiter nur in den Optionen.
@@ -267,7 +272,7 @@ Mit der Integration kommen zwei Automations-Blueprints. Importiere sie mit den B
 | Benachrichtigung bei neuem Gerät | Sendet bei jedem Ereignis `fritzbox_network_new_device` eine Benachrichtigung | [![Blueprint für neue Geräte importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/bertel2020/HA-fritzbox_network/blob/main/blueprints/automation/fritzbox_network/new_device_notification.yaml) |
 | Zeitplan für den Internetzugang | Sperrt den Internetzugang von Geräten zu einer Uhrzeit und gibt ihn zu einer anderen wieder frei, an gewählten Tagen | [![Blueprint für den Zeitplan importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/bertel2020/HA-fritzbox_network/blob/main/blueprints/automation/fritzbox_network/internet_schedule.yaml) |
 
-Der Zeitplan braucht das Recht „FRITZ!Box Einstellungen“. Hat sich die Adresse eines Geräts seit der letzten Aktualisierung geändert, wird dieses Gerät nicht geschaltet und der Lauf meldet einen Fehler. Beim Start passiert nichts: Ein Neustart während der Sperrzeit lässt den Zugang, wie er ist.
+Der Zeitplan braucht das Recht „FRITZ!Box Einstellungen“. Hat sich die Adresse eines Geräts seit der letzten Aktualisierung geändert, wird dieses Gerät nicht geschaltet und der Lauf meldet einen Fehler. Beim Start passiert nichts: Ein Neustart während der Sperrzeit lässt den Zugang, wie er ist. Statt einzelner Geräte kannst du eine **Gruppe** (ein Label auf den Schaltern „Internetzugang“) wählen; dann gilt der Zeitplan für jeden Schalter mit diesem Label, auch für später hinzugefügte.
 
 ## Zusammen mit der Core-Integration
 

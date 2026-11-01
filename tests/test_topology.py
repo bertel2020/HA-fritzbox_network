@@ -242,3 +242,46 @@ async def test_entries_needs_an_administrator(
 
     assert not result["success"]
     assert result["error"]["code"] == "unauthorized"
+
+
+async def test_topology_carries_the_labels_of_the_internet_switch(
+    hass, hass_ws_client, fake_client, entry
+):
+    from homeassistant.helpers import label_registry as lr
+
+    await _setup(hass, entry)
+    label = lr.async_get(hass).async_create("Kinder")
+    registry = er.async_get(hass)
+    switch = "switch.fritz_020000000004_internet_access"
+    registry.async_update_entity(switch, labels={label.label_id})
+    client = await hass_ws_client(hass)
+
+    topology = await _subscribe(client)
+
+    assert topology["labels"] == [
+        {"id": label.label_id, "name": "Kinder", "icon": None, "color": None}
+    ]
+    clients = {c["mac"]: c for c in topology["clients"]}
+    assert clients[LAN]["labels"] == [label.label_id]
+    assert clients[WLAN]["labels"] == []
+
+
+async def test_topology_is_sent_again_when_a_label_is_set_or_made(
+    hass, hass_ws_client, fake_client, entry
+):
+    from homeassistant.helpers import label_registry as lr
+
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    first = await _subscribe(client)
+    assert first["labels"] == []
+
+    label = lr.async_get(hass).async_create("Gäste")
+    update = (await client.receive_json())["event"]
+    assert [item["name"] for item in update["labels"]] == ["Gäste"]
+
+    er.async_get(hass).async_update_entity(
+        "switch.fritz_020000000004_internet_access", labels={label.label_id}
+    )
+    update = (await client.receive_json())["event"]
+    assert {c["mac"]: c for c in update["clients"]}[LAN]["labels"] == [label.label_id]
