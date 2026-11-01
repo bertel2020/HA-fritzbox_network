@@ -29,6 +29,30 @@
 
 Die Integration arbeitet lokal mit der FRITZ!Box (TR-064) und baut keine Internetverbindungen auf. Sie ist eine Alternative zum Gerätetracking der Core-Integration „AVM FRITZ!Box Tools“ und wird dafür von Grund auf nach MAC-Adressen geführt.
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots/net-light.png" alt="Seitenpanel mit der Geräteliste" width="100%">
+</p>
+
+| Netzkarte | Gerätedetail |
+| --- | --- |
+| ![Netzkarte](screenshots/map-light.png) | ![Gerätedetail](screenshots/device-light.png) |
+
+| Topologie-Karte | Funk-Karte |
+| --- | --- |
+| ![Topologie-Karte](screenshots/topology-light.png) | ![Funk-Karte](screenshots/radio-light.png) |
+
+<details>
+<summary>Dunkles Design</summary>
+
+<p align="center">
+  <img src="screenshots/net-dark.png" alt="Seitenpanel mit der Geräteliste (dunkel)" width="48%">
+  <img src="screenshots/map-dark.png" alt="Netzkarte (dunkel)" width="48%">
+</p>
+
+</details>
+
 ## Highlights
 
 - **Geräte nach MAC-Adresse**: Ein Home-Assistant-Gerät pro Netzwerkgerät, mit Entity-IDs wie `device_tracker.fritz_3c2af4a1b2c3`. Sie bleiben beim Umbenennen gleich.

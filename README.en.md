@@ -29,6 +29,30 @@
 
 The integration works locally with the FRITZ!Box (TR-064) and makes no connections to the internet. It is an alternative to the device tracking of the core integration "AVM FRITZ!Box Tools", built from the ground up around MAC addresses.
 
+## Screenshots
+
+<p align="center">
+  <img src="screenshots-en/net-light.png" alt="Side panel with the device list" width="100%">
+</p>
+
+| Network map | Device page |
+| --- | --- |
+| ![Network map](screenshots-en/map-light.png) | ![Device page](screenshots-en/device-light.png) |
+
+| Topology card | Wi-Fi card |
+| --- | --- |
+| ![Topology card](screenshots-en/topology-light.png) | ![Wi-Fi card](screenshots-en/radio-light.png) |
+
+<details>
+<summary>Dark theme</summary>
+
+<p align="center">
+  <img src="screenshots-en/net-dark.png" alt="Side panel with the device list (dark)" width="48%">
+  <img src="screenshots-en/map-dark.png" alt="Network map (dark)" width="48%">
+</p>
+
+</details>
+
 ## Highlights
 
 - **Devices by MAC address**: One Home Assistant device per network device, with entity ids like `device_tracker.fritz_3c2af4a1b2c3`. They stay the same when a device is renamed.
