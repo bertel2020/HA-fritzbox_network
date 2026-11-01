@@ -15,6 +15,7 @@ The integration works locally with the FRITZ!Box and makes no connections to the
 - [Entities](#entities)
 - [Names and entity ids](#names-and-entity-ids)
 - [Deleting and hiding devices](#deleting-and-hiding-devices)
+- [Topology card](#topology-card)
 - [Blueprints](#blueprints)
 - [Next to the core integration](#next-to-the-core-integration)
 - [Privacy and security](#privacy-and-security)
@@ -136,6 +137,26 @@ The deletion only affects Home Assistant. The device stays in the box; remove it
 
 When a filter in the options excludes a device, its device and entities are removed with the next poll. They come back when the filter includes them again.
 
+## Topology card
+
+The integration ships a dashboard card that shows the devices of your network by access point: the box and every repeater as a group, the devices below with Wi-Fi or LAN, link rate and signal. Online devices come first. A click on a device opens it.
+
+Add it in the dashboard editor under **Add card → FRITZ!Box Network topology**, or in YAML:
+
+```yaml
+type: custom:fritzbox-network-topology-card
+title: Network
+```
+
+| Option | Meaning |
+|--------|---------|
+| `title` | Heading of the card |
+| `entry_id` | Only needed with more than one box: the id of the config entry |
+
+The card has a search (name, IP or MAC) and the filters All, Wi-Fi, LAN and Offline. The numbers next to an access point are shown / total. Devices the box does not assign to an access point are listed at the end. Without a mesh topology there are no access points and all devices sit in that group.
+
+The card needs an administrator account because it shows MAC and IP addresses. It loads automatically, a hard refresh of the browser after the update brings the new version.
+
 ## Blueprints
 
 Two automation blueprints ship with the integration. Import them with the buttons; they appear under **Settings → Automations & scenes → Blueprints**.
@@ -192,7 +213,10 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/ruff check custom_components tests tools
 .venv/bin/pytest
+node --test tests/js/
 ```
+
+The last line tests the logic of the topology card and needs Node.js.
 
 The tests run against a fake client with anonymised captures of a FRITZ!Box (`tests/fixtures/`). `tools/spike.py` reads a real box without changing anything (host list, mesh, a few services); the credentials come from the environment variables `FRITZ_HOST`, `FRITZ_USER`, `FRITZ_PASSWORD` and optionally `FRITZ_TLS=1`. It writes to `spike_out/` (not in the repository).
 

@@ -14,4 +14,5 @@ First version.
   - Optional, off by default: signal strength, link rate, Wi-Fi band, network name and a guest network flag.
   - The FRITZ!Box and its repeaters as devices of their own with model, firmware and the number of connected devices.
 - Tidying up: delete offline devices by hand (they stay hidden), filters for the guest network, private MAC addresses and single devices, and an option not to create devices for offline hosts. Repeaters are never filtered.
+- Topology card for the dashboard: the devices by access point, with search, filters and signal. It loads itself and needs an administrator account.
 - Setup: a new address and a new password without setting up again, a mesh repeater is refused, diagnostics with the poll duration.

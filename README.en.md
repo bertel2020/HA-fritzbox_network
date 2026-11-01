@@ -36,6 +36,7 @@ The integration works locally with the FRITZ!Box (TR-064) and makes no connectio
 - **Presence**: Device tracker with an adjustable wait before a device counts as away.
 - **Connection data per device**: IP address, LAN or Wi-Fi, access point, "online since" and "last online". Optional (off by default): signal strength, link rate (download/upload), Wi-Fi band, network name and a guest network flag.
 - **Actions**: Block and allow the internet access per device, Wake on LAN.
+- **Topology card**: The devices of the network by access point on a dashboard, with search and filters.
 - **Mesh**: The FRITZ!Box and its repeaters are devices of their own with model, firmware and the number of connected devices.
 - **Tidy**: Offline devices can be deleted by hand and stay hidden. Plus filters for the guest network, private MAC addresses and single devices, and an option not to create devices for offline hosts.
 - **Gentle**: Only two requests to the FRITZ!Box per poll (host list and mesh), never one per device.

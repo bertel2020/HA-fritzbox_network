@@ -15,6 +15,7 @@ Die Integration arbeitet lokal mit der FRITZ!Box und baut keine Internetverbindu
 - [Entitäten](#entitäten)
 - [Namen und Entity-IDs](#namen-und-entity-ids)
 - [Geräte löschen und ausblenden](#geräte-löschen-und-ausblenden)
+- [Topologie-Karte](#topologie-karte)
 - [Blueprints](#blueprints)
 - [Zusammen mit der Core-Integration](#zusammen-mit-der-core-integration)
 - [Datenschutz und Sicherheit](#datenschutz-und-sicherheit)
@@ -136,6 +137,26 @@ Die Löschung betrifft nur Home Assistant. In der Box bleibt das Gerät stehen; 
 
 Schließt ein Filter in den Optionen ein Gerät aus, werden dessen Gerät und Entitäten beim nächsten Abruf entfernt. Sie kommen zurück, wenn der Filter sie wieder einschließt.
 
+## Topologie-Karte
+
+Mit der Integration kommt eine Dashboard-Karte, die die Geräte deines Netzes nach Access Point zeigt: die Box und jeder Repeater als Gruppe, darunter die Geräte mit WLAN oder LAN, Link-Rate und Signal. Geräte, die online sind, stehen oben. Ein Klick auf ein Gerät öffnet es.
+
+Füge sie im Dashboard-Editor unter **Karte hinzufügen → FRITZ!Box Network topology** hinzu, oder per YAML:
+
+```yaml
+type: custom:fritzbox-network-topology-card
+title: Netzwerk
+```
+
+| Option | Bedeutung |
+|--------|-----------|
+| `title` | Überschrift der Karte |
+| `entry_id` | Nur bei mehr als einer Box nötig: die ID des Config-Eintrags |
+
+Die Karte hat eine Suche (Name, IP oder MAC) und die Filter Alle, WLAN, LAN und Offline. Die Zahlen neben einem Access Point sind angezeigt / gesamt. Geräte, die die Box keinem Access Point zuordnet, stehen am Ende. Ohne Mesh-Topologie gibt es keine Access Points, und alle Geräte stehen in dieser Gruppe.
+
+Die Karte braucht ein Administratorkonto, weil sie MAC- und IP-Adressen zeigt. Sie lädt sich selbst; nach dem Update bringt ein harter Reload des Browsers die neue Version.
+
 ## Blueprints
 
 Mit der Integration kommen zwei Automations-Blueprints. Importiere sie mit den Buttons; sie erscheinen unter **Einstellungen → Automatisierungen & Szenen → Blueprints**.
@@ -192,7 +213,10 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/ruff check custom_components tests tools
 .venv/bin/pytest
+node --test tests/js/
 ```
+
+Die letzte Zeile testet die Logik der Topologie-Karte und braucht Node.js.
 
 Die Tests laufen gegen einen Fake-Client mit anonymisierten Aufnahmen einer FRITZ!Box (`tests/fixtures/`). `tools/spike.py` liest eine echte Box lesend aus (Geräteliste, Mesh, einige Dienste); Zugangsdaten kommen aus den Umgebungsvariablen `FRITZ_HOST`, `FRITZ_USER`, `FRITZ_PASSWORD` und optional `FRITZ_TLS=1`. Das Skript ändert nichts und schreibt nach `spike_out/` (nicht im Repository).
 

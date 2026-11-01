@@ -30,3 +30,5 @@ jobs:
         run: ruff format --check custom_components tests tools
       - name: Test
         run: pytest
+      - name: Test the topology card
+        run: node --test tests/js/
