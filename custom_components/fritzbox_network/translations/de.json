@@ -97,6 +97,19 @@
       "last_online": {
         "name": "Zuletzt online"
       },
+      "last_update": {
+        "name": "Letzte Aktualisierung"
+      },
+      "failed_polls": {
+        "name": "Fehlgeschlagene Abfragen"
+      },
+      "mesh_status": {
+        "name": "Mesh-Status",
+        "state": {
+          "available": "Verfügbar",
+          "unavailable": "Nicht verfügbar"
+        }
+      },
       "clients": {
         "name": "Verbundene Geräte"
       },

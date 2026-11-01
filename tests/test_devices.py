@@ -306,3 +306,36 @@ async def test_online_since_and_last_online_follow_the_presence(hass, fake_clien
 
     assert hass.states.get(since).state == "unknown"
     assert hass.states.get(last).state not in ("unknown", "unavailable")
+
+
+async def test_box_diagnostic_sensors_are_off_by_default_and_report_failures(
+    hass, fake_client, entry
+):
+    coordinator = await _setup(hass, entry)
+    registry = er.async_get(hass)
+    ids = {
+        key: registry.async_get_entity_id("sensor", "fritzbox_network", f"SERIAL1_{key}")
+        for key in ("last_update", "failed_polls", "mesh_status")
+    }
+    assert all(ids.values())
+    assert all(registry.async_get(i).disabled_by for i in ids.values())
+
+    for entity_id in ids.values():
+        registry.async_update_entity(entity_id, disabled_by=None)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator = entry.runtime_data
+
+    assert hass.states.get(ids["last_update"]).state not in ("unknown", "unavailable")
+    assert hass.states.get(ids["failed_polls"]).state == "0"
+    assert hass.states.get(ids["mesh_status"]).state == "available"
+
+    def failing_hosts():
+        raise ConnectionError("down")
+
+    fake_client.get_hosts = failing_hosts
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert hass.states.get(ids["failed_polls"]).state == "1"
+    assert hass.states.get(ids["mesh_status"]).state == "available"

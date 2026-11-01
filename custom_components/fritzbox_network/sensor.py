@@ -18,18 +18,24 @@ from homeassistant.const import (
     UnitOfDataRate,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoredExtraData, RestoreEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .const import (
+    DOMAIN,
     KEY_ACCESS_POINT,
     KEY_CLIENTS,
     KEY_CONNECTION_TYPE,
+    KEY_FAILED_POLLS,
     KEY_IP_ADDRESS,
     KEY_LAST_ONLINE,
+    KEY_LAST_UPDATE,
     KEY_LINK_RATE_DOWNLOAD,
     KEY_LINK_RATE_UPLOAD,
+    KEY_MESH_STATUS,
     KEY_ONLINE_SINCE,
     KEY_SIGNAL_STRENGTH,
     KEY_SSID,
@@ -46,6 +52,8 @@ from .models import ClientLink, Host, MeshNode
 
 CONNECTION_LAN = "lan"
 CONNECTION_WLAN = "wlan"
+MESH_AVAILABLE = "available"
+MESH_UNAVAILABLE = "unavailable"
 
 
 async def async_setup_entry(
@@ -80,6 +88,15 @@ async def async_setup_entry(
         entry,
         async_add_entities,
         lambda coordinator, node: [FritzNetworkClients(coordinator, node)],
+    )
+
+    coordinator = entry.runtime_data
+    async_add_entities(
+        [
+            FritzNetworkLastUpdate(coordinator),
+            FritzNetworkFailedPolls(coordinator),
+            FritzNetworkMeshStatus(coordinator),
+        ]
     )
 
 
@@ -292,3 +309,65 @@ class FritzNetworkLastOnline(_ConnectionTime):
     @property
     def native_value(self) -> datetime | None:
         return self._value if self._was_active is False else None
+
+
+class _BoxDiagnostic(CoordinatorEntity[FritzNetworkCoordinator], SensorEntity):
+    """A diagnostic value of the connection to the box, off by default.
+
+    It stays available while polls fail: that is when it is needed.
+    """
+
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, key: str) -> None:
+        super().__init__(coordinator)
+        self._attr_translation_key = key
+        self._attr_unique_id = f"{coordinator.serial}_{key}"
+        self.entity_id = f"sensor.fritz_network_{key}"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+
+    @property
+    def available(self) -> bool:
+        return True
+
+
+class FritzNetworkLastUpdate(_BoxDiagnostic):
+    """When the box was last polled successfully."""
+
+    _attr_device_class = SensorDeviceClass.TIMESTAMP
+
+    def __init__(self, coordinator: FritzNetworkCoordinator) -> None:
+        super().__init__(coordinator, KEY_LAST_UPDATE)
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self.coordinator.last_success
+
+
+class FritzNetworkFailedPolls(_BoxDiagnostic):
+    """How many polls in a row failed."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: FritzNetworkCoordinator) -> None:
+        super().__init__(coordinator, KEY_FAILED_POLLS)
+
+    @property
+    def native_value(self) -> int:
+        return self.coordinator.failed_polls
+
+
+class FritzNetworkMeshStatus(_BoxDiagnostic):
+    """Whether the mesh topology came with the last poll."""
+
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = [MESH_AVAILABLE, MESH_UNAVAILABLE]
+
+    def __init__(self, coordinator: FritzNetworkCoordinator) -> None:
+        super().__init__(coordinator, KEY_MESH_STATUS)
+
+    @property
+    def native_value(self) -> str:
+        return MESH_AVAILABLE if self.coordinator.data.mesh else MESH_UNAVAILABLE

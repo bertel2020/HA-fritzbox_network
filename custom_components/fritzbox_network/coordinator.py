@@ -83,6 +83,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.all_hosts: dict[str, Host] = {}
         self.last_active: dict[str, datetime] = {}
         self._failures = 0
+        self.last_success: datetime | None = None
         # mac -> (allowed, monotonic deadline): see WAN_OVERRIDE_SECONDS
         self._wan_override: dict[str, tuple[bool, float]] = {}
         # How long the last and the slowest poll took, shown in the diagnostics.
@@ -121,6 +122,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.slowest_fetch_seconds = max(self.slowest_fetch_seconds, self.last_fetch_seconds)
         _LOGGER.debug("Poll took %.2f s for %d hosts", self.last_fetch_seconds, len(hosts))
         self._reset_failures()
+        self.last_success = dt_util.utcnow()
         self.all_hosts = {h.mac: h for h in hosts}
         selected = self._apply_filters(hosts, mesh)
         self._apply_wan_override(selected)
@@ -142,6 +144,11 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 del self._wan_override[mac]
             else:
                 hosts[mac] = replace(host, wan_access=allowed)
+
+    @property
+    def failed_polls(self) -> int:
+        """How many polls in a row failed."""
+        return self._failures
 
     def _register_failure(self) -> None:
         self._failures += 1

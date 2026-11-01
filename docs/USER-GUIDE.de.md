@@ -105,6 +105,8 @@ Signalstärke, Link-Rate, Band und SSID kommen aus den Mesh-Daten der Box, ohne 
 
 Die FRITZ!Box und jeder Repeater sind eigene Geräte mit Modell und Firmware. Pro Gerät gibt es den Sensor **Verbundene Geräte** (Anzahl der Geräte, die an diesem Access Point hängen). Ein Repeater ist zugleich sein Eintrag in der Geräteliste, also ein einziges Gerät.
 
+Das Gerät der FRITZ!Box hat außerdem drei Diagnose-Sensoren, standardmäßig aus: **Letzte Aktualisierung** (die letzte erfolgreiche Abfrage), **Fehlgeschlagene Abfragen** (wie viele Abfragen in Folge scheiterten) und **Mesh-Status** (ob die Mesh-Topologie bei der letzten Abfrage mitkam). Sie bleiben verfügbar, auch wenn die Box nicht erreichbar ist.
+
 ### Ereignis
 
 Wird ein Gerät in der Box umbenannt, löst Home Assistant das Ereignis `fritzbox_network_device_renamed` aus, mit `mac`, `old_name` und `new_name`.

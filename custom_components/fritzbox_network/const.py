@@ -43,6 +43,11 @@ KEY_CONNECTION_TYPE = "connection_type"
 KEY_ACCESS_POINT = "access_point"
 KEY_ONLINE_SINCE = "online_since"
 KEY_LAST_ONLINE = "last_online"
+
+# Keys of the diagnostic sensors of the box.
+KEY_LAST_UPDATE = "last_update"
+KEY_FAILED_POLLS = "failed_polls"
+KEY_MESH_STATUS = "mesh_status"
 KEY_INTERNET_ACCESS = "internet_access"
 KEY_WAKE_ON_LAN = "wake_on_lan"
 KEY_CLIENTS = "clients"
