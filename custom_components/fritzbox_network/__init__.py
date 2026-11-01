@@ -33,7 +33,12 @@ from .const import (
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .panel import async_drop_panel, async_ensure_panel, async_serve_frontend
-from .repairs import async_remove_stale_issue, async_update_stale_issue
+from .repairs import (
+    async_remove_internet_issues,
+    async_remove_stale_issue,
+    async_update_internet_issues,
+    async_update_stale_issue,
+)
 from .services import async_register as async_register_services
 from .vendor import async_load as async_load_vendors
 from .websocket_api import async_register as async_register_websocket
@@ -110,6 +115,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
     entry.runtime_data = coordinator
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
+    entry.async_on_unload(
+        coordinator.async_add_listener(lambda: async_update_internet_issues(hass, entry))
+    )
+    entry.async_on_unload(lambda: async_remove_internet_issues(hass, entry))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_ensure_panel(hass)
     _setup_stale_check(hass, entry)

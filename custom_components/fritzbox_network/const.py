@@ -47,6 +47,11 @@ INTERNET_DETAIL_POLLS = 10
 # How many throughput samples and events of the internet connection are kept in memory.
 INTERNET_HISTORY = 240
 INTERNET_EVENTS = 20
+# What counts as a problem worth a repair: a noise margin below this many dB for this many seconds,
+# or this many new connections within a day.
+INTERNET_NOISE_WARN_DB = 10
+INTERNET_LOW_MARGIN_SECONDS = 3600
+INTERNET_RECONNECTS_WARN = 3
 
 EVENT_DEVICE_RENAMED = f"{DOMAIN}_device_renamed"
 EVENT_NEW_DEVICE = f"{DOMAIN}_new_device"

@@ -271,6 +271,14 @@
         }
       },
       "description": "{count} Geräte sind seit mehr als {days} Tagen offline. Ausblenden entfernt ihre Entitäten; in den Optionen kannst du sie wieder einblenden."
+    },
+    "internet_line": {
+      "title": "Die DSL-Leitung ist schwach",
+      "description": "Der Störabstand der DSL-Leitung liegt seit über einer Stunde unter 10 dB (jetzt {margin} dB). Die Verbindung kann abbrechen oder langsam werden. Prüfe Kabel und Dose und frage beim Anbieter nach, wenn es so bleibt. Die Internet-Seite im Panel „FRITZ!Box Netzwerk“ zeigt die Leitung."
+    },
+    "internet_reconnects": {
+      "title": "Die Internetverbindung bricht immer wieder ab",
+      "description": "Die Box hat ihre Internetverbindung in den letzten 24 Stunden {count} Mal neu aufgebaut. Prüfe Leitung und Kabel und frage beim Anbieter nach, wenn es anhält. Die Internet-Seite im Panel „FRITZ!Box Netzwerk“ zeigt die Ereignisse."
     }
   },
   "services": {

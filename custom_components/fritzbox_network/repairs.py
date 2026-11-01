@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 from homeassistant.components.repairs import RepairsFlow
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers import (
     entity_registry as er,
@@ -21,12 +21,16 @@ from .const import (
     CONF_STALE_DAYS,
     DEFAULT_STALE_DAYS,
     DOMAIN,
+    INTERNET_LOW_MARGIN_SECONDS,
+    INTERNET_RECONNECTS_WARN,
     KEY_LAST_ONLINE,
 )
 from .coordinator import FritzNetworkConfigEntry
 from .models import Host
 
 ISSUE_STALE_DEVICES = "stale_devices"
+ISSUE_INTERNET_LINE = "internet_line"
+ISSUE_INTERNET_RECONNECTS = "internet_reconnects"
 
 
 def last_online(hass: HomeAssistant, host: Host) -> datetime | None:
@@ -81,6 +85,53 @@ async def async_update_stale_issue(hass: HomeAssistant, entry: FritzNetworkConfi
 
 def async_remove_stale_issue(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
     ir.async_delete_issue(hass, DOMAIN, f"{ISSUE_STALE_DEVICES}_{entry.entry_id}")
+
+
+@callback
+def async_remove_internet_issues(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
+    for key in (ISSUE_INTERNET_LINE, ISSUE_INTERNET_RECONNECTS):
+        ir.async_delete_issue(hass, DOMAIN, f"{key}_{entry.entry_id}")
+
+
+@callback
+def async_update_internet_issues(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
+    """Raise a repair for a line that stays weak or a connection that keeps dropping.
+
+    Only what lasts counts: a weak noise margin for an hour, or several new connections within
+    a day. A repair goes away on its own when the problem does. It tells, it cannot fix.
+    """
+    coordinator = entry.runtime_data
+    now = dt_util.utcnow()
+    issues: dict[str, dict[str, str]] = {}
+    since = coordinator.internet_low_margin_since
+    info = coordinator.data.internet
+    if since and info and info.dsl and (now - since).total_seconds() >= INTERNET_LOW_MARGIN_SECONDS:
+        margins = [
+            m for m in (info.dsl.noise_margin_down, info.dsl.noise_margin_up) if m is not None
+        ]
+        issues[ISSUE_INTERNET_LINE] = {"margin": f"{min(margins):g}"}
+    recent = [
+        e
+        for e in coordinator.internet_events
+        if e["kind"] == "reconnected"
+        and (dt_util.parse_datetime(e["time"]) or now) > now - timedelta(days=1)
+    ]
+    if len(recent) >= INTERNET_RECONNECTS_WARN:
+        issues[ISSUE_INTERNET_RECONNECTS] = {"count": str(len(recent))}
+    for key in (ISSUE_INTERNET_LINE, ISSUE_INTERNET_RECONNECTS):
+        issue_id = f"{key}_{entry.entry_id}"
+        if key not in issues:
+            ir.async_delete_issue(hass, DOMAIN, issue_id)
+            continue
+        ir.async_create_issue(
+            hass,
+            DOMAIN,
+            issue_id,
+            is_fixable=False,
+            severity=ir.IssueSeverity.WARNING,
+            translation_key=key,
+            translation_placeholders=issues[key],
+        )
 
 
 class StaleDevicesFlow(RepairsFlow):

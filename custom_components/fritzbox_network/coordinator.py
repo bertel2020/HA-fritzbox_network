@@ -47,6 +47,7 @@ from .const import (
     INTERNET_DETAIL_POLLS,
     INTERNET_EVENTS,
     INTERNET_HISTORY,
+    INTERNET_NOISE_WARN_DB,
     MAX_BACKOFF_SECONDS,
     ROAM_CONFIRM_POLLS,
     WAN_OVERRIDE_SECONDS,
@@ -111,6 +112,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._internet_slow: dict[str, Any] = {}
         self._internet_counters: tuple[float, int, int] | None = None
         self.internet_rate: tuple[float, float] | None = None
+        # since when the noise margin of the DSL line has been below the limit
+        self.internet_low_margin_since: datetime | None = None
         self.internet_samples: deque[tuple[float, float, float]] = deque(maxlen=INTERNET_HISTORY)
         self.internet_events: deque[dict[str, Any]] = deque(maxlen=INTERNET_EVENTS)
         # How long the last and the slowest poll took, shown in the diagnostics.
@@ -212,6 +215,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             and info.uptime < previous.uptime
         )
         self._note_internet_changes(previous, info, reconnected)
+        self._track_line_margin(info)
         self._measure_throughput(info, reconnected)
         return info
 
@@ -236,6 +240,17 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 info.external_ipv4,
                 {"old_ip": previous.external_ipv4, "new_ip": info.external_ipv4},
             )
+
+    def _track_line_margin(self, info: InternetInfo) -> None:
+        margins = (
+            [m for m in (info.dsl.noise_margin_down, info.dsl.noise_margin_up) if m is not None]
+            if info.dsl
+            else []
+        )
+        if margins and min(margins) < INTERNET_NOISE_WARN_DB:
+            self.internet_low_margin_since = self.internet_low_margin_since or dt_util.utcnow()
+        else:
+            self.internet_low_margin_since = None
 
     def _internet_event(
         self,

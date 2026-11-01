@@ -1,8 +1,10 @@
 """The internet connection: parsing what the box says, the throughput and the events."""
 
+from datetime import timedelta
 from unittest.mock import patch
 
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import entity_registry as er, issue_registry as ir
+from homeassistant.util import dt as dt_util
 import pytest
 from pytest_homeassistant_custom_component.common import async_capture_events
 
@@ -305,3 +307,39 @@ async def test_an_unknown_box_is_refused(hass, hass_ws_client, fake_client, entr
     client = await hass_ws_client(hass)
     await client.send_json_auto_id({"type": "fritzbox_network/box/reboot", "entry_id": "nope"})
     assert (await client.receive_json())["error"]["code"] == "not_found"
+
+
+async def test_a_weak_line_for_an_hour_is_a_repair_that_goes_away(hass, fake_client, entry):
+    fake_client.internet_slow["X_AVM-DE_GetDSLInfo"]["NewDownstreamNoiseMargin"] = 80
+    coordinator = await _setup(hass, entry)
+    issue = f"internet_line_{entry.entry_id}"
+    registry = ir.async_get(hass)
+    # low, but not for long
+    assert coordinator.internet_low_margin_since is not None
+    assert registry.async_get_issue("fritzbox_network", issue) is None
+
+    coordinator.internet_low_margin_since = dt_util.utcnow() - timedelta(hours=2)
+    await _poll(hass, coordinator)
+    created = registry.async_get_issue("fritzbox_network", issue)
+    assert created is not None and created.translation_placeholders == {"margin": "8"}
+    assert not created.is_fixable
+
+    fake_client.internet_slow["X_AVM-DE_GetDSLInfo"]["NewDownstreamNoiseMargin"] = 170
+    coordinator._polls = 0  # the line is read again at this poll
+    await _poll(hass, coordinator)
+    assert registry.async_get_issue("fritzbox_network", issue) is None
+    assert coordinator.internet_low_margin_since is None
+
+
+async def test_a_connection_that_keeps_dropping_is_a_repair(hass, fake_client, entry):
+    coordinator = await _setup(hass, entry)
+    registry = ir.async_get(hass)
+    issue = f"internet_reconnects_{entry.entry_id}"
+    uptime = fake_client.internet_fast["GetStatusInfo"]
+    for value in (100, 10, 100, 10, 100, 10):
+        uptime["NewUptime"] = value
+        await _poll(hass, coordinator)
+    assert registry.async_get_issue("fritzbox_network", issue) is not None
+
+    await hass.config_entries.async_unload(entry.entry_id)
+    assert registry.async_get_issue("fritzbox_network", issue) is None
