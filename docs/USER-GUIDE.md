@@ -105,7 +105,9 @@ Signal strength, link rate, band and SSID come from the mesh data of the box, wi
 
 The FRITZ!Box and every repeater are devices of their own with model and firmware. Each has the sensor **Connected devices** (the number of devices connected to that access point). A repeater is also its entry in the host list, so it is a single device.
 
-The FRITZ!Box device also has three diagnostic sensors, off by default: **Last update** (the last successful poll), **Failed polls** (how many polls in a row failed) and **Mesh status** (whether the mesh topology came with the last poll). They stay available while the box cannot be reached.
+The FRITZ!Box device also counts the devices of your network (after the filters): **Devices online**, **Devices offline** and **Devices total**. Online follows the presence of the device trackers, including the consider-home time.
+
+It also has three diagnostic sensors, off by default: **Last update** (the last successful poll), **Failed polls** (how many polls in a row failed) and **Mesh status** (whether the mesh topology came with the last poll). They stay available while the box cannot be reached.
 
 ### Event
 

@@ -97,6 +97,15 @@
       "last_online": {
         "name": "Last online"
       },
+      "devices_online": {
+        "name": "Devices online"
+      },
+      "devices_offline": {
+        "name": "Devices offline"
+      },
+      "devices_total": {
+        "name": "Devices total"
+      },
       "last_update": {
         "name": "Last update"
       },

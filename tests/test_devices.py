@@ -358,3 +358,17 @@ async def test_new_device_fires_an_event_but_not_at_startup(hass, fake_client, e
 
     assert [e.data["mac"] for e in events] == [new_mac]
     assert events[0].data["name"] == "newcomer"
+
+
+async def test_box_counts_the_devices(hass, fake_client, entry):
+    coordinator = await _setup(hass, entry)
+    hosts = coordinator.data.hosts.values()
+    online = sum(coordinator.is_connected(h) for h in hosts)
+
+    states = {
+        key: hass.states.get(f"sensor.fritz_network_{key}")
+        for key in ("devices_online", "devices_offline", "devices_total")
+    }
+    assert int(states["devices_online"].state) == online > 0
+    assert int(states["devices_total"].state) == len(hosts)
+    assert int(states["devices_offline"].state) == len(hosts) - online

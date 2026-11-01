@@ -29,6 +29,9 @@ from .const import (
     KEY_ACCESS_POINT,
     KEY_CLIENTS,
     KEY_CONNECTION_TYPE,
+    KEY_DEVICES_OFFLINE,
+    KEY_DEVICES_ONLINE,
+    KEY_DEVICES_TOTAL,
     KEY_FAILED_POLLS,
     KEY_IP_ADDRESS,
     KEY_LAST_ONLINE,
@@ -93,6 +96,9 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     async_add_entities(
         [
+            FritzNetworkDevicesOnline(coordinator),
+            FritzNetworkDevicesOffline(coordinator),
+            FritzNetworkDevicesTotal(coordinator),
             FritzNetworkLastUpdate(coordinator),
             FritzNetworkFailedPolls(coordinator),
             FritzNetworkMeshStatus(coordinator),
@@ -311,15 +317,10 @@ class FritzNetworkLastOnline(_ConnectionTime):
         return self._value if self._was_active is False else None
 
 
-class _BoxDiagnostic(CoordinatorEntity[FritzNetworkCoordinator], SensorEntity):
-    """A diagnostic value of the connection to the box, off by default.
-
-    It stays available while polls fail: that is when it is needed.
-    """
+class _BoxSensor(CoordinatorEntity[FritzNetworkCoordinator], SensorEntity):
+    """A sensor of the box device itself."""
 
     _attr_has_entity_name = True
-    _attr_entity_category = EntityCategory.DIAGNOSTIC
-    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: FritzNetworkCoordinator, key: str) -> None:
         super().__init__(coordinator)
@@ -327,6 +328,51 @@ class _BoxDiagnostic(CoordinatorEntity[FritzNetworkCoordinator], SensorEntity):
         self._attr_unique_id = f"{coordinator.serial}_{key}"
         self.entity_id = f"sensor.fritz_network_{key}"
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+
+
+class _DeviceCount(_BoxSensor):
+    """How many of the devices in the network (after the filters) are in a state."""
+
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+
+class FritzNetworkDevicesOnline(_DeviceCount):
+    def __init__(self, coordinator: FritzNetworkCoordinator) -> None:
+        super().__init__(coordinator, KEY_DEVICES_ONLINE)
+
+    @property
+    def native_value(self) -> int:
+        return sum(self.coordinator.is_connected(h) for h in self.coordinator.data.hosts.values())
+
+
+class FritzNetworkDevicesOffline(_DeviceCount):
+    def __init__(self, coordinator: FritzNetworkCoordinator) -> None:
+        super().__init__(coordinator, KEY_DEVICES_OFFLINE)
+
+    @property
+    def native_value(self) -> int:
+        return sum(
+            not self.coordinator.is_connected(h) for h in self.coordinator.data.hosts.values()
+        )
+
+
+class FritzNetworkDevicesTotal(_DeviceCount):
+    def __init__(self, coordinator: FritzNetworkCoordinator) -> None:
+        super().__init__(coordinator, KEY_DEVICES_TOTAL)
+
+    @property
+    def native_value(self) -> int:
+        return len(self.coordinator.data.hosts)
+
+
+class _BoxDiagnostic(_BoxSensor):
+    """A diagnostic value of the connection to the box, off by default.
+
+    It stays available while polls fail: that is when it is needed.
+    """
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
 
     @property
     def available(self) -> bool:

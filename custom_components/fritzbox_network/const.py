@@ -46,9 +46,15 @@ KEY_ONLINE_SINCE = "online_since"
 KEY_LAST_ONLINE = "last_online"
 
 # Keys of the diagnostic sensors of the box.
+# Keys of the device counters of the box.
+KEY_DEVICES_ONLINE = "devices_online"
+KEY_DEVICES_OFFLINE = "devices_offline"
+KEY_DEVICES_TOTAL = "devices_total"
+
 KEY_LAST_UPDATE = "last_update"
 KEY_FAILED_POLLS = "failed_polls"
 KEY_MESH_STATUS = "mesh_status"
+KEY_REFRESH = "refresh"
 KEY_INTERNET_ACCESS = "internet_access"
 KEY_WAKE_ON_LAN = "wake_on_lan"
 KEY_CLIENTS = "clients"
