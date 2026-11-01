@@ -125,13 +125,15 @@ Beide brauchen das Recht „FRITZ!Box Einstellungen“ und nehmen ein Gerät, ei
 | `fritzbox_network.set_name` | Benennt das Gerät in der FRITZ!Box selbst um (`name`). Der Name in Home Assistant folgt, wenn Namen übernommen werden; Entity-IDs ändern sich nie. Abgelehnt bei Geräten, deren Namen die Box nicht ändern lässt. |
 | `fritzbox_network.wake_on_lan` | Sendet das Wake-on-LAN-Signal der Box an das Gerät, ohne den (standardmäßig deaktivierten) Button. |
 
-### Ereignis
+### Ereignisse
 
 Wird ein Gerät in der Box umbenannt, löst Home Assistant das Ereignis `fritzbox_network_device_renamed` aus, mit `mac`, `old_name` und `new_name`.
 
 Listet die Box ein Gerät, das sie vorher nicht gelistet hat, löst Home Assistant das Ereignis `fritzbox_network_new_device` aus, mit `mac`, `name`, `ip` und `vendor` (leer, solange die Hersteller-Option aus ist). Damit lässt sich eine Benachrichtigung über neue Geräte im Netz bauen. Was die Box beim Start listet, gilt nicht als neu: Geräte, die dazukamen, während Home Assistant aus war, werden nicht gemeldet, ebenso wenig Geräte, die ein Filter ausschließt.
 
 Wechselt ein Gerät zu einem anderen Access Point (der Box oder einem Repeater), löst Home Assistant `fritzbox_network_device_roamed` aus, mit `mac`, `name`, `old_ap`, `old_ap_mac`, `new_ap`, `new_ap_mac`, `link_type`, `band` und `signal_dbm`. Der neue Access Point muss in zwei Abfragen hintereinander erscheinen, damit ein Gerät, das zwischen zweien hin- und herspringt, nicht bei jeder Abfrage auslöst; bei der Standardabfrage geht ein sehr kurzer Besuch verloren. Das erste Sehen eines Geräts ist kein Wechsel. Nutze es für Anwesenheit nach Raum: Der Access Point eines Repeaters verrät, wo im Haus ein Handy ist.
+
+Alle drei Ereignisse erscheinen auch im **Logbuch** (zum Beispiel „phone moved from FRITZ!Repeater to FRITZ!Box“) und im Verlauf des Trackers des Geräts. Die Rohdaten siehst du, wenn du unter **Werkzeuge → Ereignisse** den Ereignisnamen abhörst.
 
 ## Namen und Entity-IDs
 

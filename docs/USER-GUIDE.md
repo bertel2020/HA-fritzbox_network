@@ -125,13 +125,15 @@ Both need the right "FRITZ!Box settings" and take a device, an entity or an area
 | `fritzbox_network.set_name` | Renames the device in the FRITZ!Box itself (`name`). The name in Home Assistant follows if names are taken over; entity ids never change. Refused for devices whose name the box does not let change. |
 | `fritzbox_network.wake_on_lan` | Sends the Wake on LAN signal of the box to the device, without the (off by default) button. |
 
-### Event
+### Events
 
 When a device is renamed in the box, Home Assistant fires the event `fritzbox_network_device_renamed` with `mac`, `old_name` and `new_name`.
 
 When the box lists a device it did not list before, Home Assistant fires the event `fritzbox_network_new_device` with `mac`, `name`, `ip` and `vendor` (empty unless the vendor option is on). Use it to be notified about new devices in your network. What the box lists at startup is not new, so devices that joined while Home Assistant was down are not announced, and neither are devices a filter excludes.
 
 When a device moves to another access point (the box or a repeater), Home Assistant fires `fritzbox_network_device_roamed` with `mac`, `name`, `old_ap`, `old_ap_mac`, `new_ap`, `new_ap_mac`, `link_type`, `band` and `signal_dbm`. The new access point has to show in two polls in a row, so a device that flaps between two does not fire on every poll; with the default interval a very short visit is missed. Seeing a device for the first time is not roaming. Use it for presence by room: the access point of a repeater tells where in the house a phone is.
+
+All three events also show in the **Logbook** (for example "phone moved from FRITZ!Repeater to FRITZ!Box") and in the history of the device's tracker. To see the raw data, listen to the event name under **Tools → Events**.
 
 ## Names and entity ids
 
