@@ -90,6 +90,10 @@ class MeshTopology:
     def master(self) -> MeshNode | None:
         return next((n for n in self.nodes.values() if n.role == "master"), None)
 
+    def node_by_mac(self, mac: str) -> MeshNode | None:
+        """The node with this MAC, which stays when the box renews the node's uid."""
+        return next((n for n in self.nodes.values() if n.mac == mac), None)
+
     def node_of(self, host: Host) -> MeshNode | None:
         """The mesh node (box or repeater) this host entry belongs to, if any."""
         wanted = {host.mac, *host.mac_list}

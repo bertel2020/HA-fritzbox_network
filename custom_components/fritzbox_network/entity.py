@@ -70,7 +70,7 @@ def async_setup_client_entities(
     The factory returns None for a host it cannot decide on yet.
     """
     coordinator = entry.runtime_data
-    known: set[str] = set()
+    known: set[str] = set()  # MACs: the uid of a node may change
 
     @callback
     def _add_new_hosts() -> None:
@@ -106,7 +106,7 @@ class FritzNetworkNodeEntity(CoordinatorEntity[FritzNetworkCoordinator]):
         key: str,
     ) -> None:
         super().__init__(coordinator)
-        self._uid = node.uid
+        self._mac = node.mac
         self._attr_unique_id = f"{node.mac}_{key}"
         self.entity_id = f"{platform_domain}.fritz_{mac_id(node.mac)}_{key}"
         if node.role == "master":
@@ -124,7 +124,7 @@ class FritzNetworkNodeEntity(CoordinatorEntity[FritzNetworkCoordinator]):
     @property
     def node(self) -> MeshNode | None:
         mesh = self.coordinator.data.mesh
-        return mesh.nodes.get(self._uid) if mesh else None
+        return mesh.node_by_mac(self._mac) if mesh else None
 
     @property
     def available(self) -> bool:
@@ -139,13 +139,13 @@ def async_setup_node_entities(
 ) -> None:
     """Create entities for every mesh node now and for every node that appears later."""
     coordinator = entry.runtime_data
-    known: set[str] = set()
+    known: set[str] = set()  # MACs: the uid of a node may change
 
     @callback
     def _add_new_nodes() -> None:
         mesh = coordinator.data.mesh
-        new = [n for uid, n in (mesh.nodes.items() if mesh else []) if uid not in known]
-        known.update(n.uid for n in new)
+        new = [n for n in (mesh.nodes.values() if mesh else []) if n.mac not in known]
+        known.update(n.mac for n in new)
         entities = [e for node in new for e in factory(coordinator, node)]
         if entities:
             async_add_entities(entities)

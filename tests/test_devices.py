@@ -239,3 +239,22 @@ async def test_link_sensors_exist_only_for_devices_with_a_connection(hass, fake_
     await hass.async_block_till_done()
 
     assert registry.async_get("sensor.fritz_020000000001_signal_strength")
+
+
+async def test_mesh_entities_follow_the_mac_when_the_uid_changes(hass, fake_client, entry):
+    coordinator = await _setup(hass, entry)
+    before = int(hass.states.get("sensor.fritz_020000000005_clients").state)
+    mesh = fake_client.mesh
+    node = mesh.nodes.pop("n-1")
+    mesh.nodes["n-renewed"] = replace(node, uid="n-renewed")
+    mesh.links = {
+        mac: replace(link, ap_uid="n-renewed") if link.ap_uid == "n-1" else link
+        for mac, link in mesh.links.items()
+    }
+
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    state = hass.states.get("sensor.fritz_020000000005_clients")
+    assert state.state == str(before)
+    assert state.state != "unavailable"

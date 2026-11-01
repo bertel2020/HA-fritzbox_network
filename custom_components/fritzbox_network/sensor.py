@@ -163,9 +163,10 @@ class FritzNetworkClients(FritzNetworkNodeEntity, SensorEntity):
     @property
     def native_value(self) -> int | None:
         mesh = self.coordinator.data.mesh
-        if mesh is None:
+        node = self.node
+        if mesh is None or node is None:
             return None
-        return sum(1 for link in mesh.links.values() if link.ap_uid == self._uid)
+        return sum(1 for link in mesh.links.values() if link.ap_uid == node.uid)
 
 
 class FritzNetworkIpAddress(FritzNetworkClientEntity, SensorEntity):
