@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 import json
+import re
 from typing import Any
 from xml.etree import ElementTree as ET
 
@@ -13,10 +14,25 @@ from homeassistant.helpers.device_registry import format_mac
 # is how clients announce a randomized ("private") MAC address.
 _PRIVATE_MAC_DIGITS = "26ae"
 
+_MAC_RE = re.compile(r"([0-9a-f]{2}:){5}[0-9a-f]{2}")
+
 
 def mac_id(mac: str) -> str:
     """MAC without separators, as used in entity ids."""
     return format_mac(mac).replace(":", "")
+
+
+def _mac(value: Any) -> str | None:
+    """The MAC in the usual format, or None where it is not a valid MAC address."""
+    if not isinstance(value, str):
+        return None
+    mac = format_mac(value.strip())
+    return mac if _MAC_RE.fullmatch(mac) else None
+
+
+def _dicts(value: Any) -> list[dict[str, Any]]:
+    """The dict items of a list; anything else the box sends in its place is empty."""
+    return [i for i in value if isinstance(i, dict)] if isinstance(value, list) else []
 
 
 def is_private_mac(mac: str) -> bool:
@@ -123,10 +139,9 @@ def parse_hosts(xml: str | bytes) -> list[Host]:
         xml = xml.encode("utf-8")
     hosts: list[Host] = []
     for item in ET.fromstring(xml).findall("Item"):
-        mac = _text(item, "MACAddress")
+        mac = _mac(_text(item, "MACAddress"))
         if not mac:
             continue
-        mac = format_mac(mac)
         hostname = _text(item, "HostName")
         friendly = _text(item, "X_AVM-DE_FriendlyName")
         wan = _text(item, "X_AVM-DE_WANAccess")
@@ -148,9 +163,11 @@ def parse_hosts(xml: str | bytes) -> list[Host]:
                 hostname=hostname,
                 friendly_name=friendly,
                 mac_list=[
-                    format_mac(m)
-                    for m in (_text(item, "X_AVM-DE_MACAddressList") or mac).split(",")
-                ],
+                    m
+                    for m in map(_mac, (_text(item, "X_AVM-DE_MACAddressList") or mac).split(","))
+                    if m
+                ]
+                or [mac],
                 device_class=_text(item, "X_AVM-DE_DeviceClass"),
             )
         )
@@ -193,60 +210,66 @@ def _band(interface: dict[str, Any]) -> str | None:
 def parse_mesh(raw: str | bytes) -> MeshTopology:
     """Parse the JSON behind ``X_AVM-DE_GetMeshListPath``."""
     data = json.loads(raw)
-    nodes_by_uid: dict[str, dict[str, Any]] = {n["uid"]: n for n in data.get("nodes", [])}
+    if not isinstance(data, dict):
+        raise ValueError("The mesh topology is not a JSON object")
+    nodes_by_uid: dict[str, dict[str, Any]] = {
+        n["uid"]: n for n in _dicts(data.get("nodes")) if isinstance(n.get("uid"), str)
+    }
     interfaces: dict[str, dict[str, Any]] = {
-        i["uid"]: i for n in nodes_by_uid.values() for i in n.get("node_interfaces", [])
+        i["uid"]: i
+        for n in nodes_by_uid.values()
+        for i in _dicts(n.get("node_interfaces"))
+        if isinstance(i.get("uid"), str)
     }
 
     topology = MeshTopology()
     for uid, node in nodes_by_uid.items():
-        if node.get("is_meshed") and node.get("device_mac_address"):
+        node_mac = _mac(node.get("device_mac_address"))
+        if node.get("is_meshed") and node_mac:
             topology.nodes[uid] = MeshNode(
                 uid=uid,
-                mac=format_mac(node["device_mac_address"]),
+                mac=node_mac,
                 name=node.get("device_friendly_name") or node.get("device_name") or uid,
                 model=node.get("device_model"),
                 firmware=node.get("device_firmware_version"),
                 role=node.get("mesh_role") or "unknown",
                 macs=frozenset(
-                    format_mac(m)
+                    m
                     for m in (
-                        node["device_mac_address"],
-                        *(
-                            i["mac_address"]
-                            for i in node.get("node_interfaces", [])
-                            if i.get("mac_address")
-                        ),
+                        node_mac,
+                        *(_mac(i.get("mac_address")) for i in _dicts(node.get("node_interfaces"))),
                     )
+                    if m
                 ),
             )
 
     seen_links: set[str] = set()
     for node in nodes_by_uid.values():
-        for interface in node.get("node_interfaces", []):
-            for link in interface.get("node_links", []):
-                if link["uid"] in seen_links or link.get("state") != "CONNECTED":
+        for interface in _dicts(node.get("node_interfaces")):
+            for link in _dicts(interface.get("node_links")):
+                link_uid = link.get("uid")
+                if not isinstance(link_uid, str) or link_uid in seen_links:
                     continue
-                seen_links.add(link["uid"])
-                node_1 = nodes_by_uid.get(link["node_1_uid"])
-                node_2 = nodes_by_uid.get(link["node_2_uid"])
-                if_1 = interfaces.get(link["node_interface_1_uid"])
-                if_2 = interfaces.get(link["node_interface_2_uid"])
+                if link.get("state") != "CONNECTED":
+                    continue
+                seen_links.add(link_uid)
+                node_1 = nodes_by_uid.get(link.get("node_1_uid"))
+                node_2 = nodes_by_uid.get(link.get("node_2_uid"))
+                if_1 = interfaces.get(link.get("node_interface_1_uid"))
+                if_2 = interfaces.get(link.get("node_interface_2_uid"))
                 if not (node_1 and node_2 and if_1 and if_2):
                     continue
                 side = _ap_side(node_1, if_1, node_2, if_2)
                 if side is None:
                     continue
                 ap, client = (node_1, node_2) if side == 1 else (node_2, node_1)
-                client_mac = client.get("device_mac_address")
+                client_mac = _mac(client.get("device_mac_address"))
                 if not client_mac:
                     continue
                 ap_side = if_1 if side == 1 else if_2
-                topology.links[format_mac(client_mac)] = ClientLink(
+                topology.links[client_mac] = ClientLink(
                     ap_uid=ap["uid"],
-                    ap_mac=format_mac(ap["device_mac_address"])
-                    if ap.get("device_mac_address")
-                    else None,
+                    ap_mac=_mac(ap.get("device_mac_address")),
                     ap_name=ap.get("device_friendly_name") or ap.get("device_name"),
                     link_type=link.get("type", "unknown"),
                     # rx/tx are as seen by the node of the link they belong to;
