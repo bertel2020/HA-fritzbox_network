@@ -1,0 +1,19 @@
+set_name:
+  target:
+    device:
+      integration: fritzbox_network
+    entity:
+      integration: fritzbox_network
+  fields:
+    name:
+      required: true
+      example: Living room TV
+      selector:
+        text:
+
+wake_on_lan:
+  target:
+    device:
+      integration: fritzbox_network
+    entity:
+      integration: fritzbox_network

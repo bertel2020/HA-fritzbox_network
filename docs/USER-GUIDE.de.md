@@ -116,6 +116,15 @@ Das Gerät der FRITZ!Box zählt außerdem die Geräte im Netz (nach den Filtern)
 
 Es hat außerdem drei Diagnose-Sensoren, standardmäßig aus: **Letzte Aktualisierung** (die letzte erfolgreiche Abfrage), **Fehlgeschlagene Abfragen** (wie viele Abfragen in Folge scheiterten) und **Mesh-Status** (ob die Mesh-Topologie bei der letzten Abfrage mitkam). Sie bleiben verfügbar, auch wenn die Box nicht erreichbar ist.
 
+### Aktionen
+
+Beide brauchen das Recht „FRITZ!Box Einstellungen“ und nehmen ein Gerät, eine Entität oder einen Bereich als Ziel.
+
+| Aktion | Was sie tut |
+|--------|-------------|
+| `fritzbox_network.set_name` | Benennt das Gerät in der FRITZ!Box selbst um (`name`). Der Name in Home Assistant folgt, wenn Namen übernommen werden; Entity-IDs ändern sich nie. Abgelehnt bei Geräten, deren Namen die Box nicht ändern lässt. |
+| `fritzbox_network.wake_on_lan` | Sendet das Wake-on-LAN-Signal der Box an das Gerät, ohne den (standardmäßig deaktivierten) Button. |
+
 ### Ereignis
 
 Wird ein Gerät in der Box umbenannt, löst Home Assistant das Ereignis `fritzbox_network_device_renamed` aus, mit `mac`, `old_name` und `new_name`.

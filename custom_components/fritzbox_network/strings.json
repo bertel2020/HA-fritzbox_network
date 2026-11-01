@@ -187,12 +187,37 @@
     },
     "action_failed": {
       "message": "The FRITZ!Box rejected the action: {error}"
+    },
+    "no_target": {
+      "message": "The device is not known to this integration or is hidden."
+    },
+    "no_write_rights": {
+      "message": "The user of the integration may not change settings."
+    },
+    "name_not_writeable": {
+      "message": "The name of {name} cannot be changed in the FRITZ!Box."
     }
   },
   "issues": {
     "missing_rights": {
       "title": "Missing rights for the FRITZ!Box user",
       "description": "The user \"{user}\" may not change settings. The devices are shown, but the internet access switches and the Wake on LAN buttons are not created. Give the user the right \"FRITZ!Box settings\" under System > FRITZ!Box Users."
+    }
+  },
+  "services": {
+    "set_name": {
+      "name": "Rename device",
+      "description": "Renames the device in the FRITZ!Box itself. The name in Home Assistant follows if names are taken over; entity ids never change.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "New name in the box"
+        }
+      }
+    },
+    "wake_on_lan": {
+      "name": "Wake on LAN",
+      "description": "Sends the Wake on LAN signal of the box to the device."
     }
   }
 }

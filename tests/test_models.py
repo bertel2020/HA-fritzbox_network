@@ -139,3 +139,16 @@ def test_hosts_carry_their_access_profile():
     )
 
     assert hosts[0].filter_profile == "filtprof2"
+
+
+def test_hosts_say_whether_their_name_can_be_changed():
+    xml = (
+        "<List>"
+        "<Item><MACAddress>02:00:00:00:00:01</MACAddress>"
+        "<X_AVM-DE_FriendlyNameIsWriteable>1</X_AVM-DE_FriendlyNameIsWriteable></Item>"
+        "<Item><MACAddress>02:00:00:00:00:02</MACAddress>"
+        "<X_AVM-DE_FriendlyNameIsWriteable>0</X_AVM-DE_FriendlyNameIsWriteable></Item>"
+        "<Item><MACAddress>02:00:00:00:00:03</MACAddress></Item></List>"
+    )
+
+    assert [h.name_writeable for h in parse_hosts(xml)] == [True, False, None]

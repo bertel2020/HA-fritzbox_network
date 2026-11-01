@@ -70,6 +70,9 @@ class FakeClient:
     def set_priority(self, ip: str, enabled: bool) -> None:
         self.calls.append(("priority", ip, enabled))
 
+    def set_friendly_name(self, mac: str, name: str) -> None:
+        self.calls.append(("name", mac, name))
+
     def get_filter_profiles(self) -> dict[str, str]:
         return dict(self.profiles)
 

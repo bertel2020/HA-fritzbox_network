@@ -25,6 +25,7 @@ from homeassistant.loader import async_get_integration
 from .api import FritzNetworkClient
 from .const import CONF_HIDDEN_MACS, CONF_SHOW_VENDOR, CONF_USE_TLS, DOMAIN
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
+from .services import async_register as async_register_services
 from .vendor import async_load as async_load_vendors
 from .websocket_api import async_register as async_register_websocket
 
@@ -50,6 +51,7 @@ CARD_URL = f"/{DOMAIN}/fritzbox-network-topology-card.js"
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register what is shared by all entries: the topology command and card."""
     async_register_websocket(hass)
+    async_register_services(hass)
     await _async_register_card(hass)
     return True
 

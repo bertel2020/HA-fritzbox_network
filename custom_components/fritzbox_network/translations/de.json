@@ -187,12 +187,37 @@
     },
     "action_failed": {
       "message": "Die FRITZ!Box hat die Aktion abgelehnt: {error}"
+    },
+    "no_target": {
+      "message": "Das Gerät ist dieser Integration nicht bekannt oder ausgeblendet."
+    },
+    "no_write_rights": {
+      "message": "Der Benutzer der Integration darf keine Einstellungen ändern."
+    },
+    "name_not_writeable": {
+      "message": "Der Name von {name} lässt sich in der FRITZ!Box nicht ändern."
     }
   },
   "issues": {
     "missing_rights": {
       "title": "Fehlende Rechte des FRITZ!Box-Benutzers",
       "description": "Der Benutzer \"{user}\" darf keine Einstellungen ändern. Die Geräte werden angezeigt, aber die Schalter für den Internetzugang und die Wake-on-LAN-Buttons werden nicht angelegt. Gib dem Benutzer unter System > FRITZ!Box-Benutzer das Recht \"FRITZ!Box Einstellungen\"."
+    }
+  },
+  "services": {
+    "set_name": {
+      "name": "Gerät umbenennen",
+      "description": "Benennt das Gerät in der FRITZ!Box selbst um. Der Name in Home Assistant folgt, wenn Namen übernommen werden; Entity-IDs ändern sich nie.",
+      "fields": {
+        "name": {
+          "name": "Name",
+          "description": "Neuer Name in der Box"
+        }
+      }
+    },
+    "wake_on_lan": {
+      "name": "Wake on LAN",
+      "description": "Sendet das Wake-on-LAN-Signal der Box an das Gerät."
     }
   }
 }

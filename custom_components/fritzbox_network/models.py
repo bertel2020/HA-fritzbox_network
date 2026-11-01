@@ -62,6 +62,7 @@ class Host:
     mac_list: list[str] = field(default_factory=list)
     device_class: str | None = None
     filter_profile: str | None = None
+    name_writeable: bool | None = None
 
     @property
     def is_ethernet(self) -> bool:
@@ -134,6 +135,10 @@ def _flag(item: ET.Element, tag: str) -> bool:
     return _text(item, tag) == "1"
 
 
+def _writeable(value: str | None) -> bool | None:
+    return None if value is None else value == "1"
+
+
 def parse_hosts(xml: str | bytes) -> list[Host]:
     """Parse the XML behind ``X_AVM-DE_GetHostListPath``."""
     if isinstance(xml, str):
@@ -171,6 +176,7 @@ def parse_hosts(xml: str | bytes) -> list[Host]:
                 or [mac],
                 device_class=_text(item, "X_AVM-DE_DeviceClass"),
                 filter_profile=_text(item, "X_AVM-DE_FilterProfileID"),
+                name_writeable=_writeable(_text(item, "X_AVM-DE_FriendlyNameIsWriteable")),
             )
         )
     return hosts

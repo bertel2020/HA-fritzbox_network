@@ -317,11 +317,26 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         if await self.hass.async_add_executor_job(self.client.get_host_ip, host.mac) != host.ip:
             raise HomeAssistantError(translation_domain=DOMAIN, translation_key="ip_changed")
         await self.hass.async_add_executor_job(action, host.ip, value)
-        self._overrides[(host.mac, attr)] = (value, time.monotonic() + WAN_OVERRIDE_SECONDS)
+        await self._async_show_now(host.mac, attr, value)
+
+    async def _async_show_now(self, mac: str, attr: str, value: Any) -> None:
+        """Show a value just set until the box lists it too, and poll again."""
+        self._overrides[(mac, attr)] = (value, time.monotonic() + WAN_OVERRIDE_SECONDS)
         hosts = dict(self.data.hosts)
         self._apply_overrides(hosts)
         self.async_set_updated_data(NetworkData(hosts=hosts, mesh=self.data.mesh))
         await self.async_request_refresh()
+
+    async def async_set_name(self, host: Host, name: str) -> None:
+        """Rename a device in the box; the device in Home Assistant follows."""
+        if host.name_writeable is False:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="name_not_writeable",
+                translation_placeholders={"name": host.name},
+            )
+        await self.hass.async_add_executor_job(self.client.set_friendly_name, host.mac, name)
+        await self._async_show_now(host.mac, "name", name)
 
     async def async_set_internet_access(self, host: Host, allowed: bool) -> None:
         await self._async_set_by_ip(host, "wan_access", allowed, self.client.set_internet_access)

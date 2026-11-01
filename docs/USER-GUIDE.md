@@ -116,6 +116,15 @@ The FRITZ!Box device also counts the devices of your network (after the filters)
 
 It also has three diagnostic sensors, off by default: **Last update** (the last successful poll), **Failed polls** (how many polls in a row failed) and **Mesh status** (whether the mesh topology came with the last poll). They stay available while the box cannot be reached.
 
+### Actions
+
+Both need the right "FRITZ!Box settings" and take a device, an entity or an area as the target.
+
+| Action | What it does |
+|--------|--------------|
+| `fritzbox_network.set_name` | Renames the device in the FRITZ!Box itself (`name`). The name in Home Assistant follows if names are taken over; entity ids never change. Refused for devices whose name the box does not let change. |
+| `fritzbox_network.wake_on_lan` | Sends the Wake on LAN signal of the box to the device, without the (off by default) button. |
+
 ### Event
 
 When a device is renamed in the box, Home Assistant fires the event `fritzbox_network_device_renamed` with `mac`, `old_name` and `new_name`.

@@ -241,6 +241,16 @@ class FritzNetworkClient:
                 NewAutoWOLEnabled=enabled,
             )
 
+    def set_friendly_name(self, mac: str, name: str) -> None:
+        """Rename the device in the box itself."""
+        with self._lock:
+            self._connection.call_action(
+                HOSTS_SERVICE,
+                "X_AVM-DE_SetFriendlyNameByMAC",
+                NewMACAddress=mac.upper(),
+                **{"NewX_AVM-DE_FriendlyName": name},
+            )
+
     def wake_on_lan(self, mac: str) -> None:
         with self._lock:
             self._connection.call_action(

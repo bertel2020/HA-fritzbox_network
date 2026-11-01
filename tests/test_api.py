@@ -156,3 +156,17 @@ def test_auto_wake_on_lan_reads_and_writes_by_mac():
         NewMACAddress="02:00:00:00:00:03".upper(),
         NewAutoWOLEnabled=False,
     )
+
+
+def test_set_friendly_name_by_mac():
+    client = _client()
+    client._fc.call_action.side_effect = None
+
+    client.set_friendly_name("02:00:00:00:00:03", "TV")
+
+    client._fc.call_action.assert_called_once_with(
+        "Hosts1",
+        "X_AVM-DE_SetFriendlyNameByMAC",
+        NewMACAddress="02:00:00:00:00:03".upper(),
+        **{"NewX_AVM-DE_FriendlyName": "TV"},
+    )
