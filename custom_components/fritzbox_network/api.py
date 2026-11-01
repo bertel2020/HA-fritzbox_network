@@ -19,6 +19,7 @@ from typing import Any
 from fritzconnection import FritzConnection
 from fritzconnection.core.exceptions import (
     FritzActionError,
+    FritzArrayIndexError,
     FritzAuthorizationError,
     FritzLookUpError,
     FritzServiceError,
@@ -55,6 +56,9 @@ INTERNET_SLOW = (
 )
 SECURITY_SERVICE = "LANConfigSecurity1"
 RIGHT_ADMIN = "BoxAdmin"
+
+# the most port forwardings read: the box lists a few dozen at the most
+MAX_PORT_MAPPINGS = 128
 
 # seconds for connecting and for each read, also of the direct list downloads
 REQUEST_TIMEOUT = 10
@@ -170,6 +174,30 @@ class FritzNetworkClient:
                 return self._connection.call_action("UserInterface1", "GetInfo")
             except (FritzActionError, FritzServiceError, FritzAuthorizationError, KeyError):
                 return {}
+
+    def get_port_mappings(self) -> list[dict[str, Any]]:
+        """The port forwardings of the box, those set by hand and those a device opened by UPnP."""
+        entries: list[dict[str, Any]] = []
+        with self._lock:
+            for index in range(MAX_PORT_MAPPINGS):
+                try:
+                    result = self._connection.call_action(
+                        "WANIPConn1", "GetGenericPortMappingEntry", NewPortMappingIndex=index
+                    )
+                except (FritzArrayIndexError, FritzActionError):
+                    break  # past the last entry the box answers with an error
+                entries.append(
+                    {
+                        "description": result.get("NewPortMappingDescription") or None,
+                        "protocol": result.get("NewProtocol"),
+                        "external_port": result.get("NewExternalPort"),
+                        "internal_port": result.get("NewInternalPort"),
+                        "client": result.get("NewInternalClient") or None,
+                        "enabled": bool(result.get("NewEnabled")),
+                        "lease": result.get("NewLeaseDuration") or 0,
+                    }
+                )
+        return entries
 
     def _guest_wifi_service(self) -> str | None:
         """The service of the guest Wi-Fi: the one whose access point type says "guest"."""

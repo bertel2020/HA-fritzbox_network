@@ -345,6 +345,14 @@ export const PANEL_CSS = `
   figure.spec rect { fill: var(--accent); }
   figure.spec:last-of-type rect { fill: var(--up); }
   figure.spec figcaption { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  ul.ports { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  ul.ports li { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+  ul.ports li:first-child { border-top: 0; }
+  ul.ports li.off { opacity: .6; }
+  ul.ports .pdesc { font-weight: 500; }
+  ul.ports .pmap { color: var(--muted); text-align: right; }
+  ul.ports small { grid-column: 1 / -1; color: var(--muted); }
+  button.linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--accent-hover); cursor: pointer; text-decoration: underline; }
   .hints { padding: 8px 16px; }
   .hintline { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 14px; }
   .hintline.bad { color: var(--bad); }

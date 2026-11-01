@@ -439,3 +439,48 @@ async def test_the_topology_carries_the_firmware_offer(hass, hass_ws_client, fak
     assert (await client.receive_json())["success"]
     topology = (await client.receive_json())["event"]
     assert topology["firmware"] == {"installed": "8.25", "latest": "8.30", "info_url": None}
+
+
+async def test_the_ports_come_with_the_device_they_lead_to(
+    hass, hass_ws_client, fake_client, entry
+):
+    fake_client.ports = [
+        {
+            "description": "Web",
+            "protocol": "TCP",
+            "external_port": 443,
+            "internal_port": 8443,
+            "client": fake_client.hosts[0].ip,
+            "enabled": True,
+            "lease": 0,
+        },
+        {
+            "description": None,
+            "protocol": "UDP",
+            "external_port": 5000,
+            "internal_port": 5000,
+            "client": "192.0.2.250",
+            "enabled": False,
+            "lease": 3600,
+        },
+    ]
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id(
+        {"type": "fritzbox_network/ports/list", "entry_id": entry.entry_id}
+    )
+    result = (await client.receive_json())["result"]["entries"]
+
+    assert result[0]["device_name"] == fake_client.hosts[0].name
+    assert result[0]["device_id"] == fake_client.hosts[0].mac.replace(":", "")
+    # a client the box does not list stays a bare address
+    assert result[1]["device_id"] is None and result[1]["client"] == "192.0.2.250"
+
+
+async def test_the_ports_are_only_read_on_demand(hass, fake_client, entry):
+    reads = []
+    fake_client.get_port_mappings = lambda: reads.append(1) or []
+    coordinator = await _setup(hass, entry)
+    await _poll(hass, coordinator)
+    assert reads == []

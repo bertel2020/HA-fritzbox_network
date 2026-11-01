@@ -167,6 +167,33 @@ function hintsHtml(internet, t, now) {
     .join("")}</section>`;
 }
 
+/** One port forwarding as a line: "TCP 443 → Living room TV:8443", the device a link to its page. */
+function portLine(entry, t) {
+  const p = t.inet.ports;
+  const target = entry.device_id
+    ? `<button class="linklike" data-dev="${escapeHtml(entry.device_id)}">${escapeHtml(entry.device_name ?? entry.client)}</button>`
+    : escapeHtml(entry.client ?? p.noClient);
+  const notes = [
+    entry.enabled ? "" : p.off,
+    entry.lease ? fill(p.lease, { time: formatDuration(entry.lease, t.inet.units) }) : "",
+  ].filter(Boolean);
+  return `<li class="${entry.enabled ? "" : "off"}"><span class="pdesc">${escapeHtml(entry.description ?? p.noName)}</span>
+    <span class="pmap">${escapeHtml(entry.protocol ?? "")} ${escapeHtml(String(entry.external_port ?? "–"))} → ${target}:${escapeHtml(String(entry.internal_port ?? "–"))}</span>
+    ${notes.length ? `<small>${escapeHtml(notes.join(" · "))}</small>` : ""}</li>`;
+}
+
+/** The port forwardings and UPnP openings: loading, an error, none, or the list. Read only. */
+function ports(state, t) {
+  const p = t.inet.ports;
+  let body;
+  if (state === "failed") body = `<p class="hint">${escapeHtml(p.failed)}</p>`;
+  else if (!state) body = `<p class="hint">${escapeHtml(t.loading)}</p>`;
+  else if (!state.entries.length) body = `<p class="hint">${escapeHtml(p.none)}</p>`;
+  else body = `<ul class="ports">${state.entries.map((e) => portLine(e, t)).join("")}</ul>`;
+  return `<section class="card sec"><span class="label">${escapeHtml(p.title)}</span>${body}
+    <p class="hint">${escapeHtml(p.hint)}</p></section>`;
+}
+
 /** The two actions that interrupt the network; without the right to change settings they say why they are off. */
 function actions(canWrite, t) {
   const a = t.inet.actions;
@@ -180,7 +207,7 @@ function actions(canWrite, t) {
 
 /** The whole page. Without data from the box it says so and offers the way back. */
 export function renderInternet(internet, ctx) {
-  const { t, language, now, canWrite } = ctx;
+  const { t, language, now, canWrite, ports: portState } = ctx;
   const i = t.inet;
   const back = `<div class="dhead"><button class="back" data-act="back" data-k="back">${ic("back")}${escapeHtml(t.tabs.net)}</button>
     <h1 id="dtitle" tabindex="-1">${escapeHtml(i.title)}</h1></div>`;
@@ -216,5 +243,6 @@ export function renderInternet(internet, ctx) {
       <p class="hint">${escapeHtml(i.measureNote)}</p></section>
     ${internet.dsl ? lineQuality(internet.dsl, language, t) : ""}
     ${events(internet, t, now)}
+    ${ports(portState, t)}
     ${actions(canWrite, t)}`;
 }

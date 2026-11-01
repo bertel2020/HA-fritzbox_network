@@ -657,3 +657,22 @@ test("a new firmware is a hint only when it differs from the installed one", () 
   assert.equal(hintsModule.renderHints(data("8.25", "8.25"), t), "");
   assert.equal(hintsModule.renderHints(data("8.25", null), t), "");
 });
+
+test("the internet page lists the port forwardings, and says when there are none or they cannot be read", () => {
+  const t = texts.panelTexts("en");
+  const page = (ports) => internetPage.renderInternet(internet, { t, language: "en", now: Date.now(), canWrite: true, ports });
+  const entries = [
+    { description: "Web", protocol: "TCP", external_port: 443, internal_port: 8443, client: "192.0.2.10", device_id: "000000000001", device_name: "NAS", enabled: true, lease: 0 },
+    { description: null, protocol: "UDP", external_port: 5000, internal_port: 5000, client: "192.0.2.250", device_id: null, device_name: null, enabled: false, lease: 3600 },
+  ];
+  const html = page({ entries });
+  assert.match(html, /TCP 443 → <button class="linklike" data-dev="000000000001">NAS<\/button>:8443/);
+  assert.match(html, /UDP 5000 → 192\.0\.2\.250:5000/);
+  assert.match(html, /Without a name/);
+  assert.match(html, /off · ends after 1 h 0 min/);
+  assert.match(page({ entries: [] }), /No ports are open to the internet/);
+  assert.match(page("failed"), /did not tell its port forwardings/);
+  assert.match(page(null), /Loading/);
+  // a hostile description is escaped
+  assert.doesNotMatch(page({ entries: [{ ...entries[0], description: "<b>x</b>" }] }), /<b>x<\/b>/);
+});

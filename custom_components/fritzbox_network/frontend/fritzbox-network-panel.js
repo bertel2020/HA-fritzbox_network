@@ -97,6 +97,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       cleanupDays: null,
       picked: new Set(),
       filterPage: null,
+      ports: null,
       data: null,
       filter: "all",
       query: "",
@@ -252,6 +253,7 @@ class FritzboxNetworkPanel extends HTMLElement {
   _enterTab() {
     if (this._state.tab === "cleanup") this._loadCleanup();
     else if (this._state.tab === "filter") this._loadFilter();
+    else if (this._state.tab === "internet") this._loadPorts();
   }
 
   _ws(type, extra = {}) {
@@ -270,6 +272,17 @@ class FritzboxNetworkPanel extends HTMLElement {
     } catch (err) {
       this._fail(err);
     }
+  }
+
+  /** The port forwardings are read when the internet page opens, not with every update. */
+  async _loadPorts() {
+    this._state.ports = null;
+    try {
+      this._state.ports = await this._ws("ports/list");
+    } catch {
+      this._state.ports = "failed";
+    }
+    this._update();
   }
 
   async _loadFilter() {
@@ -334,6 +347,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._state.cleanupDays = null;
     this._state.picked = new Set();
     this._state.filterPage = null;
+    this._state.ports = null;
     this._update();
     if (await this._subscribe()) this._enterTab();
   }
@@ -563,6 +577,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         language,
         now: Date.now(),
         canWrite: Boolean(this._state.data?.can_write),
+        ports: this._state.ports,
       })
     );
   }

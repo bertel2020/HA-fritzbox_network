@@ -46,6 +46,7 @@ HIDE_COMMAND = f"{DOMAIN}/devices/hide"
 UNHIDE_COMMAND = f"{DOMAIN}/devices/unhide"
 RECONNECT_COMMAND = f"{DOMAIN}/internet/reconnect"
 REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
+PORTS_COMMAND = f"{DOMAIN}/ports/list"
 FILTER_PREVIEW_COMMAND = f"{DOMAIN}/filter/preview"
 FILTER_APPLY_COMMAND = f"{DOMAIN}/filter/apply"
 ERR_CHANGED = "changed"
@@ -432,6 +433,35 @@ def ws_unhide_devices(
     connection.send_result(msg["id"], {"unhidden": sorted(back)})
 
 
+@websocket_api.websocket_command(
+    {vol.Required("type"): PORTS_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_ports(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The port forwardings and UPnP openings of the box, read when the page is opened.
+
+    Read only, and read on demand: they are a security matter that rarely changes, so they do not
+    cost a request at every poll.
+    """
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    _, coordinator = found
+    try:
+        entries = await hass.async_add_executor_job(coordinator.client.get_port_mappings)
+    except FritzConnectionException as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    hosts = {h.ip: h for h in coordinator.data.hosts.values() if h.ip}
+    for entry in entries:
+        host = hosts.get(entry["client"])
+        entry["device_id"] = mac_id(host.mac) if host else None
+        entry["device_name"] = host.name if host else None
+    connection.send_result(msg["id"], {"entries": entries})
+
+
 async def _box_action(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
@@ -571,6 +601,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_cleanup_list)
     websocket_api.async_register_command(hass, ws_hide_devices)
     websocket_api.async_register_command(hass, ws_unhide_devices)
+    websocket_api.async_register_command(hass, ws_ports)
     websocket_api.async_register_command(hass, ws_reconnect)
     websocket_api.async_register_command(hass, ws_reboot)
     websocket_api.async_register_command(hass, ws_filter_preview)

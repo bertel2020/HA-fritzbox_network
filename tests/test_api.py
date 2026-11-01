@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 
 from fritzconnection.core.exceptions import (
     FritzActionError,
+    FritzArrayIndexError,
     FritzLookUpError,
     FritzServiceError,
 )
@@ -327,3 +328,33 @@ def test_a_box_without_a_guest_network_says_none_and_refuses_to_set_it():
     assert client.get_guest_wifi() is None
     with pytest.raises(FritzServiceError):
         client.set_guest_wifi(True)
+
+
+def test_the_port_mappings_are_read_until_the_box_runs_out():
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    client._fc = MagicMock()
+    rows = [
+        {
+            "NewPortMappingDescription": "Web",
+            "NewProtocol": "TCP",
+            "NewExternalPort": 443,
+            "NewInternalPort": 8443,
+            "NewInternalClient": "192.0.2.10",
+            "NewEnabled": True,
+            "NewLeaseDuration": 0,
+        },
+        {"NewProtocol": "UDP", "NewExternalPort": 1, "NewInternalPort": 1, "NewEnabled": False},
+    ]
+
+    def call(service, action, **args):
+        index = args["NewPortMappingIndex"]
+        if index >= len(rows):
+            raise FritzArrayIndexError("713")
+        return rows[index]
+
+    client._fc.call_action.side_effect = call
+    entries = client.get_port_mappings()
+
+    assert [e["external_port"] for e in entries] == [443, 1]
+    assert entries[0]["description"] == "Web" and entries[0]["client"] == "192.0.2.10"
+    assert entries[1]["description"] is None and entries[1]["enabled"] is False
