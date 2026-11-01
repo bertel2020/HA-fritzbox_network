@@ -140,6 +140,8 @@ Listet die Box ein Gerät, das sie vorher nicht gelistet hat, löst Home Assista
 
 Wechselt ein Gerät zu einem anderen Access Point (der Box oder einem Repeater), löst Home Assistant `fritzbox_network_device_roamed` aus, mit `mac`, `name`, `old_ap`, `old_ap_mac`, `new_ap`, `new_ap_mac`, `link_type`, `band` und `signal_dbm`. Der neue Access Point muss in zwei Abfragen hintereinander erscheinen, damit ein Gerät, das zwischen zweien hin- und herspringt, nicht bei jeder Abfrage auslöst; bei der Standardabfrage geht ein sehr kurzer Besuch verloren. Das erste Sehen eines Geräts ist kein Wechsel. Nutze es für Anwesenheit nach Raum: Der Access Point eines Repeaters verrät, wo im Haus ein Handy ist.
 
+Die Internetverbindung löst `fritzbox_network_internet_disconnected` aus, wenn die Box sie verliert, `fritzbox_network_internet_reconnected`, wenn sie neu aufgebaut wird (auch wenn die Box zwischen zwei Abfragen neu verbunden hat, was die Online-Zeit verrät), und `fritzbox_network_internet_ip_changed` mit `old_ip` und `new_ip`, wenn sich die externe IPv4-Adresse ändert. Sie stehen auch im Logbuch, ohne die Adressen. Die erste Abfrage nach dem Start von Home Assistant löst nichts aus.
+
 Alle drei Ereignisse erscheinen auch im **Logbuch** (zum Beispiel „phone moved from FRITZ!Repeater to FRITZ!Box“) und im Verlauf des Trackers des Geräts. Die Rohdaten siehst du, wenn du unter **Werkzeuge → Ereignisse** den Ereignisnamen abhörst.
 
 ## Namen und Entity-IDs

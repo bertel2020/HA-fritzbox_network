@@ -39,6 +39,9 @@ from .const import (
     DOMAIN,
     EVENT_DEVICE_RENAMED,
     EVENT_DEVICE_ROAMED,
+    EVENT_INTERNET_DISCONNECTED,
+    EVENT_INTERNET_IP_CHANGED,
+    EVENT_INTERNET_RECONNECTED,
     EVENT_NEW_DEVICE,
     FILTER_PROFILE_REFRESH_POLLS,
     INTERNET_DETAIL_POLLS,
@@ -215,23 +218,36 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
     def _note_internet_changes(
         self, previous: InternetInfo | None, info: InternetInfo, reconnected: bool
     ) -> None:
+        """Keep what happened to the connection for the panel and announce it."""
         if previous is None:
             return
         if previous.connected and info.connected is False:
-            self._internet_event("disconnected")
+            self._internet_event("disconnected", EVENT_INTERNET_DISCONNECTED)
         elif reconnected or (previous.connected is False and info.connected):
-            self._internet_event("reconnected")
+            self._internet_event("reconnected", EVENT_INTERNET_RECONNECTED)
         if (
             previous.external_ipv4
             and info.external_ipv4
             and previous.external_ipv4 != info.external_ipv4
         ):
-            self._internet_event("ip_changed", info.external_ipv4)
+            self._internet_event(
+                "ip_changed",
+                EVENT_INTERNET_IP_CHANGED,
+                info.external_ipv4,
+                {"old_ip": previous.external_ipv4, "new_ip": info.external_ipv4},
+            )
 
-    def _internet_event(self, kind: str, detail: str | None = None) -> None:
+    def _internet_event(
+        self,
+        kind: str,
+        event_type: str,
+        detail: str | None = None,
+        data: dict[str, Any] | None = None,
+    ) -> None:
         self.internet_events.appendleft(
             {"time": dt_util.utcnow().isoformat(), "kind": kind, "detail": detail}
         )
+        self.hass.bus.async_fire(event_type, data or {})
 
     def _measure_throughput(self, info: InternetInfo, reconnected: bool) -> None:
         """The rate between this and the last poll, from the byte counters of the box."""

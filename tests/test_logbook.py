@@ -14,12 +14,30 @@ def _describers(hass):
     return found
 
 
-async def test_the_three_events_are_described(hass):
+async def test_the_events_are_described(hass):
     assert set(_describers(hass)) == {
         "fritzbox_network_new_device",
         "fritzbox_network_device_renamed",
         "fritzbox_network_device_roamed",
+        "fritzbox_network_internet_disconnected",
+        "fritzbox_network_internet_reconnected",
+        "fritzbox_network_internet_ip_changed",
     }
+
+
+async def test_the_internet_events_read_well_and_keep_the_address_out_of_the_text(hass):
+    describe = _describers(hass)
+    changed = describe["fritzbox_network_internet_ip_changed"](
+        Event("x", {"old_ip": "203.0.113.7", "new_ip": "203.0.113.9"})
+    )
+    assert changed["message"] == "external IPv4 address changed"
+    assert "203.0.113" not in str(changed)
+    assert describe["fritzbox_network_internet_disconnected"](Event("x", {}))["message"] == (
+        "internet connection lost"
+    )
+    assert describe["fritzbox_network_internet_reconnected"](Event("x", {}))["message"] == (
+        "internet connection set up again"
+    )
 
 
 async def test_entries_read_well_and_point_at_the_tracker(hass, fake_client, entry):

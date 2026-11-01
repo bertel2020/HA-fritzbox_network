@@ -13,7 +13,15 @@ from homeassistant.components.logbook import (
 from homeassistant.core import Event, HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 
-from .const import DOMAIN, EVENT_DEVICE_RENAMED, EVENT_DEVICE_ROAMED, EVENT_NEW_DEVICE
+from .const import (
+    DOMAIN,
+    EVENT_DEVICE_RENAMED,
+    EVENT_DEVICE_ROAMED,
+    EVENT_INTERNET_DISCONNECTED,
+    EVENT_INTERNET_IP_CHANGED,
+    EVENT_INTERNET_RECONNECTED,
+    EVENT_NEW_DEVICE,
+)
 
 NAME = "FRITZ!Box Network"
 
@@ -52,6 +60,18 @@ def async_describe_events(
         data = event.data
         return entry(event, f"{data['name']} moved from {data['old_ap']} to {data['new_ap']}")
 
+    def internet(message: str) -> Callable[[Event], dict[str, Any]]:
+        # not about a device: the entry has no entity of its own
+        return lambda event: {LOGBOOK_ENTRY_NAME: NAME, LOGBOOK_ENTRY_MESSAGE: message}
+
+    async_describe_event(DOMAIN, EVENT_INTERNET_DISCONNECTED, internet("internet connection lost"))
+    async_describe_event(
+        DOMAIN, EVENT_INTERNET_RECONNECTED, internet("internet connection set up again")
+    )
+    # the addresses are in the event data, not in the logbook text
+    async_describe_event(
+        DOMAIN, EVENT_INTERNET_IP_CHANGED, internet("external IPv4 address changed")
+    )
     async_describe_event(DOMAIN, EVENT_NEW_DEVICE, new_device)
     async_describe_event(DOMAIN, EVENT_DEVICE_RENAMED, renamed)
     async_describe_event(DOMAIN, EVENT_DEVICE_ROAMED, roamed)

@@ -140,6 +140,8 @@ When the box lists a device it did not list before, Home Assistant fires the eve
 
 When a device moves to another access point (the box or a repeater), Home Assistant fires `fritzbox_network_device_roamed` with `mac`, `name`, `old_ap`, `old_ap_mac`, `new_ap`, `new_ap_mac`, `link_type`, `band` and `signal_dbm`. The new access point has to show in two polls in a row, so a device that flaps between two does not fire on every poll; with the default interval a very short visit is missed. Seeing a device for the first time is not roaming. Use it for presence by room: the access point of a repeater tells where in the house a phone is.
 
+The internet connection fires `fritzbox_network_internet_disconnected` when the box loses it, `fritzbox_network_internet_reconnected` when it is set up again (also when the box reconnected between two polls, which the online time shows) and `fritzbox_network_internet_ip_changed` with `old_ip` and `new_ip` when the external IPv4 address changes. They also show in the logbook, without the addresses. The first reading after Home Assistant starts fires nothing.
+
 All three events also show in the **Logbook** (for example "phone moved from FRITZ!Repeater to FRITZ!Box") and in the history of the device's tracker. To see the raw data, listen to the event name under **Tools → Events**.
 
 ## Names and entity ids

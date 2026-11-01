@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 from homeassistant.helpers import entity_registry as er
 import pytest
+from pytest_homeassistant_custom_component.common import async_capture_events
 
 from custom_components.fritzbox_network import coordinator as coordinator_module
 from custom_components.fritzbox_network.models import parse_internet
@@ -95,12 +96,16 @@ async def test_a_counter_that_wrapped_around_still_gives_a_rate(hass, fake_clien
 async def test_a_new_connection_is_noted_with_its_new_address(hass, fake_client, entry):
     coordinator = await _setup(hass, entry)
     assert not coordinator.internet_events
+    reconnected = async_capture_events(hass, "fritzbox_network_internet_reconnected")
+    changed = async_capture_events(hass, "fritzbox_network_internet_ip_changed")
 
     fake_client.internet_fast["GetStatusInfo"]["NewUptime"] = 20
     fake_client.internet_slow["GetExternalIPAddress"]["NewExternalIPAddress"] = "203.0.113.99"
     await _poll(hass, coordinator)
 
     kinds = [e["kind"] for e in coordinator.internet_events]
+    assert len(reconnected) == 1
+    assert [e.data for e in changed] == [{"old_ip": "203.0.113.7", "new_ip": "203.0.113.99"}]
     assert sorted(kinds) == ["ip_changed", "reconnected"]
     assert coordinator.data.internet.external_ipv4 == "203.0.113.99"
     # no rate across a reconnect: the counters may have started again
@@ -203,3 +208,25 @@ async def test_the_sensors_come_when_the_box_starts_telling(hass, fake_client, e
 
     assert registry.async_get("sensor.fritz_network_internet_download") is not None
     assert registry.async_get("sensor.fritz_network_dsl_noise_margin_down") is not None
+
+
+async def test_a_lost_connection_is_announced_once(hass, fake_client, entry):
+    coordinator = await _setup(hass, entry)
+    lost = async_capture_events(hass, "fritzbox_network_internet_disconnected")
+    back = async_capture_events(hass, "fritzbox_network_internet_reconnected")
+
+    fake_client.internet_fast["GetStatusInfo"]["NewConnectionStatus"] = "Disconnected"
+    await _poll(hass, coordinator)
+    await _poll(hass, coordinator)
+    assert len(lost) == 1 and not back
+
+    fake_client.internet_fast["GetStatusInfo"]["NewConnectionStatus"] = "Connected"
+    await _poll(hass, coordinator)
+    assert len(back) == 1
+    assert [e["kind"] for e in coordinator.internet_events] == ["reconnected", "disconnected"]
+
+
+async def test_the_first_reading_announces_nothing(hass, fake_client, entry):
+    events = async_capture_events(hass, "fritzbox_network_internet_ip_changed")
+    await _setup(hass, entry)
+    assert not events

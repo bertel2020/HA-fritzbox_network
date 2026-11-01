@@ -51,6 +51,9 @@ INTERNET_EVENTS = 20
 EVENT_DEVICE_RENAMED = f"{DOMAIN}_device_renamed"
 EVENT_NEW_DEVICE = f"{DOMAIN}_new_device"
 EVENT_DEVICE_ROAMED = f"{DOMAIN}_device_roamed"
+EVENT_INTERNET_DISCONNECTED = f"{DOMAIN}_internet_disconnected"
+EVENT_INTERNET_RECONNECTED = f"{DOMAIN}_internet_reconnected"
+EVENT_INTERNET_IP_CHANGED = f"{DOMAIN}_internet_ip_changed"
 # A new access point must show in this many polls in a row before it counts as roaming.
 ROAM_CONFIRM_POLLS = 2
 
