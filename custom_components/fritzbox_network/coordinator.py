@@ -287,8 +287,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         # The box blocks by IPv4 address: if DHCP gave the address to another device
         # since the last poll, blocking it would hit the wrong one. A small window
         # between this check and the action remains.
-        current = {h.mac: h for h in await self.hass.async_add_executor_job(self.client.get_hosts)}
-        if (fresh := current.get(host.mac)) is None or fresh.ip != host.ip:
+        if await self.hass.async_add_executor_job(self.client.get_host_ip, host.mac) != host.ip:
             raise HomeAssistantError(translation_domain=DOMAIN, translation_key="ip_changed")
         await self.hass.async_add_executor_job(self.client.set_internet_access, host.ip, allowed)
         self._wan_override[host.mac] = (allowed, time.monotonic() + WAN_OVERRIDE_SECONDS)

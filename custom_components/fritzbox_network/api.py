@@ -109,6 +109,20 @@ class FritzNetworkClient:
             result = self._connection.call_action(HOSTS_SERVICE, "X_AVM-DE_GetHostListPath")
             return parse_hosts(self._download(result["NewX_AVM-DE_HostListPath"]))
 
+    def get_host_ip(self, mac: str) -> str | None:
+        """The IPv4 address the box has for this MAC now; None if it has none or no entry.
+
+        One small request instead of the whole host list.
+        """
+        with self._lock:
+            try:
+                result = self._connection.call_action(
+                    HOSTS_SERVICE, "GetSpecificHostEntry", NewMACAddress=mac.upper()
+                )
+            except FritzLookUpError:
+                return None
+        return result.get("NewIPAddress") or None
+
     def get_mesh(self) -> MeshTopology | None:
         """Read the mesh topology; None if this box does not provide one."""
         with self._lock:

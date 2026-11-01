@@ -65,3 +65,24 @@ def test_polling_and_switching_never_talk_to_the_box_at_the_same_time():
         worker.join()
 
     assert overlaps == 0
+
+
+def test_host_ip_asks_for_the_one_host():
+    client = _client()
+    client._fc.call_action.side_effect = None
+    client._fc.call_action.return_value = {"NewIPAddress": "192.0.2.7"}
+
+    assert client.get_host_ip("02:00:00:00:00:03") == "192.0.2.7"
+    client._fc.call_action.assert_called_once_with(
+        "Hosts1", "GetSpecificHostEntry", NewMACAddress="02:00:00:00:00:03".upper()
+    )
+
+
+def test_host_ip_is_none_without_an_address_or_an_entry():
+    client = _client()
+    client._fc.call_action.side_effect = None
+    client._fc.call_action.return_value = {"NewIPAddress": ""}
+    assert client.get_host_ip("02:00:00:00:00:03") is None
+
+    client._fc.call_action.side_effect = FritzLookUpError("714")
+    assert client.get_host_ip("02:00:00:00:00:03") is None

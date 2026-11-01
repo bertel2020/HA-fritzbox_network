@@ -46,6 +46,9 @@ class FakeClient:
     def get_hosts(self):
         return list(self.hosts)
 
+    def get_host_ip(self, mac: str) -> str | None:
+        return next((h.ip for h in self.hosts if h.mac == mac), None)
+
     def get_mesh(self):
         return self.mesh
 
