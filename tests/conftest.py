@@ -32,6 +32,7 @@ class FakeClient:
         self.mesh = parse_mesh((FIXTURES / "mesh.json").read_text())
         self.writable = True
         self.repeater = False
+        self.auto_wol: dict[str, bool] = {}
         self.profiles = {"filtprof1": "Standard", "filtprof2": "Kids"}
         self.calls: list[tuple] = []
 
@@ -58,6 +59,13 @@ class FakeClient:
 
     def wake_on_lan(self, mac: str) -> None:
         self.calls.append(("wol", mac))
+
+    def get_auto_wol(self, mac: str) -> bool:
+        return self.auto_wol.get(mac, False)
+
+    def set_auto_wol(self, mac: str, enabled: bool) -> None:
+        self.auto_wol[mac] = enabled
+        self.calls.append(("auto_wol", mac, enabled))
 
     def set_priority(self, ip: str, enabled: bool) -> None:
         self.calls.append(("priority", ip, enabled))

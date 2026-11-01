@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
+import logging
 from typing import Any
 
 from fritzconnection.core.exceptions import FritzConnectionException
@@ -10,10 +12,17 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import DOMAIN, KEY_INTERNET_ACCESS, KEY_PRIORITY
+from .const import DOMAIN, KEY_AUTO_WOL, KEY_INTERNET_ACCESS, KEY_PRIORITY
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import FritzNetworkClientEntity, async_setup_client_entities
 from .models import Host
+
+_LOGGER = logging.getLogger(__name__)
+
+# The box keeps the automatic Wake on LAN per device, not in the host list: every
+# device that has the switch enabled is asked now and then, one after the other.
+PARALLEL_UPDATES = 1
+SCAN_INTERVAL = timedelta(minutes=10)
 
 
 async def async_setup_entry(
@@ -29,6 +38,12 @@ async def async_setup_entry(
         lambda coordinator, host: [
             FritzNetworkInternetAccess(coordinator, host),
             FritzNetworkPriority(coordinator, host),
+            # like the Wake on LAN button: not for devices known to sit on Wi-Fi
+            *(
+                []
+                if host.interface_type == "802.11"
+                else [FritzNetworkAutoWakeOnLan(coordinator, host)]
+            ),
         ],
     )
 
@@ -97,3 +112,59 @@ class FritzNetworkPriority(_HostSwitch):
 
     async def _call(self, host: Host, value: bool) -> None:
         await self.coordinator.async_set_priority(host, value)
+
+
+class FritzNetworkAutoWakeOnLan(FritzNetworkClientEntity, SwitchEntity):
+    """On = the box wakes the device itself when something wants to reach it."""
+
+    _attr_translation_key = KEY_AUTO_WOL
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, host: Host) -> None:
+        super().__init__(coordinator, host, "switch", KEY_AUTO_WOL)
+        self._enabled: bool | None = None
+
+    @property
+    def should_poll(self) -> bool:
+        return True
+
+    @property
+    def available(self) -> bool:
+        return super().available and self._enabled is not None
+
+    @property
+    def is_on(self) -> bool | None:
+        return self._enabled
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_schedule_update_ha_state(True)
+
+    async def async_update(self) -> None:
+        try:
+            self._enabled = await self.hass.async_add_executor_job(
+                self.coordinator.client.get_auto_wol, self._mac
+            )
+        except (FritzConnectionException, OSError, KeyError) as err:
+            _LOGGER.debug("Automatic Wake on LAN of %s unavailable: %s", self._mac, err)
+            self._enabled = None
+
+    async def _set(self, value: bool) -> None:
+        try:
+            await self.hass.async_add_executor_job(
+                self.coordinator.client.set_auto_wol, self._mac, value
+            )
+        except FritzConnectionException as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+        self._enabled = value
+        self.async_write_ha_state()
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self._set(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._set(False)

@@ -447,3 +447,41 @@ async def test_priority_switch_sets_the_priority(hass, fake_client, entry):
     assert fake_client.calls[-1] == ("priority", "192.0.2.3", False)
     await hass.async_block_till_done()
     assert hass.states.get(entity_id).state == "off"
+
+
+async def test_auto_wake_on_lan_switch_reads_and_sets_the_box(hass, fake_client, entry):
+    fake_client.auto_wol[LAN] = True
+    await _setup(hass, entry)
+    entity_id = "switch.fritz_020000000004_auto_wake_on_lan"
+    _enable(hass, entity_id)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    assert hass.states.get(entity_id).state == "on"
+
+    await hass.services.async_call("switch", "turn_off", {"entity_id": entity_id}, blocking=True)
+
+    assert fake_client.calls[-1] == ("auto_wol", LAN, False)
+    assert hass.states.get(entity_id).state == "off"
+    # a device known to sit on Wi-Fi has no such switch
+    assert (
+        er.async_get(hass).async_get_entity_id(
+            "switch", "fritzbox_network", f"{WLAN}_auto_wake_on_lan"
+        )
+        is None
+    )
+
+
+async def test_auto_wake_on_lan_is_unavailable_when_the_box_does_not_answer(
+    hass, fake_client, entry
+):
+    def failing(mac):
+        raise ConnectionError("no answer")
+
+    fake_client.get_auto_wol = failing
+    await _setup(hass, entry)
+    entity_id = "switch.fritz_020000000004_auto_wake_on_lan"
+    _enable(hass, entity_id)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert hass.states.get(entity_id).state == "unavailable"

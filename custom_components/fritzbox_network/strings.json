@@ -154,6 +154,9 @@
       },
       "priority": {
         "name": "Priority"
+      },
+      "auto_wake_on_lan": {
+        "name": "Automatic Wake on LAN"
       }
     },
     "button": {

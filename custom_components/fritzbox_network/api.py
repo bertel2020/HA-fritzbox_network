@@ -224,6 +224,23 @@ class FritzNetworkClient:
             flag_name = next(n for n in names if n != ip_names[0])
             fc.call_action(HOSTS_SERVICE, action_name, **{ip_names[0]: ip, flag_name: enabled})
 
+    def get_auto_wol(self, mac: str) -> bool:
+        """Whether the box wakes the device itself when something wants to reach it."""
+        with self._lock:
+            result = self._connection.call_action(
+                HOSTS_SERVICE, "X_AVM-DE_GetAutoWakeOnLANByMACAddress", NewMACAddress=mac.upper()
+            )
+        return bool(result["NewAutoWOLEnabled"])
+
+    def set_auto_wol(self, mac: str, enabled: bool) -> None:
+        with self._lock:
+            self._connection.call_action(
+                HOSTS_SERVICE,
+                "X_AVM-DE_SetAutoWakeOnLANByMACAddress",
+                NewMACAddress=mac.upper(),
+                NewAutoWOLEnabled=enabled,
+            )
+
     def wake_on_lan(self, mac: str) -> None:
         with self._lock:
             self._connection.call_action(

@@ -140,3 +140,19 @@ def test_priority_finds_the_argument_names_in_the_box_description():
 def test_priority_refuses_arguments_it_does_not_understand():
     with pytest.raises(FritzServiceError):
         _priority_client(["NewA", "NewB"]).set_priority("192.0.2.1", True)
+
+
+def test_auto_wake_on_lan_reads_and_writes_by_mac():
+    client = _client()
+    client._fc.call_action.side_effect = None
+    client._fc.call_action.return_value = {"NewAutoWOLEnabled": True}
+
+    assert client.get_auto_wol("02:00:00:00:00:03") is True
+    client.set_auto_wol("02:00:00:00:00:03", False)
+
+    client._fc.call_action.assert_called_with(
+        "Hosts1",
+        "X_AVM-DE_SetAutoWakeOnLANByMACAddress",
+        NewMACAddress="02:00:00:00:00:03".upper(),
+        NewAutoWOLEnabled=False,
+    )

@@ -67,6 +67,9 @@
       },
       "priority": {
         "default": "mdi:rocket-launch-outline"
+      },
+      "auto_wake_on_lan": {
+        "default": "mdi:power-sleep"
       }
     },
     "button": {
