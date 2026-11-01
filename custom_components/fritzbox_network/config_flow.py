@@ -44,6 +44,8 @@ from .coordinator import FritzNetworkConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
+_PORT = vol.All(int, vol.Range(min=1, max=65535))
+
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_HOST, default="192.168.178.1"): str,
@@ -52,7 +54,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
             selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
         ),
         vol.Optional(CONF_USE_TLS, default=False): bool,
-        vol.Optional(CONF_PORT): int,
+        vol.Optional(CONF_PORT): _PORT,
     }
 )
 
@@ -178,7 +180,7 @@ class FritzNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_HOST): str,
                 vol.Optional(CONF_USE_TLS): bool,
-                vol.Optional(CONF_PORT): int,
+                vol.Optional(CONF_PORT): _PORT,
             }
         )
         return self.async_show_form(

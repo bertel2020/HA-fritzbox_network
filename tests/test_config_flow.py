@@ -1,7 +1,8 @@
 """Config flow."""
 
 from fritzconnection.core.exceptions import FritzAuthorizationError
-from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.data_entry_flow import FlowResultType, InvalidData
+import pytest
 
 from custom_components.fritzbox_network.const import DOMAIN
 
@@ -83,3 +84,13 @@ async def test_reauth_refuses_another_box(hass, fake_client, entry):
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "wrong_device"
     assert entry.data["password"] == "secret"
+
+
+@pytest.mark.parametrize("port", [0, 65536])
+async def test_user_flow_rejects_a_port_out_of_range(hass, fake_client, port):
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": "user"})
+
+    with pytest.raises(InvalidData):
+        await hass.config_entries.flow.async_configure(
+            result["flow_id"], {**USER_INPUT, "port": port}
+        )
