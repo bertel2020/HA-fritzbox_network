@@ -276,3 +276,16 @@ async def test_internet_switch_refuses_an_address_that_changed(hass, fake_client
             blocking=True,
         )
     assert not [c for c in fake_client.calls if c[0] == "internet"]
+
+
+async def test_hosts_stay_when_the_mesh_download_fails(hass, fake_client, entry):
+    def failing_mesh():
+        raise ConnectionError("mesh download failed")
+
+    fake_client.get_mesh = failing_mesh
+
+    coordinator = await _setup(hass, entry)
+
+    assert coordinator.last_update_success
+    assert coordinator.data.mesh is None
+    assert hass.states.get("device_tracker.fritz_020000000003").state == "home"

@@ -1,5 +1,7 @@
 """The client against a mocked fritzconnection."""
 
+import threading
+import time
 from unittest.mock import MagicMock
 
 from fritzconnection.core.exceptions import FritzLookUpError
@@ -32,3 +34,34 @@ def test_downloads_carry_a_timeout():
 
     assert client._download("/hosts.xml") == "<x/>"
     assert client._fc.session.get.call_args.kwargs["timeout"] == REQUEST_TIMEOUT
+
+
+def test_polling_and_switching_never_talk_to_the_box_at_the_same_time():
+    client = _client()
+    inside = 0
+    overlaps = 0
+    guard = threading.Lock()
+
+    def call_action(*args, **kwargs):
+        nonlocal inside, overlaps
+        with guard:
+            inside += 1
+            overlaps += inside > 1
+        time.sleep(0.01)
+        with guard:
+            inside -= 1
+        return {"NewX_AVM-DE_HostListPath": "/hosts.xml"}
+
+    client._fc.call_action.side_effect = call_action
+    client._fc.session.get.return_value.__enter__.return_value.text = "<List/>"
+
+    workers = [threading.Thread(target=client.get_hosts) for _ in range(4)] + [
+        threading.Thread(target=client.set_internet_access, args=("192.0.2.1", False))
+        for _ in range(4)
+    ]
+    for worker in workers:
+        worker.start()
+    for worker in workers:
+        worker.join()
+
+    assert overlaps == 0
