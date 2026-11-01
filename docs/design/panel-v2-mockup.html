@@ -1,0 +1,1029 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel v2 Mockup</title>
+<meta name="description" content="Seitenpanel FRITZ!Box Netzwerk v2: Liste und Netzkarte (zwei Varianten), Filter mit Mehr-Menü, Gerät als Vollseite.">
+<style>
+  /* Dieselben Tokens wie PANEL_CSS (panel-styles.js), hier auf :root statt :host. */
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#f4f6f9, #0f1216);
+    --surface: light-dark(#fff, #1b1f24);
+    --soft: light-dark(#f5f7f9, #22272e);
+    --line: light-dark(#e1e5ea, #2d333b);
+    --line-2: light-dark(#eef0f3, #262c33);
+    --input-line: light-dark(#c3cbd5, #3a424c);
+    --text: light-dark(#1b1f24, #e6e9ed);
+    --muted: light-dark(#5b6270, #9aa4b1);
+    --accent: light-dark(#0a6aa8, #5bb2ea);
+    --accent-hover: light-dark(#07507f, #8ccaf2);
+    --accent-soft: light-dark(#eaf3fa, #16324a);
+    --on-accent: light-dark(#fff, #0b1a26);
+    --focus: #7db8e0;
+    --ok: light-dark(#1e6b34, #7fd49a);
+    --ok-soft: light-dark(#e6f4ea, #173a24);
+    --warn: light-dark(#8a4b00, #f2c27a);
+    --warn-soft: light-dark(#fff1de, #3a2a12);
+    --bad: light-dark(#a1261b, #f2a29a);
+    --bad-soft: light-dark(#fdecea, #3d1c19);
+    --neutral-soft: light-dark(#eef1f4, #2a3038);
+    --radius: 18px;
+    --shadow-c: light-dark(rgb(16 24 40 / 14%), rgb(0 0 0 / 40%));
+    --shadow: 0 1px 2px var(--shadow-c), 0 6px 18px -10px var(--shadow-c);
+    /* neu für die Netzkarte */
+    --link: light-dark(#8e98a6, #6b7684);
+    --page: light-dark(#dfe4ea, #07090b);
+  }
+  :root[data-theme="light"] { color-scheme: light; }
+  :root[data-theme="dark"] { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--page); color: var(--text); font: 14px/1.45 Roboto, "Noto Sans", system-ui, sans-serif; display: flex; flex-direction: column; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; background: none; border: 0; padding: 0; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  [hidden] { display: none !important; }
+
+  /* ---------- Mockup-Steuerung (gehört nicht zum Panel) ---------- */
+  .mk { flex: none; background: var(--surface); border-bottom: 1px solid var(--line); padding: 8px 16px; display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+  .mk h1 { font-size: 14px; font-weight: 600; margin: 0 8px 0 0; }
+  .mk .grp { display: flex; align-items: center; gap: 6px; min-width: 0; flex-wrap: wrap; }
+  .mk .grp > span { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .mk .seg button { min-height: 32px; padding: 0 10px; font-size: 13px; }
+  .mk-desc { flex: none; padding: 6px 16px 8px; font-size: 12.5px; color: var(--muted); background: var(--surface); border-bottom: 1px solid var(--line); }
+  .mk-desc b { color: var(--text); font-weight: 500; }
+  .stage { flex: 1; min-height: 420px; display: flex; justify-content: center; align-items: stretch; overflow: hidden; }
+  .stage.phone { padding: 12px; align-items: center; }
+  /* Der Rahmen ist der "Bildschirm": eigener Scroll, fixed-Elemente beziehen sich auf ihn. */
+  .frame { container: app / inline-size; position: relative; transform: translateZ(0); overflow: hidden; background: var(--bg); width: 100%; height: 100%; }
+  .stage.phone .frame { width: min(406px, 100%); height: min(860px, 100%); border-radius: 28px; border: 8px solid light-dark(#1b1f24, #3a424c); box-shadow: 0 10px 40px rgb(0 0 0 / 25%); }
+  .viewport { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; }
+
+  /* ---------- Kopf (wie heute) ---------- */
+  .app { min-height: 100%; }
+  .header { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+    gap: 0 24px; padding: 0 max(16px, calc((100% - 1200px) / 2 + 24px)); }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 10px 0; min-height: 60px; min-width: 0; }
+  .menu { display: none; width: 40px; height: 40px; margin-left: -10px; place-items: center; border-radius: 50%; }
+  .logo { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); border: 1px solid var(--line); flex: none; }
+  .brand b { display: block; font-size: 18px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+  .brand small { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  nav { display: flex; gap: 4px; padding: 8px 0; }
+  nav button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border-radius: 20px; font-weight: 500; color: var(--muted); white-space: nowrap; }
+  nav button:hover { color: var(--text); background: var(--neutral-soft); }
+  nav button[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
+  nav em { font-style: normal; font-size: 11px; font-weight: 600; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--warn-soft); color: var(--warn); }
+  @container app (max-width: 900px) { .header { gap: 0; } nav { order: 3; width: 100%; padding-top: 0; } nav button { flex: 1; justify-content: center; padding: 0 8px; } }
+  @container app (max-width: 760px) { .menu { display: grid; } }
+  main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; }
+  @container app (max-width: 600px) { main { padding: 16px 16px 56px; } }
+
+  /* ---------- gemeinsame Teile (wie PANEL_CSS) ---------- */
+  .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 11px; border-radius: 13px; background: var(--neutral-soft); color: var(--muted); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .chip.ok { background: var(--ok-soft); color: var(--ok); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); }
+  .chip.info { background: var(--accent-soft); color: var(--accent-hover); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--input-line); flex: none; }
+  .dot.on { background: var(--ok); }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+  h2 { font-size: 16px; font-weight: 500; margin: 0; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .muted { color: var(--muted); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 18px; border-radius: 20px; font-weight: 500; white-space: nowrap; border: 1px solid var(--input-line); background: var(--surface); }
+  .btn:hover { background: var(--soft); }
+  .btn.sm { min-height: 34px; padding: 0 14px; font-size: 13px; }
+  .btn.p { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn.d { color: var(--bad); border-color: transparent; background: none; }
+  .btn.d:hover { background: var(--bad-soft); }
+  .btn[disabled] { opacity: .55; cursor: default; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 50%; display: inline-grid; place-items: center; color: var(--muted); flex: none; }
+  .icon-btn:hover { background: var(--neutral-soft); color: var(--text); }
+  .icon-btn[disabled] { opacity: .4; cursor: default; }
+  .bars { display: inline-flex; gap: 2px; align-items: flex-end; height: 14px; width: 20px; flex: none; }
+  .bars i { width: 3px; background: var(--line); border-radius: 1px; }
+  .bars i.on { background: var(--ok); }
+  .bars.mid i.on { background: var(--warn); }
+  .bars.low i.on { background: var(--bad); }
+  .seg { display: inline-flex; border: 1px solid var(--input-line); border-radius: 10px; overflow: hidden; max-width: 100%; flex: none; }
+  .seg button { padding: 0 12px; min-height: 40px; font-weight: 500; color: var(--muted); border-left: 1px solid var(--input-line); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
+  .seg button:first-child { border-left: 0; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+  input[type="search"], select { width: 100%; height: 42px; border-radius: 10px; border: 1px solid var(--input-line); background: var(--surface); padding: 0 12px; min-width: 0; }
+  input[type="search"] { padding-left: 38px; }
+
+  /* ---------- Werkzeugleiste ---------- */
+  .toolbar { padding: 16px; display: grid; gap: 12px; position: relative; }
+  .tools { display: grid; grid-template-columns: minmax(0, 1fr) 160px 170px auto; gap: 8px; align-items: center; }
+  .tools.map { grid-template-columns: minmax(0, 1fr) auto; }
+  @container app (max-width: 700px) {
+    .tools { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+    .tools .search, .tools .viewsw { grid-column: 1 / -1; }
+    .tools.map { grid-template-columns: minmax(0, 1fr); }
+  }
+  .search { position: relative; display: block; }
+  .search svg { position: absolute; left: 12px; top: 12px; color: var(--muted); }
+  .search kbd { position: absolute; right: 10px; top: 10px; font: 12px monospace; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+  @container app (max-width: 700px) { .search kbd { display: none; } }
+  .sel { position: relative; display: block; min-width: 0; }
+  .sel > span { position: absolute; left: 12px; top: 4px; font-size: 10px; line-height: 1.2; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); pointer-events: none; }
+  .sel select { padding-top: 13px; font-size: 13px; }
+  .viewsw { display: flex; }
+  .viewsw button { flex: 1; justify-content: center; }
+  .meta { color: var(--muted); font-size: 12px; padding: 0 4px; }
+
+  /* Filter: drei feste Chips + aktiver Zusatzfilter + "Mehr"-Menü. Bricht um, scrollt nie waagerecht. */
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .fchip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 20px; border: 1px solid var(--line); color: var(--muted); font-weight: 500; white-space: nowrap; background: var(--surface); }
+  .fchip b { font-weight: 600; font-size: 12px; }
+  .fchip svg.i { width: 14px; height: 14px; }
+  .fchip:hover { color: var(--text); background: var(--soft); }
+  .fchip[aria-pressed="true"] { color: var(--accent-hover); border-color: var(--accent); background: var(--accent-soft); }
+  .fchip.more[aria-expanded="true"] { border-color: var(--accent); }
+  .fchip .x { margin-right: -4px; display: inline-grid; }
+  @container app (max-width: 600px) { .chips { gap: 6px; } .fchip { padding: 0 9px; } .fchip.more > svg.i:first-child, .fchip.more b { display: none; } .maphead .aslist { display: none; } }
+  .fmenu { position: absolute; z-index: 12; top: 100%; left: 16px; margin-top: -8px; width: 300px; max-height: 420px; overflow: auto; padding: 8px;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 30px var(--shadow-c); }
+  .fmenu .label { display: block; padding: 8px 10px 4px; }
+  .fmenu [role="menuitemradio"] { display: flex; width: 100%; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border-radius: 8px; text-align: left; }
+  .fmenu [role="menuitemradio"]:hover, .fmenu [role="menuitemradio"]:focus-visible { background: var(--soft); }
+  .fmenu [role="menuitemradio"] .t { flex: 1; }
+  .fmenu [role="menuitemradio"] b { font-size: 12px; color: var(--muted); font-weight: 600; }
+  .fmenu [aria-checked="true"] { color: var(--accent-hover); background: var(--accent-soft); }
+  .fmenu .ck { width: 18px; display: inline-grid; }
+  .sheet-scrim { position: fixed; inset: 0; z-index: 11; background: rgb(0 0 0 / 35%); }
+  @container app (min-width: 601px) { .sheet-scrim { background: transparent; } }
+  @container app (max-width: 600px) {
+    .fmenu { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; margin: 0; max-height: 75%; border-radius: 20px 20px 0 0; padding: 8px 12px 20px; }
+    .fmenu::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--input-line); margin: 4px auto 8px; }
+    .fmenu [role="menuitemradio"] { min-height: 48px; }
+  }
+
+  /* ---------- Liste (wie heute, Funkbänder brechen um statt zu scrollen) ---------- */
+  .ap { margin-top: 16px; overflow: hidden; }
+  .ap-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; text-align: left; min-width: 0; }
+  .ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); flex: none; }
+  .who { flex: 1; min-width: 0; }
+  .who b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .who small { display: block; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ap-head .count { color: var(--muted); font-size: 12px; white-space: nowrap; }
+  .ap-head .chev { color: var(--muted); transition: transform .15s; display: inline-grid; }
+  .ap.closed .chev { transform: rotate(-90deg); }
+  .ap.closed .ap-body { display: none; }
+  .radios { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 12px; }
+  .radio { flex: 1 1 150px; max-width: 260px; background: var(--soft); border-radius: 12px; padding: 8px 12px; }
+  .radio .top { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; }
+  .radio .top b { font-weight: 500; }
+  .meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 6px; }
+  .meter i { display: block; height: 100%; background: var(--ok); }
+  .meter i.busy { background: var(--warn); }
+  .busyText { color: var(--warn); }
+  .groupbar { margin-top: 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; padding: 12px 16px; }
+  .dev { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 16px; border-top: 1px solid var(--line); text-align: left; min-width: 0; min-height: 56px; }
+  .dev:hover { background: color-mix(in srgb, var(--soft) 60%, transparent); }
+  .dev .end { display: flex; align-items: center; gap: 10px; flex: none; color: var(--muted); font-size: 12px; }
+  .dev .link { color: var(--muted); display: inline-grid; }
+  .dev.off .who b { color: var(--muted); }
+  .warnIcon { color: var(--warn); display: inline-flex; }
+  @container app (max-width: 480px) { .dev .rate, .dev .link { display: none; } }
+  .empty { display: grid; justify-items: center; gap: 6px; padding: 48px 16px; text-align: center; color: var(--muted); }
+  .empty b { color: var(--text); font-weight: 500; }
+
+  /* ---------- Netzkarte, gemeinsam ---------- */
+  .mapcard { margin-top: 16px; padding: 16px; position: relative; }
+  .maphead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 12px; }
+  .maphead h2 { flex: 1 1 auto; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-2); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .lg-line { width: 26px; height: 0; border-top: 2px solid var(--link); display: inline-block; }
+  .lg-line.wlan { border-top-style: dashed; }
+  .lg-dot { width: 14px; height: 14px; border-radius: 50%; display: inline-block; border: 2px solid var(--ok); background: var(--ok-soft); }
+  .lg-dot.off { border: 2px dashed var(--input-line); background: var(--surface); }
+  .lg-dot.blk { border-color: var(--bad); background: var(--bad-soft); }
+  .lg-dot.weak { border-color: var(--warn); background: var(--warn-soft); }
+  .lg-dot.sq { border-radius: 4px; }
+
+  /* Variante 1: Inseln. Pro Access Point eine Fläche, Geräte als Knöpfe an "Leitungen". Ohne Pinch lesbar. */
+  .isl { position: relative; }
+  .isl svg.links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+  .isl svg.links path { fill: none; stroke: var(--link); stroke-width: 2; }
+  .isl svg.links path.wlan { stroke-dasharray: 6 5; }
+  .inet { display: flex; justify-content: center; margin-bottom: 22px; }
+  .inet span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 14px; background: var(--ok-soft); color: var(--ok); font-size: 12px; font-weight: 500; }
+  .isles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px 16px; position: relative; }
+  .isle { position: relative; border: 1px solid var(--line); border-radius: 16px; background: var(--soft); padding: 12px; min-width: 0; }
+  .isle.root { grid-column: 1 / -1; background: color-mix(in srgb, var(--accent-soft) 45%, var(--soft)); }
+  .isle.root .buses { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px 16px; }
+  .isle.lost { border-style: dashed; }
+  .isle-h { display: flex; align-items: center; gap: 10px; min-width: 0; margin-bottom: 10px; }
+  .isle-h .ico { width: 34px; height: 34px; }
+  .isle-up { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); margin: -4px 0 8px; }
+  .loads { display: flex; flex-wrap: wrap; gap: 6px; margin: -2px 0 10px; }
+  .load { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--surface); color: var(--muted); border: 1px solid var(--line); white-space: nowrap; }
+  .load.busy { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
+  .bus { border-left: 2px solid var(--link); padding: 0 0 4px 10px; margin: 0 0 10px 6px; min-width: 0; }
+  .bus.wlan { border-left-style: dashed; }
+  .bus-h { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 6px; }
+  .nodes { display: grid; grid-template-columns: repeat(auto-fill, minmax(68px, 1fr)); gap: 6px 4px; }
+  .isl.compact .nodes { grid-template-columns: repeat(auto-fill, 44px); gap: 4px; }
+  .nd { display: grid; justify-items: center; gap: 3px; padding: 4px 2px; border-radius: 10px; min-width: 0; text-align: center; }
+  .nd:hover { background: var(--surface); }
+  .nd .c { position: relative; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 600;
+    border: 2px solid var(--ok); background: var(--ok-soft); color: var(--ok); }
+  .nd.lan .c { border-radius: 9px; }
+  .nd.off .c { border: 2px dashed var(--input-line); background: var(--surface); color: var(--muted); }
+  .nd.weak .c { border-color: var(--warn); background: var(--warn-soft); color: var(--warn); }
+  .nd.blk .c { border-color: var(--bad); background: var(--bad-soft); color: var(--bad); }
+  .nd .bd { position: absolute; top: -5px; right: -6px; width: 16px; height: 16px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 700; border: 2px solid var(--soft); }
+  .nd.weak .bd { background: var(--warn); color: var(--surface); }
+  .nd.blk .bd { background: var(--bad); color: var(--surface); }
+  .nd .sg { position: absolute; bottom: -4px; right: -6px; display: inline-flex; gap: 1px; align-items: flex-end; height: 10px; padding: 1px 2px; border-radius: 3px; background: var(--surface); }
+  .nd .sg i { width: 2px; background: var(--line); }
+  .nd .sg i.on { background: var(--ok); }
+  .nd .sg.mid i.on { background: var(--warn); }
+  .nd .sg.low i.on { background: var(--bad); }
+  .nd .nm { font-size: 11px; line-height: 1.25; color: var(--text); max-width: 100%; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: break-word; hyphens: auto; }
+  .nd.off .nm { color: var(--muted); }
+  .isl.compact .nd .nm { display: none; }
+  .nd.hl .c { box-shadow: 0 0 0 4px var(--focus); }
+  .hidden-note { font-size: 12px; color: var(--muted); margin: 0 0 8px 18px; }
+  @container app (max-width: 600px) {
+    .mapcard { padding: 12px; }
+    .toolbar { padding: 12px; }
+    .isles { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .isle:not(.root) { margin-left: 26px; }
+    .isle { padding: 10px; }
+    .nodes { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
+    .inet { justify-content: flex-start; margin-bottom: 14px; }
+  }
+
+  /* Variante 2: Radial. Freie Karte mit Zoomen und Verschieben (Maus, Rad, Pinch, Knöpfe). */
+  .rad { position: relative; height: 600px; border-radius: 14px; background: var(--soft); border: 1px solid var(--line); overflow: hidden; }
+  @container app (max-width: 600px) { .rad { height: 480px; } }
+  .rad svg { width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; user-select: none; }
+  .rad svg.drag { cursor: grabbing; }
+  .rad .ln { fill: none; stroke: var(--link); stroke-width: 1.5; }
+  .rad .ln.wlan { stroke-dasharray: 5 4; }
+  .rad .ln.weak { stroke: var(--warn); }
+  .rad .ln.up { stroke-width: 3; }
+  .rad .hub circle { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 2; }
+  .rad .hub.lost circle { fill: var(--surface); stroke: var(--input-line); stroke-dasharray: 4 3; }
+  .rad .hub text { font-size: 13px; font-weight: 600; fill: var(--text); paint-order: stroke; stroke: var(--soft); stroke-width: 4px; }
+  .rad .rn circle.b { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 2; }
+  .rad .rn rect.b { fill: var(--ok-soft); stroke: var(--ok); stroke-width: 2; }
+  .rad .rn.off .b { fill: var(--surface); stroke: var(--input-line); stroke-dasharray: 3 2; }
+  .rad .rn.weak .b { fill: var(--warn-soft); stroke: var(--warn); }
+  .rad .rn.blk .b { fill: var(--bad-soft); stroke: var(--bad); }
+  .rad .rn text { font-size: 10px; fill: var(--text); paint-order: stroke; stroke: var(--soft); stroke-width: 3px; opacity: 0; pointer-events: none; }
+  .rad svg.labels .rn text, .rad .rn:hover text, .rad .rn:focus text, .rad .rn.hl text { opacity: 1; }
+  .rad .rn.dim { opacity: .15; }
+  .rad .rn:focus { outline: none; }
+  .rad .rn:focus-visible .b, .rad .rn.hl .b { stroke: var(--focus); stroke-width: 4; }
+  .rad .rn .hit { fill: transparent; }
+  .zoom { position: absolute; right: 10px; top: 10px; display: grid; gap: 6px; }
+  .zoom button { width: 40px; height: 40px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); font-size: 18px; font-weight: 500; display: grid; place-items: center; }
+  .radhint { position: absolute; left: 10px; bottom: 10px; font-size: 11px; color: var(--muted); background: color-mix(in srgb, var(--surface) 85%, transparent); padding: 3px 8px; border-radius: 8px; pointer-events: none; }
+
+  /* ---------- Gerät als Vollseite ---------- */
+  .dhead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; min-width: 0; }
+  .dhead h1 { flex-basis: 100%; order: 3; min-width: 0; font-size: 24px; font-weight: 500; margin: 4px 0 0; letter-spacing: -.01em; overflow-wrap: anywhere; line-height: 1.25; }
+  .dhead h1:focus { outline: none; }
+  .dhead h1:focus-visible { outline: 3px solid var(--focus); }
+  .back { display: inline-flex; align-items: center; gap: 6px; color: var(--accent-hover); font-weight: 500; min-height: 40px; padding: 0 10px 0 6px; border-radius: 20px; flex: none; }
+  .back:hover { background: var(--accent-soft); }
+  .pager { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); font-size: 12px; flex: none; margin-left: auto; }
+  .chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .dsecs { display: grid; gap: 12px; margin-top: 14px; }
+  @container app (min-width: 900px) { .dsecs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; } .dsecs .wide { grid-column: 1 / -1; } }
+  .sec { padding: 16px; min-width: 0; }
+  .sec > .label { display: block; margin-bottom: 10px; }
+  .path { display: flex; align-items: center; min-width: 0; }
+  .path .pn { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; padding: 6px 10px; border-radius: 12px; background: var(--soft); }
+  .path .pn b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .path .pn.me { background: var(--accent-soft); color: var(--accent-hover); }
+  .path .pl { flex: 1 1 40px; min-width: 36px; display: grid; justify-items: center; font-size: 11px; color: var(--muted); padding: 0 4px; }
+  .path .pl i { width: 100%; border-top: 2px solid var(--link); margin: 2px 0; }
+  .path .pl.wlan i { border-top-style: dashed; }
+  .path .pl.weak i { border-color: var(--warn); }
+  .path .pl.weak { color: var(--warn); }
+  @container app (max-width: 700px) {
+    .path { flex-direction: column; align-items: stretch; }
+    .path .pl { min-height: 34px; grid-template-columns: auto 1fr; align-items: center; justify-items: start; gap: 10px; padding: 0 0 0 18px; }
+    .path .pl i { width: 0; height: 30px; border-top: 0; border-left: 2px solid var(--link); margin: 0; }
+    .path .pl.wlan i { border-left-style: dashed; }
+    .path .pl.weak i { border-color: var(--warn); }
+  }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 12px; }
+  .tile { background: var(--soft); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+  .tile b { display: block; font-size: 18px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile small { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  dl { margin: 0; display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px 12px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  .mono { font-family: ui-monospace, monospace; font-size: 13px; }
+  .action { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-2); min-height: 56px; flex-wrap: wrap; }
+  .action:first-of-type { border-top: 0; padding-top: 0; }
+  .action > div:first-child { flex: 1 1 160px; min-width: 0; }
+  .action small { display: block; color: var(--muted); font-size: 12px; }
+  .action .ctl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; margin-left: auto; }
+  .action select { width: auto; min-width: 150px; max-width: 100%; }
+  .val { font-weight: 500; }
+  .val-line { display: block; font-weight: 500; font-size: 15px; }
+  .switch { position: relative; width: 52px; height: 32px; border-radius: 16px; background: #aeb6c1; flex: none; transition: background .15s; }
+  .switch::after { content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .15s; }
+  .switch[aria-checked="true"] { background: var(--accent); }
+  .switch[aria-checked="true"]::after { transform: translateX(20px); }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .note { border-radius: 12px; padding: 10px 12px; margin-bottom: 12px; background: var(--warn-soft); color: var(--warn); display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; font-size: 13px; }
+  .note span { flex: 1 1 180px; }
+  .hint { margin: 10px 0 0; font-size: 12px; color: var(--muted); }
+  .spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); border-top-color: var(--accent); animation: spin .8s linear infinite; display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .spin { animation: none; } * { transition: none !important; } }
+  .pad { padding: 20px; }
+  .lead { color: var(--muted); margin: 4px 0 0; max-width: 70ch; }
+  .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; transition: .2s; background: var(--text); color: var(--surface); padding: 10px 18px; border-radius: 12px; width: max-content; max-width: calc(100% - 32px); z-index: 30; pointer-events: none; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+</style>
+</head>
+<body>
+  <div class="mk" role="region" aria-label="Mockup-Steuerung">
+    <h1>Panel v2 · Mockup</h1>
+    <div class="grp"><span id="l-map">Netzkarte</span><div class="seg" role="group" aria-labelledby="l-map">
+      <button data-mk="mapv" data-v="isl" aria-pressed="true">1 Inseln ★</button><button data-mk="mapv" data-v="rad" aria-pressed="false">2 Radial + Zoom</button></div></div>
+    <div class="grp"><span id="l-n">Geräte</span><div class="seg" role="group" aria-labelledby="l-n">
+      <button data-mk="many" data-v="0" aria-pressed="true">25</button><button data-mk="many" data-v="1" aria-pressed="false">79</button></div></div>
+    <div class="grp"><span id="l-dev">Gerät</span><div class="seg" role="group" aria-labelledby="l-dev">
+      <button data-mk="device" data-v="desk" aria-pressed="true">Desktop</button><button data-mk="device" data-v="phone" aria-pressed="false">Handy</button></div></div>
+    <div class="grp"><span id="l-theme">Thema</span><div class="seg" role="group" aria-labelledby="l-theme">
+      <button data-mk="theme" data-v="auto" aria-pressed="true">Auto</button><button data-mk="theme" data-v="light" aria-pressed="false">Hell</button><button data-mk="theme" data-v="dark" aria-pressed="false">Dunkel</button></div></div>
+  </div>
+  <div class="mk-desc" id="mk-desc" aria-live="polite"></div>
+  <div class="stage" id="stage"><div class="frame" id="frame"></div></div>
+
+<script>
+"use strict";
+/* ================= Beispieldaten (erfunden) ================= */
+const DAY = 86400000;
+const NOW = Date.parse("2026-11-01T10:00:00Z");
+const ago = (d) => new Date(NOW - d * DAY).toISOString();
+const NODES = [
+  { mac: "m0", name: "FRITZ!Box 7590 AX", role: "master", radios: { "2_4ghz": { channel: 6, utilization: 48, noise: -89 }, "5ghz": { channel: 36, utilization: 22, noise: -92 } } },
+  { mac: "m1", name: "Repeater Obergeschoss", role: "slave", uplink: { type: "wlan", band: "5ghz", signal: -58 }, radios: { "2_4ghz": { channel: 1, utilization: 74, noise: -86 }, "5ghz": { channel: 100, utilization: 31, noise: -91 } } },
+  { mac: "m2", name: "Repeater Gartenhaus", role: "slave", uplink: { type: "lan" }, radios: { "2_4ghz": { channel: 11, utilization: 12, noise: -94 }, "5ghz": { channel: 44, utilization: 9, noise: -95 } } },
+];
+const LABELS = [{ id: "kinder", name: "Kinder" }, { id: "smart", name: "Smart Home" }, { id: "medien", name: "Medien" }, { id: "arbeit", name: "Arbeit" }];
+const PROFILES = ["Standard", "Kinder", "Gast", "Unbeschränkt"];
+const BANDS = { "2_4ghz": "2,4 GHz", "5ghz": "5 GHz", "6ghz": "6 GHz" };
+let n = 10;
+function dev(o) {
+  n += 1;
+  const h = (v) => (v & 255).toString(16).toUpperCase().padStart(2, "0");
+  const mac = `3C:A6:2F:${h(0x10 + n)}:${h(0x5a + n * 3)}:${h(0x20 + n * 7)}`;
+  return Object.assign({
+    id: mac.replace(/:/g, "").toLowerCase(), mac, ip: `192.168.178.${n + 10}`, online: true, link_type: "wlan", band: "5ghz", ap: "m0",
+    signal: -60, down: 0, up: 0, maxd: 0, maxu: 0, last: 0, created: 200, labels: [], guest: false, wan: true, priority: false,
+    profile: "Standard", ssid: "Heimnetz", port: null, speed: null, private_mac: false,
+    ents: { internet: true, priority: false, profile: false, wol: false },
+  }, o);
+}
+const BASE = [
+  dev({ name: "Laptop Anna", vendor: "Apple", ap: "m1", signal: -58, down: 520, up: 310, maxd: 1200, maxu: 1200, labels: ["arbeit"] }),
+  dev({ name: "iPhone Anna", vendor: "Apple", ap: "m1", signal: -63, down: 390, up: 280, maxd: 866, maxu: 866, private_mac: true }),
+  dev({ name: "iPad Ben", vendor: "Apple", ap: "m1", signal: -71, down: 86, up: 40, maxd: 400, maxu: 400, labels: ["kinder"], profile: "Kinder", ents: { internet: true, priority: false, profile: true, wol: false } }),
+  dev({ name: "Switch Ben", vendor: "Nintendo", band: "2_4ghz", ap: "m1", signal: -69, down: 32, up: 18, maxd: 72, maxu: 72, labels: ["kinder"], profile: "Kinder", ents: { internet: true, priority: false, profile: true, wol: false } }),
+  dev({ name: "Handy Ben", vendor: "Samsung", ap: "m1", signal: -60, down: 290, up: 190, maxd: 866, maxu: 866, labels: ["kinder"], wan: false, profile: "Kinder" }),
+  dev({ name: "Tablet Clara", vendor: "Samsung", ap: "m1", online: false, last: 2, labels: ["kinder"], profile: "Kinder" }),
+  dev({ name: "Fernseher Wohnzimmer", vendor: "LG Electronics", link_type: "lan", band: null, port: "LAN 1", speed: 1000, down: 1000, up: 1000, labels: ["medien"], priority: true, ents: { internet: true, priority: true, profile: false, wol: false } }),
+  dev({ name: "Apple TV", vendor: "Apple", link_type: "lan", band: null, port: "LAN 2", speed: 1000, down: 1000, up: 1000, labels: ["medien"] }),
+  dev({ name: "Sonos Küche", vendor: "Sonos", band: "2_4ghz", signal: -55, down: 65, up: 65, maxd: 144, maxu: 144, labels: ["medien"] }),
+  dev({ name: "NAS", vendor: "Synology", link_type: "lan", band: null, port: "LAN 3", speed: 2500, down: 2500, up: 2500, priority: true, profile: "Unbeschränkt", ents: { internet: true, priority: true, profile: true, wol: true } }),
+  dev({ name: "Arbeitsrechner", vendor: "Dell", link_type: "lan", band: null, port: "LAN 4", speed: 1000, online: false, last: 1, labels: ["arbeit"], profile: "Unbeschränkt", ents: { internet: true, priority: false, profile: false, wol: true } }),
+  dev({ name: "Drucker Büro", vendor: "HP", band: "2_4ghz", signal: -67, down: 24, up: 24, maxd: 72, maxu: 72, labels: ["arbeit"] }),
+  dev({ name: "Shelly Plug Garage", vendor: "Shelly", band: "2_4ghz", ap: "m2", signal: -79, down: 6, up: 2, maxd: 65, maxu: 65, labels: ["smart"] }),
+  dev({ name: "Wetterstation", vendor: "Ecowitt", band: "2_4ghz", ap: "m2", signal: -74, down: 11, up: 11, maxd: 65, maxu: 65, labels: ["smart"] }),
+  dev({ name: "Mähroboter", vendor: "Husqvarna", band: "2_4ghz", ap: "m2", online: false, last: 3, labels: ["smart"] }),
+  dev({ name: "Kamera Einfahrt", vendor: "Reolink", ap: "m2", signal: -66, down: 120, up: 160, maxd: 433, maxu: 433, labels: ["smart"] }),
+  dev({ name: "Thermostat Bad", vendor: "tado", band: "2_4ghz", ap: "m1", signal: -70, down: 13, up: 13, maxd: 65, maxu: 65, labels: ["smart"] }),
+  dev({ name: "Home Assistant", vendor: "Raspberry Pi", link_type: "lan", band: null, port: "LAN 3 (Switch)", speed: 1000, down: 1000, up: 1000, labels: ["smart"] }),
+  dev({ name: "Saugroboter", vendor: "Roborock", band: "2_4ghz", ap: "m1", signal: -68, down: 26, up: 26, maxd: 72, maxu: 72, labels: ["smart"] }),
+  dev({ name: "Gast-Handy Mia", vendor: "Xiaomi", guest: true, signal: -61, down: 240, up: 120, maxd: 600, maxu: 600, created: 1, profile: "Gast", ssid: "FRITZ!Box Gast" }),
+  dev({ name: "Galaxy-A52", vendor: "Samsung", band: "2_4ghz", signal: -73, down: 18, up: 9, maxd: 72, maxu: 72, created: 3, private_mac: true }),
+  dev({ name: "Gast-Laptop", vendor: "Lenovo", guest: true, online: false, last: 45, profile: "Gast", ssid: "FRITZ!Box Gast" }),
+  dev({ name: "Alter Kindle", vendor: "Amazon", band: "2_4ghz", online: false, last: 120, ip: null }),
+  dev({ name: "Smartwatch Tom", vendor: "Garmin", band: "2_4ghz", ap: "m1", online: false, last: 63, ip: null }),
+  dev({ name: "ESP Keller", vendor: "Espressif", band: "2_4ghz", ap: null, online: false, last: 9, labels: ["smart"] }),
+];
+// 54 weitere Geräte für den Test mit 79 Geräten (wie beim Nutzer)
+const EXTRA = (() => {
+  const names = ["Shelly 1PM Flur", "Shelly Dimmer Bad", "Hue Bridge", "Echo Dot Küche", "Echo Show Büro", "Nest Mini Kind", "ESP32 Sensor", "Tasmota Steckdose", "Tuya Licht",
+    "Ring Türklingel", "Kamera Garten", "Kamera Flur", "Fire TV Stick", "Chromecast", "PlayStation 5", "Xbox", "Steam Deck", "Laptop Gast", "Kindle Paperwhite", "Apple Watch",
+    "Wallbox", "Wechselrichter", "Batteriespeicher", "Wärmepumpe", "Rauchmelder Hub", "Zigbee Gateway", "Bewässerung", "Pool-Pumpe", "Netatmo", "Miele Spülmaschine",
+    "Bosch Waschmaschine", "Kühlschrank", "Kaffeemaschine", "Smart-TV Kind", "Beamer", "AV-Receiver", "Soundbar", "Drucker Kinder", "MacBook Ben", "Pixel Clara",
+    "iPad Oma", "Tablet Küche", "Thermostat Kind", "Thermostat Wohnen", "Rollladen Süd", "Rollladen West", "Shelly Garten", "LED-Streifen", "Luftreiniger", "Saugroboter OG",
+    "Mini-PC", "Pi-hole", "Switch Keller", "Laptop Arbeit 2"];
+  return names.map((name, i) => {
+    const ap = ["m0", "m1", "m2", "m0", "m1", "m0"][i % 6];
+    const lan = i % 7 === 0 && ap !== "m1";
+    const online = i % 6 !== 4;
+    const signal = -48 - ((i * 13) % 34);
+    const maxd = i % 3 ? 72 : 433;
+    const down = i % 9 === 0 ? Math.round(maxd / 5) : Math.round(maxd * 0.6);
+    return dev({ name, vendor: ["Shelly", "Amazon", "Espressif", "Google", "Apple", "Sony", "Bosch"][i % 7], ap, online, last: online ? 0 : 1 + (i % 50),
+      link_type: lan ? "lan" : "wlan", band: lan ? null : i % 3 ? "2_4ghz" : "5ghz", port: lan ? "LAN 2" : null, speed: lan ? 1000 : null,
+      signal, down: lan ? 1000 : down, up: lan ? 1000 : Math.round(down * 0.8), maxd: lan ? 0 : maxd, maxu: lan ? 0 : maxd,
+      labels: i % 4 === 0 ? ["smart"] : i % 11 === 0 ? ["kinder"] : [], wan: i % 17 !== 5, created: i === 3 ? 2 : 150, ip: online || i % 2 ? `192.168.178.${100 + i}` : null });
+  });
+})();
+[...BASE, ...EXTRA].forEach((c) => { c.last_online = ago(c.online ? 0 : c.last); c.created_at = ago(c.created); if (!c.online) { c.down = c.up = 0; } });
+let CLIENTS = BASE;
+
+/* ================= Logik (wie shared.js) ================= */
+const FILTERS = ["all", "online", "offline", "wlan", "lan", "guest", "blocked", "weak", "new", "stale", "unassigned"];
+const FNAMES = { all: "Alle", online: "Online", offline: "Offline", wlan: "WLAN", lan: "LAN", guest: "Gast", blocked: "Gesperrt", weak: "Schwach", new: "Neu (7 Tage)", stale: "Lange offline", unassigned: "Ohne Access Point" };
+const PRIMARY = ["all", "online", "offline"];
+const daysSince = (iso) => Math.max(0, Math.floor((NOW - Date.parse(iso)) / DAY));
+const ratio = (c) => { const r = [[c.down, c.maxd], [c.up, c.maxu]].filter(([, b]) => b > 0).map(([a, b]) => a / b); return r.length ? Math.min(...r) : null; };
+const isWeak = (c) => c.online && c.link_type === "wlan" && ratio(c) !== null && ratio(c) < 1 / 3;
+const isBlocked = (c) => c.wan === false;
+function match(c, f) {
+  if (f.startsWith("label:")) return c.labels.includes(f.slice(6));
+  switch (f) {
+    case "online": return c.online; case "offline": return !c.online; case "wlan": return c.link_type === "wlan"; case "lan": return c.link_type === "lan";
+    case "guest": return c.guest; case "blocked": return isBlocked(c); case "weak": return isWeak(c); case "new": return daysSince(c.created_at) < 7;
+    case "stale": return !c.online && daysSince(c.last_online) >= 30; case "unassigned": return !c.ap; default: return true;
+  }
+}
+const count = (f) => CLIENTS.filter((c) => match(c, f)).length;
+const labelName = (id) => LABELS.find((l) => l.id === id)?.name ?? id;
+const filterName = (f) => (f.startsWith("label:") ? labelName(f.slice(6)) : FNAMES[f]);
+const SORTS = { name: (a, b) => a.name.localeCompare(b.name), signal: (a, b) => (b.signal ?? -999) - (a.signal ?? -999), rate: (a, b) => b.down - a.down, last: (a, b) => Date.parse(b.last_online) - Date.parse(a.last_online) };
+const shown = (c) => {
+  const q = S.query.trim().toLowerCase();
+  return match(c, S.filter) && (!q || [c.name, c.ip, c.mac, c.vendor].some((v) => (v ?? "").toLowerCase().includes(q)));
+};
+const visible = () => CLIENTS.filter(shown).sort((a, b) => Number(b.online) - Number(a.online) || SORTS[S.sort](a, b));
+function apSub(node) {
+  const on = CLIENTS.filter((c) => c.online && c.ap === node.mac);
+  const rates = on.map((c) => c.down).filter((r) => r > 0);
+  return [`${on.filter((c) => c.link_type === "wlan").length} WLAN`, `${on.filter((c) => c.link_type === "lan").length} LAN`, rates.length ? `min. ${Math.min(...rates)} Mbit/s` : ""].filter(Boolean).join(" · ");
+}
+function groups(list) {
+  const narrowed = S.filter !== "all" || S.query;
+  if (S.group === "flat") return [{ key: "flat", title: "Alle Geräte", icon: "list", list }];
+  if (S.group === "band") {
+    return [["lan", "LAN", "lan", (c) => c.link_type === "lan"], ["2_4ghz", "2,4 GHz", "wifi", (c) => c.link_type === "wlan" && c.band === "2_4ghz"], ["5ghz", "5 GHz", "wifi", (c) => c.link_type === "wlan" && c.band === "5ghz"]]
+      .map(([key, title, icon, p]) => ({ key, title, icon, list: list.filter(p) })).filter((g) => g.list.length);
+  }
+  if (S.group === "label") {
+    const g = LABELS.map((l) => ({ key: "label:" + l.id, title: l.name, icon: "tag", list: list.filter((c) => c.labels.includes(l.id)) }));
+    g.push({ key: "none", title: "Ohne Gruppe", icon: "help", list: list.filter((c) => !c.labels.length) });
+    return g.filter((x) => x.list.length);
+  }
+  const g = NODES.map((node) => ({ key: node.mac, title: node.name, sub: apSub(node), icon: node.role === "master" ? "router" : "ap", node, list: list.filter((c) => c.ap === node.mac) }));
+  g.push({ key: "none", title: "Ohne Access Point", sub: "Die Box nennt keinen Access Point", icon: "help", list: list.filter((c) => !c.ap) });
+  return g.filter((x) => x.list.length || (x.node && !narrowed));
+}
+const whenText = (iso) => { const d = daysSince(iso); return d === 0 ? "heute" : d === 1 ? "gestern" : `vor ${d} Tagen`; };
+const bars = (dbm) => (dbm > -60 ? 4 : dbm > -67 ? 3 : dbm > -75 ? 2 : 1);
+const level = (dbm) => (dbm > -65 ? "" : dbm > -75 ? "mid" : "low");
+const esc = (v) => String(v ?? "").replace(/[&<>"']/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[ch]);
+const initials = (name) => name.replace(/[^\p{L}\p{N} ]/gu, " ").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+const nodeName = (mac) => NODES.find((x) => x.mac === mac)?.name;
+/** Was ein Screenreader zu einem Knoten der Karte sagt. */
+function nodeLabel(c) {
+  return [c.name, c.online ? "online" : `offline, zuletzt ${whenText(c.last_online)}`, c.link_type === "lan" ? "LAN" : c.link_type === "wlan" ? `WLAN ${BANDS[c.band]}${c.online ? `, ${c.signal} dBm` : ""}` : "",
+    isWeak(c) ? "schwache Verbindung" : "", isBlocked(c) ? "Internet gesperrt" : "", c.guest ? "Gast" : ""].filter(Boolean).join(", ");
+}
+
+/* ================= Icons ================= */
+const P = {
+  router: '<rect x="3" y="13" width="18" height="7" rx="2"/><path d="M7 16.5h.01M11 16.5h.01M15 9a4 4 0 0 0-6 0M18 6a8 8 0 0 0-12 0"/>',
+  ap: '<circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19A10 10 0 0 1 5 5"/>',
+  wifi: '<path d="M2 8.8a15 15 0 0 1 20 0M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0"/><circle cx="12" cy="19.5" r="1"/>',
+  lan: '<rect x="9" y="2" width="6" height="6" rx="1"/><rect x="2" y="16" width="6" height="6" rx="1"/><rect x="16" y="16" width="6" height="6" rx="1"/><path d="M12 8v4M5 16v-4h14v4"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>', globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  chev: '<path d="m6 9 6 6 6-6"/>', back: '<path d="M19 12H5M12 19l-7-7 7-7"/>', close: '<path d="M18 6 6 18M6 6l12 12"/>',
+  tag: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>',
+  external: '<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+  alert: '<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/>',
+  map: '<circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="18" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M10.5 7 6.5 15.8M13.5 7l4 8.8"/>',
+  list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>', filter: '<path d="M3 5h18l-7 8v6l-4 2v-8z"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01"/>',
+  left: '<path d="m15 18-6-6 6-6"/>', right: '<path d="m9 18 6-6-6-6"/>', menu: '<path d="M3 6h18M3 12h18M3 18h18"/>', check: '<path d="M20 6 9 17l-5-5"/>',
+};
+const ic = (k) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${P[k]}</svg>`;
+
+/* ================= Zustand ================= */
+const S = { mapv: "isl", many: "0", device: "desk", theme: "auto", tab: "net", view: "map", filter: "all", query: "", sort: "name", group: "ap",
+  names: true, sel: null, hl: null, closed: new Set(), menu: false, enabling: new Set(), listScroll: 0, openedHere: false, vb: null };
+const DESC = {
+  isl: "<b>Netzkarte 1 · Inseln (Empfehlung).</b> FRITZ!Box oben, jeder Repeater als eigene Fläche, verbunden mit durchgezogener (LAN) oder gestrichelter (WLAN) Linie. Geräte hängen als Knöpfe an ihrer Leitung (LAN / 2,4 GHz / 5 GHz). Ohne Zoom lesbar, auf dem Handy untereinander. „Namen“ blendet die Beschriftung aus und macht die Karte dichter.",
+  rad: "<b>Netzkarte 2 · Radial mit Zoom.</b> Echte Topologie wie ein Netzplan: Box in der Mitte, Repeater außen, Geräte im Kreis um ihren Access Point. Verschieben per Ziehen, Zoom per Rad, Pinch oder Knöpfen; Namen erscheinen ab einer Zoomstufe, bei Fokus und beim Überfahren. Gefilterte Geräte werden blass statt zu verschwinden.",
+};
+const frame = document.getElementById("frame");
+const stage = document.getElementById("stage");
+const byId = (id) => CLIENTS.find((c) => c.id === id);
+
+/* ================= Rahmen ================= */
+function shell() {
+  frame.className = `frame${S.sel ? " has-sel" : ""}`;
+  const stale = count("stale");
+  frame.innerHTML = `
+  <div class="viewport" id="vp">
+    <div class="app">
+      <header class="header">
+        <div class="brand">
+          <button class="menu" aria-label="Seitenleiste von Home Assistant">${ic("menu")}</button>
+          <span class="logo">${ic("router")}</span>
+          <div style="min-width:0"><b>FRITZ!Box Netzwerk</b><small>FRITZ!Box 7590 AX · aktualisiert vor 12 s</small></div>
+        </div>
+        <nav role="tablist" aria-label="Bereiche">
+          ${[["net", "Netzwerk", ""], ["cleanup", "Aufräumen", stale ? `<em>${stale}</em>` : ""], ["filter", "Filter", ""]]
+            .map(([k, t, b]) => `<button role="tab" data-tab="${k}" aria-selected="${S.tab === k}">${t}${b}</button>`).join("")}
+        </nav>
+      </header>
+      <main id="main"></main>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>`;
+  renderMain();
+}
+function renderMain() {
+  const main = document.getElementById("main");
+  if (S.tab !== "net") {
+    const t = S.tab === "cleanup" ? ["Lange offline", "Unverändert gegenüber heute (Regler für die Tage, Auswahl, Ausblenden mit Bestätigung, ausgeblendete Geräte). Hier nicht nachgebaut."]
+      : ["Gerätefilter", "Unverändert gegenüber heute (Live-Vorschau: bleibt, kommt dazu, wird entfernt). Hier nicht nachgebaut."];
+    main.innerHTML = `<section class="card pad"><h2>${t[0]}</h2><p class="lead">${t[1]}</p></section>`;
+    return;
+  }
+  if (S.sel && byId(S.sel)) { main.innerHTML = `<section id="detail" aria-labelledby="dtitle">${detailHtml(byId(S.sel))}</section>`; return; }
+  main.innerHTML = `<div id="listview">
+      <div class="card toolbar">
+        <div class="tools ${S.view === "map" ? "map" : ""}">
+          <label class="search"><span class="sr">Suchen</span>${ic("search")}<input type="search" id="q" placeholder="Name, IP, MAC, Hersteller…" value="${esc(S.query)}" aria-describedby="meta"><kbd aria-hidden="true">/</kbd></label>
+          ${S.view === "list" ? `<label class="sel"><span>Sortieren</span><select id="sort">${Object.entries({ name: "Name", signal: "Signal", rate: "Rate", last: "Zuletzt online" }).map(([k, v]) => `<option value="${k}" ${k === S.sort ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+          <label class="sel"><span>Gruppieren</span><select id="group">${Object.entries({ ap: "Access Point", band: "Band / LAN", label: "Gruppe", flat: "Flach" }).map(([k, v]) => `<option value="${k}" ${k === S.group ? "selected" : ""}>${v}</option>`).join("")}</select></label>` : ""}
+          <div class="seg viewsw" role="group" aria-label="Ansicht">
+            <button data-view="list" aria-pressed="${S.view === "list"}">${ic("list")}Liste</button>
+            <button data-view="map" aria-pressed="${S.view === "map"}">${ic("map")}Netzkarte</button>
+          </div>
+        </div>
+        <div id="filters"></div>
+        <div id="menuhost"></div>
+        <div class="meta" id="meta" aria-live="polite"></div>
+      </div>
+      <div id="groupbar"></div>
+      <div id="body"></div>
+    </div>`;
+  updateList();
+}
+
+/* ================= Filter ================= */
+function filtersHtml() {
+  const labels = LABELS.filter((l) => count("label:" + l.id));
+  const chip = (f) => `<button class="fchip" data-filter="${f}" aria-pressed="${S.filter === f}">${esc(filterName(f))}<b>${count(f)}</b></button>`;
+  const secondary = !PRIMARY.includes(S.filter);
+  const active = secondary ? `<button class="fchip" data-filter="all" aria-pressed="true" aria-label="Filter ${esc(filterName(S.filter))} entfernen">${S.filter.startsWith("label:") ? ic("tag") : ""}${esc(filterName(S.filter))}<b>${count(S.filter)}</b><span class="x">${ic("close")}</span></button>` : "";
+  const extra = FILTERS.filter((f) => !PRIMARY.includes(f) && count(f)).length + labels.length;
+  return `<div class="chips" role="group" aria-label="Statusfilter">${PRIMARY.map(chip).join("")}${active}
+    <button class="fchip more" id="morebtn" aria-haspopup="menu" aria-expanded="${S.menu}" aria-controls="fmenu" aria-label="Weitere Filter, ${extra} verfügbar">${ic("filter")}Mehr<b>${extra}</b>${ic("chev")}</button></div>`;
+}
+function menuHtml() {
+  if (!S.menu) return "";
+  const avail = FILTERS.filter((f) => !PRIMARY.includes(f) && (count(f) || f === S.filter));
+  const labels = LABELS.filter((l) => count("label:" + l.id));
+  const item = (f) => `<button role="menuitemradio" aria-checked="${S.filter === f}" data-filter="${f}" tabindex="-1"><span class="ck">${S.filter === f ? ic("check") : ""}</span>${f.startsWith("label:") ? ic("tag") : ""}<span class="t">${esc(filterName(f))}</span><b>${count(f)}</b></button>`;
+  return `<div class="sheet-scrim" data-act="menu-close"></div>
+    <div class="fmenu" id="fmenu" role="menu" aria-label="Weitere Filter">
+      <span class="label" aria-hidden="true">Status &amp; Verbindung</span>${avail.map(item).join("")}
+      <span class="label" aria-hidden="true">Gruppen</span>${labels.map((l) => item("label:" + l.id)).join("")}
+    </div>`;
+}
+function groupbarHtml() {
+  if (!S.filter.startsWith("label:")) return "";
+  const id = S.filter.slice(6);
+  const m = CLIENTS.filter((c) => c.labels.includes(id));
+  const block = m.every((c) => c.wan);
+  return `<div class="card groupbar"><span class="ico">${ic("tag")}</span><span class="who"><b>${esc(labelName(id))}</b><small>${m.length} Geräte · ${m.filter((c) => !c.wan).length} gesperrt</small></span>
+    <button class="btn ${block ? "d" : "p"}" data-act="bulk">${block ? "Alle sperren" : "Alle freigeben"}</button></div>`;
+}
+
+/* ================= Liste ================= */
+function row(c) {
+  const link = c.link_type === "lan" ? "lan" : c.link_type === "wlan" ? "wifi" : "help";
+  const line2 = c.online ? [c.ip, c.vendor].filter(Boolean).join(" · ") : `zuletzt online ${whenText(c.last_online)}`;
+  const b = bars(c.signal);
+  const sig = c.link_type === "wlan" && c.online ? `<span class="bars ${level(c.signal)}" title="${c.signal} dBm" aria-hidden="true">${[1, 2, 3, 4].map((i) => `<i class="${i <= b ? "on" : ""}" style="height:${3 + i * 3}px"></i>`).join("")}</span>` : "";
+  return `<button class="dev ${c.online ? "" : "off"}" data-dev="${c.id}">
+    <span class="dot ${c.online ? "on" : ""}"></span><span class="sr">${c.online ? "online" : "offline"},</span><span class="link">${ic(link)}</span>
+    <span class="who"><b>${esc(c.name)}</b><small>${esc(line2)}</small></span>
+    <span class="end">${isBlocked(c) ? '<span class="chip bad">Gesperrt</span>' : ""}${c.guest ? '<span class="chip info">Gast</span>' : ""}<span class="rate">${c.online && c.down ? `${c.down} / ${c.up}` : ""}</span>${isWeak(c) ? `<span class="warnIcon" title="Schwache Verbindung">${ic("alert")}</span>` : ""}${sig}</span></button>`;
+}
+function radiosHtml(node) {
+  return `<div class="radios">${Object.entries(node.radios).map(([band, r]) => {
+    const busy = r.utilization >= 70;
+    return `<div class="radio"><div class="top"><b>${BANDS[band]}</b><span class="muted">Kanal ${r.channel}</span></div>
+      <div class="meter" role="meter" aria-label="Auslastung ${BANDS[band]}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${r.utilization}"><i class="${busy ? "busy" : ""}" style="width:${r.utilization}%"></i></div>
+      <div class="top"><span class="${busy ? "busyText" : "muted"}">${r.utilization} % belegt</span><span class="muted">${r.noise} dBm</span></div></div>`;
+  }).join("")}</div>`;
+}
+function listHtml() {
+  const gs = groups(visible());
+  if (!gs.length) return `<div class="card empty ap">${ic("search")}<b>Nichts gefunden</b><span>Passe Filter oder Suche an.</span></div>`;
+  return gs.map((g) => {
+    const open = !S.closed.has(g.key);
+    const body = g.list.length ? g.list.map(row).join("") : `<div class="empty"><span>Keine Geräte an diesem Access Point.</span></div>`;
+    return `<section class="card ap ${open ? "" : "closed"}" aria-label="${esc(g.title)}">
+      <button class="ap-head" data-ap="${esc(g.key)}" aria-expanded="${open}">
+        <span class="ico">${ic(g.icon)}</span><span class="who"><b>${esc(g.title)}</b>${g.sub ? `<small>${esc(g.sub)}</small>` : ""}</span>
+        <span class="count">${g.list.length}</span><span class="chev">${ic("chev")}</span></button>
+      <div class="ap-body">${g.node ? radiosHtml(g.node) : ""}${body}</div></section>`;
+  }).join("");
+}
+
+/* ================= Netzkarte ================= */
+const LEGEND = `<div class="legend" aria-label="Legende">
+  <span><i class="lg-line"></i>LAN</span><span><i class="lg-line wlan"></i>WLAN</span>
+  <span><i class="lg-dot"></i>online</span><span><i class="lg-dot off"></i>offline</span><span><i class="lg-dot weak"></i>schwache Verbindung</span>
+  <span><i class="lg-dot blk"></i>Internet gesperrt</span><span><i class="lg-dot sq"></i>eckig = Kabel</span></div>`;
+function mapHtml() {
+  const head = `<div class="maphead"><h2>Netzkarte</h2>
+    ${S.mapv === "isl" ? `<button class="btn sm" data-act="names" aria-pressed="${S.names}">${S.names ? "Namen ausblenden" : "Namen zeigen"}</button>` : ""}
+    <button class="btn sm aslist" data-view="list">Als Liste lesen</button></div>`;
+  return `<div class="card mapcard" role="region" aria-label="Netzkarte">${head}${S.mapv === "isl" ? islandsHtml() : radialHtml()}${LEGEND}</div>`;
+}
+function ndHtml(c) {
+  const cls = [c.link_type === "lan" ? "lan" : "", c.online ? "" : "off", isWeak(c) ? "weak" : "", isBlocked(c) ? "blk" : "", S.hl === c.id ? "hl" : ""].join(" ");
+  const badge = isBlocked(c) ? '<span class="bd" aria-hidden="true">⦸</span>' : isWeak(c) ? '<span class="bd" aria-hidden="true">!</span>' : "";
+  const b = bars(c.signal);
+  const sig = c.link_type === "wlan" && c.online ? `<span class="sg ${level(c.signal)}" aria-hidden="true">${[1, 2, 3, 4].map((i) => `<i class="${i <= b ? "on" : ""}" style="height:${2 + i * 2}px"></i>`).join("")}</span>` : "";
+  return `<button class="nd ${cls}" data-dev="${c.id}" aria-label="${esc(nodeLabel(c))}" title="${esc(c.name)}"><span class="c" aria-hidden="true">${esc(initials(c.name))}${badge}${sig}</span><span class="nm" aria-hidden="true">${esc(c.name)}</span></button>`;
+}
+function busesHtml(list) {
+  const buses = [["lan", "LAN", (c) => c.link_type === "lan"], ["wlan", "WLAN 5 GHz", (c) => c.link_type === "wlan" && c.band === "5ghz"], ["wlan", "WLAN 2,4 GHz", (c) => c.link_type === "wlan" && c.band === "2_4ghz"], ["wlan", "Ohne Verbindung", (c) => !c.link_type]];
+  return buses.map(([type, title, p]) => {
+    const l = list.filter(p).sort((a, b) => Number(b.online) - Number(a.online) || a.name.localeCompare(b.name));
+    return l.length ? `<div class="bus ${type}" role="group" aria-label="${title}, ${l.length} Geräte"><div class="bus-h" aria-hidden="true">${title} · ${l.length}</div><div class="nodes">${l.map(ndHtml).join("")}</div></div>` : "";
+  }).join("");
+}
+function islandsHtml() {
+  const isle = (node) => {
+    const all = CLIENTS.filter((c) => (node ? c.ap === node.mac : !c.ap));
+    const list = all.filter(shown);
+    if (!node && !all.length) return "";
+    const hidden = all.length - list.length;
+    const up = node?.uplink ? `<div class="isle-up"><i class="lg-line ${node.uplink.type}"></i>${node.uplink.type === "lan" ? "per LAN" : `per WLAN ${BANDS[node.uplink.band]}, ${node.uplink.signal} dBm`} an FRITZ!Box</div>` : "";
+    const loads = node ? `<div class="loads">${Object.entries(node.radios).map(([b, r]) => `<span class="load ${r.utilization >= 70 ? "busy" : ""}">${BANDS[b]} · Kanal ${r.channel} · ${r.utilization} %</span>`).join("")}</div>` : "";
+    return `<section class="isle ${node?.role === "master" ? "root" : ""} ${node ? "" : "lost"}" data-node="${node?.mac ?? "none"}" data-up="${node?.uplink?.type ?? ""}" aria-label="${esc(node?.name ?? "Ohne Access Point")}, ${list.length} Geräte">
+      <div class="isle-h"><span class="ico">${ic(node ? (node.role === "master" ? "router" : "ap") : "help")}</span>
+        <span class="who"><b>${esc(node?.name ?? "Ohne Access Point")}</b><small>${esc(node ? apSub(node) : "Die Box nennt keinen Access Point")}</small></span></div>
+      ${up}${loads}<div class="buses">${busesHtml(list)}</div>
+      ${hidden ? `<p class="hidden-note">${hidden} ${hidden === 1 ? "Gerät" : "Geräte"} durch Filter ausgeblendet</p>` : ""}</section>`;
+  };
+  return `<div class="isl ${S.names ? "" : "compact"}" id="isl"><svg class="links" id="links" aria-hidden="true"></svg>
+    <div class="inet"><span>${ic("globe")}Internet · verbunden</span></div>
+    <div class="isles">${NODES.map(isle).join("")}${isle(null)}</div></div>`;
+}
+/** Die Linien zwischen Box und Repeatern, nach dem Layout gemessen (geht in jeder Spaltenzahl). */
+function drawLinks() {
+  const wrap = document.getElementById("isl"); const svg = document.getElementById("links");
+  if (!wrap || !svg) return;
+  const W = wrap.getBoundingClientRect();
+  const root = wrap.querySelector(".isle.root").getBoundingClientRect();
+  const inet = wrap.querySelector(".inet span").getBoundingClientRect();
+  const phone = frame.clientWidth <= 600;
+  const p = [];
+  const x0 = phone ? inet.left - W.left + 14 : inet.left - W.left + inet.width / 2;
+  p.push(`<path d="M${x0},${inet.bottom - W.top} V${root.top - W.top}"/>`);
+  wrap.querySelectorAll(".isle[data-up]:not(.root)").forEach((el, i) => {
+    const type = el.dataset.up; if (!type) return;
+    const r = el.getBoundingClientRect();
+    if (phone) {
+      const x = 8 + i * 8, y = r.top - W.top + 28;
+      p.push(`<path class="${type}" d="M${x},${root.bottom - W.top} V${y} H${r.left - W.left}"/>`);
+    } else {
+      const x = r.left - W.left + r.width / 2, y0 = root.bottom - W.top, y1 = r.top - W.top;
+      p.push(`<path class="${type}" d="M${x},${y0} V${y1}"/>`);
+    }
+  });
+  svg.innerHTML = p.join("");
+}
+
+/* Radial: Positionen werden aus der Topologie gerechnet, nicht gespeichert. */
+function radialLayout() {
+  const hubs = NODES.map((node) => ({ node, list: CLIENTS.filter((c) => c.ap === node.mac).sort((a, b) => (a.link_type === "lan") - (b.link_type === "lan") || a.name.localeCompare(b.name)) }));
+  const lost = CLIENTS.filter((c) => !c.ap);
+  const ringR = (k) => { let r = 70, cap, left = k, rings = 0; while (left > 0) { cap = Math.floor((2 * Math.PI * r) / 30); left -= cap; rings++; if (left > 0) r += 30; } return { r, rings }; };
+  const place = (hx, hy, list, start = 0, span = 2 * Math.PI) => {
+    const out = []; let r = 70, i = 0;
+    while (i < list.length) {
+      const cap = Math.max(1, Math.floor((span * r) / 30)); const take = Math.min(cap, list.length - i);
+      for (let j = 0; j < take; j++) { const a = start + (span * (j + 0.5)) / take; out.push({ c: list[i + j], x: hx + r * Math.cos(a), y: hy + r * Math.sin(a) }); }
+      i += take; r += 30;
+    }
+    return out;
+  };
+  const master = hubs[0], reps = hubs.slice(1);
+  const mr = ringR(master.list.length).r, rr = Math.max(...reps.map((h) => ringR(h.list.length).r), 70);
+  const R = mr + rr + 70;
+  const pos = [{ hub: master.node, x: 0, y: 0 }];
+  const dots = place(0, 0, master.list).map((d) => ({ ...d, hub: master.node }));
+  const tall = frame.clientWidth <= 600; // schmal: Repeater oben/unten statt links/rechts
+  reps.forEach((h, i) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / reps.length + (tall ? 0 : Math.PI / reps.length);
+    const x = R * Math.cos(a), y = R * Math.sin(a);
+    pos.push({ hub: h.node, x, y });
+    dots.push(...place(x, y, h.list).map((d) => ({ ...d, hub: h.node })));
+  });
+  if (lost.length) {
+    const lx = tall ? mr + 100 : 0, ly = tall ? 0 : -(mr + 100);
+    pos.push({ hub: { name: "Ohne Access Point", role: "lost" }, x: lx, y: ly });
+    dots.push(...place(lx, ly, lost).map((d) => ({ ...d, hub: null })));
+  }
+  const xs = [...pos, ...dots].map((d) => d.x), ys = [...pos, ...dots].map((d) => d.y), pad = 50;
+  return { pos, dots, box: { x: Math.min(...xs) - pad, y: Math.min(...ys) - pad, w: Math.max(...xs) - Math.min(...xs) + 2 * pad, h: Math.max(...ys) - Math.min(...ys) + 2 * pad } };
+}
+function radialHtml() {
+  const L = radialLayout();
+  if (!S.vb) { const b = L.box, m = 760; S.vb = b.w < m ? { x: b.x - (m - b.w) / 2, y: b.y - (m - b.h) / 2, w: m, h: Math.max(b.h, m) } : { ...b }; }
+  const hub = (h) => L.pos.find((p) => p.hub === h);
+  const lines = [
+    ...L.pos.slice(1).filter((p) => p.hub.uplink).map((p) => `<path class="ln up ${p.hub.uplink.type}" d="M0,0 L${p.x},${p.y}"/>`),
+    ...L.dots.filter((d) => d.hub).map((d) => { const h = hub(d.hub); return `<path class="ln ${d.c.link_type === "lan" ? "" : "wlan"} ${isWeak(d.c) ? "weak" : ""}" d="M${h.x},${h.y} L${d.x.toFixed(1)},${d.y.toFixed(1)}" ${shown(d.c) ? "" : 'opacity=".15"'}/>`; }),
+  ].join("");
+  const hubs = L.pos.map((p) => `<g class="hub ${p.hub.role}" transform="translate(${p.x},${p.y})"><circle r="${p.hub.role === "master" ? 24 : 18}"/><text text-anchor="middle" y="${p.hub.role === "master" ? 42 : 34}">${esc(p.hub.name)}</text></g>`).join("")
+;
+  const nodes = L.dots.map((d) => {
+    const c = d.c, cls = [c.online ? "" : "off", isWeak(c) ? "weak" : "", isBlocked(c) ? "blk" : "", shown(c) ? "" : "dim", S.hl === c.id ? "hl" : ""].join(" ");
+    const shape = c.link_type === "lan" ? `<rect class="b" x="-9" y="-9" width="18" height="18" rx="4"/>` : `<circle class="b" r="9"/>`;
+    return `<g class="rn ${cls}" transform="translate(${d.x.toFixed(1)},${d.y.toFixed(1)})" data-dev="${c.id}" role="button" tabindex="${shown(c) ? 0 : -1}" aria-label="${esc(nodeLabel(c))}"><circle class="hit" r="16"/>${shape}<text text-anchor="middle" y="22">${esc(c.name)}</text></g>`;
+  }).join("");
+  return `<div class="rad"><svg id="radsvg" viewBox="${S.vb.x} ${S.vb.y} ${S.vb.w} ${S.vb.h}" aria-label="Netzkarte, ${CLIENTS.length} Geräte">${lines}${hubs}${nodes}</svg>
+    <div class="zoom"><button data-zoom="in" aria-label="Vergrößern">+</button><button data-zoom="out" aria-label="Verkleinern">−</button><button data-zoom="fit" aria-label="Alles zeigen" style="font-size:12px">⤢</button></div>
+    <span class="radhint" aria-hidden="true">Ziehen zum Verschieben · Rad/Pinch zum Zoomen</span></div>`;
+}
+function applyVb() {
+  const svg = document.getElementById("radsvg"); if (!svg) return;
+  svg.setAttribute("viewBox", `${S.vb.x} ${S.vb.y} ${S.vb.w} ${S.vb.h}`);
+  const scale = Math.min(svg.clientWidth / S.vb.w, svg.clientHeight / S.vb.h);
+  svg.classList.toggle("labels", scale > 1.15);
+}
+function zoomAt(f, cx, cy) {
+  const v = S.vb; const nw = Math.min(4000, Math.max(160, v.w / f)); const k = nw / v.w;
+  S.vb = { x: cx - (cx - v.x) * k, y: cy - (cy - v.y) * k, w: nw, h: v.h * k }; applyVb();
+}
+function svgPoint(svg, clientX, clientY) {
+  const r = svg.getBoundingClientRect(); const v = S.vb;
+  const s = Math.max(v.w / r.width, v.h / r.height); // preserveAspectRatio meet
+  const ox = (r.width * s - v.w) / 2, oy = (r.height * s - v.h) / 2;
+  return { x: v.x - ox + (clientX - r.left) * s, y: v.y - oy + (clientY - r.top) * s, s };
+}
+let drag = null; const pointers = new Map(); let moved = false;
+frame.addEventListener("pointerdown", (e) => {
+  const svg = e.target.closest("#radsvg"); if (!svg) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY }); moved = false;
+  drag = { vb: { ...S.vb }, x: e.clientX, y: e.clientY, dist: null };
+  if (pointers.size === 2) { const [a, b] = [...pointers.values()]; drag.dist = Math.hypot(a.x - b.x, a.y - b.y); drag.mid = svgPoint(svg, (a.x + b.x) / 2, (a.y + b.y) / 2); }
+});
+frame.addEventListener("pointermove", (e) => {
+  const svg = document.getElementById("radsvg"); if (!drag || !svg || !pointers.has(e.pointerId)) return;
+  pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (pointers.size === 2 && drag.dist) {
+    const [a, b] = [...pointers.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y);
+    S.vb = { ...drag.vb }; zoomAt(d / drag.dist, drag.mid.x, drag.mid.y); moved = true; return;
+  }
+  const s = svgPoint(svg, 0, 0).s; const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!moved && Math.abs(dx) + Math.abs(dy) > 5) { moved = true; svg.classList.add("drag"); try { svg.setPointerCapture(e.pointerId); } catch (_) {} }
+  if (moved) { S.vb = { ...drag.vb, x: drag.vb.x - dx * s, y: drag.vb.y - dy * s }; applyVb(); }
+});
+const endPointer = (e) => { pointers.delete(e.pointerId); if (!pointers.size) { drag = null; document.getElementById("radsvg")?.classList.remove("drag"); } };
+frame.addEventListener("pointerup", endPointer); frame.addEventListener("pointercancel", endPointer);
+frame.addEventListener("wheel", (e) => {
+  const svg = e.target.closest("#radsvg"); if (!svg) return;
+  e.preventDefault(); const p = svgPoint(svg, e.clientX, e.clientY); zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, p.x, p.y);
+}, { passive: false });
+
+/* ================= Gerät (Vollseite) ================= */
+function entRow(c, key, label, hint, value, control) {
+  // Ohne IPv4 geht es nicht; ist die Entität in HA aus, zeigen wir den bekannten Wert und bieten Einschalten an.
+  if (key !== "wol" && !c.ip) return `<div class="action"><div>${label}<small>Braucht eine IPv4-Adresse</small></div><div class="ctl"><span class="val">${esc(value)}</span></div></div>`;
+  if (!c.ents[key]) {
+    const busy = S.enabling.has(c.id + key);
+    return `<div class="action"><div>${label}${value ? `<span class="val-line">${esc(value)}</span>` : ""}<small>${busy ? "Wird eingeschaltet, Home Assistant lädt neu (ca. 30 s) …" : "Ausgeschaltet in Home Assistant"}</small></div>
+      <div class="ctl"><button class="btn sm" data-enable="${key}" data-k="en-${key}" ${busy ? "disabled" : ""}>${busy ? '<span class="spin" aria-hidden="true"></span>Bitte warten' : "Einschalten"}</button></div></div>`;
+  }
+  return `<div class="action"><div>${label}<small>${hint}</small></div><div class="ctl">${control}</div></div>`;
+}
+function pathHtml(c) {
+  const node = NODES.find((x) => x.mac === c.ap);
+  const seg = (cls, text) => `<div class="pl ${cls}"><i></i><span>${esc(text)}</span></div>`;
+  const parts = [`<div class="pn">${ic("globe")}<b>Internet</b></div>`, seg("", ""), `<div class="pn">${ic("router")}<b>FRITZ!Box</b></div>`];
+  if (node && node.role !== "master") parts.push(seg(node.uplink.type, node.uplink.type === "lan" ? "LAN" : `WLAN ${BANDS[node.uplink.band]} · ${node.uplink.signal} dBm`), `<div class="pn">${ic("ap")}<b>${esc(node.name)}</b></div>`);
+  const own = c.link_type === "lan" ? `${c.port ?? "LAN"}${c.speed ? " · " + c.speed + " Mbit/s" : ""}` : c.link_type === "wlan" ? `WLAN ${BANDS[c.band]}${c.online ? " · " + c.signal + " dBm" : ""}` : "unbekannt";
+  parts.push(seg(`${c.link_type === "lan" ? "" : "wlan"} ${isWeak(c) ? "weak" : ""}`, c.online ? own : "offline"), `<div class="pn me">${ic(c.link_type === "lan" ? "lan" : "wifi")}<b>${esc(c.name)}</b></div>`);
+  return `<div class="path" role="img" aria-label="Verbindungsweg: Internet, FRITZ!Box${node && node.role !== "master" ? ", " + esc(node.name) : ""}, ${esc(c.name)} über ${esc(own)}">${parts.join("")}</div>`;
+}
+function detailHtml(c) {
+  const list = visible();
+  const idx = list.findIndex((x) => x.id === c.id);
+  const prev = idx > 0 ? list[idx - 1] : null, next = idx >= 0 && idx < list.length - 1 ? list[idx + 1] : null;
+  const node = NODES.find((x) => x.mac === c.ap);
+  const pager = `<span class="pager">${idx >= 0 ? `<span aria-hidden="true">${idx + 1} / ${list.length}</span>` : ""}
+    <button class="icon-btn" data-go="${prev?.id ?? ""}" data-k="prev" aria-label="Vorheriges Gerät${prev ? ": " + esc(prev.name) : ""}" ${prev ? "" : "disabled"} title="Vorheriges (k)">${ic("left")}</button>
+    <button class="icon-btn" data-go="${next?.id ?? ""}" data-k="next" aria-label="Nächstes Gerät${next ? ": " + esc(next.name) : ""}" ${next ? "" : "disabled"} title="Nächstes (j)">${ic("right")}</button></span>`;
+  const chips = [
+    `<span class="chip ${c.online ? "ok" : ""}"><span class="dot ${c.online ? "on" : ""}"></span>${c.online ? "Online" : "Offline, zuletzt " + whenText(c.last_online)}</span>`,
+    c.link_type ? `<span class="chip">${c.link_type === "wlan" ? "WLAN" : "LAN"}</span>` : "",
+    c.guest ? '<span class="chip info">Gast</span>' : "", isBlocked(c) ? '<span class="chip bad">Gesperrt</span>' : "",
+    isWeak(c) ? `<span class="chip warn">Schwach, ${Math.round(ratio(c) * 100)} % der Maximalrate</span>` : "",
+    c.private_mac ? '<span class="chip">Private MAC</span>' : "", daysSince(c.created_at) < 7 ? '<span class="chip info">Neu</span>' : "",
+  ].join("");
+  const tiles = c.online ? `<div class="tiles">
+      <div class="tile"><span class="label">Rate ↓/↑</span><b>${c.down} / ${c.up}</b><small>Mbit/s</small></div>
+      ${c.maxd ? `<div class="tile"><span class="label">Maximal</span><b>${c.maxd} / ${c.maxu}</b><small>Mbit/s</small></div>` : ""}
+      ${c.link_type === "wlan" ? `<div class="tile"><span class="label">Signal</span><b>${c.signal} dBm</b><small>${["", "schwach", "mäßig", "gut", "sehr gut"][bars(c.signal)]}</small></div>
+        <div class="tile"><span class="label">Band</span><b>${BANDS[c.band]}</b><small>${node ? "Kanal " + node.radios[c.band].channel : ""}</small></div>`
+      : `<div class="tile"><span class="label">Anschluss</span><b>${esc(c.port)}</b><small>${c.speed} Mbit/s</small></div>`}</div>`
+    : `<p class="muted" style="margin:12px 0 0">Keine aktuellen Verbindungsdaten, das Gerät ist offline.</p>`;
+  const off = ["priority", "profile", "wol"].filter((k) => !c.ents[k] && (k === "wol" || c.ip) && !S.enabling.has(c.id + k));
+  const internet = entRow(c, "internet", "Internetzugang", c.wan ? "Das Gerät darf ins Internet" : "Gesperrt, nur das Heimnetz geht", c.wan ? "Erlaubt" : "Gesperrt",
+    `<button class="switch" role="switch" aria-checked="${c.wan}" aria-label="Internetzugang" data-sw="wan" data-k="sw-wan"></button>`);
+  const prio = entRow(c, "priority", "Priorisierung", "Vorrang bei voller Leitung", c.priority ? "An" : "Aus",
+    `<button class="switch" role="switch" aria-checked="${c.priority}" aria-label="Priorisierung" data-sw="priority" data-k="sw-prio"></button>`);
+  const prof = entRow(c, "profile", "Zugangsprofil", "Zeitlimits und Filter der Box", c.profile,
+    `<label class="sr" for="prof">Zugangsprofil</label><select id="prof" data-k="prof">${PROFILES.map((p) => `<option ${p === c.profile ? "selected" : ""}>${p}</option>`).join("")}</select>`);
+  const wol = entRow(c, "wol", "Wake on LAN", c.online ? "Nur für ausgeschaltete Geräte" : "Startet das Gerät über das Netz", "",
+    `<button class="btn sm" data-act="wol" data-k="wol" ${c.online ? "disabled" : ""}>Aufwecken</button>`);
+  const master = [["MAC", `<span class="mono">${c.mac}</span>`], ["IPv4", `<span class="mono">${c.ip ?? "unbekannt"}</span>`], ["Hersteller", esc(c.vendor)],
+    ["Access Point", esc(node?.name ?? "nicht zugeordnet")], ["Netz", esc(c.ssid ?? "–")], ["Zugangsprofil", esc(c.profile)], ["Bekannt seit", whenText(c.created_at)]]
+    .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join("");
+  return `<div class="dhead"><button class="back" data-act="close" data-k="close">${ic("back")}${S.view === "map" ? "Netzkarte" : "Liste"}</button>${pager}<h1 id="dtitle" tabindex="-1">${esc(c.name)}</h1></div>
+    <div class="chips-row">${chips}</div>
+    <div class="dsecs">
+      <div class="card sec wide"><span class="label">Verbindung</span>${pathHtml(c)}${tiles}</div>
+      <div class="card sec"><span class="label">Aktionen</span>
+        ${off.length >= 2 ? `<div class="note"><span>${off.length} Aktionen sind in Home Assistant ausgeschaltet. Die aktuellen Werte siehst du trotzdem.</span><button class="btn sm" data-enable="all" data-k="en-all">Alle einschalten</button></div>` : ""}
+        ${internet}${prio}${prof}${wol}
+        <div class="btn-row"><button class="btn" data-act="rename" data-k="rename">Umbenennen</button><button class="btn" data-act="ha" data-k="ha">${ic("external")}In Home Assistant</button><button class="btn" data-act="showmap" data-k="showmap">${ic("map")}In der Netzkarte</button></div>
+      </div>
+      <div class="card sec"><span class="label">Stammdaten</span><dl>${master}</dl>
+        <span class="label" style="display:block;margin-top:16px">Gruppen</span>
+        <div class="chips-row" role="group" aria-label="Gruppen des Geräts">${LABELS.map((l) => `<button class="fchip" data-label="${l.id}" data-k="lb-${l.id}" aria-pressed="${c.labels.includes(l.id)}">${esc(l.name)}</button>`).join("")}<button class="fchip" data-act="newgroup">+ Neue Gruppe</button></div>
+        <p class="hint">Label auf dem Schalter „Internetzugang“; nutzbar in Dashboards, Automationen und im Zeitplan-Blueprint.</p>
+        <span class="label" style="display:block;margin-top:16px">Verlauf</span><div class="btn-row" style="margin-top:8px"><button class="btn sm" data-act="logbook">Logbuch</button><button class="btn sm" data-act="history">Verlauf</button></div></div>
+    </div>`;
+}
+
+/* ================= Aktualisieren ================= */
+function setHtml(id, html) { const el = document.getElementById(id); if (el && el.__h !== html) { el.innerHTML = html; el.__h = html; } }
+function updateList() {
+  if (S.tab !== "net" || S.sel) return;
+  setHtml("filters", filtersHtml());
+  setHtml("meta", `${CLIENTS.length} Geräte · ${count("online")} online · ${count("blocked")} gesperrt · ${visible().length} angezeigt`);
+  setHtml("groupbar", groupbarHtml());
+  setHtml("menuhost", menuHtml());
+  setHtml("body", S.view === "map" ? mapHtml() : listHtml());
+  if (S.view === "map") { if (S.mapv === "isl") drawLinks(); else applyVb(); }
+}
+function updateDetail() {
+  const el = document.getElementById("detail"); if (!el || !S.sel) return;
+  const k = document.activeElement?.dataset?.k;
+  el.innerHTML = detailHtml(byId(S.sel));
+  if (k) el.querySelector(`[data-k="${k}"]`)?.focus();
+}
+
+/* ================= Navigation (Hash-Routen wie im Panel) ================= */
+function route() {
+  const h = location.hash;
+  const m = /^#\/device\/([0-9a-f]{12})$/.exec(h);
+  const prevSel = S.sel;
+  S.sel = m && byId(m[1]) ? m[1] : null;
+  S.tab = h === "#/cleanup" ? "cleanup" : h === "#/filter" ? "filter" : "net";
+  shell();
+  const vp = document.getElementById("vp");
+  if (S.sel && S.sel !== prevSel) { vp.scrollTop = 0; document.getElementById("dtitle")?.focus({ preventScroll: true }); }
+  else if (!S.sel && prevSel) {
+    vp.scrollTop = S.listScroll;
+    document.querySelector(`[data-dev="${prevSel}"]`)?.focus({ preventScroll: true });
+  }
+}
+function openDevice(id, replace = false) {
+  if (!S.sel) S.listScroll = document.getElementById("vp")?.scrollTop ?? 0;
+  if (replace || S.sel) location.replace(`#/device/${id}`);
+  else { S.openedHere = true; location.hash = `#/device/${id}`; }
+}
+function closeDevice() { if (S.openedHere) { S.openedHere = false; history.back(); } else location.hash = "#/"; }
+
+/* ================= Ereignisse ================= */
+let toastTimer;
+function toast(msg) { const t = document.getElementById("toast"); if (!t) return; t.textContent = msg; t.classList.add("show"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("show"), 2600); }
+function setMenu(open, focusFirst = false) {
+  S.menu = open; updateList();
+  if (open && focusFirst) document.querySelector("#fmenu [role=menuitemradio]")?.focus();
+  if (!open) document.getElementById("morebtn")?.focus();
+}
+frame.addEventListener("click", (e) => {
+  const el = e.target.closest("button, [data-act], g[data-dev]");
+  if (!el || el.disabled) return;
+  const d = el.dataset;
+  if (d.tab) { location.hash = d.tab === "net" ? "#/" : `#/${d.tab}`; return; }
+  if (d.dev) { if (el.closest("#radsvg") && moved) return; S.hl = null; openDevice(d.dev); return; }
+  if (d.go) { openDevice(d.go, true); return; }
+  if (el.id === "morebtn") { setMenu(!S.menu, true); return; }
+  if (d.filter) {
+    const fromMenu = Boolean(el.closest("#fmenu")); S.filter = d.filter; S.menu = false; S.closed.clear(); updateList();
+    (fromMenu ? document.getElementById("morebtn") : document.querySelector(`#filters [data-filter="${CSS.escape(d.filter)}"]`))?.focus();
+    return;
+  }
+  if (d.view) { S.view = d.view; renderMain(); document.querySelector(`.viewsw [data-view="${d.view}"]`)?.focus(); return; }
+  if (d.zoom) {
+    if (d.zoom === "fit") { S.vb = null; updateList(); return; }
+    zoomAt(d.zoom === "in" ? 1.4 : 1 / 1.4, S.vb.x + S.vb.w / 2, S.vb.y + S.vb.h / 2); return;
+  }
+  if (d.ap) { S.closed.has(d.ap) ? S.closed.delete(d.ap) : S.closed.add(d.ap); updateList(); document.querySelector(`[data-ap="${CSS.escape(d.ap)}"]`)?.focus(); return; }
+  const c = S.sel && byId(S.sel);
+  if (d.sw && c) {
+    if (d.sw === "wan") { c.wan = !c.wan; toast(c.wan ? `${c.name}: Internet freigegeben` : `${c.name}: Internet gesperrt`); }
+    else { c.priority = !c.priority; toast(`Priorisierung ${c.priority ? "an" : "aus"}`); }
+    updateDetail(); return;
+  }
+  if (d.enable && c) {
+    const keys = d.enable === "all" ? ["priority", "profile", "wol"].filter((k) => !c.ents[k]) : [d.enable];
+    keys.forEach((k) => S.enabling.add(c.id + k)); updateDetail();
+    setTimeout(() => { keys.forEach((k) => { c.ents[k] = true; S.enabling.delete(c.id + k); }); updateDetail(); toast(keys.length > 1 ? `${keys.length} Entitäten eingeschaltet` : "Entität eingeschaltet"); }, 1600);
+    return;
+  }
+  if (d.label && c) { c.labels = c.labels.includes(d.label) ? c.labels.filter((l) => l !== d.label) : [...c.labels, d.label]; updateDetail(); return; }
+  switch (d.act) {
+    case "close": closeDevice(); return;
+    case "menu-close": setMenu(false); return;
+    case "names": S.names = !S.names; updateList(); document.querySelector('[data-act="names"]')?.focus(); return;
+    case "showmap": {
+      const id = S.sel; S.view = "map"; S.hl = id; S.filter = "all"; S.query = ""; S.vb = null; closeDevice();
+      setTimeout(() => document.querySelector(`[data-dev="${id}"]`)?.scrollIntoView({ block: "center" }), 60); return;
+    }
+    case "bulk": {
+      const id = S.filter.slice(6); const m = CLIENTS.filter((x) => x.labels.includes(id)); const block = m.every((x) => x.wan);
+      m.forEach((x) => (x.wan = !block)); toast(`${m.length} Geräte ${block ? "gesperrt" : "freigegeben"} (im Panel mit Bestätigungsdialog)`); updateList(); return;
+    }
+    case "wol": toast("Wake on LAN gesendet"); return;
+    case "rename": toast("Dialog „Umbenennen“ wie bisher"); return;
+    case "ha": toast("Öffnet /config/devices/device/…"); return;
+    case "logbook": case "history": toast("Öffnet Logbuch/Verlauf, gefiltert auf das Gerät"); return;
+    case "newgroup": toast("Dialog „Neue Gruppe“ wie bisher"); return;
+  }
+});
+frame.addEventListener("input", (e) => { if (e.target.id === "q") { S.query = e.target.value; updateList(); } });
+frame.addEventListener("change", (e) => {
+  const t = e.target;
+  if (t.id === "sort") { S.sort = t.value; updateList(); }
+  if (t.id === "group") { S.group = t.value; S.closed.clear(); updateList(); }
+  if (t.id === "prof") { byId(S.sel).profile = t.value; toast("Zugangsprofil geändert"); updateDetail(); }
+});
+document.addEventListener("keydown", (e) => {
+  const inField = /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName);
+  if (S.menu && document.getElementById("fmenu")?.contains(e.target)) {
+    const items = [...document.querySelectorAll("#fmenu [role=menuitemradio]")]; const i = items.indexOf(e.target);
+    if (e.key === "ArrowDown") { e.preventDefault(); items[(i + 1) % items.length].focus(); return; }
+    if (e.key === "ArrowUp") { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); return; }
+    if (e.key === "Home") { e.preventDefault(); items[0].focus(); return; }
+    if (e.key === "End") { e.preventDefault(); items.at(-1).focus(); return; }
+    if (e.key === "Tab") { setMenu(false); return; }
+  }
+  if (e.key === "Escape") { if (S.menu) { setMenu(false); return; } if (S.sel) { closeDevice(); return; } }
+  if (e.key === "ArrowDown" && e.target.id === "morebtn") { e.preventDefault(); setMenu(true, true); return; }
+  if ((e.key === "Enter" || e.key === " ") && e.target.matches?.("g[data-dev]")) { e.preventDefault(); moved = false; openDevice(e.target.dataset.dev); return; }
+  if (inField) return;
+  if (e.key === "/" && S.tab === "net") { e.preventDefault(); if (S.sel) closeDevice(); setTimeout(() => document.getElementById("q")?.focus(), 0); }
+  if (S.sel && (e.key === "j" || e.key === "k")) { const b = document.querySelector(`[data-k="${e.key === "j" ? "next" : "prev"}"]`); if (b && !b.disabled) b.click(); }
+  if (document.activeElement?.closest?.("#radsvg") && ["+", "-"].includes(e.key)) zoomAt(e.key === "+" ? 1.4 : 1 / 1.4, S.vb.x + S.vb.w / 2, S.vb.y + S.vb.h / 2);
+});
+window.addEventListener("hashchange", route);
+
+/* ================= Mockup-Steuerung ================= */
+document.querySelector(".mk").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-mk]"); if (!b) return;
+  S[b.dataset.mk] = b.dataset.v; S.menu = false; S.vb = null;
+  try { localStorage.setItem("panel-v2-mockup", JSON.stringify({ mapv: S.mapv, many: S.many, device: S.device, theme: S.theme })); } catch (_) {}
+  chrome(); if (S.sel && !byId(S.sel)) { location.hash = "#/"; return; } shell();
+});
+function chrome() {
+  document.querySelectorAll("[data-mk]").forEach((b) => b.setAttribute("aria-pressed", String(S[b.dataset.mk] === b.dataset.v)));
+  if (S.theme === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = S.theme;
+  stage.classList.toggle("phone", S.device === "phone");
+  CLIENTS = S.many === "1" ? [...BASE, ...EXTRA] : BASE;
+  document.getElementById("mk-desc").innerHTML = DESC[S.mapv];
+}
+new ResizeObserver(() => { if (S.view === "map" && !S.sel) { if (S.mapv === "isl") drawLinks(); else applyVb(); } }).observe(frame);
+try { Object.assign(S, JSON.parse(localStorage.getItem("panel-v2-mockup") || "{}")); } catch (_) {}
+chrome();
+route();
+</script>
+</body>
+</html>
