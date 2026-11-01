@@ -581,3 +581,19 @@ export function sparkLine(values, width, height, { min, max } = {}) {
   });
   return { line: line.trim(), area: `${line.trim()} L${last} ${height} L${first} ${height}Z` };
 }
+
+/** Min, mean and max of the numbers in a list; null without any. */
+export function seriesStats(values) {
+  const known = values.filter((v) => typeof v === "number");
+  if (!known.length) return null;
+  return {
+    min: Math.min(...known),
+    max: Math.max(...known),
+    mean: known.reduce((a, b) => a + b, 0) / known.length,
+  };
+}
+
+/** One column of the points of a device ([time, online, signal, rate]) as a list of numbers. */
+export function pointColumn(points, index) {
+  return (points ?? []).map((p) => (typeof p[index] === "number" ? p[index] : null));
+}

@@ -130,6 +130,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       page: 0,
       pageSize: rememberedPageSize(),
       history: null,
+      trend: null,
       closed: new Set(),
       sel: route.device,
       threshold: WEAK_LINK_RATIO,
@@ -678,8 +679,28 @@ class FritzboxNetworkPanel extends HTMLElement {
         pager: pagerFor(this._order(), state.sel),
         view: state.view,
         enabling: state.enabling,
+        trend: state.trend,
       })
     );
+    this._maybeLoadTrend();
+  }
+
+  /** The history of the open device, read when it is opened and now and then while it stays open. */
+  async _maybeLoadTrend() {
+    const client = this._selected();
+    const trend = this._state.trend;
+    if (!client || this._trendBusy) return;
+    if (trend?.mac === client.mac && Date.now() - trend.at < HISTORY_REFRESH_MS) return;
+    this._trendBusy = true;
+    try {
+      const data = await this._ws("history/device", { mac: client.mac });
+      this._state.trend = { mac: client.mac, data, at: Date.now(), range: trend?.mac === client.mac ? trend.range : "day" };
+    } catch {
+      this._state.trend = { mac: client.mac, data: null, at: Date.now() - HISTORY_REFRESH_MS + 30000, range: "day" };
+    } finally {
+      this._trendBusy = false;
+    }
+    if (this._selected()?.mac === client.mac) this._renderDetail();
   }
 
   /** A device page was opened or paged to: from the top, with the focus on its name. */
@@ -837,6 +858,11 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._update();
       const root = this.shadowRoot;
       (fromMenu ? root.querySelector("#morebtn") : root.querySelector(`#chips [data-k="f-${CSS.escape(ds.filter)}"]`))?.focus();
+      return;
+    } else if (ds.range) {
+      if (state.trend) state.trend.range = ds.range;
+      this._update();
+      this.shadowRoot.querySelector(`[data-range="${ds.range}"]`)?.focus();
       return;
     } else if (ds.sort) {
       state.sortDesc = state.sort === ds.sort ? !state.sortDesc : false;

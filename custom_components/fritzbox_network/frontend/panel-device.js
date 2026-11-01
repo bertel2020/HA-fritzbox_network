@@ -1,6 +1,6 @@
 /* The device page of the panel: a page of its own with the connection, the actions and the master data, as HTML. */
 
-import { BANDS, escapeHtml, isBlocked, isWeak, uplinkStyle } from "./shared.js";
+import { BANDS, escapeHtml, isBlocked, isWeak, pointColumn, seriesStats, sparkLine, uplinkStyle } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { weakPercent, whenText } from "./panel-network.js";
@@ -260,6 +260,7 @@ export function renderDevice(client, ctx) {
     <div class="chips-row">${chips}</div>
     <div class="dsecs">
       <section class="card sec wide"><span class="label">${escapeHtml(t.connection)}</span>${pathHtml(client, data, t, ctx.threshold)}${tilesHtml(client, data, t)}</section>
+      ${trendSection(client, ctx)}
       <section class="card sec"><span class="label">${escapeHtml(t.actions)}</span>
         ${note}
         ${switchRow("internet_access", t.internet, blocked ? t.internetBlocked : t.internetAllowed, internet, !blocked, rowCtx)}
@@ -275,6 +276,34 @@ export function renderDevice(client, ctx) {
         ${groupsSection(client, data, t)}
         ${historySection(client, t)}</section>
     </div>`;
+}
+
+/** One chart of the trend: the line, the area below and the lowest, mean and highest value. */
+function trendChart(title, values, unit, t) {
+  const path = sparkLine(values, 300, 90);
+  const stats = seriesStats(values);
+  if (!path || !stats) return "";
+  const round = (n) => Math.round(n);
+  return `<div class="trend"><span class="label">${escapeHtml(title)}</span>
+    <svg viewBox="0 0 300 90" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(title)}"><path class="area" d="${path.area}"/><path d="${path.line}"/></svg>
+    <span class="hint">${escapeHtml(fill(t.trendStats, { min: round(stats.min), mean: round(stats.mean), max: round(stats.max), unit }))}</span></div>`;
+}
+
+/** Signal and rate of the last day or week, from the history the box keeps. */
+function trendSection(client, ctx) {
+  const { t, trend } = ctx;
+  if (!trend || trend.mac !== client.mac) return "";
+  const range = trend.range === "week" ? "week" : "day";
+  const points = trend.data?.[range] ?? [];
+  const charts = [
+    client.link_type === "wlan" ? trendChart(t.trendSignal, pointColumn(points, 2), "dBm", t) : "",
+    trendChart(t.trendRate, pointColumn(points, 3), "Mbit/s", t),
+  ].join("");
+  const buttons = ["day", "week"]
+    .map((r) => `<button data-range="${r}" aria-pressed="${r === range}">${escapeHtml(t.trendRanges[r])}</button>`)
+    .join("");
+  return `<section class="card sec wide"><div class="trendhead"><span class="label">${escapeHtml(t.trendTitle)}</span><div class="seg" role="group" aria-label="${escapeHtml(t.trendTitle)}">${buttons}</div></div>
+    ${charts ? `<div class="trends">${charts}</div>` : `<p class="hint">${escapeHtml(t.trendNone)}</p>`}</section>`;
 }
 
 /** The groups of a device: the labels of Home Assistant, put on its "Internet access" entity. */

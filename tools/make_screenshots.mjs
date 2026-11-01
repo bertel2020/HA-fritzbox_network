@@ -336,6 +336,14 @@ try {
                   case "fritzbox_network/cleanup/list": return data.cleanup;
                   case "fritzbox_network/filter/preview": return data.filterPreview;
                   case "fritzbox_network/ports/list": return data.ports;
+                  case "fritzbox_network/history/device": {
+                    const c = data.topology.clients.find((x) => x.mac === msg.mac);
+                    const make = (count, step) => Array.from({ length: count }, (_, i) => [
+                      i * step, 1, c?.link_type === "wlan" ? Math.round((c.signal_dbm ?? -60) + 6 * Math.sin(i / 7) + (i % 5)) : null,
+                      Math.round((c?.rate_download ?? 100) * (0.8 + 0.2 * Math.sin(i / 5))),
+                    ]);
+                    return { day: make(288, 300), week: make(168, 3600) };
+                  }
                   case "fritzbox_network/history/summary": {
                     // a steady wobble per device, so the sparklines have something to draw
                     const devices = {};

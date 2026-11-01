@@ -431,4 +431,12 @@ export const PANEL_CSS = `
   .tpager .btn { min-height: 32px; padding: 0 10px; }
   @container app (max-width: 760px) { .devtable .wide { display: none; } }
   @container app (max-width: 520px) { .devtable .hist, .devtable th:nth-child(4) { display: none; } .chips2 { display: none; } }
+
+  .trendhead { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .trendhead .seg { grid-auto-flow: column; width: auto; }
+  .trendhead .seg button { min-height: 32px; text-align: center; border-top: 0; }
+  .trends { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px 24px; margin-top: 8px; }
+  .trend svg { width: 100%; height: 90px; display: block; margin: 6px 0 2px; background: var(--soft); border-radius: 10px; }
+  .trend path { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .trend path.area { fill: var(--accent); opacity: .12; stroke: none; }
 `;
