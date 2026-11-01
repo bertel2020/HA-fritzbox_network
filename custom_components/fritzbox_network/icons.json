@@ -64,6 +64,9 @@
         "state": {
           "off": "mdi:web-off"
         }
+      },
+      "priority": {
+        "default": "mdi:rocket-launch-outline"
       }
     },
     "button": {

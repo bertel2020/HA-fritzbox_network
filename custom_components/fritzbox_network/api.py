@@ -207,6 +207,23 @@ class FritzNetworkClient:
                     raise
                 _LOGGER.debug("%s was not blocked, nothing to allow", ip)
 
+    def set_priority(self, ip: str, enabled: bool) -> None:
+        """Give the host with this IPv4 address priority in the router, or take it away.
+
+        The argument names are looked up in the description the box gives of the
+        action: the address is the one with "ip" in its name, the other one is the flag.
+        """
+        with self._lock:
+            fc = self._connection
+            action_name = "X_AVM-DE_SetPrioritizationByIP"
+            action = fc.services[HOSTS_SERVICE].actions[action_name]
+            names = [n for n, a in action.arguments.items() if a.direction == "in"]
+            ip_names = [n for n in names if "ip" in n.lower()]
+            if len(names) != 2 or len(ip_names) != 1:
+                raise FritzServiceError(f"Unexpected arguments of {action_name}: {names}")
+            flag_name = next(n for n in names if n != ip_names[0])
+            fc.call_action(HOSTS_SERVICE, action_name, **{ip_names[0]: ip, flag_name: enabled})
+
     def wake_on_lan(self, mac: str) -> None:
         with self._lock:
             self._connection.call_action(

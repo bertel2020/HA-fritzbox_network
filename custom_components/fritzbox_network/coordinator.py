@@ -316,6 +316,9 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
     async def async_set_internet_access(self, host: Host, allowed: bool) -> None:
         await self._async_set_by_ip(host, "wan_access", allowed, self.client.set_internet_access)
 
+    async def async_set_priority(self, host: Host, enabled: bool) -> None:
+        await self._async_set_by_ip(host, "priority", enabled, self.client.set_priority)
+
     async def async_set_filter_profile(self, host: Host, profile_id: str) -> None:
         await self._async_set_by_ip(
             host, "filter_profile", profile_id, self.client.set_filter_profile

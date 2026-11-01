@@ -430,3 +430,20 @@ async def test_no_access_profile_select_without_profiles_or_rights(hass, fake_cl
         )
         is None
     )
+
+
+async def test_priority_switch_sets_the_priority(hass, fake_client, entry):
+    await _setup(hass, entry)
+    entity_id = "switch.fritz_020000000003_priority"
+    assert er.async_get(hass).async_get(entity_id).disabled_by is not None
+    _enable(hass, entity_id)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    # the capture has this device with priority
+    assert hass.states.get(entity_id).state == "on"
+
+    await hass.services.async_call("switch", "turn_off", {"entity_id": entity_id}, blocking=True)
+
+    assert fake_client.calls[-1] == ("priority", "192.0.2.3", False)
+    await hass.async_block_till_done()
+    assert hass.states.get(entity_id).state == "off"

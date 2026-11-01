@@ -4,7 +4,7 @@ import threading
 import time
 from unittest.mock import MagicMock
 
-from fritzconnection.core.exceptions import FritzLookUpError
+from fritzconnection.core.exceptions import FritzLookUpError, FritzServiceError
 import pytest
 
 from custom_components.fritzbox_network.api import REQUEST_TIMEOUT, FritzNetworkClient
@@ -113,3 +113,30 @@ def test_no_filter_profiles_without_the_service():
     client._fc.services = {}
 
     assert client.get_filter_profiles() == {}
+
+
+def _priority_client(argument_names):
+    client = _client()
+    client._fc.call_action.side_effect = None
+    arguments = {n: MagicMock(direction="in") for n in argument_names}
+    action = MagicMock(arguments=arguments)
+    client._fc.services = {"Hosts1": MagicMock(actions={"X_AVM-DE_SetPrioritizationByIP": action})}
+    return client
+
+
+def test_priority_finds_the_argument_names_in_the_box_description():
+    client = _priority_client(["NewPrioritization", "NewIPAddress"])
+
+    client.set_priority("192.0.2.1", True)
+
+    client._fc.call_action.assert_called_once_with(
+        "Hosts1",
+        "X_AVM-DE_SetPrioritizationByIP",
+        NewIPAddress="192.0.2.1",
+        NewPrioritization=True,
+    )
+
+
+def test_priority_refuses_arguments_it_does_not_understand():
+    with pytest.raises(FritzServiceError):
+        _priority_client(["NewA", "NewB"]).set_priority("192.0.2.1", True)

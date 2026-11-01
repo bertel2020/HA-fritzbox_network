@@ -151,6 +151,9 @@
     "switch": {
       "internet_access": {
         "name": "Internetzugang"
+      },
+      "priority": {
+        "name": "Priorisierung"
       }
     },
     "button": {

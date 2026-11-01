@@ -59,6 +59,9 @@ class FakeClient:
     def wake_on_lan(self, mac: str) -> None:
         self.calls.append(("wol", mac))
 
+    def set_priority(self, ip: str, enabled: bool) -> None:
+        self.calls.append(("priority", ip, enabled))
+
     def get_filter_profiles(self) -> dict[str, str]:
         return dict(self.profiles)
 
