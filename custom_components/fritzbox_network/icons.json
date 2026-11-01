@@ -1,0 +1,83 @@
+{
+  "entity": {
+    "sensor": {
+      "ip_address": {
+        "default": "mdi:ip-network"
+      },
+      "connection_type": {
+        "default": "mdi:lan",
+        "state": {
+          "lan": "mdi:ethernet-cable",
+          "wlan": "mdi:wifi"
+        }
+      },
+      "access_point": {
+        "default": "mdi:access-point"
+      },
+      "online_since": {
+        "default": "mdi:clock-check-outline"
+      },
+      "last_online": {
+        "default": "mdi:clock-outline"
+      },
+      "clients": {
+        "default": "mdi:devices"
+      },
+      "devices_online": {
+        "default": "mdi:lan-connect"
+      },
+      "devices_offline": {
+        "default": "mdi:lan-disconnect"
+      },
+      "devices_total": {
+        "default": "mdi:lan"
+      },
+      "last_update": {
+        "default": "mdi:update"
+      },
+      "failed_polls": {
+        "default": "mdi:alert-circle-outline"
+      },
+      "mesh_status": {
+        "default": "mdi:lan",
+        "state": {
+          "available": "mdi:lan-check",
+          "unavailable": "mdi:lan-disconnect"
+        }
+      },
+      "link_rate_download": {
+        "default": "mdi:download-network"
+      },
+      "link_rate_upload": {
+        "default": "mdi:upload-network"
+      },
+      "wlan_band": {
+        "default": "mdi:wifi"
+      },
+      "ssid": {
+        "default": "mdi:wifi"
+      }
+    },
+    "switch": {
+      "internet_access": {
+        "default": "mdi:web",
+        "state": {
+          "off": "mdi:web-off"
+        }
+      }
+    },
+    "button": {
+      "refresh": {
+        "default": "mdi:refresh"
+      },
+      "wake_on_lan": {
+        "default": "mdi:power"
+      }
+    },
+    "binary_sensor": {
+      "guest": {
+        "default": "mdi:account-multiple-outline"
+      }
+    }
+  }
+}
