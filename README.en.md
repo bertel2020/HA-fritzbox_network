@@ -60,6 +60,10 @@ The integration works locally with the FRITZ!Box (TR-064) and makes no connectio
 - MAC and IP addresses and device names appear as entity attributes in Home Assistant; whoever has access there can see them.
 - The diagnostics remove MAC and IP addresses, names, credentials and the address of the box.
 
+## Roadmap
+
+- **Side panel** in the Home Assistant sidebar: the network as a tree by access point with search and filters, a detail view per device and the actions block/allow internet and Wake on LAN. It builds on the topology card. Later, only if it is needed: bulk clean-up of long-offline devices, a preview for the device filters, groups such as kids and guests, and a history of roaming and signal.
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md).

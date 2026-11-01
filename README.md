@@ -60,6 +60,10 @@ Voraussetzung ist **Home Assistant 2026.8 oder neuer**. Alles Weitere (Installat
 - MAC- und IP-Adressen sowie Gerätenamen stehen als Entitätsattribute in Home Assistant. Wer dort Zugriff hat, sieht sie.
 - Die Diagnosedaten entfernen MAC- und IP-Adressen, Namen, Zugangsdaten und die Adresse der Box.
 
+## Ausblick
+
+- **Seitenpanel** in der Home-Assistant-Seitenleiste: das Netzwerk als Baum nach Access Point mit Suche und Filtern, einer Detailansicht pro Gerät und den Aktionen Internet sperren und freigeben sowie Wake on LAN. Es baut auf der Topologie-Karte auf. Später, nur bei Bedarf: Aufräumen langer Offline-Geräte in einem Zug, eine Vorschau für die Gerätefilter, Gruppen wie Kinder und Gäste und ein Verlauf von Roaming und Signal.
+
 ## Mitwirken
 
 Siehe [CONTRIBUTING.md](CONTRIBUTING.md).
