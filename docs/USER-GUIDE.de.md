@@ -15,6 +15,7 @@ Die Integration arbeitet lokal mit der FRITZ!Box und baut keine Internetverbindu
 - [Entitäten](#entitäten)
 - [Namen und Entity-IDs](#namen-und-entity-ids)
 - [Geräte löschen und ausblenden](#geräte-löschen-und-ausblenden)
+- [Blueprints](#blueprints)
 - [Zusammen mit der Core-Integration](#zusammen-mit-der-core-integration)
 - [Datenschutz und Sicherheit](#datenschutz-und-sicherheit)
 - [Markenhinweis](#markenhinweis)
@@ -134,6 +135,17 @@ Ein Laptop mit LAN und WLAN hat zwei MAC-Adressen und steht in der Box zweimal. 
 Die Löschung betrifft nur Home Assistant. In der Box bleibt das Gerät stehen; dort entfernst du es über das Papierkorb-Symbol unter **Heimnetz → Netzwerk → Netzwerkverbindungen**. Per TR-064 lässt sich das nicht auslösen.
 
 Schließt ein Filter in den Optionen ein Gerät aus, werden dessen Gerät und Entitäten beim nächsten Abruf entfernt. Sie kommen zurück, wenn der Filter sie wieder einschließt.
+
+## Blueprints
+
+Mit der Integration kommen zwei Automations-Blueprints. Importiere sie mit den Buttons; sie erscheinen unter **Einstellungen → Automatisierungen & Szenen → Blueprints**.
+
+| Blueprint | Was es tut | Import |
+|-----------|------------|--------|
+| Benachrichtigung bei neuem Gerät | Sendet bei jedem Ereignis `fritzbox_network_new_device` eine Benachrichtigung | [![Blueprint für neue Geräte importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/bertel2020/HA-fritzbox_network/blob/main/blueprints/automation/fritzbox_network/new_device_notification.yaml) |
+| Zeitplan für den Internetzugang | Sperrt den Internetzugang von Geräten zu einer Uhrzeit und gibt ihn zu einer anderen wieder frei, an gewählten Tagen | [![Blueprint für den Zeitplan importieren](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/bertel2020/HA-fritzbox_network/blob/main/blueprints/automation/fritzbox_network/internet_schedule.yaml) |
+
+Der Zeitplan braucht das Recht „FRITZ!Box Einstellungen“. Hat sich die Adresse eines Geräts seit der letzten Aktualisierung geändert, wird dieses Gerät nicht geschaltet und der Lauf meldet einen Fehler. Beim Start passiert nichts: Ein Neustart während der Sperrzeit lässt den Zugang, wie er ist.
 
 ## Zusammen mit der Core-Integration
 

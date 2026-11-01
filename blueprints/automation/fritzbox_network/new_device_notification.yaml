@@ -1,0 +1,44 @@
+blueprint:
+  name: FRITZ!Box Network – notify about a new device
+  description: >-
+    Sends a notification when the FRITZ!Box lists a device it did not list before.
+    Devices that joined while Home Assistant was down and devices excluded by a
+    filter are not announced.
+  domain: automation
+  author: bertel2020
+  source_url: https://github.com/bertel2020/HA-fritzbox_network/blob/main/blueprints/automation/fritzbox_network/new_device_notification.yaml
+  homeassistant:
+    min_version: "2024.10.0"
+  input:
+    notify_entity:
+      name: Notification target
+      description: The notify entity that receives the message.
+      selector:
+        entity:
+          domain: notify
+    title:
+      name: Title
+      default: New device in the network
+      selector:
+        text:
+
+mode: queued
+max: 10
+
+variables:
+  notify_title: !input title
+
+triggers:
+  - trigger: event
+    event_type: fritzbox_network_new_device
+
+actions:
+  - action: notify.send_message
+    target:
+      entity_id: !input notify_entity
+    data:
+      title: "{{ notify_title }}"
+      message: >-
+        {{ trigger.event.data.name }}
+        ({{ trigger.event.data.ip or 'no IPv4 address' }},
+        {{ trigger.event.data.mac }})

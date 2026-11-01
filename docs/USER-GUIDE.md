@@ -15,6 +15,7 @@ The integration works locally with the FRITZ!Box and makes no connections to the
 - [Entities](#entities)
 - [Names and entity ids](#names-and-entity-ids)
 - [Deleting and hiding devices](#deleting-and-hiding-devices)
+- [Blueprints](#blueprints)
 - [Next to the core integration](#next-to-the-core-integration)
 - [Privacy and security](#privacy-and-security)
 - [Trademark notice](#trademark-notice)
@@ -134,6 +135,17 @@ A laptop on LAN and WLAN has two MAC addresses and appears twice in the box. It 
 The deletion only affects Home Assistant. The device stays in the box; remove it there with the trash icon under **Home Network → Network → Network Connections**. It cannot be triggered through TR-064.
 
 When a filter in the options excludes a device, its device and entities are removed with the next poll. They come back when the filter includes them again.
+
+## Blueprints
+
+Two automation blueprints ship with the integration. Import them with the buttons; they appear under **Settings → Automations & scenes → Blueprints**.
+
+| Blueprint | What it does | Import |
+|-----------|--------------|--------|
+| New device notification | Sends a notification for every `fritzbox_network_new_device` event | [![Import new device notification](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/bertel2020/HA-fritzbox_network/blob/main/blueprints/automation/fritzbox_network/new_device_notification.yaml) |
+| Internet access schedule | Blocks the internet access of devices at one time and allows it at another, on chosen days | [![Import internet access schedule](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https://github.com/bertel2020/HA-fritzbox_network/blob/main/blueprints/automation/fritzbox_network/internet_schedule.yaml) |
+
+The schedule needs the right "FRITZ!Box settings". If the address of a device changed since the last update, that device is not switched and the run reports an error. Nothing happens at startup, so a restart during the blocked period leaves the access as it is.
 
 ## Next to the core integration
 
