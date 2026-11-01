@@ -17,7 +17,7 @@ from custom_components.fritzbox_network import async_remove_config_entry_device
 from custom_components.fritzbox_network.const import CONF_HIDDEN_MACS
 from custom_components.fritzbox_network.diagnostics import async_get_config_entry_diagnostics
 
-from .conftest import LAN, OFFLINE, REPEATER, WLAN
+from .conftest import BOX, LAN, OFFLINE, REPEATER, WLAN
 
 
 def _device(hass, entry, mac):
@@ -485,3 +485,38 @@ async def test_auto_wake_on_lan_is_unavailable_when_the_box_does_not_answer(
     await hass.async_block_till_done()
 
     assert hass.states.get(entity_id).state == "unavailable"
+
+
+async def test_roaming_fires_once_after_the_new_access_point_held(hass, fake_client, entry):
+    events = async_capture_events(hass, "fritzbox_network_device_roamed")
+    coordinator = await _setup(hass, entry)
+    link = fake_client.mesh.links[WLAN]
+    old_ap = link.ap_mac
+    assert old_ap and old_ap != BOX
+    assert events == []
+
+    fake_client.mesh.links[WLAN] = replace(link, ap_mac=BOX, ap_name="FRITZ!Box")
+    await coordinator.async_refresh()
+    assert events == []  # once is not enough
+    await coordinator.async_refresh()
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert len(events) == 1
+    data = events[0].data
+    assert data["mac"] == WLAN
+    assert (data["old_ap_mac"], data["new_ap_mac"]) == (old_ap, BOX)
+    assert data["old_ap"] == "FRITZ!Repeater 1200 AX" and data["link_type"] == "wlan"
+
+
+async def test_a_device_that_flaps_between_access_points_does_not_roam(hass, fake_client, entry):
+    events = async_capture_events(hass, "fritzbox_network_device_roamed")
+    coordinator = await _setup(hass, entry)
+    link = fake_client.mesh.links[WLAN]
+
+    for ap in (BOX, link.ap_mac, BOX, link.ap_mac):
+        fake_client.mesh.links[WLAN] = replace(link, ap_mac=ap)
+        await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert events == []

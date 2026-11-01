@@ -40,6 +40,9 @@ BACKOFF_AFTER_FAILURES = 3
 
 EVENT_DEVICE_RENAMED = f"{DOMAIN}_device_renamed"
 EVENT_NEW_DEVICE = f"{DOMAIN}_new_device"
+EVENT_DEVICE_ROAMED = f"{DOMAIN}_device_roamed"
+# A new access point must show in this many polls in a row before it counts as roaming.
+ROAM_CONFIRM_POLLS = 2
 
 # Keys of the entities per client device (also part of the unique id).
 KEY_TRACKER = "tracker"

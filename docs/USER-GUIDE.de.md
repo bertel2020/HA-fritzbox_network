@@ -131,6 +131,8 @@ Wird ein Gerät in der Box umbenannt, löst Home Assistant das Ereignis `fritzbo
 
 Listet die Box ein Gerät, das sie vorher nicht gelistet hat, löst Home Assistant das Ereignis `fritzbox_network_new_device` aus, mit `mac`, `name`, `ip` und `vendor` (leer, solange die Hersteller-Option aus ist). Damit lässt sich eine Benachrichtigung über neue Geräte im Netz bauen. Was die Box beim Start listet, gilt nicht als neu: Geräte, die dazukamen, während Home Assistant aus war, werden nicht gemeldet, ebenso wenig Geräte, die ein Filter ausschließt.
 
+Wechselt ein Gerät zu einem anderen Access Point (der Box oder einem Repeater), löst Home Assistant `fritzbox_network_device_roamed` aus, mit `mac`, `name`, `old_ap`, `old_ap_mac`, `new_ap`, `new_ap_mac`, `link_type`, `band` und `signal_dbm`. Der neue Access Point muss in zwei Abfragen hintereinander erscheinen, damit ein Gerät, das zwischen zweien hin- und herspringt, nicht bei jeder Abfrage auslöst; bei der Standardabfrage geht ein sehr kurzer Besuch verloren. Das erste Sehen eines Geräts ist kein Wechsel. Nutze es für Anwesenheit nach Raum: Der Access Point eines Repeaters verrät, wo im Haus ein Handy ist.
+
 ## Namen und Entity-IDs
 
 Die Entity-ID entsteht einmal, beim Anlegen, aus der MAC-Adresse ohne Doppelpunkte:

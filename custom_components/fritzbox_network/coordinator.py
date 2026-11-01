@@ -44,11 +44,13 @@ from .const import (
     DEFAULT_SKIP_OFFLINE,
     DOMAIN,
     EVENT_DEVICE_RENAMED,
+    EVENT_DEVICE_ROAMED,
     EVENT_NEW_DEVICE,
     FILTER_EXCLUDE,
     FILTER_INCLUDE,
     FILTER_PROFILE_REFRESH_POLLS,
     MAX_BACKOFF_SECONDS,
+    ROAM_CONFIRM_POLLS,
     WAN_OVERRIDE_SECONDS,
 )
 from .models import Host, MeshNode, MeshTopology, NetworkData, is_private_mac
@@ -89,6 +91,9 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.all_hosts: dict[str, Host] = {}
         # None until the first poll: what the box lists then is not new.
         self._known_macs: set[str] | None = None
+        # the access point each device is confirmed at, and one it was seen at since
+        self._access_points: dict[str, str] = {}
+        self._pending_roam: dict[str, tuple[str, int]] = {}
         self.last_active: dict[str, datetime] = {}
         self._failures = 0
         self.last_success: datetime | None = None
@@ -145,6 +150,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.all_hosts = {h.mac: h for h in hosts}
         selected = self._apply_filters(hosts, mesh)
         self._fire_new_devices(selected)
+        self._fire_roaming(selected, mesh)
         self._apply_overrides(selected)
 
         now = dt_util.utcnow()
@@ -274,6 +280,47 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                     EVENT_NEW_DEVICE,
                     {"mac": mac, "name": host.name, "ip": host.ip, "vendor": self.vendor(mac)},
                 )
+
+    def _fire_roaming(self, selected: dict[str, Host], mesh: MeshTopology | None) -> None:
+        """Announce a device that moved to another access point.
+
+        The new access point has to show in several polls in a row, so a device
+        that flaps between two does not fire on every poll. Seeing a device for the
+        first time sets its access point and fires nothing.
+        """
+        if mesh is None:
+            return
+        names = {n.mac: self.node_name(n) for n in mesh.nodes.values()}
+        for mac, host in selected.items():
+            link = mesh.links.get(mac)
+            if link is None or link.ap_mac is None:
+                continue
+            confirmed = self._access_points.get(mac)
+            if confirmed is None or link.ap_mac == confirmed:
+                self._access_points[mac] = link.ap_mac
+                self._pending_roam.pop(mac, None)
+                continue
+            seen_at, count = self._pending_roam.get(mac, (None, 0))
+            count = count + 1 if seen_at == link.ap_mac else 1
+            if count < ROAM_CONFIRM_POLLS:
+                self._pending_roam[mac] = (link.ap_mac, count)
+                continue
+            self._access_points[mac] = link.ap_mac
+            self._pending_roam.pop(mac, None)
+            self.hass.bus.async_fire(
+                EVENT_DEVICE_ROAMED,
+                {
+                    "mac": mac,
+                    "name": host.name,
+                    "old_ap_mac": confirmed,
+                    "old_ap": names.get(confirmed, confirmed),
+                    "new_ap_mac": link.ap_mac,
+                    "new_ap": names.get(link.ap_mac, link.ap_name or link.ap_mac),
+                    "link_type": link.link_type.lower(),
+                    "band": link.band,
+                    "signal_dbm": link.signal_dbm,
+                },
+            )
 
     def _sync_names(self, hosts: dict[str, Host]) -> None:
         """Carry names changed in the box over to the device registry.

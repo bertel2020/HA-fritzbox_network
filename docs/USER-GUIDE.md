@@ -131,6 +131,8 @@ When a device is renamed in the box, Home Assistant fires the event `fritzbox_ne
 
 When the box lists a device it did not list before, Home Assistant fires the event `fritzbox_network_new_device` with `mac`, `name`, `ip` and `vendor` (empty unless the vendor option is on). Use it to be notified about new devices in your network. What the box lists at startup is not new, so devices that joined while Home Assistant was down are not announced, and neither are devices a filter excludes.
 
+When a device moves to another access point (the box or a repeater), Home Assistant fires `fritzbox_network_device_roamed` with `mac`, `name`, `old_ap`, `old_ap_mac`, `new_ap`, `new_ap_mac`, `link_type`, `band` and `signal_dbm`. The new access point has to show in two polls in a row, so a device that flaps between two does not fire on every poll; with the default interval a very short visit is missed. Seeing a device for the first time is not roaming. Use it for presence by room: the access point of a repeater tells where in the house a phone is.
+
 ## Names and entity ids
 
 The entity id is created once, when the device is added, from the MAC address without colons:
