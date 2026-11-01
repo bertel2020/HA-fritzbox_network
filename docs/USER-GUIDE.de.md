@@ -161,7 +161,7 @@ Schließt ein Filter in den Optionen ein Gerät aus, werden dessen Gerät und En
 
 ## Topologie-Karte
 
-Mit der Integration kommt eine Dashboard-Karte, die die Geräte deines Netzes nach Access Point zeigt: die Box und jeder Repeater als Gruppe, darunter die Geräte mit WLAN oder LAN, Link-Rate und Signal. Geräte, die online sind, stehen oben. Ein Klick auf ein Gerät öffnet es.
+Mit der Integration kommt eine Dashboard-Karte, die auf einen Blick zeigt, wer an welchem Access Point hängt: die Box und jeder Repeater als Gruppe, darunter die Geräte mit Online-Punkt, WLAN oder LAN und Signal. Geräte, die online sind, stehen oben. Suche, Filter, Details und Aktionen gibt es im [Seitenpanel](#seitenpanel): Ein Tipp auf ein Gerät öffnet dessen Seite dort, ein Tipp auf die Überschrift die Übersicht.
 
 Füge sie im Dashboard-Editor unter **Karte hinzufügen → FRITZ!Box Network topology** hinzu, oder per YAML:
 
@@ -174,21 +174,13 @@ title: Netzwerk
 |--------|-----------|
 | `title` | Überschrift der Karte |
 | `entry_id` | Nur bei mehr als einer Box nötig: die ID des Config-Eintrags |
-| `default_filter` | Filter beim Start: `all`, `wifi`, `lan`, `offline` oder `weak` (Standard `all`) |
 | `collapsed` | `true`: die Access Points starten zugeklappt (Standard `false`) |
-| `compact` | `true`: Suche und Filter ausblenden (Standard `false`) |
 | `max_height` | Maximale Höhe der Liste in Pixel, danach scrollt sie; 0 oder leer: keine Grenze |
 | `weak_threshold` | Schwache Verbindung unter diesem Prozentwert der höchsten Rate (1–99, Standard 33) |
-| `hide_vendor`, `hide_rate`, `hide_signal` | Hersteller, Rate oder Signal ausblenden (Standard `false`) |
-| `hide_radio` | Kanal und Auslastung der Access Points ausblenden (Standard `false`) |
-| `tap_action` | `expand` (Standard) klappt das Gerät auf, `more-info` öffnet es, `none` tut nichts |
 
-Ein Tipp auf ein Gerät klappt es auf: IP, MAC, Band und Signal, dazu die Aktionen Internet sperren oder freigeben, Priorisierung und Wake on LAN und ein Knopf, der das Gerät öffnet. Eine Aktion erscheint nur, wenn die Entität dazu existiert und aktiviert ist; sie ändert die Box genau so wie der Schalter im Gerät. Im Kopf jedes Access Points stehen Band, Kanal und Auslastung seiner Funkmodule (ab 70 % in Warnfarbe); die Daten kommen aus den Funk-Sensoren der Box und des Repeaters, auch wenn du die Sensoren selbst nicht aktiviert hast.
+Alle Optionen stehen auch im visuellen Editor der Karte. Die Optionen `default_filter`, `compact`, `hide_vendor`, `hide_rate`, `hide_signal`, `hide_radio` und `tap_action` einer früheren Version gibt es nicht mehr; bestehende Karten laden weiter, die Werte werden ignoriert.
 
-Alle Optionen stehen auch im visuellen Editor der Karte. Die Filter Offline und Schwach zeigen die Zahl der Geräte, die sie finden würden; der Filter Schwach erscheint nur, solange es solche Geräte gibt.
-
-
-Die Karte hat eine Suche (Name, IP, MAC oder Hersteller) und die Filter Alle, WLAN, LAN, Offline und Schwach (schwache Verbindung). Ein Gerät hängt an einer schwachen Verbindung, wenn es online ist und seine aktuelle Rate unter einem Drittel (einstellbar mit `weak_threshold`) der höchsten Rate liegt, die seine Verbindung kann, in einer der beiden Richtungen; die Karte markiert es mit einem Warnsymbol, das den Prozentwert zeigt. Ein Gerät im Leerlauf kann eine Weile mit niedrigerer Rate laufen, lies die Markierung also als Hinweis und nicht als Fehler. Die Zahlen neben einem Access Point sind angezeigt / gesamt. Geräte, die die Box keinem Access Point zuordnet, stehen am Ende. Ohne Mesh-Topologie gibt es keine Access Points, und alle Geräte stehen in dieser Gruppe.
+Ein Gerät hängt an einer schwachen Verbindung, wenn es online ist und seine aktuelle Rate unter einem Drittel (einstellbar mit `weak_threshold`) der höchsten Rate liegt, die seine Verbindung kann, in einer der beiden Richtungen; die Karte markiert es mit einem Warnsymbol, das den Prozentwert zeigt. Ein Gerät im Leerlauf kann eine Weile mit niedrigerer Rate laufen, lies die Markierung also als Hinweis und nicht als Fehler. Die Zahlen neben einem Access Point sind angezeigt / gesamt. Geräte, die die Box keinem Access Point zuordnet, stehen am Ende. Ohne Mesh-Topologie gibt es keine Access Points, und alle Geräte stehen in dieser Gruppe. Kanal und Auslastung der Funkmodule zeigt die [Funk-Karte](#funk-karte), Aktionen wie Internet sperren die [Geräte-Karte](#geräte-karte).
 
 Die Karte braucht ein Administratorkonto, weil sie MAC- und IP-Adressen zeigt. Sie lädt sich selbst; nach dem Update bringt ein harter Reload des Browsers die neue Version.
 

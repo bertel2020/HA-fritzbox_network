@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FRITZ!Box Netzwerk: schlanke Topologie-Karte (Mockup)</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#f4f6f9, #0f1216);
+    --card: light-dark(#fff, #1b1f24);
+    --soft: light-dark(#f5f7f9, #22272e);
+    --line: light-dark(#e1e5ea, #2d333b);
+    --text: light-dark(#1b1f24, #e6e9ed);
+    --muted: light-dark(#5b6270, #9aa4b1);
+    --accent: light-dark(#0a6aa8, #5bb2ea);
+    --accent-soft: light-dark(#eaf3fa, #16324a);
+    --on-accent: light-dark(#fff, #0b1a26);
+    --ok: light-dark(#1e6b34, #7fd49a);
+    --warn: light-dark(#8a4b00, #f2c27a);
+    --off: light-dark(#9aa3ae, #5b6470);
+  }
+  :root[data-scheme="light"] { color-scheme: light; }
+  :root[data-scheme="dark"] { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--text); font: 14px/1.45 Roboto, "Noto Sans", system-ui, sans-serif; }
+  button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0; }
+  h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  h2 { font-size: 15px; font-weight: 500; margin: 0 0 4px; }
+  p.lead, .cap { color: var(--muted); margin: 0 0 16px; max-width: 70ch; }
+  .cap { font-size: 12px; margin: 8px 0 0; }
+  .bar { display: flex; gap: 8px; margin-bottom: 24px; }
+  .bar button { padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; color: var(--muted); }
+  .bar button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 24px; max-width: 1100px; align-items: start; }
+  section.col > .tag { display: inline-block; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .narrow { max-width: 380px; }
+
+  /* the card, the way Home Assistant draws it */
+  .card { background: var(--card); border-radius: 12px; border: 1px solid var(--line); overflow: hidden; }
+  .card header { display: flex; align-items: center; gap: 8px; padding: 12px 16px 8px; font-size: 20px; line-height: 1.2; }
+  .card header span { flex: 1; }
+  .card header a { font-size: 12px; color: var(--accent); text-decoration: none; display: inline-flex; gap: 4px; align-items: center; }
+  .card header a:hover { text-decoration: underline; }
+  svg.i { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .controls { padding: 0 16px 8px; display: flex; flex-direction: column; gap: 8px; }
+  .controls .in { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; color: var(--muted); }
+  .chips { display: flex; gap: 8px; }
+  .chip { padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .chip.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .ap { display: flex; align-items: center; gap: 8px; padding: 10px 16px; font-weight: 500; border-top: 1px solid var(--line); }
+  .apname { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  .apname small { font-weight: 400; font-size: 12px; color: var(--muted); }
+  .count { font-weight: 400; font-size: 12px; color: var(--muted); }
+  .row { display: flex; align-items: center; gap: 8px; padding: 6px 16px 6px 40px; }
+  .row:hover { background: var(--soft); }
+  .row.open { background: var(--soft); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--off); flex: none; }
+  .dot.on { background: var(--ok); }
+  .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .name small { color: var(--muted); margin-left: 6px; }
+  .rate { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .link { color: var(--muted); }
+  .warnic { color: var(--warn); }
+  .bars { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; width: 18px; }
+  .bars i { width: 3px; background: var(--line); border-radius: 1px; display: block; }
+  .bars i.on { background: var(--ok); }
+  .detail { padding: 2px 16px 10px 40px; background: var(--soft); }
+  .detail .info { font-size: 12px; color: var(--muted); }
+  .detail .btns { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .hint { padding: 8px 16px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); display: flex; gap: 6px; align-items: center; }
+  .gone { text-decoration: line-through; opacity: .55; }
+
+  /* what a tap leads to */
+  .arrow { display: flex; align-items: center; gap: 8px; color: var(--accent); font-size: 13px; margin: 12px 0; }
+  .mini { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 12px 16px; display: flex; gap: 12px; align-items: center; }
+  .mini b { display: block; font-weight: 500; }
+  .mini small { color: var(--muted); }
+
+  ul.diff { margin: 0; padding-left: 18px; color: var(--muted); max-width: 70ch; }
+  ul.diff li { margin: 2px 0; }
+  .sec { max-width: 1100px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="chevr" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+    <symbol id="ap" viewBox="0 0 24 24"><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19 5a10 10 0 0 1 0 14M5 19a10 10 0 0 1 0-14"/></symbol>
+    <symbol id="wifi" viewBox="0 0 24 24"><path d="M5 12.5a10 10 0 0 1 14 0M8.5 16a5 5 0 0 1 7 0M2 9a14 14 0 0 1 20 0"/><circle cx="12" cy="19" r="1"/></symbol>
+    <symbol id="lan" viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="5"/><rect x="3" y="16" width="6" height="5"/><rect x="15" y="16" width="6" height="5"/><path d="M12 8v4M6 16v-4h12v4"/></symbol>
+    <symbol id="alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3zM12 10v4M12 17h.01"/></symbol>
+    <symbol id="ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></symbol>
+  </defs>
+</svg>
+
+<h1>Topologie-Karte: vorher und nachher</h1>
+<p class="lead">Die Karte zeigt nur noch, wer an welchem Access Point hängt und ob etwas auffällt. Suchen, Filtern, Details und Aktionen liegen im Seitenpanel; ein Tipp führt dorthin.</p>
+<div class="bar" role="group" aria-label="Darstellung">
+  <button aria-pressed="false" data-s="light">Hell</button>
+  <button aria-pressed="false" data-s="dark">Dunkel</button>
+  <button aria-pressed="true" data-s="auto">System</button>
+</div>
+
+<div class="grid">
+  <!-- BEFORE -->
+  <section class="col">
+    <span class="tag">Vorher</span>
+    <div class="card">
+      <header><span>Netzwerk</span></header>
+      <div class="controls">
+        <div class="in gone">Suchen…</div>
+        <div class="chips gone"><span class="chip on">Alle 14</span><span class="chip">WLAN 11</span><span class="chip">LAN 3</span><span class="chip">Offline 2</span><span class="chip">Schwach 1</span></div>
+      </div>
+      <div class="ap"><svg class="i"><use href="#chev"/></svg><svg class="i"><use href="#ap"/></svg>
+        <span class="apname">FRITZ!Box 7590<small class="gone">2,4 GHz Kanal 6 · 31 % · 5 GHz Kanal 100 · 12 %</small></span><span class="count">9 / 9</span></div>
+      <div class="row"><span class="dot on"></span><svg class="i link"><use href="#wifi"/></svg><span class="name">iPhone Roberto<small class="gone">Apple</small></span><span class="rate gone">433 / 12 Mbit/s</span><span class="bars"><i class="on" style="height:4px"></i><i class="on" style="height:7px"></i><i class="on" style="height:10px"></i><i style="height:12px"></i></span></div>
+      <div class="row open"><span class="dot on"></span><svg class="i link"><use href="#wifi"/></svg><span class="name">Wohnzimmer TV<small class="gone">Samsung</small></span><span class="rate gone">144 / 3 Mbit/s</span><svg class="i warnic"><use href="#alert"/></svg><span class="bars"><i class="on" style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i><i style="height:12px"></i></span></div>
+      <div class="detail gone"><div class="info">192.168.178.42 · AA:BB:CC:DD:EE:FF · 5 GHz, 144 / 866 Mbit/s</div><div class="btns"><span class="chip">Internet sperren</span><span class="chip">Priorisierung</span><span class="chip">Gerät öffnen</span></div></div>
+      <div class="row"><span class="dot on"></span><svg class="i link"><use href="#lan"/></svg><span class="name">NAS<small class="gone">Synology</small></span><span class="rate gone">1 / 1 Gbit/s</span></div>
+    </div>
+    <p class="cap">Durchgestrichen: wandert ins Panel oder entfällt. Elf Optionen im Editor.</p>
+  </section>
+
+  <!-- AFTER -->
+  <section class="col">
+    <span class="tag">Nachher</span>
+    <div class="card">
+      <header><span>Netzwerk</span><a href="#panel">Im Panel öffnen <svg class="i"><use href="#ext"/></svg></a></header>
+      <div class="ap"><svg class="i"><use href="#chev"/></svg><svg class="i"><use href="#ap"/></svg>
+        <span class="apname">FRITZ!Box 7590</span><span class="count">9 / 9</span></div>
+      <div class="row"><span class="dot on"></span><svg class="i link"><use href="#wifi"/></svg><span class="name">iPhone Roberto</span><span class="bars"><i class="on" style="height:4px"></i><i class="on" style="height:7px"></i><i class="on" style="height:10px"></i><i style="height:12px"></i></span></div>
+      <div class="row"><span class="dot on"></span><svg class="i link"><use href="#wifi"/></svg><span class="name">Wohnzimmer TV</span><svg class="i warnic"><use href="#alert"/></svg><span class="bars"><i class="on" style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i><i style="height:12px"></i></span></div>
+      <div class="row"><span class="dot on"></span><svg class="i link"><use href="#lan"/></svg><span class="name">NAS</span></div>
+      <div class="ap"><svg class="i"><use href="#chevr"/></svg><svg class="i"><use href="#ap"/></svg>
+        <span class="apname">Repeater Keller</span><span class="count">3 / 3</span></div>
+      <div class="ap"><svg class="i"><use href="#chevr"/></svg><svg class="i"><use href="#ap"/></svg>
+        <span class="apname">Repeater Garten</span><span class="count">2 / 2</span></div>
+    </div>
+    <p class="cap">Ein Blick genügt: Gruppen, Online-Punkt, Verbindung, Signal, Warnung.</p>
+  </section>
+
+  <!-- NARROW + TAP -->
+  <section class="col">
+    <span class="tag">Nachher, schmale Spalte (Handy)</span>
+    <div class="card narrow">
+      <header><span>Netzwerk</span><a href="#panel" aria-label="Im Panel öffnen"><svg class="i"><use href="#ext"/></svg></a></header>
+      <div class="ap"><svg class="i"><use href="#chev"/></svg><svg class="i"><use href="#ap"/></svg>
+        <span class="apname">FRITZ!Box 7590</span><span class="count">9 / 9</span></div>
+      <div class="row"><span class="dot on"></span><svg class="i link"><use href="#wifi"/></svg><span class="name">iPhone Roberto</span><span class="bars"><i class="on" style="height:4px"></i><i class="on" style="height:7px"></i><i class="on" style="height:10px"></i><i style="height:12px"></i></span></div>
+      <div class="row"><span class="dot on"></span><svg class="i link"><use href="#wifi"/></svg><span class="name">Wohnzimmer TV</span><svg class="i warnic"><use href="#alert"/></svg><span class="bars"><i class="on" style="height:4px"></i><i style="height:7px"></i><i style="height:10px"></i><i style="height:12px"></i></span></div>
+    </div>
+    <div class="arrow"><svg class="i"><use href="#chevr"/></svg>Tipp auf „Wohnzimmer TV“</div>
+    <div class="mini"><svg class="i"><use href="#ext"/></svg><div><b>Seitenpanel, Seite des Geräts</b><small>#/device/&lt;mac&gt; – Details, Aktionen, Verlauf</small></div></div>
+    <p class="cap">Ein Tipp auf den Kopf der Karte (oder das Icon) öffnet die Übersicht des Panels.</p>
+  </section>
+</div>
+
+<div class="sec">
+  <h2>Was sich ändert</h2>
+  <ul class="diff">
+    <li>Bleibt: <code>title</code>, <code>entry_id</code>, <code>collapsed</code>, <code>max_height</code>.</li>
+    <li>Entfällt: Suche, Filter-Chips, <code>compact</code>, <code>default_filter</code>, <code>tap_action</code>, aufklappbare Detailzeile, Hersteller, Rate, Kanal/Auslastung.</li>
+    <li>Alte YAMLs laufen weiter, unbekannte Schlüssel werden ignoriert.</li>
+    <li>Schnellaktionen (Internet sperren, Wake on LAN) bleiben in der Geräte-Karte.</li>
+  </ul>
+</div>
+
+<script>
+  const root = document.documentElement;
+  document.querySelectorAll(".bar button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(".bar button").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+    if (b.dataset.s === "auto") root.removeAttribute("data-scheme"); else root.dataset.scheme = b.dataset.s;
+  }));
+</script>
+</body>
+</html>

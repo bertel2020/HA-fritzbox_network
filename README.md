@@ -37,7 +37,7 @@ Die Integration arbeitet lokal mit der FRITZ!Box (TR-064) und baut keine Interne
 - **Verbindungsdaten pro Gerät**: IP-Adresse, LAN oder WLAN, Access Point, „Online seit“ und „Zuletzt online“. Optional (standardmäßig aus): Signalstärke, Link-Rate (Download/Upload), WLAN-Band, Netzwerkname und ein Gastnetz-Hinweis.
 - **Aktionen**: Internetzugang pro Gerät sperren und freigeben, Wake on LAN.
 - **Seitenpanel** (nur Administratoren): Das ganze Netz in der Seitenleiste, mit Statusfiltern, Suche, Gruppierung nach Access Point, Funkdaten, einer Detailseite pro Gerät mit allen Aktionen, Gruppen über Labels, dem Aufräumen langer Offline-Geräte in einem Zug und dem Gerätefilter mit Vorschau.
-- **Dashboard-Karten**: Die Topologie-Karte (Geräte nach Access Point, mit Suche, Filtern und Aktionen pro Gerät), eine Funk-Karte (Kanal, Auslastung und Rauschen pro Funkmodul) und eine Geräte-Karte (ausgewählte Geräte mit Internet sperren und freigeben).
+- **Dashboard-Karten**: Die Topologie-Karte (Geräte nach Access Point auf einen Blick, ein Tipp öffnet das Seitenpanel), eine Funk-Karte (Kanal, Auslastung und Rauschen pro Funkmodul) und eine Geräte-Karte (ausgewählte Geräte mit Internet sperren und freigeben).
 - **Mesh**: Die FRITZ!Box und ihre Repeater sind eigene Geräte mit Modell, Firmware und der Anzahl der verbundenen Geräte.
 - **Aufgeräumt**: Offline-Geräte lassen sich von Hand löschen und bleiben ausgeblendet. Dazu Filter für Gastnetz, private MAC-Adressen und einzelne Geräte, und eine Option, für Offline-Geräte keine Geräte anzulegen.
 - **Schonend**: Pro Abfrage nur zwei Anfragen an die FRITZ!Box (Geräteliste und Mesh), nie eine pro Gerät.

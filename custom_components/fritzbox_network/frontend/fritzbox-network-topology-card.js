@@ -2,18 +2,13 @@
 
 import {
   WEAK_LINK_RATIO,
-  BANDS,
   BUSY_UTILIZATION,
   escapeHtml,
-  matches,
   linkRatio,
   isWeak,
-  countFilters,
   groupTopology,
   signalBars,
   rateText,
-  radioInfo,
-  detailText,
   radioRows,
   devicesFor,
   bulkPlan,
@@ -22,21 +17,14 @@ import {
 } from "./shared.js";
 
 const INTEGRATION = "fritzbox_network";
-const FILTERS = ["all", "wifi", "lan", "offline", "weak"];
+const PANEL_PATH = "/fritzbox-network";
 
-const TAP_ACTIONS = ["expand", "more-info", "none"];
 const TEXT = {
   en: {
     title: "Network",
-    all: "All",
-    wifi: "Wi-Fi",
-    lan: "LAN",
-    offline: "Offline",
-    weak: "Weak",
     weakTitle: "Weak link: only {percent} % of the possible rate",
-    search: "Search…",
-    searchTitle: "Search name, IP, MAC or vendor",
     rateTitle: "Download / upload",
+    openPanel: "Open in the panel",
     unassigned: "Without access point",
     empty: "No devices match.",
     loading: "Loading…",
@@ -62,41 +50,26 @@ const TEXT = {
       title: "Title",
       entry_id: "FRITZ!Box",
       entry_id_help: "Only needed with more than one box.",
-      default_filter: "Filter at the start",
       collapsed: "Start with access points collapsed",
-      compact: "Hide search and filters",
       max_height: "Maximum height (px)",
       max_height_help: "Empty or 0: no limit, the list grows with the devices.",
       weak_threshold: "Weak link below (% of the highest rate)",
       weak_threshold_help: "Empty: 33.",
-      hide_vendor: "Hide the vendor",
       hide_rate: "Hide the rate",
       hide_signal: "Hide the signal",
-      hide_radio: "Hide channel and load of the access points",
       entities: "Devices",
       entities_help: "Devices of the FRITZ!Box Network integration.",
       label: "Group (label)",
       label_help: "Also shows every device of this group, not only the ones named above.",
       hide_noise: "Hide the noise",
       hide_clients: "Hide the number of devices",
-      tap_action: "Tap on a device",
-      tap_action_help: "Empty: show the details and actions.",
-      expand: "Show details and actions",
-      "more-info": "Open the device",
-      none: "Do nothing",
     },
   },
   de: {
     title: "Netzwerk",
-    all: "Alle",
-    wifi: "WLAN",
-    lan: "LAN",
-    offline: "Offline",
-    weak: "Schwach",
     weakTitle: "Schwache Verbindung: nur {percent} % der möglichen Rate",
-    search: "Suchen…",
-    searchTitle: "Name, IP, MAC oder Hersteller suchen",
     rateTitle: "Download / Upload",
+    openPanel: "Im Panel öffnen",
     unassigned: "Ohne Access Point",
     empty: "Keine passenden Geräte.",
     loading: "Lädt…",
@@ -122,28 +95,19 @@ const TEXT = {
       title: "Titel",
       entry_id: "FRITZ!Box",
       entry_id_help: "Nur bei mehr als einer Box nötig.",
-      default_filter: "Filter beim Start",
       collapsed: "Access Points zugeklappt starten",
-      compact: "Suche und Filter ausblenden",
       max_height: "Maximale Höhe (px)",
       max_height_help: "Leer oder 0: keine Grenze, die Liste wächst mit den Geräten.",
       weak_threshold: "Schwache Verbindung unter (% der höchsten Rate)",
       weak_threshold_help: "Leer: 33.",
-      hide_vendor: "Hersteller ausblenden",
       hide_rate: "Rate ausblenden",
       hide_signal: "Signal ausblenden",
-      hide_radio: "Kanal und Auslastung der Access Points ausblenden",
       entities: "Geräte",
       entities_help: "Geräte der Integration FRITZ!Box Netzwerk.",
       label: "Gruppe (Label)",
       label_help: "Zeigt zusätzlich jedes Gerät dieser Gruppe, nicht nur die oben genannten.",
       hide_noise: "Rauschen ausblenden",
       hide_clients: "Anzahl der Geräte ausblenden",
-      tap_action: "Tippen auf ein Gerät",
-      tap_action_help: "Leer: Details und Aktionen zeigen.",
-      expand: "Details und Aktionen zeigen",
-      "more-info": "Gerät öffnen",
-      none: "Nichts tun",
     },
   },
 };
@@ -181,16 +145,9 @@ function normalizeConfig(config = {}) {
   return {
     title: config.title || undefined,
     entry_id: config.entry_id || undefined,
-    default_filter: FILTERS.includes(config.default_filter) ? config.default_filter : "all",
     collapsed: Boolean(config.collapsed),
-    compact: Boolean(config.compact),
     max_height: number(config.max_height, 0, 10000, 0),
     weak_threshold: number(config.weak_threshold, 1, 99, Math.round(WEAK_LINK_RATIO * 100)),
-    hide_vendor: Boolean(config.hide_vendor),
-    hide_rate: Boolean(config.hide_rate),
-    hide_signal: Boolean(config.hide_signal),
-    hide_radio: Boolean(config.hide_radio),
-    tap_action: TAP_ACTIONS.includes(config.tap_action) ? config.tap_action : "expand",
   };
 }
 
@@ -323,6 +280,12 @@ class FritzboxNetworkCardBase extends HTMLElement {
     );
   }
 
+  /** Leaves the dashboard for the side panel, on the page of a device when one is given. */
+  _openPanel(deviceId) {
+    globalThis.history.pushState(null, "", `${PANEL_PATH}${deviceId ? `#/device/${deviceId}` : ""}`);
+    globalThis.dispatchEvent(new CustomEvent("location-changed"));
+  }
+
   /** The buttons of a device: they change the box, so only the one that was tapped runs. */
   _act(action, entityId) {
     if (action === "details") return this._moreInfo(entityId);
@@ -360,32 +323,24 @@ class FritzboxNetworkTopologyCard extends FritzboxNetworkCardBase {
   constructor() {
     super();
     this._config = normalizeConfig();
-    this._filter = "all";
-    this._query = "";
     this._collapsed = new Set();
-    this._expanded = new Set();
     this._seeded = false;
   }
 
   setConfig(config) {
     const previous = this._config;
     this._config = normalizeConfig(config);
-    // keep the filter the user picked unless the option for it changed
-    if (this._config.default_filter !== previous.default_filter) {
-      this._filter = this._config.default_filter;
-    }
     if (this._config.collapsed !== previous.collapsed) {
       this._collapsed.clear();
       this._seeded = false;
     }
-    if (this._config.compact) this._query = "";
     this._seedCollapsed();
     this._build();
     if (this._config.entry_id !== previous.entry_id) this._resubscribe();
   }
 
   getCardSize() {
-    return 6;
+    return 5;
   }
 
   getGridOptions() {
@@ -404,61 +359,19 @@ class FritzboxNetworkTopologyCard extends FritzboxNetworkCardBase {
     return editorForm([
       { name: "title", selector: { text: {} } },
       { name: "entry_id", selector: configEntry },
-      { name: "default_filter", selector: selectOptions(FILTERS) },
-      {
-        type: "grid",
-        name: "",
-        schema: [
-          { name: "collapsed", selector: { boolean: {} } },
-          { name: "compact", selector: { boolean: {} } },
-        ],
-      },
+      { name: "collapsed", selector: { boolean: {} } },
       { name: "max_height", selector: number(0, 2000, 10, "px") },
       { name: "weak_threshold", selector: number(1, 99, 1, "%") },
-      {
-        type: "grid",
-        name: "",
-        schema: [
-          { name: "hide_vendor", selector: { boolean: {} } },
-          { name: "hide_rate", selector: { boolean: {} } },
-          { name: "hide_signal", selector: { boolean: {} } },
-          { name: "hide_radio", selector: { boolean: {} } },
-        ],
-      },
-      { name: "tap_action", selector: selectOptions(TAP_ACTIONS) },
     ]);
-  }
-
-  _onHass() {
-    this._refreshActions();
   }
 
   _onData() {
     this._seedCollapsed();
-    this._renderChips();
     this._renderList();
   }
 
   _onError() {
     this._renderList();
-  }
-
-  /** The switches of an open row change on their own; draw it again when one did. */
-  _refreshActions() {
-    const signature = this._actionStates();
-    if (signature !== this._actionSignature) {
-      this._actionSignature = signature;
-      this._renderList();
-    }
-  }
-
-  _actionStates() {
-    if (!this._expanded.size || !this._data) return "";
-    return this._data.clients
-      .filter((c) => this._expanded.has(c.mac))
-      .flatMap((c) => Object.values(c.actions ?? {}))
-      .map((id) => `${id}=${this._hass?.states?.[id]?.state}`)
-      .join(",");
   }
 
   get _threshold() {
@@ -476,26 +389,19 @@ class FritzboxNetworkTopologyCard extends FritzboxNetworkCardBase {
 
   _build() {
     const t = this._t;
-    const { compact, max_height: maxHeight } = this._config;
+    const maxHeight = this._config.max_height;
     this.shadowRoot.innerHTML = `
       <style>
         ${SHARED_CSS}
-        .controls { display: flex; flex-direction: column; gap: 8px; padding: 0 16px 8px; }
-        .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
-        .chips::-webkit-scrollbar { display: none; }
-        input { box-sizing: border-box; width: 100%; padding: 8px 10px; border-radius: 8px;
-          border: 1px solid var(--divider-color); background: transparent;
-          color: var(--primary-text-color); font: inherit; }
+        .head { display: flex; align-items: center; gap: 8px; width: 100%; padding: 16px 16px 8px; text-align: left;
+          border: 0; background: none; color: var(--ha-card-header-color, var(--primary-text-color)); font: inherit;
+          font-size: var(--ha-card-header-font-size, 24px); line-height: 1.2; cursor: pointer; }
+        .head span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .head ha-icon { --mdc-icon-size: 20px; color: var(--secondary-text-color); }
         .list { ${maxHeight ? `max-height: ${maxHeight}px; overflow-y: auto;` : ""} }
         .ap { display: flex; align-items: center; gap: 8px; padding: 10px 16px; cursor: pointer;
           font-weight: 500; border-top: 1px solid var(--divider-color); }
-        .apname { display: flex; flex-direction: column; flex: 1; min-width: 0; white-space: nowrap; }
-        .radios { overflow: hidden; text-overflow: ellipsis; font-weight: 400; font-size: 12px;
-          color: var(--secondary-text-color); }
-        .radios span + span { margin-left: 12px; }
-        .radios .busy { color: var(--warning-color, #ffa600); }
-        .detail { padding: 2px 16px 10px 40px; }
-        .info { font-size: 12px; color: var(--secondary-text-color); word-break: break-all; }
+        .apname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .ap .count { flex: none; margin-left: auto; font-weight: 400; font-size: 12px;
           color: var(--secondary-text-color); }
         .row { display: flex; align-items: center; gap: 8px; padding: 6px 16px 6px 40px;
@@ -503,35 +409,17 @@ class FritzboxNetworkTopologyCard extends FritzboxNetworkCardBase {
         .row.click { cursor: pointer; }
         .row.click:hover { background: var(--secondary-background-color); }
       </style>
-      <ha-card header="${escapeHtml(this._config.title ?? t.title)}">
-        ${
-          compact
-            ? ""
-            : `<div class="controls">
-          <input type="search" placeholder="${escapeHtml(t.search)}" title="${escapeHtml(
-                t.searchTitle
-              )}" aria-label="${escapeHtml(t.searchTitle)}" value="${escapeHtml(this._query)}" />
-          <span class="chips"></span>
-        </div>`
-        }
+      <ha-card>
+        <button class="head" data-open="" title="${escapeHtml(t.openPanel)}" aria-label="${escapeHtml(t.openPanel)}">
+          <span>${escapeHtml(this._config.title ?? t.title)}</span>
+          <ha-icon icon="mdi:open-in-new"></ha-icon>
+        </button>
         <div class="list"></div>
       </ha-card>`;
-    this.shadowRoot.querySelector("input")?.addEventListener("input", (event) => {
-      this._query = event.target.value;
-      this._renderList();
-    });
-    this._renderChips();
     this._renderList();
   }
 
   _onClick(event) {
-    const chip = event.target.closest("[data-filter]");
-    if (chip) {
-      this._filter = chip.dataset.filter;
-      this._renderChips();
-      this._renderList();
-      return;
-    }
     const ap = event.target.closest("[data-ap]");
     if (ap) {
       const key = ap.dataset.ap;
@@ -540,38 +428,8 @@ class FritzboxNetworkTopologyCard extends FritzboxNetworkCardBase {
       this._renderList();
       return;
     }
-    const action = event.target.closest("[data-action]");
-    if (action) {
-      this._act(action.dataset.action, action.dataset.entity);
-      return;
-    }
-    const expand = event.target.closest("[data-expand]");
-    if (expand) {
-      const mac = expand.dataset.expand;
-      if (this._expanded.has(mac)) this._expanded.delete(mac);
-      else this._expanded.add(mac);
-      this._actionSignature = this._actionStates();
-      this._renderList();
-      return;
-    }
-    const row = event.target.closest("[data-entity]");
-    if (row) this._moreInfo(row.dataset.entity);
-  }
-
-  /** The filter chips; the ones with a number only show devices that would be found. */
-  _renderChips() {
-    const chips = this.shadowRoot?.querySelector(".chips");
-    if (!chips) return;
-    const t = this._t;
-    const counts = countFilters(this._data, this._threshold);
-    chips.innerHTML = FILTERS.filter(
-      (f) => f !== "weak" || counts.weak || this._filter === "weak"
-    )
-      .map((f) => {
-        const label = counts[f] ? `${t[f]} ${counts[f]}` : t[f];
-        return `<button class="chip${f === this._filter ? " on" : ""}" data-filter="${f}">${escapeHtml(label)}</button>`;
-      })
-      .join("");
+    const open = event.target.closest("[data-open]");
+    if (open) this._openPanel(open.dataset.open);
   }
 
   _renderList() {
@@ -586,7 +444,7 @@ class FritzboxNetworkTopologyCard extends FritzboxNetworkCardBase {
       list.innerHTML = `<div class="note">${escapeHtml(t.loading)}</div>`;
       return;
     }
-    const groups = groupTopology(this._data, this._filter, this._query, this._threshold);
+    const groups = groupTopology(this._data, "all", "", this._threshold);
     if (!groups.some((g) => g.clients.length)) {
       list.innerHTML = `<div class="note">${escapeHtml(t.empty)}</div>`;
       return;
@@ -598,63 +456,34 @@ class FritzboxNetworkTopologyCard extends FritzboxNetworkCardBase {
         const icon = group.node?.role === "master" ? "mdi:router-wireless" : "mdi:access-point";
         const title = group.node ? group.node.name : t.unassigned;
         const rows = open ? group.clients.map((c) => this._row(c)).join("") : "";
-        const radios = this._config.hide_radio
-          ? ""
-          : radioInfo(group.node, t)
-              .map((r) => `<span class="${r.busy ? "busy" : ""}">${escapeHtml(r.text)}</span>`)
-              .join("");
         return `
           <div class="ap" data-ap="${escapeHtml(key)}" role="button" tabindex="0" aria-expanded="${open}">
             <ha-icon icon="mdi:chevron-${open ? "down" : "right"}"></ha-icon>
             <ha-icon icon="${group.node ? icon : "mdi:help-network-outline"}"></ha-icon>
-            <span class="apname">${escapeHtml(title)}${radios ? `<small class="radios">${radios}</small>` : ""}</span>
+            <span class="apname">${escapeHtml(title)}</span>
             <span class="count">${group.clients.length} / ${group.total}</span>
           </div>${rows}`;
       })
       .join("");
   }
 
+  /** A device: status, link and signal; a tap opens its page in the side panel. */
   _row(client) {
     const t = this._t;
-    const config = this._config;
-    const signal = !config.hide_signal && client.link_type === "wlan" ? signalHtml(client) : "";
-    const ratio = linkRatio(client);
+    const signal = client.link_type === "wlan" ? signalHtml(client) : "";
     const weak = isWeak(client, this._threshold)
       ? `<ha-icon class="weak" icon="mdi:wifi-alert" title="${escapeHtml(
-          t.weakTitle.replace("{percent}", Math.round(ratio * 100))
+          t.weakTitle.replace("{percent}", Math.round(linkRatio(client) * 100))
         )}"></ha-icon>`
       : "";
-    const expand = config.tap_action === "expand";
-    const open = expand && this._expanded.has(client.mac);
-    const clickable = expand || (Boolean(client.entity_id) && config.tap_action === "more-info");
-    const target = expand
-      ? ` data-expand="${escapeHtml(client.mac)}" aria-expanded="${open}"`
-      : ` data-entity="${escapeHtml(client.entity_id)}"`;
-    const entity = clickable ? `${target} role="button" tabindex="0"` : "";
-    const rate = config.hide_rate ? "" : rateText(client);
+    const target = client.id ? ` data-open="${escapeHtml(client.id)}" role="button" tabindex="0"` : "";
     return `
-      <div class="row${clickable ? " click" : ""}"${entity}>
+      <div class="row${client.id ? " click" : ""}"${target}>
         <span class="dot${client.online ? " on" : ""}"></span>
         <ha-icon class="link" icon="${linkIcon(client)}"></ha-icon>
-        <span class="name">${escapeHtml(client.name)}${client.vendor && !config.hide_vendor ? `<small>${escapeHtml(client.vendor)}</small>` : ""}${client.guest ? `<small>${escapeHtml(t.guest)}</small>` : ""}</span>
-        <span class="rate" title="${escapeHtml(t.rateTitle)}">${escapeHtml(rate)}</span>
+        <span class="name">${escapeHtml(client.name)}${client.guest ? `<small>${escapeHtml(t.guest)}</small>` : ""}</span>
         ${weak}
         ${signal}
-      </div>${open ? this._detail(client) : ""}`;
-  }
-
-  /** The open row: what is known about the device and the actions the box allows. */
-  _detail(client) {
-    const buttons = this._actionButtons(client);
-    if (client.entity_id) {
-      buttons.push(
-        `<button class="chip act" data-action="details" data-entity="${escapeHtml(client.entity_id)}">${escapeHtml(this._t.details)}</button>`
-      );
-    }
-    return `
-      <div class="detail">
-        <div class="info">${escapeHtml(detailText(client))}</div>
-        <div class="buttons">${buttons.join("")}</div>
       </div>`;
   }
 }

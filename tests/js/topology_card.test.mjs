@@ -120,36 +120,28 @@ test("the config gets its defaults and drops values that make no sense", () => {
   assert.deepEqual(card.normalizeConfig(), {
     title: undefined,
     entry_id: undefined,
-    default_filter: "all",
     collapsed: false,
-    compact: false,
     max_height: 0,
     weak_threshold: 33,
-    hide_vendor: false,
-    hide_rate: false,
-    hide_signal: false,
-    hide_radio: false,
-    tap_action: "expand",
   });
-  const config = card.normalizeConfig({
-    title: "",
-    default_filter: "bogus",
-    max_height: -5,
-    weak_threshold: 500,
-    tap_action: "explode",
-    compact: 1,
-  });
+  const config = card.normalizeConfig({ title: "", max_height: -5, weak_threshold: 500, collapsed: 1 });
   assert.equal(config.title, undefined);
-  assert.equal(config.default_filter, "all");
   assert.equal(config.max_height, 0);
   assert.equal(config.weak_threshold, 33);
-  assert.equal(config.tap_action, "expand");
-  assert.equal(config.compact, true);
-  const set = card.normalizeConfig({ default_filter: "weak", max_height: 300, weak_threshold: 50, tap_action: "none" });
-  assert.deepEqual(
-    [set.default_filter, set.max_height, set.weak_threshold, set.tap_action],
-    ["weak", 300, 50, "none"]
-  );
+  assert.equal(config.collapsed, true);
+  const set = card.normalizeConfig({ max_height: 300, weak_threshold: 50 });
+  assert.deepEqual([set.max_height, set.weak_threshold], [300, 50]);
+});
+
+test("a config from before the card was slimmed down still loads", () => {
+  const old = { title: "Netz", default_filter: "weak", compact: true, tap_action: "none", hide_vendor: true, collapsed: true };
+  assert.deepEqual(card.normalizeConfig(old), {
+    title: "Netz",
+    entry_id: undefined,
+    collapsed: true,
+    max_height: 0,
+    weak_threshold: 33,
+  });
 });
 
 test("the editor form names every option of the config", async () => {
