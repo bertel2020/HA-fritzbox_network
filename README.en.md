@@ -39,9 +39,13 @@ The integration works locally with the FRITZ!Box (TR-064) and makes no connectio
 | --- | --- |
 | ![Network map](screenshots-en/map-light.png) | ![Device page](screenshots-en/device-light.png) |
 
-| Topology card | Wi-Fi card |
+| Internet | Topology card |
 | --- | --- |
-| ![Topology card](screenshots-en/topology-light.png) | ![Wi-Fi card](screenshots-en/radio-light.png) |
+| ![Internet](screenshots-en/internet-light.png) | ![Topology card](screenshots-en/topology-light.png) |
+
+| Wi-Fi card | Devices card |
+| --- | --- |
+| ![Wi-Fi card](screenshots-en/radio-light.png) | ![Devices card](screenshots-en/devices-light.png) |
 
 <details>
 <summary>Dark theme</summary>

@@ -5,7 +5,7 @@
 //   npm install --no-save --prefix /some/dir playwright-core @mdi/js
 //   NODE_DEPS=/some/dir node tools/make_screenshots.mjs [scene ...]
 // CHROME=/path overrides the macOS default path. Scenes: net, map, device, cleanup, filter,
-// topology, radio, devices (default: all).
+// internet, topology, radio, devices (default: all).
 import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, extname, join } from "node:path";
@@ -92,6 +92,33 @@ function wifi(mac, key, name, ip, vendor, ap, signal, rate, extra = {}) {
   });
 }
 
+// A VDSL line with the sample throughput of the last two hours; documentation addresses only.
+function internet(en) {
+  const now = Math.round(Date.now() / 1000);
+  const samples = Array.from({ length: 120 }, (_, i) => {
+    const wave = Math.sin(i / 9);
+    return [now - (119 - i) * 30, Math.round(Math.max(300, 18000 + 16000 * wave + (i % 11) * 700)), Math.round(2500 + 1200 * Math.sin(i / 5))];
+  });
+  const band = (from, to, base, dip) => Array.from({ length: to - from }, (_, i) => Math.round(base - ((i * 7) % 13) - (i > dip ? 8 : 0)));
+  const gap = (n) => Array(n).fill(0);
+  return {
+    connected: true, uptime: 65439, last_error: "ERROR_NONE", access_type: "DSL", rate_down: 56316, rate_up: 11260,
+    external_ipv4: "203.0.113.7", external_ipv6: "2001:db8::1", ipv6_prefix: "2001:db8:1::", ipv6_prefix_length: 56,
+    dns: ["198.51.100.1", "198.51.100.2", "2001:db8::53"],
+    dsl: {
+      modulation: "VDSL", profile: "17a", rate_down: 56316, rate_up: 11260, max_rate_down: 96347, max_rate_up: 34957,
+      noise_margin_down: 17, noise_margin_up: 22, attenuation_down: 7, attenuation_up: 7, fec_errors: 96, crc_errors: 0,
+      spectrum_down: [...gap(1), ...band(0, 12, 112, 8), ...gap(5), ...band(0, 22, 80, 15), ...gap(8), ...band(0, 16, 66, 11)],
+      spectrum_up: [...gap(7), ...band(0, 14, 88, 99), ...gap(10), ...band(0, 20, 60, 12), ...gap(13)],
+    },
+    throughput: { down: samples.at(-1)[1], up: samples.at(-1)[2] }, samples,
+    events: [
+      { time: ago(0, 11), kind: "ip_changed", detail: "203.0.113.7" },
+      { time: ago(0, 11), kind: "reconnected", detail: null },
+    ],
+  };
+}
+
 function sample(lang) {
   const en = lang === "en";
   const kids = en ? "Kids" : "Kinder";
@@ -136,6 +163,8 @@ function sample(lang) {
     entry_id: "box1",
     can_write: true,
     labels,
+    internet: internet(en),
+    firmware: null,
     nodes: [
       {
         mac: BOX, name: "FRITZ!Box 7590", role: "master", model: "FRITZ!Box 7590",
@@ -192,12 +221,19 @@ function sample(lang) {
       };
     }
   }
-  return { topology, cleanup, filterPreview, states };
+  const ports = {
+    entries: [
+      { description: "Nextcloud", protocol: "TCP", external_port: 443, internal_port: 8443, client: "192.168.178.20", device_id: id("3c:a6:2f:10:00:01"), device_name: "NAS", enabled: true, lease: 0 },
+      { description: en ? "Game console" : "Spielkonsole", protocol: "UDP", external_port: 3074, internal_port: 3074, client: "192.168.178.64", device_id: id("3c:a6:2f:20:00:04"), device_name: en ? "Kids tablet" : "Kindertablet", enabled: true, lease: 3600 },
+    ],
+  };
+  return { topology, cleanup, filterPreview, ports, states };
 }
 
 const SCENES = {
   net: { kind: "panel", viewport: [1280, 820], hash: "" },
   map: { kind: "panel", viewport: [1280, 1100], hash: "", view: "map" },
+  internet: { kind: "panel", viewport: [1280, 1740], hash: "#/internet" },
   device: { kind: "panel", viewport: [1280, 920], hash: "#/device/3ca62f200004" },
   cleanup: { kind: "panel", viewport: [1280, 760], hash: "#/cleanup" },
   filter: { kind: "panel", viewport: [1280, 920], hash: "#/filter" },
@@ -299,6 +335,7 @@ try {
                   case "fritzbox_network/entries": return [{ entry_id: "box1", title: lang === "en" ? "Home" : "Zuhause" }];
                   case "fritzbox_network/cleanup/list": return data.cleanup;
                   case "fritzbox_network/filter/preview": return data.filterPreview;
+                  case "fritzbox_network/ports/list": return data.ports;
                   default: return {};
                 }
               },

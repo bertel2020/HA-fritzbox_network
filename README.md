@@ -39,9 +39,13 @@ Die Integration arbeitet lokal mit der FRITZ!Box (TR-064) und baut keine Interne
 | --- | --- |
 | ![Netzkarte](screenshots/map-light.png) | ![Gerätedetail](screenshots/device-light.png) |
 
-| Topologie-Karte | Funk-Karte |
+| Internet | Topologie-Karte |
 | --- | --- |
-| ![Topologie-Karte](screenshots/topology-light.png) | ![Funk-Karte](screenshots/radio-light.png) |
+| ![Internet](screenshots/internet-light.png) | ![Topologie-Karte](screenshots/topology-light.png) |
+
+| Funk-Karte | Geräte-Karte |
+| --- | --- |
+| ![Funk-Karte](screenshots/radio-light.png) | ![Geräte-Karte](screenshots/devices-light.png) |
 
 <details>
 <summary>Dunkles Design</summary>
