@@ -350,7 +350,7 @@ export const PANEL_CSS = `
   .hintline.bad { color: var(--bad); }
   .hintline.warn { color: var(--warn); }
   .hintline.info { color: var(--muted); }
-  #internet-view .card.hints + .card { margin-top: 16px; }
+  #internet-view .card.hints + .card, #net-view > #hints > .card.hints { margin-bottom: 16px; }
   .ihead { display: flex; align-items: center; gap: 12px; }
   .ihead .ico { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); flex: none; }
   .ihead .who { flex: 1; min-width: 0; }

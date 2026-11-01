@@ -24,6 +24,7 @@ import {
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
+import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice, entityState } from "./panel-device.js";
 import { openDialog, showToast } from "./panel-dialogs.js";
 import { pickedMacs, renderHidden, renderStale, staleList } from "./panel-cleanup.js";
@@ -415,6 +416,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         <main>
           <div id="note"></div>
           <div id="net-view" hidden>
+            <div id="hints"></div>
             <div class="card toolbar">
               <div class="tools" id="tools">
                 <label class="search"><span class="sr">${t.search}</span>${ic("search")}<input type="search" id="q" placeholder="${t.search}" title="${t.searchTitle}" aria-label="${t.searchTitle}" aria-describedby="meta" value="${escapeHtml(state.query)}"><kbd aria-hidden="true">/</kbd></label>
@@ -536,6 +538,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     state.language = this._hass?.language;
     const shown = visibleClients(state, now);
+    this._set("hints", renderHints(state.data, t));
     this._set("chips", renderChips(state, t, now));
     this._set("menuhost", renderFilterMenu(state, t, now));
     this._set("meta", renderMeta(state, t, shown.length));

@@ -628,3 +628,32 @@ test("the internet page offers to reconnect and restart, and says why it cannot"
   assert.match(refused, /data-act="reboot"[^>]*disabled/);
   assert.match(refused, /may not change settings/);
 });
+
+const hintsModule = await import(`${base}panel-hints.js`);
+
+test("the network points out a busy radio and a weak repeater link", () => {
+  const t = texts.panelTexts("en");
+  const data = {
+    nodes: [
+      { name: "Box", role: "master", radios: { "5ghz": { utilization: 85 }, "2_4ghz": { utilization: 30 } }, uplink: null },
+      { name: "Keller", role: "slave", radios: {}, uplink: { type: "wlan", band: "5ghz", signal_dbm: -80 } },
+      { name: "Garten", role: "slave", radios: {}, uplink: { type: "wlan", band: "5ghz", signal_dbm: -60 } },
+      { name: "Dach", role: "slave", radios: {}, uplink: { type: "lan", signal_dbm: null } },
+    ],
+  };
+  const hints = hintsModule.networkHints(data, t);
+  assert.deepEqual(hints.map((h) => [h.key, h.values.name]), [["radioBusy", "Box"], ["uplinkWeak", "Keller"]]);
+  assert.equal(hints[0].values.percent, 85);
+  assert.deepEqual(hintsModule.networkHints({ nodes: [] }, t), []);
+  assert.deepEqual(hintsModule.networkHints(null, t), []);
+  assert.equal(hintsModule.renderHints({ nodes: [] }, t), "");
+  assert.match(hintsModule.renderHints(data, t), /5 GHz radio is 85 % busy/);
+});
+
+test("a new firmware is a hint only when it differs from the installed one", () => {
+  const t = texts.panelTexts("de");
+  const data = (installed, latest) => ({ nodes: [], firmware: { installed, latest } });
+  assert.match(hintsModule.renderHints(data("8.25", "8.30"), t), /neue Firmware: 8\.30/);
+  assert.equal(hintsModule.renderHints(data("8.25", "8.25"), t), "");
+  assert.equal(hintsModule.renderHints(data("8.25", null), t), "");
+});
