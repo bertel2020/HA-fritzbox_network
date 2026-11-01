@@ -18,6 +18,7 @@ All notable changes to this integration are recorded here.
 - Side panel: the pages are underlined tabs at the left under the title. The lines of the connection path sit at the same height, with the label below. "Clean up" takes fixed steps (3, 7, 14, 30, 90 days, 1 year) as buttons instead of the slider. The group "No access point" is now "Not assigned".
 - Side panel: a device opens as a page of its own instead of a column on the right. Back leads to the list or the map with filter, scroll position and focus; ‹ › or `j`/`k` page through the devices shown. New at the top of the page is the connection path (internet, FRITZ!Box, repeater, device); from 900 px the actions and the master data stand side by side.
 - Side panel: instead of a long row of filters there are three fixed ones (All, Online, Offline) and the "More" menu with the other filters and the groups, on a phone as a sheet from the bottom. The row and the radio boxes wrap instead of scrolling sideways.
+- Access profile: the built-in profiles of the box come without a name; they are now called "Standard", "Guest" and "Unrestricted" after their type instead of "filtprof1", "filtprof2" and "filtprof3".
 
 ## 0.1.0 – 2026-10-25
 

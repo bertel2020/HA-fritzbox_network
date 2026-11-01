@@ -18,6 +18,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Seitenpanel: Die Seiten stehen als unterstrichene Tabs links unter dem Titel. Die Linien im Verbindungsweg liegen auf einer Höhe, die Beschriftung hängt darunter. „Aufräumen“ nimmt feste Stufen (3, 7, 14, 30, 90 Tage, 1 Jahr) als Knöpfe statt des Schiebers. Die Gruppe „Ohne Access Point“ heißt „Nicht zugeordnet“.
 - Seitenpanel: Das Gerät öffnet sich als eigene Seite statt in einer Spalte rechts. Zurück führt in die Liste oder Karte mit Filter, Scrollposition und Fokus; mit ‹ › oder `j`/`k` blätterst du durch die angezeigten Geräte. Neu oben auf der Seite ist der Verbindungsweg (Internet, FRITZ!Box, Repeater, Gerät), ab 900 px stehen Aktionen und Stammdaten nebeneinander.
 - Seitenpanel: Statt einer langen Reihe von Filtern gibt es drei feste (Alle, Online, Offline) und das Menü „Mehr“ mit den übrigen Filtern und den Gruppen, auf dem Handy als Blatt von unten. Die Reihe und die Funkbänder brechen um statt waagerecht zu scrollen.
+- Zugangsprofil: Die eingebauten Profile der Box kommen ohne Namen; sie heißen jetzt „Standard“, „Guest“ und „Unrestricted“ nach ihrem Typ statt „filtprof1“, „filtprof2“ und „filtprof3“.
 
 ## 0.1.0 – 2026-10-25
 

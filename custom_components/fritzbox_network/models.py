@@ -404,11 +404,16 @@ def parse_mesh(raw: str | bytes) -> MeshTopology:
     return topology
 
 
+# The built-in profiles come without a name; the box derives it from the type.
+_FILTER_PROFILE_TYPES = {"standard": "Standard", "guest": "Guest", "unrestricted": "Unrestricted"}
+
+
 def parse_filter_profiles(xml: str | None) -> dict[str, str]:
     """Parse ``NewFilterProfileList`` into {profile id: name}.
 
     The layout of the list is read loosely: an element with a child whose tag ends
-    in "id" is a profile, the first child with "name" in its tag is its name.
+    in "id" is a profile, the first child with "name" in its tag is its name. Without
+    a name the type of a built-in profile stands in for it, else the id.
     """
     if not xml:
         return {}
@@ -422,7 +427,11 @@ def parse_filter_profiles(xml: str | None) -> dict[str, str]:
         profile_id = next((v for k, v in fields.items() if k.endswith("id") and v), None)
         if profile_id is None:
             continue
-        profiles[profile_id] = next((v for k, v in fields.items() if "name" in k and v), profile_id)
+        name = next((v for k, v in fields.items() if "name" in k and v), None)
+        if name is None:
+            kind = next((v for k, v in fields.items() if k.endswith("type")), "")
+            name = _FILTER_PROFILE_TYPES.get(kind.lower(), profile_id)
+        profiles[profile_id] = name
     return profiles
 
 

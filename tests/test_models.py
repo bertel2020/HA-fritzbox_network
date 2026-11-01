@@ -193,3 +193,28 @@ def test_radios_ignore_what_is_not_a_number_and_what_is_not_the_own_network():
     }
 
     assert _radios(node) == {"2_4ghz": Radio(None, None, None)}
+
+
+def test_built_in_filter_profiles_are_named_after_their_type():
+    xml = (
+        "<FilterProfileList>"
+        "<FilterProfile><FilterProfileID>filtprof2</FilterProfileID><Name></Name>"
+        "<FilterProfileType>Guest</FilterProfileType></FilterProfile>"
+        "<FilterProfile><FilterProfileID>filtprof1</FilterProfileID><Name></Name>"
+        "<FilterProfileType>Standard</FilterProfileType></FilterProfile>"
+        "<FilterProfile><FilterProfileID>filtprof3</FilterProfileID><Name></Name>"
+        "<FilterProfileType>Unrestricted</FilterProfileType></FilterProfile>"
+        "<FilterProfile><FilterProfileID>filtprof7301</FilterProfileID><Name>Samsung OTN</Name>"
+        "<FilterProfileType>Personal</FilterProfileType></FilterProfile>"
+        "<FilterProfile><FilterProfileID>filtprof9</FilterProfileID><Name></Name>"
+        "<FilterProfileType>Personal</FilterProfileType></FilterProfile>"
+        "</FilterProfileList>"
+    )
+
+    assert parse_filter_profiles(xml) == {
+        "filtprof2": "Guest",
+        "filtprof1": "Standard",
+        "filtprof3": "Unrestricted",
+        "filtprof7301": "Samsung OTN",
+        "filtprof9": "filtprof9",
+    }
