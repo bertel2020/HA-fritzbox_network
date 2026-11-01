@@ -243,6 +243,7 @@ The **network map** shows the internet at the top, the FRITZ!Box below as a wide
 - **Connection:** connected or disconnected, access type (DSL, cable …), time online, external IPv4, IPv6 prefix, DNS servers and the last error.
 - **Load now** as a bar against the line rate, and a course of the last hours. The box does not report the throughput itself: the panel works it out from the byte counters of the box between two updates, so the first rate shows after the second update. The course is kept in the memory of Home Assistant and starts again after a restart.
 - **Line quality** (DSL only): line rate and what the line could do, noise margin, attenuation and the errors since synchronisation (FEC, CRC). If the noise margin falls or the errors rise, the line is the cause, not a device.
+- **Notes** at the top of the page when something stands out: no connection, a noise margin below 10 dB (below 6 dB as serious), three or more new connections in 24 hours and a line that was full in the last measurements.
 - **Recent events:** connection lost or set up again and a new external IPv4. The integration notices them itself and keeps the last 20 since it started; they do not go to the logbook.
 
 Which values the box gives depends on the model and the connection; what it does not report is missing on the page. The integration reads three small values more per update for this (status and two byte counters), addresses and line only every ten updates or right after a new connection. If the connection is missing altogether, the node stays a plain word.

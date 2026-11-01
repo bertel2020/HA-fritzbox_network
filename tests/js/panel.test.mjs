@@ -549,3 +549,40 @@ test("the node of the map reads out the state and the rates", () => {
   assert.equal(internetPage.nodeLabel({ ...internet, connected: false, throughput: null }, t, "en"), "Internet, disconnected");
   assert.equal(internetPage.nodeRates({ throughput: null }, "en"), null);
 });
+
+test("the internet page points out what stands out, the most serious first", () => {
+  const now = Date.parse("2026-11-01T12:00:00Z");
+  const calm = internetPage.internetHints(internet, now);
+  assert.deepEqual(calm, []);
+  const keys = (changes) => internetPage.internetHints({ ...internet, ...changes }, now).map((h) => [h.level, h.key]);
+  assert.deepEqual(keys({ connected: false }), [["bad", "down"]]);
+  const margin = (db) => ({ dsl: { ...internet.dsl, noise_margin_down: db } });
+  assert.deepEqual(keys(margin(5)), [["bad", "noiseVeryLow"]]);
+  assert.deepEqual(keys(margin(9)), [["warn", "noiseLow"]]);
+  assert.deepEqual(keys(margin(10)), []);
+  assert.deepEqual(keys({ ...margin(9), connected: false }), [["bad", "down"], ["warn", "noiseLow"]]);
+});
+
+test("several new connections in a day are one hint, an old one does not count", () => {
+  const now = Date.parse("2026-11-01T12:00:00Z");
+  const at = (hours) => new Date(now - hours * 3600000).toISOString();
+  const events = (kinds) => kinds.map(([kind, hours]) => ({ kind, time: at(hours), detail: null }));
+  const hints = (list) => internetPage.internetHints({ ...internet, events: events(list) }, now).map((h) => h.key);
+  assert.deepEqual(hints([["reconnected", 1], ["reconnected", 5], ["reconnected", 9]]), ["reconnects"]);
+  assert.deepEqual(hints([["reconnected", 1], ["reconnected", 5], ["reconnected", 30]]), []);
+  // a loss and its new connection are one interruption
+  assert.deepEqual(hints([["disconnected", 2], ["reconnected", 1], ["disconnected", 4], ["reconnected", 3]]), []);
+  assert.deepEqual(internetPage.internetHints(null, now), []);
+});
+
+test("a line that is full for the last samples is noted", () => {
+  const now = Date.now();
+  const full = [[1, 51000, 100], [2, 52000, 100], [3, 53000, 100]];
+  assert.deepEqual(internetPage.internetHints({ ...internet, samples: full }, now).map((h) => h.key), ["saturatedDown"]);
+  assert.deepEqual(internetPage.internetHints({ ...internet, samples: full.slice(1) }, now), []);
+});
+
+test("the hints show on the page and in both languages", () => {
+  const html = internetPage.renderInternet({ ...internet, connected: false }, { t: texts.panelTexts("de"), language: "de", now: Date.now() });
+  assert.match(html, /Die Box hat keine Internetverbindung/);
+});

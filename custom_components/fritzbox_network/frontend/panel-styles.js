@@ -339,6 +339,12 @@ export const PANEL_CSS = `
 
   /* dialog + toast */
   #internet-view .card + .card { margin-top: 16px; }
+  .hints { padding: 8px 16px; }
+  .hintline { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 14px; }
+  .hintline.bad { color: var(--bad); }
+  .hintline.warn { color: var(--warn); }
+  .hintline.info { color: var(--muted); }
+  #internet-view .card.hints + .card { margin-top: 16px; }
   .ihead { display: flex; align-items: center; gap: 12px; }
   .ihead .ico { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); flex: none; }
   .ihead .who { flex: 1; min-width: 0; }

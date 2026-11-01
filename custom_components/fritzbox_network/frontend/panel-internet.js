@@ -89,6 +89,56 @@ function events(internet, t, now) {
     <p class="hint">${escapeHtml(i.eventsHint)}</p></section>`;
 }
 
+const DAY = 86400000;
+// the noise margin in dB below which a DSL line gets unstable
+const NOISE_WARN = 10;
+const NOISE_BAD = 6;
+const RECONNECTS_WARN = 3;
+// the share of the line rate that counts as full, over the last samples
+const SATURATED = 0.9;
+const SATURATED_SAMPLES = 3;
+
+/**
+ * What stands out about the connection, most serious first: [{ level, key, values }] with the level
+ * "bad", "warn" or "info" and the key of the text in t.inet.hints.
+ */
+export function internetHints(internet, now) {
+  if (!internet) return [];
+  const hints = [];
+  if (internet.connected === false) hints.push({ level: "bad", key: "down", values: {} });
+  const margins = [internet.dsl?.noise_margin_down, internet.dsl?.noise_margin_up].filter((n) => typeof n === "number");
+  if (margins.length) {
+    const margin = Math.min(...margins);
+    if (margin < NOISE_BAD) hints.push({ level: "bad", key: "noiseVeryLow", values: { db: margin } });
+    else if (margin < NOISE_WARN) hints.push({ level: "warn", key: "noiseLow", values: { db: margin } });
+  }
+  const drops = (internet.events ?? []).filter(
+    (e) => (e.kind === "reconnected" || e.kind === "disconnected") && now - Date.parse(e.time) < DAY
+  );
+  // a loss followed by the new connection is one interruption, not two
+  const lost = drops.filter((e) => e.kind === "reconnected").length || drops.length;
+  if (lost >= RECONNECTS_WARN) hints.push({ level: "warn", key: "reconnects", values: { n: lost } });
+  const recent = (internet.samples ?? []).slice(-SATURATED_SAMPLES);
+  if (recent.length === SATURATED_SAMPLES) {
+    const full = (index, max) => typeof max === "number" && max > 0 && recent.every((s) => s[index] >= max * SATURATED);
+    if (full(1, internet.rate_down)) hints.push({ level: "info", key: "saturatedDown", values: {} });
+    if (full(2, internet.rate_up)) hints.push({ level: "info", key: "saturatedUp", values: {} });
+  }
+  const order = { bad: 0, warn: 1, info: 2 };
+  return hints.sort((a, b) => order[a.level] - order[b.level]);
+}
+
+function hintsHtml(internet, t, now) {
+  const hints = internetHints(internet, now);
+  if (!hints.length) return "";
+  return `<section class="card sec hints" aria-label="${escapeHtml(t.inet.hintsLabel)}">${hints
+    .map(
+      (h) =>
+        `<p class="hintline ${h.level}"><span aria-hidden="true">${ic(h.level === "info" ? "check" : "alert")}</span><span>${escapeHtml(fill(t.inet.hints[h.key], h.values))}</span></p>`
+    )
+    .join("")}</section>`;
+}
+
 /** The whole page. Without data from the box it says so and offers the way back. */
 export function renderInternet(internet, ctx) {
   const { t, language, now } = ctx;
@@ -109,6 +159,7 @@ export function renderInternet(internet, ctx) {
   const prefix = internet.ipv6_prefix ? `${internet.ipv6_prefix}/${internet.ipv6_prefix_length ?? ""}`.replace(/\/$/, "") : "–";
   const rate = internet.throughput;
   return `${back}
+    ${hintsHtml(internet, t, now)}
     <section class="card sec">
       <div class="ihead"><span class="ico">${ic("globe")}</span>
         <span class="who"><b>${escapeHtml(i.connection)}</b><small>${escapeHtml(sub)}</small></span>
