@@ -372,3 +372,24 @@ async def test_box_counts_the_devices(hass, fake_client, entry):
     assert int(states["devices_online"].state) == online > 0
     assert int(states["devices_total"].state) == len(hosts)
     assert int(states["devices_offline"].state) == len(hosts) - online
+
+
+async def test_refresh_button_polls_the_box_even_without_write_rights(hass, fake_client, entry):
+    fake_client.writable = False
+    coordinator = await _setup(hass, entry)
+    polls = 0
+    original = fake_client.get_hosts
+
+    def counting_hosts():
+        nonlocal polls
+        polls += 1
+        return original()
+
+    fake_client.get_hosts = counting_hosts
+    await hass.services.async_call(
+        "button", "press", {"entity_id": "button.fritz_network_refresh"}, blocking=True
+    )
+    await hass.async_block_till_done()
+
+    assert coordinator.last_update_success
+    assert polls >= 1

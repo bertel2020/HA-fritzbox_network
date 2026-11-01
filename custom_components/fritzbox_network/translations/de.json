@@ -149,6 +149,9 @@
       }
     },
     "button": {
+      "refresh": {
+        "name": "Aktualisieren"
+      },
       "wake_on_lan": {
         "name": "Wake on LAN"
       }
