@@ -392,4 +392,43 @@ export const PANEL_CSS = `
   .dialog .btn-row { justify-content: flex-end; margin-top: 20px; }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; transition: .2s; background: var(--text); color: var(--surface); padding: 10px 18px; border-radius: 12px; max-width: min(560px, calc(100vw - 32px)); z-index: 30; pointer-events: none; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* the flat list as a table */
+  .tablecard { margin-top: 16px; overflow: hidden; }
+  .tablewrap { overflow-x: auto; }
+  .devtable { width: 100%; border-collapse: collapse; }
+  .devtable th { text-align: left; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 0; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--surface); }
+  .devtable th.num, .devtable td.num { text-align: right; }
+  .devtable th > button { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; width: 100%; padding: 10px 12px; display: inline-flex; align-items: center; gap: 6px; text-align: inherit; }
+  .devtable th.num > button { justify-content: flex-end; }
+  .devtable th > button:hover, .devtable th[aria-sort="ascending"] > button, .devtable th[aria-sort="descending"] > button { color: var(--accent-hover); }
+  .arrow { width: 0; height: 0; border: 4px solid transparent; opacity: 0; }
+  .arrow.up { border-bottom-color: currentColor; border-top-width: 0; opacity: 1; }
+  .arrow.down { border-top-color: currentColor; border-bottom-width: 0; opacity: 1; }
+  .devtable td { padding: 8px 12px; border-bottom: 1px solid var(--line); vertical-align: middle; font-size: 13px; }
+  .devtable tbody tr { cursor: pointer; }
+  .devtable tbody tr:hover td { background: var(--soft); }
+  .devtable tbody tr[aria-current="true"] td { background: var(--accent-soft); }
+  .devtable tr.off td { color: var(--muted); }
+  .who2 { display: flex; align-items: center; gap: 12px; min-width: 0; }
+  .who2 .link { color: var(--muted); display: inline-grid; }
+  .who2 .who { min-width: 0; }
+  .tlink { font-size: 14px; font-weight: 500; text-align: left; color: var(--text); display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .devtable tr.off .tlink { color: var(--muted); }
+  .devtable .who small { display: block; color: var(--muted); font-size: 12px; }
+  .chips2 { display: inline-flex; gap: 6px; margin-left: 8px; vertical-align: middle; }
+  .chips2:empty { display: none; }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .devtable .bars { margin-left: 8px; vertical-align: middle; }
+  .hist { width: 112px; }
+  svg.spark { width: 96px; height: 26px; display: block; }
+  .devtable .spark path { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+  .devtable .spark .area { fill: var(--accent); opacity: .12; stroke: none; }
+  .devtable .spark.off path { stroke: var(--link); }
+  .devtable .spark.off .area { fill: var(--link); }
+  .tpager { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 14px; padding: 10px 16px; color: var(--muted); font-size: 13px; }
+  .tpager select { margin-left: 8px; min-height: 32px; border: 1px solid var(--input-line); border-radius: 8px; background: var(--surface); padding: 0 8px; }
+  .tpager .btn { min-height: 32px; padding: 0 10px; }
+  @container app (max-width: 760px) { .devtable .wide { display: none; } }
+  @container app (max-width: 520px) { .devtable .hist, .devtable th:nth-child(4) { display: none; } .chips2 { display: none; } }
 `;

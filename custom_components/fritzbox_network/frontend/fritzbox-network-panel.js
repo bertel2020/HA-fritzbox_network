@@ -26,6 +26,7 @@ import {
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
+import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice, entityState } from "./panel-device.js";
 import { openDialog, showToast } from "./panel-dialogs.js";
@@ -35,6 +36,8 @@ import { renderFilterControls, renderPicker, renderPreview } from "./panel-filte
 const DOMAIN = "fritzbox_network";
 const BOX_KEY = `${DOMAIN}_panel_box`;
 const VIEW_KEY = `${DOMAIN}_panel_view`;
+const HISTORY_REFRESH_MS = 300000;
+const PAGE_KEY = "fritzbox_network_page_size";
 const VIEWS = ["list", "map"];
 
 function remembered() {
@@ -50,6 +53,24 @@ function remember(entryId) {
     sessionStorage.setItem(BOX_KEY, entryId);
   } catch {
     // a private window may refuse; the choice then only lasts until the next reload
+  }
+}
+
+/** The rows per page chosen last in this browser. */
+function rememberedPageSize() {
+  try {
+    const size = Number(localStorage.getItem(PAGE_KEY));
+    return PAGE_SIZES.includes(size) && localStorage.getItem(PAGE_KEY) !== null ? size : DEFAULT_PAGE_SIZE;
+  } catch {
+    return DEFAULT_PAGE_SIZE;
+  }
+}
+
+function rememberPageSize(size) {
+  try {
+    localStorage.setItem(PAGE_KEY, String(size));
+  } catch {
+    // without storage the panel starts with the usual size next time
   }
 }
 
@@ -104,7 +125,11 @@ class FritzboxNetworkPanel extends HTMLElement {
       filter: "all",
       query: "",
       sort: "name",
-      group: "ap",
+      sortDesc: false,
+      group: "flat",
+      page: 0,
+      pageSize: rememberedPageSize(),
+      history: null,
       closed: new Set(),
       sel: route.device,
       threshold: WEAK_LINK_RATIO,
@@ -223,6 +248,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           this._error = null;
           this._updatedAt = Date.now();
           this._update();
+          this._maybeLoadHistory();
           if (this._state.tab === "cleanup") this._loadCleanup();
         },
         { type: `${DOMAIN}/subscribe_topology`, entry_id: this._entryId }
@@ -260,6 +286,22 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _ws(type, extra = {}) {
     return this._hass.callWS({ type: `${DOMAIN}/${type}`, entry_id: this._entryId, ...extra });
+  }
+
+  /** The sparklines come from the history of the box: read now and then, not with every poll. */
+  async _maybeLoadHistory() {
+    if (this._historyBusy || (this._historyAt && Date.now() - this._historyAt < HISTORY_REFRESH_MS)) return;
+    this._historyBusy = true;
+    try {
+      this._state.history = (await this._ws("history/summary")).devices;
+      this._historyAt = Date.now();
+      this._update();
+    } catch {
+      // without a history the table shows no sparklines; the next poll tries again
+      this._historyAt = Date.now() - HISTORY_REFRESH_MS + 30000;
+    } finally {
+      this._historyBusy = false;
+    }
   }
 
   async _loadCleanup() {
@@ -553,13 +595,20 @@ class FritzboxNetworkPanel extends HTMLElement {
       button.setAttribute("aria-pressed", String(button.dataset.view === state.view));
     }
     state.language = this._hass?.language;
+    for (const [id, value] of [["sort", state.sort], ["group", state.group]]) {
+      const select = root.querySelector(`#${id}`);
+      if (select && select.value !== value) select.value = value;
+    }
+    const listKey = [state.filter, state.query, state.sort, state.sortDesc, state.group, state.pageSize].join("|");
+    if (this._listKey !== listKey) state.page = 0;
+    this._listKey = listKey;
     const shown = visibleClients(state, now);
     this._set("hints", renderHints(state.data, t));
     this._set("chips", renderChips(state, t, now));
     this._set("menuhost", renderFilterMenu(state, t, now));
     this._set("meta", renderMeta(state, t, shown.length));
     this._set("groupbar", renderGroupBar(state, t, this._hass));
-    this._set("body", map ? renderMap(state, t, now, shown) : renderGroups(state, t, now));
+    this._set("body", map ? renderMap(state, t, now, shown) : state.group === "flat" ? renderTable(state, t, now, shown) : renderGroups(state, t, now));
     this._drawLinks();
   }
 
@@ -743,8 +792,13 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _onChange(event) {
     const el = event.target;
-    if (el.id === "sort") this._state.sort = el.value;
-    else if (el.id === "group") this._state.group = el.value;
+    if (el.id === "sort") {
+      this._state.sort = el.value;
+      this._state.sortDesc = false;
+    } else if (el.id === "pagesize") {
+      this._state.pageSize = Number(el.value);
+      rememberPageSize(this._state.pageSize);
+    } else if (el.id === "group") this._state.group = el.value;
     else if (el.id === "box") return this._switchBox(el.value);
     else if (el.matches("[data-profile]")) return this._call("select", "select_option", { option: el.value }, el.dataset.entity, this._t.toastProfile);
     else if (el.dataset.pick) {
@@ -783,6 +837,17 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._update();
       const root = this.shadowRoot;
       (fromMenu ? root.querySelector("#morebtn") : root.querySelector(`#chips [data-k="f-${CSS.escape(ds.filter)}"]`))?.focus();
+      return;
+    } else if (ds.sort) {
+      state.sortDesc = state.sort === ds.sort ? !state.sortDesc : false;
+      state.sort = ds.sort;
+      this._update();
+      this.shadowRoot.querySelector(`[data-sort="${ds.sort}"]`)?.focus();
+      return;
+    } else if (ds.act === "page-prev" || ds.act === "page-next") {
+      state.page += ds.act === "page-next" ? 1 : -1;
+      this._update();
+      this.shadowRoot.querySelector(`[data-act="${ds.act}"]:not([disabled])`)?.focus();
       return;
     } else if (ds.act === "menu") {
       return this._setMenu(!state.menu);

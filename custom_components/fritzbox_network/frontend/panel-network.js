@@ -105,6 +105,7 @@ export function visibleClients(state, now) {
     filter: state.filter,
     query: state.query,
     sort: state.sort,
+    desc: state.sortDesc,
     now,
     threshold: state.threshold,
   });

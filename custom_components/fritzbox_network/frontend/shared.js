@@ -248,21 +248,24 @@ const SORTS = {
   signal: (a, b) => (b.signal_dbm ?? -999) - (a.signal_dbm ?? -999),
   rate: (a, b) => (b.rate_download ?? -1) - (a.rate_download ?? -1),
   last: (a, b) => Date.parse(b.last_online ?? 0) - Date.parse(a.last_online ?? 0),
+  link: (a, b) => `${a.link_type ?? "~"}${a.band ?? ""}`.localeCompare(`${b.link_type ?? "~"}${b.band ?? ""}`),
 };
 
-/** Online devices first, then by the chosen key. */
-export function sortClients(clients, sort = "name") {
+/** Online devices first, then by the chosen key, the other way round when `desc` is set. */
+export function sortClients(clients, sort = "name", desc = false) {
   const key = SORTS[sort] ?? SORTS.name;
-  return [...clients].sort((a, b) => Number(Boolean(b.online)) - Number(Boolean(a.online)) || key(a, b));
+  const sign = desc ? -1 : 1;
+  return [...clients].sort((a, b) => Number(Boolean(b.online)) - Number(Boolean(a.online)) || sign * key(a, b));
 }
 
 /** The clients the panel shows: the filter, the search, the sorting. */
-export function panelClients(data, { filter = "all", query = "", sort = "name", now = Date.now(), threshold } = {}) {
+export function panelClients(data, { filter = "all", query = "", sort = "name", desc = false, now = Date.now(), threshold } = {}) {
   return sortClients(
     (data?.clients ?? []).filter(
       (c) => panelMatches(c, filter, now, threshold) && matches(c, "all", query)
     ),
-    sort
+    sort,
+    desc
   );
 }
 
@@ -522,4 +525,59 @@ export function sparkPaths(samples, width, height) {
 export function usedPercent(rate, max) {
   if (typeof rate !== "number" || typeof max !== "number" || max <= 0) return null;
   return Math.min(100, Math.round((rate / max) * 100));
+}
+
+/** The rows per page the table offers; 0 is all of them. */
+export const PAGE_SIZES = [25, 50, 100, 0];
+export const DEFAULT_PAGE_SIZE = 50;
+
+/** One page of a list; the page number is kept inside the list, a size of 0 shows everything. */
+export function pageSlice(list, page, size) {
+  const total = list.length;
+  const pages = size > 0 ? Math.max(1, Math.ceil(total / size)) : 1;
+  const current = Math.min(Math.max(0, page), pages - 1);
+  const from = size > 0 ? current * size : 0;
+  const to = size > 0 ? Math.min(total, from + size) : total;
+  return { items: list.slice(from, to), page: current, pages, from: total ? from + 1 : 0, to, total };
+}
+
+/**
+ * What the sparkline of a device shows: its signal for a Wi-Fi device, else its rate, and when
+ * there is nothing of that (or the device is offline) the hours it was online.
+ */
+export function historySeries(client, history) {
+  const own = history?.[client.mac];
+  if (!own) return null;
+  const has = (values) => values.some((v) => typeof v === "number");
+  if (client.online) {
+    const values = client.link_type === "wlan" ? own.signal : own.rate;
+    if (has(values)) return { kind: client.link_type === "wlan" ? "signal" : "rate", values };
+  }
+  return has(own.online) ? { kind: "online", values: own.online.map((v) => v ?? 0) } : null;
+}
+
+/** A line through values (null leaves a gap) in a box of width × height; null with fewer than two. */
+export function sparkLine(values, width, height, { min, max } = {}) {
+  const known = values.filter((v) => typeof v === "number");
+  if (known.length < 2) return null;
+  const low = min ?? Math.min(...known);
+  const span = (max ?? Math.max(...known)) - low || 1;
+  const step = width / Math.max(1, values.length - 1);
+  let pen = "M";
+  let line = "";
+  let first = null;
+  let last = 0;
+  values.forEach((v, i) => {
+    if (typeof v !== "number") {
+      pen = "M";
+      return;
+    }
+    const x = (i * step).toFixed(1);
+    const y = (height - 2 - ((v - low) / span) * (height - 4)).toFixed(1);
+    line += `${pen}${x} ${y} `;
+    pen = "L";
+    first ??= x;
+    last = x;
+  });
+  return { line: line.trim(), area: `${line.trim()} L${last} ${height} L${first} ${height}Z` };
 }

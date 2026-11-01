@@ -98,7 +98,7 @@ test("the groups show access points with radios, names are escaped", () => {
   assert.match(html, /85 % Auslastung/);
   assert.match(html, /tv &lt;b&gt;/);
   assert.doesNotMatch(html, /tv <b>/);
-  assert.match(html, /Ohne Access Point/);
+  assert.match(html, /Nicht zugeordnet/);
   assert.match(html, /zuletzt online vor 3 Tagen/);
 });
 
@@ -675,4 +675,52 @@ test("the internet page lists the port forwardings, and says when there are none
   assert.match(page(null), /Loading/);
   // a hostile description is escaped
   assert.doesNotMatch(page({ entries: [{ ...entries[0], description: "<b>x</b>" }] }), /<b>x<\/b>/);
+});
+
+const table = await import(`${base}panel-table.js`);
+
+test("a page of the list keeps inside the list and 0 rows per page shows all", () => {
+  const list = Array.from({ length: 120 }, (_, i) => i);
+  assert.deepEqual(
+    (({ items, ...rest }) => ({ n: items.length, ...rest }))(shared.pageSlice(list, 0, 50)),
+    { n: 50, page: 0, pages: 3, from: 1, to: 50, total: 120 }
+  );
+  assert.equal(shared.pageSlice(list, 9, 50).page, 2);
+  assert.equal(shared.pageSlice(list, 2, 50).items.length, 20);
+  assert.equal(shared.pageSlice(list, 3, 0).items.length, 120);
+  assert.deepEqual(shared.pageSlice([], 0, 50), { items: [], page: 0, pages: 1, from: 0, to: 0, total: 0 });
+});
+
+test("sorting can be turned round, online devices stay first", () => {
+  const list = [
+    { name: "b", online: true }, { name: "a", online: true }, { name: "c", online: false },
+  ];
+  assert.deepEqual(shared.sortClients(list, "name").map((c) => c.name), ["a", "b", "c"]);
+  assert.deepEqual(shared.sortClients(list, "name", true).map((c) => c.name), ["b", "a", "c"]);
+});
+
+test("a sparkline leaves gaps for missing values and needs two values", () => {
+  assert.equal(shared.sparkLine([1], 96, 26), null);
+  assert.equal(shared.sparkLine([null, null, 3], 96, 26), null);
+  const { line } = shared.sparkLine([1, null, 3, 4], 90, 20);
+  assert.equal(line.split("M").length - 1, 2);
+  assert.match(line, /^M0\.0 /);
+});
+
+test("the sparkline shows the signal of a Wi-Fi device, the rate of a cable and else the hours online", () => {
+  const history = { w: { signal: [-60, -61], rate: [1, 2], online: [1, 1] }, x: { signal: [null, null], rate: [null, null], online: [0, 1] } };
+  assert.equal(shared.historySeries({ mac: "w", online: true, link_type: "wlan" }, history).kind, "signal");
+  assert.equal(shared.historySeries({ mac: "w", online: true, link_type: "lan" }, history).kind, "rate");
+  assert.equal(shared.historySeries({ mac: "w", online: false, link_type: "wlan" }, history).kind, "online");
+  assert.equal(shared.historySeries({ mac: "x", online: true, link_type: "lan" }, history).kind, "online");
+  assert.equal(shared.historySeries({ mac: "none", online: true }, history), null);
+});
+
+test("the table sorts by the header, pages and escapes names", () => {
+  const html = table.renderTable({ ...state, sort: "rate", sortDesc: true, page: 0, pageSize: 50, history: null }, t, NOW, data.clients);
+  assert.match(html, /aria-sort="descending"/);
+  assert.match(html, /data-sort="name"/);
+  assert.match(html, /tv &lt;b&gt;/);
+  assert.match(html, /1–2 von 2|1–2 von 2/);
+  assert.doesNotMatch(html, /tv <b>/);
 });

@@ -336,6 +336,19 @@ try {
                   case "fritzbox_network/cleanup/list": return data.cleanup;
                   case "fritzbox_network/filter/preview": return data.filterPreview;
                   case "fritzbox_network/ports/list": return data.ports;
+                  case "fritzbox_network/history/summary": {
+                    // a steady wobble per device, so the sparklines have something to draw
+                    const devices = {};
+                    data.topology.clients.forEach((c, n) => {
+                      const wave = (base, amp) => Array.from({ length: 24 }, (_, i) => Math.round((base + amp * Math.sin((i + n * 3) / 3)) * 10) / 10);
+                      devices[c.mac] = {
+                        online: Array.from({ length: 24 }, (_, i) => (c.online || i < 12 ? 1 : 0)),
+                        signal: c.link_type === "wlan" ? wave(c.signal_dbm ?? -60, 5) : Array(24).fill(null),
+                        rate: wave(c.rate_download ?? 100, (c.rate_download ?? 100) / 5),
+                      };
+                    });
+                    return { devices };
+                  }
                   default: return {};
                 }
               },
