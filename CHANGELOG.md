@@ -6,12 +6,16 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Seitenpanel: Die Liste ist standardmäßig **flach** und eine sortierbare Tabelle (Klick auf die Spaltenköpfe) mit Verbindung, Rate, Signal, Sparkline der letzten 24 Stunden und „Zuletzt online“, mit Seiten (50 Zeilen, wählbar 25/50/100/alle, das Panel merkt sich die Wahl). Die Gruppierung nach Access Point, Band und Gruppe bleibt wählbar.
+- Die Integration speichert pro Gerät Online-Zeiten, Signal und Rate (einen Tag im Fünf-Minuten-Takt, eine Woche stündlich) im `.storage` von Home Assistant, damit die Sparklines einen Neustart überstehen. Neue Websocket-Befehle `history/summary` und `history/device`.
+- Seitenpanel, Geräteseite: Verlauf von Signal und Rate über 24 Stunden oder 7 Tage mit niedrigstem, mittlerem und höchstem Wert.
 - Seitenpanel: Netzkarte als zweite Ansicht neben der Liste (Umschalter **Liste | Netzkarte**, das Panel merkt sich die Wahl). Die FRITZ!Box und jeder Repeater sind eigene Flächen, die Geräte hängen als Knöpfe mit Initialen an Leitungen für LAN und die WLAN-Bänder. Die Linie zum Repeater zeigt, ob er per LAN oder WLAN angebunden ist. Gefilterte Geräte fehlen in der Karte, mit dem Hinweis „N durch den Filter ausgeblendet“.
 - Die Topologie liefert pro Repeater additiv `uplink` mit Art, Band und Signal der Anbindung aus der Mesh-Topologie.
 - Eine Aktion, deren Entität in Home Assistant ausgeschaltet ist, zeigt den bekannten Wert (Zugangsprofil, Priorisierung) und den Knopf **Einschalten**, bei zwei oder mehr auch **Alle einschalten**. Danach lädt Home Assistant die Integration kurz neu.
 
 ### Geändert
 
+- Seitenpanel: Die Seiten stehen als unterstrichene Tabs links unter dem Titel. Die Linien im Verbindungsweg liegen auf einer Höhe, die Beschriftung hängt darunter. „Aufräumen“ nimmt feste Stufen (3, 7, 14, 30, 90 Tage, 1 Jahr) als Knöpfe statt des Schiebers. Die Gruppe „Ohne Access Point“ heißt „Nicht zugeordnet“.
 - Seitenpanel: Das Gerät öffnet sich als eigene Seite statt in einer Spalte rechts. Zurück führt in die Liste oder Karte mit Filter, Scrollposition und Fokus; mit ‹ › oder `j`/`k` blätterst du durch die angezeigten Geräte. Neu oben auf der Seite ist der Verbindungsweg (Internet, FRITZ!Box, Repeater, Gerät), ab 900 px stehen Aktionen und Stammdaten nebeneinander.
 - Seitenpanel: Statt einer langen Reihe von Filtern gibt es drei feste (Alle, Online, Offline) und das Menü „Mehr“ mit den übrigen Filtern und den Gruppen, auf dem Handy als Blatt von unten. Die Reihe und die Funkbänder brechen um statt waagerecht zu scrollen.
 

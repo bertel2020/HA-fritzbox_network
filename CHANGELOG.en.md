@@ -6,12 +6,16 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Side panel: the list is **flat** by default and a sortable table (click the column heads) with connection, rate, signal, a sparkline of the last 24 hours and "Last online", with pages (50 rows, choose 25/50/100/all, the panel remembers the choice). Grouping by access point, band and group stays available.
+- The integration keeps online times, signal and rate per device (a day in steps of five minutes, a week in hours) in the `.storage` of Home Assistant, so the sparklines survive a restart. New websocket commands `history/summary` and `history/device`.
+- Side panel, device page: history of signal and rate over 24 hours or 7 days with the lowest, mean and highest value.
 - Side panel: a network map as a second view next to the list (switch **List | Network map**, the panel remembers the choice). The FRITZ!Box and every repeater are areas of their own, the devices hang as buttons with initials on lines for LAN and the Wi-Fi bands. The line to a repeater shows whether it is linked by cable or Wi-Fi. Filtered devices are left out of the map, with the note "N hidden by the filter".
 - The topology adds `uplink` per repeater: type, band and signal of its link, from the mesh topology.
 - An action whose entity is switched off in Home Assistant shows the known value (access profile, priority) and an **Enable** button, with two or more also **Enable all**. Home Assistant then reloads the integration briefly.
 
 ### Changed
 
+- Side panel: the pages are underlined tabs at the left under the title. The lines of the connection path sit at the same height, with the label below. "Clean up" takes fixed steps (3, 7, 14, 30, 90 days, 1 year) as buttons instead of the slider. The group "No access point" is now "Not assigned".
 - Side panel: a device opens as a page of its own instead of a column on the right. Back leads to the list or the map with filter, scroll position and focus; ‹ › or `j`/`k` page through the devices shown. New at the top of the page is the connection path (internet, FRITZ!Box, repeater, device); from 900 px the actions and the master data stand side by side.
 - Side panel: instead of a long row of filters there are three fixed ones (All, Online, Offline) and the "More" menu with the other filters and the groups, on a phone as a sheet from the bottom. The row and the radio boxes wrap instead of scrolling sideways.
 
