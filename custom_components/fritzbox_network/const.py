@@ -77,6 +77,7 @@ KEY_DEVICES_OFFLINE = "devices_offline"
 KEY_DEVICES_TOTAL = "devices_total"
 
 # Keys of the internet connection of the box (device of the box).
+KEY_GUEST_WIFI = "guest_wifi"
 KEY_INTERNET_CONNECTED = "internet_connected"
 KEY_INTERNET_DOWNLOAD = "internet_download"
 KEY_INTERNET_UPLOAD = "internet_upload"

@@ -343,3 +343,49 @@ async def test_a_connection_that_keeps_dropping_is_a_repair(hass, fake_client, e
 
     await hass.config_entries.async_unload(entry.entry_id)
     assert registry.async_get_issue("fritzbox_network", issue) is None
+
+
+async def test_the_guest_wifi_is_a_switch_that_shows_the_change_at_once(hass, fake_client, entry):
+    coordinator = await _setup(hass, entry)
+    state = hass.states.get("switch.fritz_network_guest_wifi")
+    assert state.state == "off"
+
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": "switch.fritz_network_guest_wifi"}, blocking=True
+    )
+    assert ("guest_wifi", True) in fake_client.calls
+    # the box still says off at the next poll: the switch keeps showing what was asked for
+    await _poll(hass, coordinator)
+    assert hass.states.get("switch.fritz_network_guest_wifi").state == "on"
+    # once the box shows it too, it is the box that decides again
+    fake_client.guest_wifi = True
+    await _poll(hass, coordinator)
+    fake_client.guest_wifi = False
+    await _poll(hass, coordinator)
+    assert hass.states.get("switch.fritz_network_guest_wifi").state == "off"
+
+
+async def test_a_box_without_a_guest_network_or_a_user_without_rights_has_no_switch(
+    hass, fake_client, entry
+):
+    fake_client.guest_wifi = None
+    await _setup(hass, entry)
+    assert hass.states.get("switch.fritz_network_guest_wifi") is None
+
+
+async def test_the_guest_wifi_switch_needs_the_right_to_change_settings(hass, fake_client, entry):
+    fake_client.writable = False
+    await _setup(hass, entry)
+    assert hass.states.get("switch.fritz_network_guest_wifi") is None
+
+
+async def test_a_refusal_of_the_box_is_an_error_not_a_changed_switch(hass, fake_client, entry):
+    from homeassistant.exceptions import HomeAssistantError
+
+    await _setup(hass, entry)
+    fake_client.fail_actions = True
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(
+            "switch", "turn_on", {"entity_id": "switch.fritz_network_guest_wifi"}, blocking=True
+        )
+    assert hass.states.get("switch.fritz_network_guest_wifi").state == "off"

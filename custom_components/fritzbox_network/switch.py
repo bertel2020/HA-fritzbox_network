@@ -8,11 +8,13 @@ from typing import Any
 
 from fritzconnection.core.exceptions import FritzConnectionException
 from homeassistant.components.switch import SwitchEntity
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, KEY_AUTO_WOL, KEY_INTERNET_ACCESS, KEY_PRIORITY
+from .const import DOMAIN, KEY_AUTO_WOL, KEY_GUEST_WIFI, KEY_INTERNET_ACCESS, KEY_PRIORITY
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import FritzNetworkClientEntity, async_setup_client_entities
 from .models import Host
@@ -46,6 +48,64 @@ async def async_setup_entry(
             ),
         ],
     )
+    _async_setup_guest_wifi(entry, async_add_entities)
+
+
+@callback
+def _async_setup_guest_wifi(
+    entry: FritzNetworkConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
+) -> None:
+    """The guest Wi-Fi switch, once the box has told it has a guest network."""
+    coordinator = entry.runtime_data
+    added = False
+
+    @callback
+    def _add() -> None:
+        nonlocal added
+        if added or coordinator.data.guest_wifi is None:
+            return
+        added = True
+        async_add_entities([FritzNetworkGuestWifi(coordinator)])
+
+    _add()
+    entry.async_on_unload(coordinator.async_add_listener(_add))
+
+
+class FritzNetworkGuestWifi(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity):
+    """The guest Wi-Fi of the box, on or off."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = KEY_GUEST_WIFI
+
+    def __init__(self, coordinator: FritzNetworkCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.serial}_{KEY_GUEST_WIFI}"
+        self.entity_id = f"switch.fritz_network_{KEY_GUEST_WIFI}"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.coordinator.data.guest_wifi is not None
+
+    @property
+    def is_on(self) -> bool | None:
+        return self.coordinator.data.guest_wifi
+
+    async def _set(self, value: bool) -> None:
+        try:
+            await self.coordinator.async_set_guest_wifi(value)
+        except FritzConnectionException as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self._set(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._set(False)
 
 
 class _HostSwitch(FritzNetworkClientEntity, SwitchEntity):

@@ -207,6 +207,9 @@
       },
       "auto_wake_on_lan": {
         "name": "Automatic Wake on LAN"
+      },
+      "guest_wifi": {
+        "name": "Guest Wi-Fi"
       }
     },
     "button": {

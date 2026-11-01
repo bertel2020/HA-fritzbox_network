@@ -78,6 +78,9 @@ class FritzNetworkClient:
         self._use_tls = use_tls
         self._lock = threading.Lock()
         self._fc: FritzConnection | None = None
+        # the WLANConfiguration service of the guest network: looked for once, then known
+        self._guest_service: str | None = None
+        self._guest_searched = False
 
     def connect(self) -> None:
         """Open the connection; raises fritzconnection exceptions on failure."""
@@ -159,6 +162,34 @@ class FritzNetworkClient:
             fast = read(INTERNET_FAST)
             slow = read(INTERNET_SLOW) if details else {}
         return fast, slow
+
+    def _guest_wifi_service(self) -> str | None:
+        """The service of the guest Wi-Fi: the one whose access point type says "guest"."""
+        if not self._guest_searched:
+            self._guest_searched = True
+            for number in range(1, 5):
+                service = f"WLANConfiguration{number}"
+                try:
+                    info = self._connection.call_action(service, "GetInfo")
+                except (FritzActionError, FritzServiceError, FritzAuthorizationError, KeyError):
+                    continue
+                if info.get("NewX_AVM-DE_APType") == "guest":
+                    self._guest_service = service
+                    break
+        return self._guest_service
+
+    def get_guest_wifi(self) -> bool | None:
+        """Whether the guest Wi-Fi is on; None where the box has none."""
+        with self._lock:
+            if (service := self._guest_wifi_service()) is None:
+                return None
+            return bool(self._connection.call_action(service, "GetInfo").get("NewEnable"))
+
+    def set_guest_wifi(self, enabled: bool) -> None:
+        with self._lock:
+            if (service := self._guest_wifi_service()) is None:
+                raise FritzServiceError("The box has no guest Wi-Fi")
+            self._connection.call_action(service, "SetEnable", NewEnable=enabled)
 
     def reconnect(self) -> None:
         """Hang up and dial in again, which usually brings a new external address."""

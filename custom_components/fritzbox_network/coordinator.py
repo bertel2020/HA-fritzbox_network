@@ -112,6 +112,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._internet_slow: dict[str, Any] = {}
         self._internet_counters: tuple[float, int, int] | None = None
         self.internet_rate: tuple[float, float] | None = None
+        # (value, monotonic deadline) of a guest Wi-Fi switch the box has not shown yet
+        self._guest_override: tuple[bool, float] | None = None
         # since when the noise margin of the DSL line has been below the limit
         self.internet_low_margin_since: datetime | None = None
         self.internet_samples: deque[tuple[float, float, float]] = deque(maxlen=INTERNET_HISTORY)
@@ -147,7 +149,16 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             return None
         return fast, slow
 
-    def _fetch(self) -> tuple[list[Host], MeshTopology | None, tuple[dict, dict] | None]:
+    def _fetch_guest_wifi(self) -> bool | None:
+        try:
+            return self.client.get_guest_wifi()
+        except (*_FETCH_ERRORS, TypeError) as err:
+            _LOGGER.debug("Guest Wi-Fi unavailable: %s", err)
+            return None
+
+    def _fetch(
+        self,
+    ) -> tuple[list[Host], MeshTopology | None, tuple[dict, dict] | None, bool | None]:
         hosts = self.client.get_hosts()
         try:
             mesh = self.client.get_mesh()
@@ -164,13 +175,14 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             except _FETCH_ERRORS as err:
                 _LOGGER.debug("Access profiles unavailable: %s", err)
         internet = self._fetch_internet()
+        guest = self._fetch_guest_wifi()
         self._polls += 1
-        return hosts, mesh, internet
+        return hosts, mesh, internet, guest
 
     async def _async_update_data(self) -> NetworkData:
         started = time.monotonic()
         try:
-            hosts, mesh, wan = await self.hass.async_add_executor_job(self._fetch)
+            hosts, mesh, wan, guest = await self.hass.async_add_executor_job(self._fetch)
         except (FritzAuthorizationError, FritzSecurityError) as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except _FETCH_ERRORS as err:
@@ -195,7 +207,22 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
 
         self._remove_filtered_devices(selected)
         self._sync_names(selected)
-        return NetworkData(hosts=selected, mesh=mesh, internet=self._update_internet(wan))
+        return NetworkData(
+            hosts=selected,
+            mesh=mesh,
+            internet=self._update_internet(wan),
+            guest_wifi=self._apply_guest_override(guest),
+        )
+
+    def _apply_guest_override(self, polled: bool | None) -> bool | None:
+        """Show a guest Wi-Fi switch just made until the box shows it too."""
+        if self._guest_override is None:
+            return polled
+        value, deadline = self._guest_override
+        if polled is None or polled == value or time.monotonic() > deadline:
+            self._guest_override = None
+            return polled
+        return value
 
     def _update_internet(self, wan: tuple[dict, dict] | None) -> InternetInfo | None:
         """The internet connection, its throughput since the poll before and what changed."""
@@ -479,7 +506,12 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         hosts = dict(self.data.hosts)
         self._apply_overrides(hosts)
         self.async_set_updated_data(
-            NetworkData(hosts=hosts, mesh=self.data.mesh, internet=self.data.internet)
+            NetworkData(
+                hosts=hosts,
+                mesh=self.data.mesh,
+                internet=self.data.internet,
+                guest_wifi=self.data.guest_wifi,
+            )
         )
         await self.async_request_refresh()
 
@@ -504,6 +536,13 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         await self._async_set_by_ip(
             host, "filter_profile", profile_id, self.client.set_filter_profile
         )
+
+    async def async_set_guest_wifi(self, enabled: bool) -> None:
+        """Switch the guest Wi-Fi and show the new state until the box does."""
+        await self.hass.async_add_executor_job(self.client.set_guest_wifi, enabled)
+        self._guest_override = (enabled, time.monotonic() + WAN_OVERRIDE_SECONDS)
+        self.async_set_updated_data(replace(self.data, guest_wifi=enabled))
+        await self.async_request_refresh()
 
     async def async_wake_on_lan(self, host: Host) -> None:
         await self.hass.async_add_executor_job(self.client.wake_on_lan, host.mac)

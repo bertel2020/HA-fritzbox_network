@@ -178,6 +178,8 @@ class NetworkData:
     hosts: dict[str, Host]
     mesh: MeshTopology | None
     internet: InternetInfo | None = None
+    # whether the guest Wi-Fi is on; None where the box has none
+    guest_wifi: bool | None = None
 
 
 def _text(item: ET.Element, tag: str) -> str | None:

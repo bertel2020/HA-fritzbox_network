@@ -283,3 +283,47 @@ def test_wake_on_lan_by_mac():
     client._fc.call_action.assert_called_once_with(
         "Hosts1", "X_AVM-DE_WakeOnLANByMACAddress", NewMACAddress="02:00:00:00:00:03".upper()
     )
+
+
+def _guest_client(types: dict[str, str]) -> FritzNetworkClient:
+    """A box whose WLANConfiguration services have these access point types."""
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    client._fc = MagicMock()
+    state = {"NewEnable": False}
+
+    def call(service, action, **args):
+        if service not in types:
+            raise FritzServiceError("no such service")
+        if action == "SetEnable":
+            state["NewEnable"] = args["NewEnable"]
+            return {}
+        return {"NewX_AVM-DE_APType": types[service], **state}
+
+    client._fc.call_action.side_effect = call
+    return client
+
+
+def test_the_guest_wifi_is_the_service_whose_type_says_so():
+    client = _guest_client(
+        {
+            "WLANConfiguration1": "normal",
+            "WLANConfiguration2": "normal",
+            "WLANConfiguration3": "guest",
+        }
+    )
+    assert client.get_guest_wifi() is False
+    client.set_guest_wifi(True)
+    assert client.get_guest_wifi() is True
+    client._fc.call_action.assert_any_call("WLANConfiguration3", "SetEnable", NewEnable=True)
+    # the services are searched once, not at every read
+    searches = [
+        c for c in client._fc.call_action.call_args_list if c.args[0] == "WLANConfiguration1"
+    ]
+    assert len(searches) == 1
+
+
+def test_a_box_without_a_guest_network_says_none_and_refuses_to_set_it():
+    client = _guest_client({"WLANConfiguration1": "normal", "WLANConfiguration2": "normal"})
+    assert client.get_guest_wifi() is None
+    with pytest.raises(FritzServiceError):
+        client.set_guest_wifi(True)
