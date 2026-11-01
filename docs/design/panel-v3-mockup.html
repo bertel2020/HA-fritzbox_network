@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Panel v3 Mockup</title>
+<style>
+  :root {
+    --bg:#f4f6f9; --surface:#fff; --soft:#f5f7f9; --line:#e1e5ea; --text:#1b1f24; --muted:#5b6270;
+    --accent:#0a6aa8; --accent-soft:#eaf3fa; --ok:#1e6b34; --ok-soft:#e6f4ea; --warn:#8a4b00; --warn-soft:#fff1de;
+    --bad:#a1261b; --bad-soft:#fdecea; --neutral:#eef1f4; --link:#8e98a6;
+  }
+  @media (prefers-color-scheme: dark) { :root {
+    --bg:#0f1216; --surface:#1b1f24; --soft:#22272e; --line:#2d333b; --text:#e6e9ed; --muted:#9aa4b1;
+    --accent:#5bb2ea; --accent-soft:#16324a; --ok:#7fd49a; --ok-soft:#173a24; --warn:#f2c27a; --warn-soft:#3a2a12;
+    --bad:#f2a29a; --bad-soft:#3d1c19; --neutral:#2a3038; --link:#6b7684; } }
+  * { box-sizing:border-box }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 Roboto,system-ui,sans-serif }
+  .wrap { max-width:1200px; margin:0 auto; padding:0 24px 48px }
+  h2.sec { margin:40px 0 4px; font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--muted) }
+  p.note { margin:0 0 12px; color:var(--muted); max-width:70ch }
+  .frame { background:var(--bg); border:1px dashed var(--line); border-radius:20px; overflow:hidden }
+  /* header: title row, then a left aligned tab strip */
+  .head { background:var(--surface); border-bottom:1px solid var(--line); padding:0 24px }
+  .head .top { display:flex; align-items:center; gap:12px; padding:12px 0 4px }
+  .logo { width:36px; height:36px; border-radius:50%; background:var(--accent-soft); display:grid; place-items:center; color:var(--accent) }
+  .head b { font-size:18px; font-weight:500; display:block; line-height:1.2 }
+  .head small { color:var(--muted); font-size:12px }
+  .chip { margin-left:auto; background:var(--ok-soft); color:var(--ok); padding:4px 12px; border-radius:16px; font-size:12px; font-weight:500 }
+  .tabs { display:flex; gap:24px }
+  .tabs a { padding:10px 2px; font-weight:500; color:var(--muted); border-bottom:3px solid transparent; cursor:pointer }
+  .tabs a.on { color:var(--accent); border-color:var(--accent) }
+  .tabs em { font-style:normal; font-size:11px; background:var(--warn-soft); color:var(--warn); border-radius:10px; padding:1px 7px; margin-left:6px }
+  .body { padding:20px 24px 24px }
+  .card { background:var(--surface); border:1px solid var(--line); border-radius:18px; padding:16px; box-shadow:0 1px 2px rgb(16 24 40/8%) }
+  /* toolbar */
+  .bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center }
+  .bar .search { flex:1 1 260px; border:1px solid var(--line); border-radius:12px; padding:9px 12px; color:var(--muted); background:var(--surface) }
+  .pill { border:1px solid var(--line); border-radius:18px; padding:6px 14px; background:var(--surface); color:var(--text); font-size:13px }
+  .pill.on { border-color:var(--accent); background:var(--accent-soft); color:var(--accent); font-weight:500 }
+  .pill small { color:var(--muted); margin-left:4px }
+  .chips { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px }
+  .chips span { background:var(--neutral); border-radius:14px; padding:3px 6px 3px 12px; font-size:12px }
+  .chips span:after { content:"×"; margin-left:8px; color:var(--muted); font-size:14px }
+  .seg { display:inline-flex; border:1px solid var(--line); border-radius:12px; overflow:hidden }
+  .seg span { padding:7px 14px; font-size:13px; color:var(--muted) }
+  .seg span.on { background:var(--accent); color:#fff }
+  /* table */
+  table { width:100%; border-collapse:collapse; margin-top:12px }
+  th { position:sticky; top:0; text-align:left; font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted);
+    font-weight:600; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap; cursor:pointer; background:var(--surface) }
+  th.sorted { color:var(--accent) }
+  th.num, td.num { text-align:right }
+  td { padding:9px 10px; border-bottom:1px solid var(--line); vertical-align:middle }
+  tr:hover td { background:var(--soft) }
+  .dev { display:flex; align-items:center; gap:12px }
+  .dot { width:9px; height:9px; border-radius:50%; background:var(--ok); flex:none }
+  .dot.off { background:var(--link) }
+  .ico { width:34px; height:34px; border-radius:10px; background:var(--neutral); display:grid; place-items:center; color:var(--muted); flex:none; font-size:15px }
+  .dev b { font-weight:500; display:block; line-height:1.25 }
+  .dev small { color:var(--muted); font-size:12px }
+  .badge { display:inline-block; border-radius:10px; padding:1px 8px; font-size:11px; font-weight:600 }
+  .badge.warn { background:var(--warn-soft); color:var(--warn) }
+  .badge.bad { background:var(--bad-soft); color:var(--bad) }
+  .badge.ok { background:var(--ok-soft); color:var(--ok) }
+  .bars { display:inline-flex; gap:2px; align-items:flex-end; height:14px; vertical-align:middle; margin-left:8px }
+  .bars i { width:3px; background:var(--line); border-radius:1px }
+  .bars i.f.ok { background:var(--ok) } .bars i.f.warn { background:#b8680a }
+  svg.spark { width:96px; height:26px; display:block }
+  .spark path { fill:none; stroke:var(--accent); stroke-width:1.6; stroke-linejoin:round }
+  .spark .area { fill:var(--accent); opacity:.12; stroke:none }
+  .spark.off path { stroke:var(--link) } .spark.off .area { fill:var(--link) }
+  .pager { display:flex; align-items:center; gap:14px; justify-content:flex-end; padding-top:12px; color:var(--muted); font-size:13px }
+  .pager .sel { border:1px solid var(--line); border-radius:8px; padding:3px 10px; color:var(--text) }
+  .pager .btn { border:1px solid var(--line); border-radius:8px; padding:3px 10px }
+  /* detail */
+  .path { display:grid; grid-template-columns:auto 1fr auto 1fr auto; align-items:center; gap:0; margin:8px 0 16px }
+  .node { display:inline-flex; align-items:center; gap:8px; background:var(--neutral); border-radius:16px; padding:10px 16px; font-weight:500 }
+  .node.me { background:var(--accent-soft); color:var(--accent) }
+  .wire { position:relative; height:2px; background:var(--link); margin:0 8px }
+  .wire span { position:absolute; left:50%; top:8px; transform:translateX(-50%); font-size:12px; color:var(--muted); white-space:nowrap }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px }
+  .stat { background:var(--soft); border-radius:14px; padding:12px 16px }
+  .stat small { display:block; color:var(--muted); font-size:11px; letter-spacing:.06em; text-transform:uppercase }
+  .stat b { font-size:22px; font-weight:500 } .stat span { color:var(--muted); font-size:12px; display:block }
+  .big svg.spark { width:100%; height:90px }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-top:16px }
+  /* cleanup */
+  .steps { display:flex; gap:0; margin:12px 0 }
+  .steps span { flex:1; text-align:center; padding:10px; border:1px solid var(--line); margin-left:-1px; color:var(--muted); font-weight:500 }
+  .steps span:first-child { border-radius:12px 0 0 12px; margin-left:0 } .steps span:last-child { border-radius:0 12px 12px 0 }
+  .steps span.on { background:var(--accent); border-color:var(--accent); color:#fff }
+  .row { display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--line) }
+  /* map */
+  .map { position:relative; height:300px; background:var(--soft); border-radius:14px }
+  .map svg { position:absolute; inset:0; width:100%; height:100% }
+  .mn { position:absolute; transform:translate(-50%,-50%); background:var(--surface); border:1px solid var(--line); border-radius:16px; padding:8px 14px; font-weight:500; box-shadow:0 1px 4px rgb(0 0 0/10%); white-space:nowrap }
+  .mn small { display:block; font-weight:400; color:var(--muted); font-size:11px }
+  .mn.net { background:var(--accent); color:#fff; border-color:var(--accent) } .mn.net small { color:#dbeaf7 }
+  @media (max-width:760px){ .two{grid-template-columns:1fr} .hide-m{display:none} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1 style="font-weight:500;margin:28px 0 0">Panel v3: Mockup</h1>
+  <p class="note">Tabs linksbündig unter dem Titel, flache Tabelle mit Sortierung, Filter-Chips, Paging (Standard 50) und gespeicherten Sparklines, Detailseite mit gleich hohen Linien, Aufräumen mit festen Stufen, Netzkarte mit Live-Raten.</p>
+
+  <h2 class="sec">1 · Liste (Standard: flach)</h2>
+  <p class="note">Spaltenkopf anklicken sortiert. „Spalten“ blendet Spalten ein oder aus. Die Sparkline zeigt die letzten 24 Stunden (Wifi: Signal, LAN: Rate, Offline: Online-Zeiten).</p>
+  <div class="frame">
+    <div class="head">
+      <div class="top"><div class="logo">⌂</div><div><b>FRITZ!Box Netzwerk</b><small>FRITZ-RM · FRITZ!Box 7590 AX</small></div><span class="chip">● aktualisiert vor 9 s</span></div>
+      <div class="tabs"><a class="on">Netzwerk</a><a>Internet</a><a>Aufräumen<em>3</em></a><a>Filter</a></div>
+    </div>
+    <div class="body"><div class="card">
+      <div class="bar">
+        <div class="search">🔍 Suchen…  <span style="float:right">/</span></div>
+        <div class="seg"><span class="on">Flach</span><span>Nach Access Point</span></div>
+        <div class="seg"><span>Liste</span><span>Netzkarte</span></div>
+        <span class="pill">Spalten ▾</span>
+      </div>
+      <div class="bar" style="margin-top:10px">
+        <span class="pill on">Alle<small>79</small></span><span class="pill">Online<small>43</small></span><span class="pill">Offline<small>36</small></span><span class="pill">Mehr<small>6</small> ▾</span>
+      </div>
+      <div class="chips"><span>WLAN 5 GHz</span><span>Signal schwach</span></div>
+      <div style="overflow-x:auto"><table id="tbl"></table></div>
+      <div class="pager">Zeilen pro Seite <span class="sel">50 ▾</span> <span id="range">1–50 von 79</span> <span class="btn">‹</span><span class="btn">›</span></div>
+    </div></div>
+  </div>
+
+  <h2 class="sec">2 · Gerät (Detail)</h2>
+  <p class="note">Die Linien liegen fest auf Knotenmitte, die Beschriftung hängt darunter. Statt doppelter Rate-Karten: Ist-Rate samt Link-Speed, Verlauf mit Umschalter 24 h / 7 Tage.</p>
+  <div class="frame"><div class="body">
+    <div class="card">
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:6px"><span class="dot"></span><b style="font-size:22px;font-weight:500">amazon-echo-schlafzimmer</b><span class="badge ok">Online</span><span class="badge">WLAN 5 GHz</span><span class="badge warn">Signal schwach</span></div>
+      <small style="color:var(--muted)">192.168.79.109 · Amazon · online seit 3 Tagen</small>
+      <div class="path" style="margin-top:16px">
+        <span class="node">🌐 Internet</span><div class="wire"><span>↓ 12 / ↑ 3 Mbit/s</span></div>
+        <span class="node">FRITZ-RM</span><div class="wire"><span>72 Mbit/s · −71 dBm</span></div><span class="node me">amazon-echo-schlafzimmer</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><small>Rate ↓ / ↑</small><b>12 / 72</b><span>Link-Speed Mbit/s</span></div>
+        <div class="stat"><small>Signal</small><b>−71 dBm</b><span>Ø 24 h: −68 dBm</span></div>
+        <div class="stat"><small>Verbunden mit</small><b>FRITZ-RM</b><span>5 GHz, Kanal 100</span></div>
+        <div class="stat"><small>Zuletzt online</small><b>jetzt</b><span>Erstmals gesehen: 12.03.2025</span></div>
+      </div>
+      <div class="two">
+        <div class="stat big"><small>Signal · <b style="font-size:12px;color:var(--accent)">24 h</b> · 7 Tage</small><svg class="spark" id="big1" viewBox="0 0 300 90" preserveAspectRatio="none"></svg><span>min −78 · Ø −68 · max −61 dBm</span></div>
+        <div class="stat big"><small>Rate · <b style="font-size:12px;color:var(--accent)">24 h</b> · 7 Tage</small><svg class="spark" id="big2" viewBox="0 0 300 90" preserveAspectRatio="none"></svg><span>min 12 · Ø 58 · max 144 Mbit/s</span></div>
+      </div>
+    </div>
+  </div></div>
+
+  <h2 class="sec">3 · Aufräumen</h2>
+  <p class="note">Feste Stufen statt Schieber, dazu eine Zusammenfassung vorab.</p>
+  <div class="frame"><div class="body"><div class="card">
+    <b style="font-size:16px;font-weight:500">Lange offline</b>
+    <p class="note">Die Box merkt sich jedes Gerät, das sie je gesehen hat. Hier blendest du Geräte aus, die lange nicht mehr online waren.</p>
+    <small style="color:var(--muted)">Offline seit mindestens</small>
+    <div class="steps"><span>3 Tage</span><span>7 Tage</span><span>14 Tage</span><span class="on">30 Tage</span><span>90 Tage</span><span>1 Jahr</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin:8px 0"><span><b>4 Geräte</b> sind seit mindestens 30 Tagen offline</span><span class="pill on">Alle auswählen</span></div>
+    <div class="row"><span class="dev"><span class="dot off"></span><span><b>Galaxy-S9</b><br><small>192.168.79.88 · zuletzt online 12.08.</small></span></span><span class="badge">Offline 81 Tage</span></div>
+    <div class="row"><span class="dev"><span class="dot off"></span><span><b>ESP-4F2A10</b><br><small>192.168.79.152 · zuletzt online 02.09.</small></span></span><span class="badge">Offline 60 Tage</span></div>
+  </div></div></div>
+
+  <h2 class="sec">4 · Netzkarte</h2>
+  <p class="note">Liniendicke und Beschriftung zeigen die Auslastung. Ein Klick auf den Internet-Knoten öffnet die Internet-Seite.</p>
+  <div class="frame"><div class="body"><div class="card"><div class="map">
+    <svg viewBox="0 0 1000 300" preserveAspectRatio="none">
+      <g stroke="var(--link)" fill="none" stroke-linecap="round">
+        <path d="M120 150 H400" stroke-width="5"/><path d="M600 150 L840 70" stroke-width="3"/><path d="M600 150 L840 150" stroke-width="2"/><path d="M600 150 L840 235" stroke-width="1.5" stroke-dasharray="6 5"/>
+      </g>
+    </svg>
+    <div class="mn net" style="left:12%;top:50%">Internet<small>↓ 12 / ↑ 3 Mbit/s</small></div>
+    <div class="mn" style="left:50%;top:50%">FRITZ-RM<small>21 Geräte · ↓ 9 Mbit/s</small></div>
+    <div class="mn" style="left:86%;top:23%">FRITZ!Repeater 1200 AX<small>21 WLAN · −62 dBm Uplink</small></div>
+    <div class="mn" style="left:86%;top:50%">55PUS7101<small>LAN · 1000 Mbit/s</small></div>
+    <div class="mn" style="left:86%;top:78%">Offline-Gruppe<small>36 Geräte</small></div>
+  </div></div></div></div>
+</div>
+<script>
+  const names = [["55PUS7101","192.168.79.32","LAN",1000,0],["amazon-echo-bad","192.168.79.110","5 GHz",292,-62],["amazon-echo-buero","192.168.79.106","5 GHz",120,-52],
+    ["amazon-echo-schlafzimmer","192.168.79.109","2,4 GHz",12,-77],["amazon-echo-show-buero","192.168.79.111","5 GHz",144,-48],["amazon-echo-show-kueche","192.168.79.107","5 GHz",57,-70],
+    ["amazon-echo-yvonne","192.168.79.105","5 GHz",433,-45],["Galaxy-S9","192.168.79.88","offline",0,0]];
+  let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const spark = (off) => { const n = 24, pts = Array.from({length:n}, (_, i) => 4 + 16 * rnd() * (off && i > 8 ? 0 : 1));
+    const d = pts.map((y, i) => `${i ? "L" : "M"}${(i * 96 / (n - 1)).toFixed(1)} ${(26 - y).toFixed(1)}`).join("");
+    return `<svg class="spark ${off ? "off" : ""}" viewBox="0 0 96 26"><path class="area" d="${d}L96 26L0 26Z"/><path d="${d}"/></svg>`; };
+  const bars = (s) => { const q = s > -55 ? 4 : s > -65 ? 3 : s > -72 ? 2 : 1, c = q >= 3 ? "ok" : "warn";
+    return `<span class="bars">${[5,8,11,14].map((h, i) => `<i class="${i < q ? "f " + c : ""}" style="height:${h}px"></i>`).join("")}</span>`; };
+  const rows = names.map(([n, ip, link, rate, sig]) => {
+    const off = link === "offline", weak = sig < -72 && sig !== 0;
+    return `<tr><td><span class="dev"><span class="dot ${off ? "off" : ""}"></span><span class="ico">${link === "LAN" ? "⏚" : "≋"}</span><span><b>${n}</b><small>${ip}</small></span></span></td>
+      <td class="hide-m">${link === "LAN" ? "FRITZ-RM · LAN 1" : off ? "–" : "FRITZ-RM · WLAN " + link}</td>
+      <td class="num">${off ? "–" : rate + " Mbit/s"}${weak ? ' <span class="badge warn">schwach</span>' : ""}${link !== "LAN" && !off ? bars(sig) : ""}</td>
+      <td class="hide-m">${spark(off)}</td><td class="num hide-m">${off ? "vor 81 Tagen" : "jetzt"}</td></tr>`; }).join("");
+  document.getElementById("tbl").innerHTML = `<thead><tr><th class="sorted">Gerät ▲</th><th class="hide-m">Verbindung</th><th class="num">Rate / Signal</th><th class="hide-m">Verlauf 24 h</th><th class="num hide-m">Zuletzt online</th></tr></thead><tbody>${rows}</tbody>`;
+  const big = (id, base) => { const n = 60, pts = Array.from({length:n}, (_, i) => base + 30 * Math.sin(i / 6) * .5 + 25 * rnd());
+    const d = pts.map((y, i) => `${i ? "L" : "M"}${(i * 300 / (n - 1)).toFixed(1)} ${(85 - y * .8).toFixed(1)}`).join("");
+    document.getElementById(id).innerHTML = `<path class="area" d="${d}L300 90L0 90Z"/><path d="${d}"/>`; };
+  big("big1", 40); big("big2", 30);
+</script>
+</body>
+</html>
