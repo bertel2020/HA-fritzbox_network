@@ -306,7 +306,7 @@ Automationen, die auf Core-Entity-IDs verweisen, musst du auf die neuen IDs umst
 - Die Kommunikation mit der FRITZ!Box bleibt im lokalen Netz (HTTP oder, wenn gewählt, HTTPS). Es gibt keine Verbindung ins Internet.
 - Die Zugangsdaten liegen im Eintrag von Home Assistant. Lege der Integration einen eigenen Benutzer mit nur dem nötigen Recht an, ohne Zugriff aus dem Internet.
 - MAC- und IP-Adressen und Gerätenamen stehen als Entitätsattribute in Home Assistant. Wer dort Zugriff hat, sieht sie.
-- Die **Diagnosedaten** (⋮ am Eintrag → Diagnose herunterladen) entfernen Zugangsdaten, die Adresse der Box sowie MAC- und IP-Adressen und Namen der Geräte. Sie zeigen außerdem, wie lange die letzte und die langsamste Abfrage dauerte. Sieh die Datei vor dem Teilen trotzdem durch.
+- Die **Diagnosedaten** (⋮ am Eintrag → Diagnose herunterladen) entfernen Zugangsdaten, die Adresse der Box sowie MAC- und IP-Adressen und Namen der Geräte. Sie zeigen außerdem, wie lange die letzte und die langsamste Abfrage dauerte, und die Internetverbindung (Zustand, Raten, DSL-Werte, Art der letzten Ereignisse) ohne die externen Adressen, DNS-Server und das Leitungsspektrum, dazu Gast-WLAN und Firmware-Angebot. Sieh die Datei vor dem Teilen trotzdem durch.
 - Die Integration kann den Internetzugang von Geräten sperren. Wer in Home Assistant Schalter bedienen darf, kann das also auch.
 
 ## Markenhinweis

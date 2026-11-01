@@ -9,6 +9,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import async_capture_events
 
 from custom_components.fritzbox_network import coordinator as coordinator_module
+from custom_components.fritzbox_network.diagnostics import async_get_config_entry_diagnostics
 from custom_components.fritzbox_network.models import parse_firmware, parse_internet, spectrum
 
 from .conftest import INTERNET_FAST, INTERNET_SLOW
@@ -484,3 +485,21 @@ async def test_the_ports_are_only_read_on_demand(hass, fake_client, entry):
     coordinator = await _setup(hass, entry)
     await _poll(hass, coordinator)
     assert reads == []
+
+
+async def test_the_diagnostics_have_the_connection_without_its_addresses(hass, fake_client, entry):
+    coordinator = await _setup(hass, entry)
+    fake_client.internet_fast["GetStatusInfo"]["NewUptime"] = 20
+    await _poll(hass, coordinator)
+
+    result = await async_get_config_entry_diagnostics(hass, entry)
+
+    internet = result["internet"]
+    assert internet["connected"] is True and internet["access_type"] == "DSL"
+    assert internet["dsl"]["noise_margin_down"] == 17.0
+    assert internet["external_ipv4"] == "**REDACTED**" and internet["dns"] == "**REDACTED**"
+    for address in ("203.0.113", "2001:db8", "198.51.100"):
+        assert address not in str(result)
+    assert internet["events"] == ["reconnected"]
+    assert result["guest_wifi"] is False
+    assert result["firmware"]["update_available"] is False

@@ -306,7 +306,7 @@ Automations that refer to core entity ids have to be changed to the new ids; the
 - Communication with the FRITZ!Box stays on your local network (HTTP or, if chosen, HTTPS). There is no connection to the internet.
 - The credentials are stored in the entry in Home Assistant. Create a dedicated user for the integration with only the necessary right, without access from the internet.
 - MAC and IP addresses and device names appear as entity attributes in Home Assistant; whoever has access there can see them.
-- The **diagnostics** (⋮ on the entry → Download diagnostics) remove credentials, the address of the box and the MAC and IP addresses and names of the devices. They also show how long the last and the slowest poll took. Look through the file before you share it anyway.
+- The **diagnostics** (⋮ on the entry → Download diagnostics) remove credentials, the address of the box and the MAC and IP addresses and names of the devices. They also show how long the last and the slowest poll took, and the internet connection (state, rates, DSL values, kind of the last events) without the external addresses, DNS servers and the line spectrum, plus guest Wi-Fi and firmware offer. Look through the file before you share it anyway.
 - The integration can block the internet access of devices. Whoever may operate switches in Home Assistant can do that too.
 
 ## Trademark notice
