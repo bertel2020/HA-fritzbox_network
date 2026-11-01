@@ -344,8 +344,8 @@ function linkIcon(client) {
 }
 
 const SHARED_CSS = `
-  :host { display: block; }
-  .chip { padding: 4px 12px; border-radius: 999px; border: 1px solid var(--divider-color);
+  :host { display: block; container-type: inline-size; }
+  .chip { flex: none; white-space: nowrap; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--divider-color);
     background: transparent; color: var(--secondary-text-color); font: inherit;
     font-size: 12px; cursor: pointer; }
   .chip.on { background: var(--primary-color); border-color: var(--primary-color);
@@ -364,6 +364,10 @@ const SHARED_CSS = `
   .bars i.on { background: var(--success-color, #43a047); }
   .note { padding: 16px; color: var(--secondary-text-color); }
   .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+  /* on a narrow card the secondary columns go, so no line breaks */
+  @container (max-width: 400px) {
+    .rate, .name small, .noise { display: none; }
+  }
 `;
 
 /** Gets the topology from the integration and keeps it; the cards only draw it. */
@@ -604,21 +608,23 @@ class FritzboxNetworkTopologyCard extends FritzboxNetworkCardBase {
     this.shadowRoot.innerHTML = `
       <style>
         ${SHARED_CSS}
-        .controls { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 16px 8px; align-items: center; }
-        .chips { display: contents; }
-        input { flex: 1 1 140px; min-width: 0; padding: 8px 10px; border-radius: 8px;
+        .controls { display: flex; flex-direction: column; gap: 8px; padding: 0 16px 8px; }
+        .chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; }
+        .chips::-webkit-scrollbar { display: none; }
+        input { box-sizing: border-box; width: 100%; padding: 8px 10px; border-radius: 8px;
           border: 1px solid var(--divider-color); background: transparent;
           color: var(--primary-text-color); font: inherit; }
         .list { ${maxHeight ? `max-height: ${maxHeight}px; overflow-y: auto;` : ""} }
         .ap { display: flex; align-items: center; gap: 8px; padding: 10px 16px; cursor: pointer;
           font-weight: 500; border-top: 1px solid var(--divider-color); }
-        .apname { display: flex; flex-direction: column; min-width: 0; }
-        .radios { display: flex; flex-wrap: wrap; gap: 2px 12px; font-weight: 400; font-size: 12px;
+        .apname { display: flex; flex-direction: column; flex: 1; min-width: 0; white-space: nowrap; }
+        .radios { overflow: hidden; text-overflow: ellipsis; font-weight: 400; font-size: 12px;
           color: var(--secondary-text-color); }
+        .radios span + span { margin-left: 12px; }
         .radios .busy { color: var(--warning-color, #ffa600); }
         .detail { padding: 2px 16px 10px 40px; }
         .info { font-size: 12px; color: var(--secondary-text-color); word-break: break-all; }
-        .ap .count { margin-left: auto; font-weight: 400; font-size: 12px;
+        .ap .count { flex: none; margin-left: auto; font-weight: 400; font-size: 12px;
           color: var(--secondary-text-color); }
         .row { display: flex; align-items: center; gap: 8px; padding: 6px 16px 6px 40px;
           font-size: 14px; }
@@ -834,17 +840,17 @@ class FritzboxNetworkRadioCard extends FritzboxNetworkCardBase {
     this.shadowRoot.innerHTML = `
       <style>
         ${SHARED_CSS}
-        .ap { display: flex; align-items: center; gap: 8px; padding: 10px 16px 4px; font-weight: 500;
+        .ap { display: flex; align-items: center; gap: 8px; padding: 10px 16px 4px; font-weight: 500; min-width: 0;
           border-top: 1px solid var(--divider-color); }
         .ap:first-child { border-top: 0; }
-        .band { display: flex; align-items: center; gap: 12px; padding: 4px 16px 4px 40px; font-size: 14px; flex-wrap: wrap; }
+        .band { display: flex; align-items: center; gap: 12px; padding: 4px 16px 4px 40px; font-size: 14px; }
         .bandname { width: 64px; flex: none; }
         .ch, .noise, .cnt { font-size: 12px; color: var(--secondary-text-color); white-space: nowrap; }
-        .meter { flex: 1 1 80px; min-width: 60px; height: 8px; border-radius: 4px; overflow: hidden;
+        .meter { flex: 1 1 40px; min-width: 24px; height: 8px; border-radius: 4px; overflow: hidden;
           background: var(--divider-color); }
         .meter i { display: block; height: 100%; background: var(--success-color, #43a047); }
         .meter i.busy { background: var(--warning-color, #ffa600); }
-        .pct { width: 40px; text-align: right; font-size: 12px; }
+        .pct { flex: none; width: 40px; text-align: right; font-size: 12px; }
         .cnt { display: inline-flex; align-items: center; gap: 2px; --mdc-icon-size: 14px; }
       </style>
       <ha-card header="${escapeHtml(this._config.title ?? this._t.radioTitle)}"><div class="list"></div></ha-card>`;
