@@ -85,6 +85,15 @@ class ClientLink:
 
 
 @dataclass
+class Radio:
+    """One Wi-Fi radio (band) of an access point, as the box measures it."""
+
+    channel: int | None = None
+    utilization: int | None = None
+    noise_dbm: int | None = None
+
+
+@dataclass
 class MeshNode:
     """A mesh participant (the box itself or a repeater)."""
 
@@ -95,6 +104,7 @@ class MeshNode:
     firmware: str | None
     role: str
     macs: frozenset[str] = frozenset()
+    radios: dict[str, Radio] = field(default_factory=dict)
 
 
 @dataclass
@@ -215,6 +225,31 @@ def _band(interface: dict[str, Any]) -> str | None:
     return "2_4ghz" if freq < 3_000_000 else "5ghz" if freq < 5_925_000 else "6ghz"
 
 
+def _int(value: Any) -> int | None:
+    return value if isinstance(value, int) and not isinstance(value, bool) else None
+
+
+def _radios(node: dict[str, Any]) -> dict[str, Radio]:
+    """The radios a node offers its own network on, by band.
+
+    The guest network is a second interface on the same radio and says the same.
+    """
+    radios: dict[str, Radio] = {}
+    for interface in _dicts(node.get("node_interfaces")):
+        band = _band(interface)
+        if interface.get("type") != "WLAN" or interface.get("opmode") != "AP" or band is None:
+            continue
+        radios.setdefault(
+            band,
+            Radio(
+                channel=_int(interface.get("current_channel")),
+                utilization=_int(interface.get("channel_utilization")),
+                noise_dbm=_int(interface.get("anpi")),
+            ),
+        )
+    return radios
+
+
 def parse_mesh(raw: str | bytes) -> MeshTopology:
     """Parse the JSON behind ``X_AVM-DE_GetMeshListPath``."""
     data = json.loads(raw)
@@ -249,6 +284,7 @@ def parse_mesh(raw: str | bytes) -> MeshTopology:
                     )
                     if m
                 ),
+                radios=_radios(node),
             )
 
     seen_links: set[str] = set()

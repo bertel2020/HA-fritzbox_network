@@ -146,6 +146,15 @@
           "5ghz": "5 GHz",
           "6ghz": "6 GHz"
         }
+      },
+      "radio_channel": {
+        "name": "Channel {band}"
+      },
+      "radio_utilization": {
+        "name": "Channel utilization {band}"
+      },
+      "radio_noise": {
+        "name": "Noise {band}"
       }
     },
     "select": {

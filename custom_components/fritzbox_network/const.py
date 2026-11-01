@@ -66,6 +66,11 @@ KEY_LAST_UPDATE = "last_update"
 KEY_FAILED_POLLS = "failed_polls"
 KEY_MESH_STATUS = "mesh_status"
 KEY_REFRESH = "refresh"
+
+# Keys of the Wi-Fi radio sensors of an access point; the band is added to the unique id.
+KEY_RADIO_CHANNEL = "radio_channel"
+KEY_RADIO_UTILIZATION = "radio_utilization"
+KEY_RADIO_NOISE = "radio_noise"
 KEY_INTERNET_ACCESS = "internet_access"
 KEY_WAKE_ON_LAN = "wake_on_lan"
 KEY_ACCESS_PROFILE = "access_profile"

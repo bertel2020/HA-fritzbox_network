@@ -5,6 +5,8 @@ import json
 import pytest
 
 from custom_components.fritzbox_network.models import (
+    Radio,
+    _radios,
     is_private_mac,
     parse_filter_profiles,
     parse_hosts,
@@ -152,3 +154,42 @@ def test_hosts_say_whether_their_name_can_be_changed():
     )
 
     assert [h.name_writeable for h in parse_hosts(xml)] == [True, False, None]
+
+
+def test_radios_of_the_access_points_by_band():
+    mesh = FakeClient().mesh
+
+    box = mesh.master.radios
+    assert set(box) == {"2_4ghz", "5ghz"}
+    assert (box["2_4ghz"].channel, box["2_4ghz"].utilization, box["2_4ghz"].noise_dbm) == (
+        11,
+        4,
+        -86,
+    )
+    repeater = next(n for n in mesh.nodes.values() if n.role == "slave")
+    assert repeater.radios["5ghz"].channel == 112
+    assert repeater.radios["2_4ghz"].utilization == 19
+
+
+def test_radios_ignore_what_is_not_a_number_and_what_is_not_the_own_network():
+    node = {
+        "node_interfaces": [
+            {
+                "type": "WLAN",
+                "opmode": "AP",
+                "current_channel": "x",
+                "channel_utilization": True,
+                "anpi": None,
+                "current_channel_info": {"primary_freq": 2412000},
+            },
+            {
+                "type": "WLAN",
+                "opmode": "STATION",
+                "current_channel_info": {"primary_freq": 5180000},
+            },
+            {"type": "WLAN", "opmode": "AP", "current_channel_info": {}},
+            {"type": "LAN", "opmode": "AP", "current_channel_info": {"primary_freq": 5180000}},
+        ]
+    }
+
+    assert _radios(node) == {"2_4ghz": Radio(None, None, None)}

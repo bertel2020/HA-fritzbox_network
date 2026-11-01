@@ -56,6 +56,15 @@
       },
       "ssid": {
         "default": "mdi:wifi"
+      },
+      "radio_channel": {
+        "default": "mdi:sine-wave"
+      },
+      "radio_utilization": {
+        "default": "mdi:gauge"
+      },
+      "radio_noise": {
+        "default": "mdi:waveform"
       }
     },
     "switch": {

@@ -520,3 +520,26 @@ async def test_a_device_that_flaps_between_access_points_does_not_roam(hass, fak
     await hass.async_block_till_done()
 
     assert events == []
+
+
+async def test_radio_sensors_of_an_access_point(hass, fake_client, entry):
+    await _setup(hass, entry)
+    registry = er.async_get(hass)
+    ids = {
+        key: registry.async_get_entity_id("sensor", "fritzbox_network", f"{BOX}_{key}_2_4ghz")
+        for key in ("radio_channel", "radio_utilization", "radio_noise")
+    }
+    assert all(ids.values())
+    assert all(registry.async_get(i).disabled_by for i in ids.values())
+    assert registry.async_get_entity_id("sensor", "fritzbox_network", f"{BOX}_radio_noise_5ghz")
+
+    for entity_id in ids.values():
+        _enable(hass, entity_id)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert hass.states.get(ids["radio_channel"]).state == "11"
+    assert hass.states.get(ids["radio_utilization"]).state == "4"
+    assert hass.states.get(ids["radio_noise"]).state == "-86"
+    assert hass.states.get(ids["radio_utilization"]).attributes["unit_of_measurement"] == "%"
+    assert "2.4 GHz" in hass.states.get(ids["radio_channel"]).attributes["friendly_name"]

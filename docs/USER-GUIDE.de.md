@@ -116,7 +116,9 @@ Die FRITZ!Box und jeder Repeater sind eigene Geräte mit Modell und Firmware. Pr
 
 Das Gerät der FRITZ!Box zählt außerdem die Geräte im Netz (nach den Filtern): **Geräte online**, **Geräte offline** und **Geräte gesamt**. „Online“ folgt der Anwesenheit der Device Tracker, einschließlich der Option „Als anwesend werten“.
 
-Es hat außerdem drei Diagnose-Sensoren, standardmäßig aus: **Letzte Aktualisierung** (die letzte erfolgreiche Abfrage), **Fehlgeschlagene Abfragen** (wie viele Abfragen in Folge scheiterten) und **Mesh-Status** (ob die Mesh-Topologie bei der letzten Abfrage mitkam). Sie bleiben verfügbar, auch wenn die Box nicht erreichbar ist.
+Die Box und jeder Repeater haben außerdem Diagnose-Sensoren für jedes ihrer WLAN-Bänder, standardmäßig aus: **Kanal**, **Kanalauslastung** (in Prozent, wie die Box sie meldet) und **Rauschen** (in dBm). Sie beantworten „warum ist das WLAN heute Abend schlecht“: ein voller Kanal oder ein hoher Rauschpegel an dem Access Point, an dem das Gerät hängt. Das Gastnetz teilt sich die Funkeinheit und steht nicht doppelt da. Sie kommen aus den Mesh-Daten, die ohnehin abgerufen werden, kosten also keine zusätzliche Anfrage.
+
+Das Gerät der FRITZ!Box hat außerdem drei Diagnose-Sensoren, standardmäßig aus: **Letzte Aktualisierung** (die letzte erfolgreiche Abfrage), **Fehlgeschlagene Abfragen** (wie viele Abfragen in Folge scheiterten) und **Mesh-Status** (ob die Mesh-Topologie bei der letzten Abfrage mitkam). Sie bleiben verfügbar, auch wenn die Box nicht erreichbar ist.
 
 ### Aktionen
 

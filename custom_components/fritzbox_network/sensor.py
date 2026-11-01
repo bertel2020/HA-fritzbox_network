@@ -13,6 +13,7 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.const import (
+    PERCENTAGE,
     SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
     EntityCategory,
     UnitOfDataRate,
@@ -40,6 +41,9 @@ from .const import (
     KEY_LINK_RATE_UPLOAD,
     KEY_MESH_STATUS,
     KEY_ONLINE_SINCE,
+    KEY_RADIO_CHANNEL,
+    KEY_RADIO_NOISE,
+    KEY_RADIO_UTILIZATION,
     KEY_SIGNAL_STRENGTH,
     KEY_SSID,
     KEY_WLAN_BAND,
@@ -51,7 +55,7 @@ from .entity import (
     async_setup_client_entities,
     async_setup_node_entities,
 )
-from .models import ClientLink, Host, MeshNode
+from .models import ClientLink, Host, MeshNode, Radio
 
 CONNECTION_LAN = "lan"
 CONNECTION_WLAN = "wlan"
@@ -90,7 +94,14 @@ async def async_setup_entry(
     async_setup_node_entities(
         entry,
         async_add_entities,
-        lambda coordinator, node: [FritzNetworkClients(coordinator, node)],
+        lambda coordinator, node: [
+            FritzNetworkClients(coordinator, node),
+            *(
+                FritzNetworkRadio(coordinator, node, band, description)
+                for band in node.radios
+                for description in RADIO_SENSORS
+            ),
+        ],
     )
 
     coordinator = entry.runtime_data
@@ -174,6 +185,64 @@ class FritzNetworkLinkSensor(FritzNetworkClientEntity, SensorEntity):
         mesh = self.coordinator.data.mesh
         link = mesh.links.get(self._mac) if mesh else None
         return self.entity_description.value_fn(link) if link else None
+
+
+@dataclass(frozen=True, kw_only=True)
+class RadioSensorDescription(SensorEntityDescription):
+    """A measurement of one Wi-Fi radio of an access point."""
+
+    value_fn: Callable[[Radio], int | None]
+
+
+RADIO_SENSORS = (
+    RadioSensorDescription(
+        key=KEY_RADIO_CHANNEL,
+        translation_key=KEY_RADIO_CHANNEL,
+        value_fn=lambda radio: radio.channel,
+    ),
+    RadioSensorDescription(
+        key=KEY_RADIO_UTILIZATION,
+        translation_key=KEY_RADIO_UTILIZATION,
+        native_unit_of_measurement=PERCENTAGE,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda radio: radio.utilization,
+    ),
+    RadioSensorDescription(
+        key=KEY_RADIO_NOISE,
+        translation_key=KEY_RADIO_NOISE,
+        native_unit_of_measurement=SIGNAL_STRENGTH_DECIBELS_MILLIWATT,
+        state_class=SensorStateClass.MEASUREMENT,
+        value_fn=lambda radio: radio.noise_dbm,
+    ),
+)
+
+BAND_NAMES = {"2_4ghz": "2.4 GHz", "5ghz": "5 GHz", "6ghz": "6 GHz"}
+
+
+class FritzNetworkRadio(FritzNetworkNodeEntity, SensorEntity):
+    """Channel, load and noise of one Wi-Fi radio of the box or a repeater."""
+
+    entity_description: RadioSensorDescription
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(
+        self,
+        coordinator: FritzNetworkCoordinator,
+        node: MeshNode,
+        band: str,
+        description: RadioSensorDescription,
+    ) -> None:
+        super().__init__(coordinator, node, "sensor", f"{description.key}_{band}")
+        self.entity_description = description
+        self._band = band
+        self._attr_translation_placeholders = {"band": BAND_NAMES.get(band, band)}
+
+    @property
+    def native_value(self) -> int | None:
+        node = self.node
+        radio = node.radios.get(self._band) if node else None
+        return self.entity_description.value_fn(radio) if radio else None
 
 
 class FritzNetworkClients(FritzNetworkNodeEntity, SensorEntity):
