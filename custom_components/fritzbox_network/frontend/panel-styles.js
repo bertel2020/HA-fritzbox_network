@@ -314,8 +314,9 @@ export const PANEL_CSS = `
   .pad { padding: 20px; }
   .lead { color: var(--muted); margin: 4px 0 16px; max-width: 70ch; }
   .range { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 8px; }
-  .range label { flex: 1 1 100%; }
-  input[type="range"] { flex: 1 1 140px; min-width: 0; accent-color: var(--accent); }
+  .range > span { flex: 1 1 100%; font-weight: 500; }
+  #days-seg .seg { grid-auto-flow: column; width: auto; flex-wrap: wrap; }
+  @container app (max-width: 600px) { #days-seg .seg { grid-template-columns: repeat(3, 1fr); grid-auto-flow: row; } #days-seg .seg button { text-align: center; border-top: 1px solid var(--input-line); } #days-seg .seg button:nth-child(3n+1) { border-left: 0; } #days-seg .seg button:nth-child(-n+3) { border-top: 0; } }
   .row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-2); min-width: 0; }
   .row .who { flex: 1; min-width: 0; }
   .row .who b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

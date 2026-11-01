@@ -1,9 +1,11 @@
 /* FRITZ!Box Network panel: the whole network in the sidebar, for administrators. */
 
 import {
+  STALE_STEPS,
   WEAK_LINK_RATIO,
   escapeHtml,
   filterChanged,
+  nearestStep,
   pagerFor,
   panelCounts,
   routeFromHash,
@@ -265,7 +267,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       const result = await this._ws("cleanup/list");
       const state = this._state;
       state.cleanup = result;
-      state.cleanupDays ??= result.days;
+      state.cleanupDays ??= nearestStep(result.days);
       const offered = new Set(result.devices.map((d) => d.mac));
       state.picked = new Set([...state.picked].filter((mac) => offered.has(mac)));
       this._update();
@@ -452,7 +454,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div class="two" id="cleanup-view" hidden>
             <section class="card pad">
               <h2>${t.cleanup.title}</h2><p class="lead">${t.cleanup.lead}</p>
-              <div class="range"><label for="days">${t.cleanup.since}</label><input type="range" id="days" min="7" max="365" value="${state.cleanupDays ?? 30}"><b id="days-label"></b></div>
+              <div class="range"><span id="days-head">${t.cleanup.since}</span><div id="days-seg"></div></div>
               <div id="stale"></div>
             </section>
             <section class="card pad"><h2>${t.cleanup.hiddenTitle}</h2><p class="lead">${t.cleanup.hiddenLead}</p><div id="hidden"></div></section>
@@ -586,9 +588,12 @@ class FritzboxNetworkPanel extends HTMLElement {
     const state = this._state;
     const t = this._t;
     const days = state.cleanupDays ?? 30;
-    const range = this.shadowRoot.querySelector("#days");
-    if (range && Number(range.value) !== days) range.value = days;
-    this.shadowRoot.querySelector("#days-label").textContent = fill(t.cleanup.days, { n: days });
+    this._set(
+      "days-seg",
+      `<div class="seg" role="radiogroup" aria-labelledby="days-head">${STALE_STEPS.map(
+        (n) => `<button role="radio" aria-checked="${n === days}" aria-pressed="${n === days}" data-days="${n}">${escapeHtml(fill(t.cleanup[n === 365 ? "year" : "days"], { n }))}</button>`
+      ).join("")}</div>`
+    );
     this._set("stale", renderStale(state, t, Date.now()));
     this._set("hidden", renderHidden(state, t));
   }
@@ -759,9 +764,6 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (el.id === "q") {
       this._state.query = el.value;
       this._update();
-    } else if (el.id === "days") {
-      this._state.cleanupDays = Number(el.value);
-      this._renderCleanup();
     } else if (el.id === "f-search" && this._state.filterPage) {
       this._state.filterPage.search = el.value;
       this._renderFilter();
@@ -793,6 +795,11 @@ class FritzboxNetworkPanel extends HTMLElement {
       rememberView(ds.view);
       this._update();
       this.shadowRoot.querySelector(`.viewsw [data-view="${ds.view}"]`)?.focus();
+      return;
+    } else if (ds.days) {
+      state.cleanupDays = Number(ds.days);
+      this._update();
+      this.shadowRoot.querySelector(`#days-seg [data-days="${ds.days}"]`)?.focus();
       return;
     } else if (ds.act === "names") {
       state.names = !state.names;

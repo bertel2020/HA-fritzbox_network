@@ -333,6 +333,14 @@ export function routeFromHash(hash) {
 }
 
 /** The offline devices that have been gone for at least this many days. */
+/** The steps the clean-up page offers, in days. */
+export const STALE_STEPS = [3, 7, 14, 30, 90, 365];
+
+/** The step nearest to a number of days. */
+export function nearestStep(days) {
+  return STALE_STEPS.reduce((best, s) => (Math.abs(s - days) < Math.abs(best - days) ? s : best));
+}
+
 export function staleSince(devices, days) {
   return (devices ?? []).filter((d) => d.days >= days);
 }

@@ -346,6 +346,11 @@ test("the clean-up slider keeps the devices gone for at least that long", () => 
   assert.deepEqual(card.staleSince(devices, 30).map((d) => d.days), [30, 200]);
   assert.deepEqual(card.staleSince(devices, 365), []);
   assert.deepEqual(card.staleSince(null, 30), []);
+  assert.deepEqual(card.STALE_STEPS, [3, 7, 14, 30, 90, 365]);
+  assert.equal(card.nearestStep(30), 30);
+  assert.equal(card.nearestStep(50), 30);
+  assert.equal(card.nearestStep(1), 3);
+  assert.equal(card.nearestStep(1000), 365);
 });
 
 test("a MAC is added to a list or taken out of it", () => {
