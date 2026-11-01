@@ -39,25 +39,20 @@ export const PANEL_CSS = `
 
   /* header */
   .header { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-    gap: 0 24px; padding: 0 max(16px, calc((100% - 1200px) / 2 + 24px)); }
-  .brand { display: flex; align-items: center; gap: 12px; padding: 10px 0; min-height: 60px; min-width: 0; }
+    border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+    padding: 0 max(16px, calc((100% - 1200px) / 2 + 24px)); }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 12px 0 6px; min-height: 60px; min-width: 0; }
   .menu { display: none; width: 40px; height: 40px; margin-left: -10px; place-items: center; border-radius: 50%; color: var(--text); }
   .menu:hover { background: var(--neutral-soft); }
   .logo { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); border: 1px solid var(--line); }
   .brand b { display: block; font-size: 18px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
   .brand small { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  nav { display: flex; gap: 4px; padding: 8px 0; }
-  nav button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; border-radius: 20px; font-weight: 500; color: var(--muted); white-space: nowrap; transition: background .15s, color .15s; }
-  nav button:hover { color: var(--text); background: var(--neutral-soft); }
-  nav button[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
+  nav { grid-column: 1 / -1; grid-row: 2; display: flex; gap: 24px; overflow-x: auto; scrollbar-width: none; }
+  nav button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 2px; margin-bottom: -1px; font-weight: 500; color: var(--muted); white-space: nowrap; border-bottom: 3px solid transparent; transition: color .15s, border-color .15s; }
+  nav button:hover { color: var(--text); }
+  nav button[aria-selected="true"] { color: var(--accent-hover); border-bottom-color: var(--accent); }
   nav em { font-style: normal; font-size: 11px; font-weight: 600; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--warn-soft); color: var(--warn); }
-  .header-end { display: flex; align-items: center; gap: 8px; }
-  @container app (max-width: 900px) {
-    .header { gap: 0; }
-    nav { order: 3; width: 100%; padding-top: 0; }
-    nav button { flex: 1; justify-content: center; padding: 0 8px; }
-  }
+  .header-end { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 8px; }
   @container app (max-width: 760px) { .menu { display: grid; } .header-end .chip.live span.t { display: none; } }
 
   main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; }
@@ -262,19 +257,22 @@ export const PANEL_CSS = `
   @container app (min-width: 900px) { .dsecs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; } .dsecs .wide { grid-column: 1 / -1; } }
   .sec { padding: 16px; min-width: 0; }
   .sec > .label { display: block; margin-bottom: 10px; }
-  .path { display: flex; align-items: center; min-width: 0; }
+  .path { display: flex; align-items: center; min-width: 0; padding-bottom: 22px; }
   .path .pn { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; padding: 6px 10px; border-radius: 12px; background: var(--soft); }
   .path .pn b { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .path .pn.me { background: var(--accent-soft); color: var(--accent-hover); }
-  .path .pl { flex: 1 1 40px; min-width: 36px; display: grid; justify-items: center; font-size: 11px; color: var(--muted); padding: 0 4px; text-align: center; }
-  .path .pl i { width: 100%; border-top: 2px solid var(--link); margin: 2px 0; }
+  /* the line sits on the middle of the nodes whatever the label is; the label hangs below it */
+  .path .pl { flex: 1 1 40px; min-width: 36px; position: relative; font-size: 11px; color: var(--muted); padding: 0 4px; text-align: center; }
+  .path .pl i { display: block; width: 100%; border-top: 2px solid var(--link); margin: 0; }
+  .path .pl span { position: absolute; left: 0; right: 0; top: 8px; }
   .path .pl.wlan i { border-top-style: dashed; }
   .path .pl.unknown i { border-top-style: dotted; }
   .path .pl.weak i { border-color: var(--warn); }
   .path .pl.weak { color: var(--warn); }
   @container app (max-width: 700px) {
-    .path { flex-direction: column; align-items: stretch; }
-    .path .pl { min-height: 34px; grid-template-columns: auto 1fr; align-items: center; justify-items: start; gap: 10px; padding: 0 0 0 18px; text-align: left; }
+    .path { flex-direction: column; align-items: stretch; padding-bottom: 0; }
+    .path .pl span { position: static; }
+    .path .pl { min-height: 34px; display: grid; grid-template-columns: auto 1fr; align-items: center; justify-items: start; gap: 10px; padding: 0 0 0 18px; text-align: left; }
     .path .pl i { width: 0; height: 30px; border-top: 0; border-left: 2px solid var(--link); margin: 0; }
     .path .pl.wlan i { border-left-style: dashed; }
     .path .pl.unknown i { border-left-style: dotted; }
