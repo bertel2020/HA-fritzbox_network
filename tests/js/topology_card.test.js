@@ -132,7 +132,8 @@ test("the config gets its defaults and drops values that make no sense", () => {
     hide_vendor: false,
     hide_rate: false,
     hide_signal: false,
-    tap_action: "more-info",
+    hide_radio: false,
+    tap_action: "expand",
   });
   const config = card.normalizeConfig({
     title: "",
@@ -146,7 +147,7 @@ test("the config gets its defaults and drops values that make no sense", () => {
   assert.equal(config.default_filter, "all");
   assert.equal(config.max_height, 0);
   assert.equal(config.weak_threshold, 33);
-  assert.equal(config.tap_action, "more-info");
+  assert.equal(config.tap_action, "expand");
   assert.equal(config.compact, true);
   const set = card.normalizeConfig({ default_filter: "weak", max_height: 300, weak_threshold: 50, tap_action: "none" });
   assert.deepEqual(
@@ -165,6 +166,32 @@ test("the editor form names every option of the config", async () => {
   for (const name of names) {
     assert.notEqual(form.computeLabel({ name }), name, `${name} has a label`);
   }
+});
+
+test("the radios of an access point show band, channel and load", () => {
+  const t = { channel: "Ch {n}" };
+  const node = {
+    radios: {
+      "2_4ghz": { channel: 1, utilization: 12 },
+      "5ghz": { channel: 100, utilization: 85 },
+      "6ghz": {},
+    },
+  };
+  assert.deepEqual(card.radioInfo(node, t), [
+    { text: "2.4 GHz · Ch 1 · 12 %", busy: false },
+    { text: "5 GHz · Ch 100 · 85 %", busy: true },
+    { text: "6 GHz", busy: false },
+  ]);
+  assert.deepEqual(card.radioInfo({}, t), []);
+  assert.deepEqual(card.radioInfo(null, t), []);
+});
+
+test("the detail line has IP, MAC, band and signal as far as known", () => {
+  assert.equal(
+    card.detailText({ ip: "192.0.2.2", mac: "aa:bb", band: "5ghz", signal_dbm: -52 }),
+    "192.0.2.2 · aa:bb · 5 GHz · -52 dBm"
+  );
+  assert.equal(card.detailText({ ip: null, mac: "aa:bb" }), "aa:bb");
 });
 
 test("names are escaped", () => {

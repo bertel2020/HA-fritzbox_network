@@ -179,7 +179,10 @@ title: Netzwerk
 | `max_height` | Maximale Höhe der Liste in Pixel, danach scrollt sie; 0 oder leer: keine Grenze |
 | `weak_threshold` | Schwache Verbindung unter diesem Prozentwert der höchsten Rate (1–99, Standard 33) |
 | `hide_vendor`, `hide_rate`, `hide_signal` | Hersteller, Rate oder Signal ausblenden (Standard `false`) |
-| `tap_action` | `more-info` (Standard) öffnet das Gerät, `none` tut nichts |
+| `hide_radio` | Kanal und Auslastung der Access Points ausblenden (Standard `false`) |
+| `tap_action` | `expand` (Standard) klappt das Gerät auf, `more-info` öffnet es, `none` tut nichts |
+
+Ein Tipp auf ein Gerät klappt es auf: IP, MAC, Band und Signal, dazu die Aktionen Internet sperren oder freigeben, Priorisierung und Wake on LAN und ein Knopf, der das Gerät öffnet. Eine Aktion erscheint nur, wenn die Entität dazu existiert und aktiviert ist; sie ändert die Box genau so wie der Schalter im Gerät. Im Kopf jedes Access Points stehen Band, Kanal und Auslastung seiner Funkmodule (ab 70 % in Warnfarbe); die Daten kommen aus den Funk-Sensoren der Box und des Repeaters, auch wenn du die Sensoren selbst nicht aktiviert hast.
 
 Alle Optionen stehen auch im visuellen Editor der Karte. Die Filter Offline und Schwach zeigen die Zahl der Geräte, die sie finden würden; der Filter Schwach erscheint nur, solange es solche Geräte gibt.
 

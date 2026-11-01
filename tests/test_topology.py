@@ -141,3 +141,36 @@ async def test_topology_carries_the_highest_rates_of_the_link(
     wlan = {c["mac"]: c for c in topology["clients"]}[WLAN]
     assert wlan["rate_max_download"] and wlan["rate_max_upload"]
     assert wlan["rate_download"] <= wlan["rate_max_download"]
+
+
+async def test_topology_carries_the_actions_of_a_device(hass, hass_ws_client, fake_client, entry):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    topology = await _subscribe(client)
+
+    lan = {c["mac"]: c for c in topology["clients"]}[LAN]
+    registry = er.async_get(hass)
+    for name, platform in (
+        ("internet_access", "switch"),
+        ("priority", "switch"),
+        ("wake_on_lan", "button"),
+    ):
+        entity_id = lan["actions"].get(name)
+        if entity_id is not None:
+            entry_ = registry.async_get(entity_id)
+            assert entry_ and entry_.domain == platform and entry_.platform == DOMAIN
+    assert lan["actions"]["internet_access"] == "switch.fritz_020000000004_internet_access"
+
+
+async def test_topology_carries_the_radios_and_the_band(hass, hass_ws_client, fake_client, entry):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    topology = await _subscribe(client)
+
+    radios = {n["mac"]: n["radios"] for n in topology["nodes"]}
+    assert radios[BOX]
+    for radio in radios[BOX].values():
+        assert set(radio) == {"channel", "utilization", "noise_dbm"}
+    assert all("band" in c for c in topology["clients"])

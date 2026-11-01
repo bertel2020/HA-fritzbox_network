@@ -7,6 +7,11 @@ const FILTERS = ["all", "wifi", "lan", "offline", "weak"];
 // highest rate the link can do, in one direction or the other.
 const WEAK_LINK_RATIO = 1 / 3;
 
+const TAP_ACTIONS = ["expand", "more-info", "none"];
+const BANDS = { "2_4ghz": "2.4 GHz", "5ghz": "5 GHz", "6ghz": "6 GHz" };
+// from this channel load on, the radio is shown as busy
+const BUSY_UTILIZATION = 70;
+
 const TEXT = {
   en: {
     title: "Network",
@@ -25,6 +30,12 @@ const TEXT = {
     admin: "The topology card needs an administrator account.",
     failed: "Could not load the network.",
     guest: "Guest",
+    channel: "Ch {n}",
+    internetBlock: "Block internet",
+    internetAllow: "Allow internet",
+    priority: "Priority",
+    wol: "Wake on LAN",
+    details: "Open device",
     editor: {
       title: "Title",
       entry_id: "FRITZ!Box",
@@ -39,8 +50,10 @@ const TEXT = {
       hide_vendor: "Hide the vendor",
       hide_rate: "Hide the rate",
       hide_signal: "Hide the signal",
+      hide_radio: "Hide channel and load of the access points",
       tap_action: "Tap on a device",
-      tap_action_help: "Empty: open the device.",
+      tap_action_help: "Empty: show the details and actions.",
+      expand: "Show details and actions",
       "more-info": "Open the device",
       none: "Do nothing",
     },
@@ -62,6 +75,12 @@ const TEXT = {
     admin: "Die Topologie-Karte braucht ein Administratorkonto.",
     failed: "Das Netzwerk konnte nicht geladen werden.",
     guest: "Gast",
+    channel: "Kanal {n}",
+    internetBlock: "Internet sperren",
+    internetAllow: "Internet freigeben",
+    priority: "Priorisierung",
+    wol: "Wake on LAN",
+    details: "Gerät öffnen",
     editor: {
       title: "Titel",
       entry_id: "FRITZ!Box",
@@ -76,8 +95,10 @@ const TEXT = {
       hide_vendor: "Hersteller ausblenden",
       hide_rate: "Rate ausblenden",
       hide_signal: "Signal ausblenden",
+      hide_radio: "Kanal und Auslastung der Access Points ausblenden",
       tap_action: "Tippen auf ein Gerät",
-      tap_action_help: "Leer: das Gerät öffnen.",
+      tap_action_help: "Leer: Details und Aktionen zeigen.",
+      expand: "Details und Aktionen zeigen",
       "more-info": "Gerät öffnen",
       none: "Nichts tun",
     },
@@ -110,7 +131,8 @@ function normalizeConfig(config = {}) {
     hide_vendor: Boolean(config.hide_vendor),
     hide_rate: Boolean(config.hide_rate),
     hide_signal: Boolean(config.hide_signal),
-    tap_action: config.tap_action === "none" ? "none" : "more-info",
+    hide_radio: Boolean(config.hide_radio),
+    tap_action: TAP_ACTIONS.includes(config.tap_action) ? config.tap_action : "expand",
   };
 }
 
@@ -186,6 +208,24 @@ function rateText(client) {
   return `${Math.round(down ?? 0)} / ${Math.round(up ?? 0)} Mbit/s`;
 }
 
+/** One entry per radio of an access point: band, channel and load, as far as the box says. */
+function radioInfo(node, t) {
+  return Object.entries(node?.radios ?? {}).map(([band, radio]) => {
+    const parts = [BANDS[band] ?? band];
+    if (typeof radio.channel === "number") parts.push(t.channel.replace("{n}", radio.channel));
+    if (typeof radio.utilization === "number") parts.push(`${radio.utilization} %`);
+    return { text: parts.join(" · "), busy: (radio.utilization ?? 0) >= BUSY_UTILIZATION };
+  });
+}
+
+/** What the expanded row says about the device: IP, MAC, band, signal. */
+function detailText(client) {
+  const parts = [client.ip, client.mac];
+  if (client.band) parts.push(BANDS[client.band] ?? client.band);
+  if (typeof client.signal_dbm === "number") parts.push(`${client.signal_dbm} dBm`);
+  return parts.filter(Boolean).join(" · ");
+}
+
 class FritzboxNetworkTopologyCard extends HTMLElement {
   constructor() {
     super();
@@ -194,7 +234,7 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
     this.shadowRoot.addEventListener("click", (event) => this._onClick(event));
     this.shadowRoot.addEventListener("keydown", (event) => {
       // the rows and headers are not buttons of their own
-      if ((event.key === "Enter" || event.key === " ") && event.target.matches?.("[data-ap], [data-entity]")) {
+      if ((event.key === "Enter" || event.key === " ") && event.target.matches?.("[data-ap], [data-entity], [data-expand]")) {
         event.preventDefault();
         this._onClick(event);
       }
@@ -203,6 +243,7 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
     this._filter = "all";
     this._query = "";
     this._collapsed = new Set();
+    this._expanded = new Set();
     this._seeded = false;
     this._data = null;
     this._error = null;
@@ -280,9 +321,10 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
             { name: "hide_vendor", selector: { boolean: {} } },
             { name: "hide_rate", selector: { boolean: {} } },
             { name: "hide_signal", selector: { boolean: {} } },
+            { name: "hide_radio", selector: { boolean: {} } },
           ],
         },
-        { name: "tap_action", selector: options(["more-info", "none"]) },
+        { name: "tap_action", selector: options(TAP_ACTIONS) },
       ],
       computeLabel: (schema) => textFor(language()).editor[schema.name] ?? schema.name,
       computeHelper: (schema) => textFor(language()).editor[`${schema.name}_help`],
@@ -296,6 +338,25 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
       if (this._config) this._build();
     }
     if (!this._unsub && !this._subscribing) this._subscribe();
+    this._refreshActions();
+  }
+
+  /** The switches of an open row change on their own; draw it again when one did. */
+  _refreshActions() {
+    const signature = this._actionStates();
+    if (signature !== this._actionSignature) {
+      this._actionSignature = signature;
+      this._renderList();
+    }
+  }
+
+  _actionStates() {
+    if (!this._expanded.size || !this._data) return "";
+    return this._data.clients
+      .filter((c) => this._expanded.has(c.mac))
+      .flatMap((c) => Object.values(c.actions ?? {}))
+      .map((id) => `${id}=${this._hass?.states?.[id]?.state}`)
+      .join(",");
   }
 
   connectedCallback() {
@@ -366,6 +427,13 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
         .list { ${maxHeight ? `max-height: ${maxHeight}px; overflow-y: auto;` : ""} }
         .ap { display: flex; align-items: center; gap: 8px; padding: 10px 16px; cursor: pointer;
           font-weight: 500; border-top: 1px solid var(--divider-color); }
+        .apname { display: flex; flex-direction: column; min-width: 0; }
+        .radios { display: flex; flex-wrap: wrap; gap: 2px 12px; font-weight: 400; font-size: 12px;
+          color: var(--secondary-text-color); }
+        .radios .busy { color: var(--warning-color, #ffa600); }
+        .detail { padding: 2px 16px 10px 40px; }
+        .info { font-size: 12px; color: var(--secondary-text-color); word-break: break-all; }
+        .buttons { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
         .ap .count { margin-left: auto; font-weight: 400; font-size: 12px;
           color: var(--secondary-text-color); }
         .row { display: flex; align-items: center; gap: 8px; padding: 6px 16px 6px 40px;
@@ -423,16 +491,40 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
       this._renderList();
       return;
     }
-    const row = event.target.closest("[data-entity]");
-    if (row) {
-      this.dispatchEvent(
-        new CustomEvent("hass-more-info", {
-          detail: { entityId: row.dataset.entity },
-          bubbles: true,
-          composed: true,
-        })
-      );
+    const action = event.target.closest("[data-action]");
+    if (action) {
+      this._act(action.dataset.action, action.dataset.entity);
+      return;
     }
+    const expand = event.target.closest("[data-expand]");
+    if (expand) {
+      const mac = expand.dataset.expand;
+      if (this._expanded.has(mac)) this._expanded.delete(mac);
+      else this._expanded.add(mac);
+      this._actionSignature = this._actionStates();
+      this._renderList();
+      return;
+    }
+    const row = event.target.closest("[data-entity]");
+    if (row) this._moreInfo(row.dataset.entity);
+  }
+
+  _moreInfo(entityId) {
+    this.dispatchEvent(
+      new CustomEvent("hass-more-info", { detail: { entityId }, bubbles: true, composed: true })
+    );
+  }
+
+  /** The buttons of an open row: they change the box, so only the one that was tapped runs. */
+  _act(action, entityId) {
+    if (action === "details") return this._moreInfo(entityId);
+    if (!this._hass || !entityId) return;
+    if (action === "wake_on_lan") {
+      this._hass.callService("button", "press", { entity_id: entityId });
+      return;
+    }
+    const on = this._hass.states?.[entityId]?.state === "on";
+    this._hass.callService("switch", on ? "turn_off" : "turn_on", { entity_id: entityId });
   }
 
   /** The filter chips; the ones with a number only show devices that would be found. */
@@ -475,11 +567,16 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
         const icon = group.node?.role === "master" ? "mdi:router-wireless" : "mdi:access-point";
         const title = group.node ? group.node.name : t.unassigned;
         const rows = open ? group.clients.map((c) => this._row(c)).join("") : "";
+        const radios = this._config.hide_radio
+          ? ""
+          : radioInfo(group.node, t)
+              .map((r) => `<span class="${r.busy ? "busy" : ""}">${escapeHtml(r.text)}</span>`)
+              .join("");
         return `
           <div class="ap" data-ap="${escapeHtml(key)}" role="button" tabindex="0" aria-expanded="${open}">
             <ha-icon icon="mdi:chevron-${open ? "down" : "right"}"></ha-icon>
             <ha-icon icon="${group.node ? icon : "mdi:help-network-outline"}"></ha-icon>
-            <span>${escapeHtml(title)}</span>
+            <span class="apname">${escapeHtml(title)}${radios ? `<small class="radios">${radios}</small>` : ""}</span>
             <span class="count">${group.clients.length} / ${group.total}</span>
           </div>${rows}`;
       })
@@ -503,10 +600,13 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
           t.weakTitle.replace("{percent}", Math.round(ratio * 100))
         )}"></ha-icon>`
       : "";
-    const clickable = Boolean(client.entity_id) && config.tap_action === "more-info";
-    const entity = clickable
-      ? ` data-entity="${escapeHtml(client.entity_id)}" role="button" tabindex="0"`
-      : "";
+    const expand = config.tap_action === "expand";
+    const open = expand && this._expanded.has(client.mac);
+    const clickable = expand || (Boolean(client.entity_id) && config.tap_action === "more-info");
+    const target = expand
+      ? ` data-expand="${escapeHtml(client.mac)}" aria-expanded="${open}"`
+      : ` data-entity="${escapeHtml(client.entity_id)}"`;
+    const entity = clickable ? `${target} role="button" tabindex="0"` : "";
     const rate = config.hide_rate ? "" : rateText(client);
     return `
       <div class="row${clickable ? " click" : ""}"${entity}>
@@ -516,6 +616,35 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
         <span class="rate" title="${escapeHtml(t.rateTitle)}">${escapeHtml(rate)}</span>
         ${weak}
         ${signal}
+      </div>${open ? this._detail(client) : ""}`;
+  }
+
+  /** The open row: what is known about the device and the actions the box allows. */
+  _detail(client) {
+    const t = this._t;
+    const states = this._hass?.states ?? {};
+    const actions = client.actions ?? {};
+    const usable = (name) => actions[name] && states[actions[name]] && states[actions[name]].state !== "unavailable";
+    const button = (name, label, extra = "") =>
+      `<button class="chip act${extra}" data-action="${name}" data-entity="${escapeHtml(actions[name])}">${escapeHtml(label)}</button>`;
+    const buttons = [];
+    if (usable("internet_access")) {
+      const allowed = states[actions.internet_access].state === "on";
+      buttons.push(button("internet_access", allowed ? t.internetBlock : t.internetAllow));
+    }
+    if (usable("priority")) {
+      buttons.push(button("priority", t.priority, states[actions.priority].state === "on" ? " on" : ""));
+    }
+    if (usable("wake_on_lan")) buttons.push(button("wake_on_lan", t.wol));
+    if (client.entity_id) {
+      buttons.push(
+        `<button class="chip act" data-action="details" data-entity="${escapeHtml(client.entity_id)}">${escapeHtml(t.details)}</button>`
+      );
+    }
+    return `
+      <div class="detail">
+        <div class="info">${escapeHtml(detailText(client))}</div>
+        <div class="buttons">${buttons.join("")}</div>
       </div>`;
   }
 }
@@ -541,6 +670,8 @@ if (typeof module !== "undefined") {
     isWeak,
     countFilters,
     normalizeConfig,
+    radioInfo,
+    detailText,
     FritzboxNetworkTopologyCard,
   };
 }

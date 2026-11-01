@@ -179,7 +179,10 @@ title: Network
 | `max_height` | Maximum height of the list in pixels, it scrolls beyond that; 0 or empty: no limit |
 | `weak_threshold` | Weak link below this percentage of the highest rate (1–99, default 33) |
 | `hide_vendor`, `hide_rate`, `hide_signal` | Hide the vendor, the rate or the signal (default `false`) |
-| `tap_action` | `more-info` (default) opens the device, `none` does nothing |
+| `hide_radio` | Hide channel and load of the access points (default `false`) |
+| `tap_action` | `expand` (default) opens the device in place, `more-info` opens it, `none` does nothing |
+
+A tap on a device opens it in place: IP, MAC, band and signal, plus the actions block or allow internet, priority and Wake on LAN, and a button that opens the device. An action only shows when its entity exists and is enabled; it changes the box just like the switch on the device. The header of every access point shows band, channel and load of its radios (in the warning color from 70 %); the data come from the box and the repeater themselves, even when you have not enabled the radio sensors.
 
 All options are also in the visual editor of the card. The Offline and Weak filters show the number of devices they would find; the Weak filter only appears while there are such devices.
 

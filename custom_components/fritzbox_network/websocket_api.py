@@ -9,11 +9,18 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 import voluptuous as vol
 
-from .const import DOMAIN
+from .const import DOMAIN, KEY_INTERNET_ACCESS, KEY_PRIORITY, KEY_WAKE_ON_LAN
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .models import mac_id
 
 COMMAND = f"{DOMAIN}/subscribe_topology"
+
+# The actions of a device the card offers: name in the topology, platform, entity key.
+DEVICE_ACTIONS = {
+    "internet_access": ("switch", KEY_INTERNET_ACCESS),
+    "priority": ("switch", KEY_PRIORITY),
+    "wake_on_lan": ("button", KEY_WAKE_ON_LAN),
+}
 
 
 def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) -> dict[str, Any]:
@@ -28,6 +35,14 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
                 "name": coordinator.node_name(n),
                 "role": n.role,
                 "model": n.model,
+                "radios": {
+                    band: {
+                        "channel": radio.channel,
+                        "utilization": radio.utilization,
+                        "noise_dbm": radio.noise_dbm,
+                    }
+                    for band, radio in n.radios.items()
+                },
             }
             for n in mesh.nodes.values()
         ]
@@ -39,6 +54,11 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
         if mesh and mesh.node_of(host):
             continue
         link = mesh.links.get(host.mac) if mesh else None
+        actions = {
+            name: entity_id
+            for name, (platform, key) in DEVICE_ACTIONS.items()
+            if (entity_id := registry.async_get_entity_id(platform, DOMAIN, f"{host.mac}_{key}"))
+        }
         clients.append(
             {
                 "mac": host.mac,
@@ -51,6 +71,8 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
                 "entity_id": registry.async_get_entity_id("device_tracker", DOMAIN, host.mac),
                 "ap_mac": link.ap_mac if link else None,
                 "link_type": link.link_type.lower() if link else None,
+                "band": link.band if link else None,
+                "actions": actions,
                 "signal_dbm": link.signal_dbm if link else None,
                 "rate_download": link.rate_download if link else None,
                 "rate_upload": link.rate_upload if link else None,
