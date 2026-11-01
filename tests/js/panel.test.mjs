@@ -602,3 +602,17 @@ test("the line quality shows the spectrum only when the box gave one", () => {
     /Signal over the frequency/
   );
 });
+
+test("the access type is named in the language of the page, an unknown one as the box says it", () => {
+  const de = texts.panelTexts("de");
+  const en = texts.panelTexts("en");
+  assert.equal(internetPage.accessLabel("DSL", de), "DSL");
+  assert.equal(internetPage.accessLabel("X_AVM-DE_Fiber", de), "Glasfaser");
+  assert.equal(internetPage.accessLabel("X_AVM-DE_Cable", en), "Cable");
+  assert.equal(internetPage.accessLabel("Ethernet", en), "Ethernet");
+  assert.equal(internetPage.accessLabel("X_AVM-DE_Satellite", en), "X_AVM-DE_Satellite");
+  assert.equal(internetPage.accessLabel(null, en), "");
+  const html = internetPage.renderInternet({ ...internet, access_type: "X_AVM-DE_Fiber", dsl: null }, { t: de, language: "de", now: Date.now() });
+  assert.match(html, /Glasfaser/);
+  assert.doesNotMatch(html, /Leitungsqualität/);
+});

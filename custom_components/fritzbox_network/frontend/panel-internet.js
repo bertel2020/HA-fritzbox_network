@@ -7,6 +7,16 @@ import { whenText } from "./panel-network.js";
 
 const CHART = { width: 300, height: 72 };
 
+/**
+ * The name of the access type the box reports ("DSL", "Ethernet", "X_AVM-DE_Fiber" …): a known one
+ * in the language of the page, an unknown one as the box wrote it, nothing where it says nothing.
+ */
+export function accessLabel(type, t) {
+  if (!type) return "";
+  const key = String(type).toLowerCase().replace(/^x_avm-de_/, "");
+  return t.inet.access[key] ?? type;
+}
+
 /** The two rates at the internet node of the map, "↓ 38.2 Mbit/s ↑ 4.1 Mbit/s"; empty before the first rate. */
 export function nodeRates(internet, language) {
   const rate = internet?.throughput;
@@ -166,7 +176,7 @@ export function renderInternet(internet, ctx) {
   if (!internet) return `${back}<div class="card"><div class="empty"><b>${escapeHtml(i.noData)}</b></div></div>`;
   const up = internet.connected !== false;
   const sub = [
-    internet.access_type,
+    accessLabel(internet.access_type, t),
     internet.uptime !== null && up ? fill(i.since, { time: formatDuration(internet.uptime, i.units) }) : "",
   ]
     .filter(Boolean)

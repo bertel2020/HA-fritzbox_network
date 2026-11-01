@@ -1,5 +1,7 @@
 """Read-only probe of the internet side of a FRITZ!Box: what it reports without extra rights.
 
+Also meant for boxes on cable, fibre or mobile: it shows which values such a box gives.
+
 Credentials come from the environment, never from arguments:
     FRITZ_HOST (default 192.168.178.1), FRITZ_USER, FRITZ_PASSWORD, FRITZ_TLS=1 for https
 
@@ -38,6 +40,11 @@ PROBES = [
     ("WANDSLInterfaceConfig1", "GetInfo"),
     ("WANDSLInterfaceConfig1", "X_AVM-DE_GetDSLInfo"),
     ("WANEthernetLinkConfig1", "GetEthernetLinkStatus"),
+    # other kinds of connection and what else the box offers around it
+    ("WANCommonIFC1", "GetAddonInfos"),
+    ("WANEthernetLinkConfig1", "GetEthernetLinkStatus"),
+    ("X_AVM-DE_WANMobileConnection1", "GetInfo"),
+    ("X_AVM-DE_Speedtest1", "GetInfo"),
     ("DeviceInfo1", "GetInfo"),
 ]
 
