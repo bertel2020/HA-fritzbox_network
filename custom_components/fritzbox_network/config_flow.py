@@ -133,10 +133,12 @@ class FritzNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             data = {**entry.data, **user_input}
             try:
-                await _validate_input(self.hass, data)
+                info = await _validate_input(self.hass, data)
             except Exception as err:  # noqa: BLE001
                 errors["base"] = _error_for(err)
             else:
+                await self.async_set_unique_id(str(info["serial"] or data[CONF_HOST]))
+                self._abort_if_unique_id_mismatch(reason="wrong_device")
                 return self.async_update_reload_and_abort(entry, data=data)
 
         return self.async_show_form(

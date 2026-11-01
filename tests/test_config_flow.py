@@ -70,3 +70,16 @@ async def test_user_flow_refuses_a_mesh_repeater(hass, fake_client):
 
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"base": "mesh_repeater"}
+
+
+async def test_reauth_refuses_another_box(hass, fake_client, entry):
+    entry.add_to_hass(hass)
+    fake_client.serial_number = "OTHER"
+    result = await entry.start_reauth_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"username": "user", "password": "new"}
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "wrong_device"
+    assert entry.data["password"] == "secret"
