@@ -138,6 +138,9 @@
     "no_ipv4_address": {
       "message": "Das Gerät hat keine IPv4-Adresse, sein Internetzugang lässt sich nicht schalten."
     },
+    "ip_changed": {
+      "message": "Die Adresse des Geräts hat sich geändert. Sein Internetzugang wurde nicht geschaltet, versuche es nach der nächsten Aktualisierung erneut."
+    },
     "action_failed": {
       "message": "Die FRITZ!Box hat die Aktion abgelehnt: {error}"
     }

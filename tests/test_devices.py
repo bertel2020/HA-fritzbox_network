@@ -3,8 +3,10 @@
 from dataclasses import replace
 
 from homeassistant.core import State
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
+import pytest
 from pytest_homeassistant_custom_component.common import (
     MockConfigEntry,
     mock_restore_cache_with_extra_data,
@@ -258,3 +260,19 @@ async def test_mesh_entities_follow_the_mac_when_the_uid_changes(hass, fake_clie
     state = hass.states.get("sensor.fritz_020000000005_clients")
     assert state.state == str(before)
     assert state.state != "unavailable"
+
+
+async def test_internet_switch_refuses_an_address_that_changed(hass, fake_client, entry):
+    await _setup(hass, entry)
+    fake_client.hosts = [
+        replace(h, ip="192.0.2.99") if h.mac == WLAN else h for h in fake_client.hosts
+    ]
+
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(
+            "switch",
+            "turn_off",
+            {"entity_id": "switch.fritz_020000000003_internet_access"},
+            blocking=True,
+        )
+    assert not [c for c in fake_client.calls if c[0] == "internet"]

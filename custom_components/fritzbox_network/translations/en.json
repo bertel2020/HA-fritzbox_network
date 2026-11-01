@@ -138,6 +138,9 @@
     "no_ipv4_address": {
       "message": "The device has no IPv4 address, its internet access cannot be switched."
     },
+    "ip_changed": {
+      "message": "The address of the device changed. Its internet access was not switched, try again after the next update."
+    },
     "action_failed": {
       "message": "The FRITZ!Box rejected the action: {error}"
     }
