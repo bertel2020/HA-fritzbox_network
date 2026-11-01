@@ -41,6 +41,12 @@ WAN_OVERRIDE_SECONDS = 120
 # The access profiles of the box rarely change: read them every n-th poll.
 FILTER_PROFILE_REFRESH_POLLS = 20
 BACKOFF_AFTER_FAILURES = 3
+# The addresses, link rates and DSL line change rarely: read them every n-th poll, and at once
+# after the box reconnected.
+INTERNET_DETAIL_POLLS = 10
+# How many throughput samples and events of the internet connection are kept in memory.
+INTERNET_HISTORY = 240
+INTERNET_EVENTS = 20
 
 EVENT_DEVICE_RENAMED = f"{DOMAIN}_device_renamed"
 EVENT_NEW_DEVICE = f"{DOMAIN}_new_device"

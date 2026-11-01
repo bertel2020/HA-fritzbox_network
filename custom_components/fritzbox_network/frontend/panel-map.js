@@ -14,6 +14,7 @@ import {
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { whenText } from "./panel-network.js";
+import { nodeLabel as internetLabel, nodeRates } from "./panel-internet.js";
 
 // up to this width the islands stand below each other and the lines run as a trunk on the left
 export const NARROW_MAP = 600;
@@ -123,6 +124,16 @@ function summary(node, data, t) {
   ].join(" · ");
 }
 
+/** The internet at the top: a button to its page with the state and the rate, plain text where the box tells nothing. */
+function internetNode(state, t) {
+  const internet = state.data?.internet;
+  if (!internet) return `<div class="inet"><span class="pill">${ic("globe")}${escapeHtml(t.internetNode)}</span></div>`;
+  const rates = nodeRates(internet, state.language);
+  return `<div class="inet"><button class="pill" data-act="internet" data-k="internet" aria-label="${escapeHtml(internetLabel(internet, t, state.language))}" title="${escapeHtml(t.inet.open)}">
+    ${ic("globe")}<span aria-hidden="true">${escapeHtml(t.internetNode)}</span><i class="dot ${internet.connected === false ? "" : "on"}" aria-hidden="true"></i>
+    ${rates ? `<span class="rates" aria-hidden="true"><small>↓ ${escapeHtml(rates.down)}</small><small>↑ ${escapeHtml(rates.up)}</small></span>` : ""}</button></div>`;
+}
+
 /** The whole map: the head with its buttons, the islands and the legend. The lines come from drawLinks. */
 export function renderMap(state, t, now, shown) {
   const m = t.map;
@@ -138,7 +149,7 @@ export function renderMap(state, t, now, shown) {
       <button class="btn sm" data-act="names" data-k="names" aria-pressed="${!state.names}">${escapeHtml(state.names ? m.hideNames : m.showNames)}</button>
       <button class="btn sm aslist" data-view="list" data-k="aslist">${escapeHtml(m.asList)}</button></div>
     <div class="isl ${state.names ? "" : "compact"}" id="isl"><svg class="links" id="links" aria-hidden="true"></svg>
-      <div class="inet"><span>${ic("globe")}${escapeHtml(t.internetNode)}</span></div>
+      ${internetNode(state, t)}
       <div class="isles">${islands.map((island) => islandHtml(island, state, t, now)).join("")}</div></div>
     ${legend}</div>`;
 }
@@ -151,7 +162,7 @@ export function drawLinks(root) {
   const wrap = root.querySelector("#isl");
   const svg = root.querySelector("#links");
   const box = wrap?.querySelector(".isle.root");
-  const inet = wrap?.querySelector(".inet span");
+  const inet = wrap?.querySelector(".inet .pill");
   if (!wrap || !svg || !box || !inet) return;
   const w = wrap.getBoundingClientRect();
   const r = box.getBoundingClientRect();

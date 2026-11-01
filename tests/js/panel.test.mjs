@@ -435,3 +435,117 @@ test("the map draws islands with real buttons, the uplink, hidden devices and th
   assert.match(html, /data-act="names"[^>]*>Namen ausblenden/);
   assert.match(map.renderMap({ ...mapState, names: false }, t, NOW, shown), /class="isl compact"/);
 });
+
+const internetPage = await import(`${base}panel-internet.js`);
+const sharedHelpers = await import(`${base}shared.js`);
+
+test("rates read as kbit/s, Mbit/s with one place and, from 100, without", () => {
+  assert.equal(sharedHelpers.formatRate(56316, "en"), "56.3 Mbit/s");
+  assert.equal(sharedHelpers.formatRate(56316, "de"), "56,3 Mbit/s");
+  assert.equal(sharedHelpers.formatRate(250000, "en"), "250 Mbit/s");
+  assert.equal(sharedHelpers.formatRate(640, "en"), "640 kbit/s");
+  assert.equal(sharedHelpers.formatRate(null, "en"), "–");
+});
+
+test("a duration shows its two largest units", () => {
+  const units = { d: "d", h: "h", m: "min" };
+  assert.equal(sharedHelpers.formatDuration(65439, units), "18 h 10 min");
+  assert.equal(sharedHelpers.formatDuration(3 * 86400 + 4 * 3600 + 59, units), "3 d 4 h");
+  assert.equal(sharedHelpers.formatDuration(90, units), "1 min");
+  assert.equal(sharedHelpers.formatDuration(null, units), "–");
+});
+
+test("the chart needs two samples and puts the larger rate at the top", () => {
+  assert.equal(sharedHelpers.sparkPaths([[0, 1, 1]], 100, 50), null);
+  assert.equal(sharedHelpers.sparkPaths(null, 100, 50), null);
+  const paths = sharedHelpers.sparkPaths([[0, 0, 0], [60, 100, 50]], 100, 50);
+  assert.equal(paths.top, 100);
+  assert.equal(paths.seconds, 60);
+  // download ends at the top of the box (y = 1), upload at half of it
+  assert.match(paths.down, /^M0\.0 49\.0 L100\.0 1\.0$/);
+  assert.match(paths.up, /L100\.0 25\.0$/);
+});
+
+test("the load is the share of the line rate, at most 100", () => {
+  assert.equal(sharedHelpers.usedPercent(28000, 56000), 50);
+  assert.equal(sharedHelpers.usedPercent(90000, 56000), 100);
+  assert.equal(sharedHelpers.usedPercent(null, 56000), null);
+  assert.equal(sharedHelpers.usedPercent(100, 0), null);
+});
+
+test("the internet page is a route of its own", () => {
+  assert.deepEqual(sharedHelpers.routeFromHash("#/internet"), { tab: "internet", device: null });
+});
+
+const internet = {
+  connected: true,
+  uptime: 65439,
+  last_error: "ERROR_NONE",
+  access_type: "DSL",
+  rate_down: 56316,
+  rate_up: 11260,
+  external_ipv4: "203.0.113.7",
+  external_ipv6: "2001:db8::1",
+  ipv6_prefix: "2001:db8:1::",
+  ipv6_prefix_length: 56,
+  dns: ["198.51.100.1", "198.51.100.2", "2001:db8::53"],
+  dsl: {
+    modulation: "VDSL",
+    profile: "17a",
+    rate_down: 56316,
+    rate_up: 11260,
+    max_rate_down: 96347,
+    max_rate_up: 34957,
+    noise_margin_down: 17,
+    noise_margin_up: 22,
+    attenuation_down: 7,
+    attenuation_up: 7,
+    fec_errors: 96,
+    crc_errors: 0,
+  },
+  throughput: { down: 38200, up: 4100 },
+  samples: [[1000, 10, 5], [1030, 20000, 100]],
+  events: [{ time: "2026-11-01T01:00:00Z", kind: "ip_changed", detail: "203.0.113.9" }],
+};
+
+test("the internet page shows the connection, the load, the line and the events", () => {
+  const t = texts.panelTexts("en");
+  const html = internetPage.renderInternet(internet, { t, language: "en", now: Date.parse("2026-11-01T12:00:00Z") });
+  assert.match(html, /203\.0\.113\.7/);
+  assert.match(html, /2001:db8:1::\/56/);
+  assert.match(html, /198\.51\.100\.1/);
+  assert.match(html, /\+2 more/);
+  assert.match(html, /38\.2 Mbit\/s/);
+  assert.match(html, /of 56\.3 Mbit\/s line rate/);
+  assert.match(html, /18 h 10 min/);
+  assert.match(html, /VDSL, profile 17a/);
+  assert.match(html, /FEC 96 · CRC 0/);
+  assert.match(html, /External IPv4 changed to 203\.0\.113\.9/);
+  assert.match(html, /aria-valuenow="68"/);
+  assert.match(html, /<svg class="spark"/);
+});
+
+test("without a line, a rate or a history the page still draws and says what is missing", () => {
+  const t = texts.panelTexts("de");
+  const bare = { ...internet, dsl: null, throughput: null, samples: [], events: [], connected: false };
+  const html = internetPage.renderInternet(bare, { t, language: "de", now: Date.now() });
+  assert.doesNotMatch(html, /Leitungsqualität/);
+  assert.match(html, /Getrennt/);
+  assert.match(html, /nach der nächsten/);
+  assert.match(html, /Der Verlauf erscheint/);
+  assert.match(html, /Seit dem Start von Home Assistant nichts/);
+  assert.match(internetPage.renderInternet(null, { t, language: "de", now: 0 }), /meldet ihre Internetverbindung nicht/);
+});
+
+test("a hostile value from the box is escaped", () => {
+  const t = texts.panelTexts("en");
+  const html = internetPage.renderInternet({ ...internet, external_ipv4: "<img src=x>" }, { t, language: "en", now: 0 });
+  assert.doesNotMatch(html, /<img src=x>/);
+});
+
+test("the node of the map reads out the state and the rates", () => {
+  const t = texts.panelTexts("en");
+  assert.equal(internetPage.nodeLabel(internet, t, "en"), "Internet, connected, 38.2 Mbit/s Download, 4.1 Mbit/s Upload");
+  assert.equal(internetPage.nodeLabel({ ...internet, connected: false, throughput: null }, t, "en"), "Internet, disconnected");
+  assert.equal(internetPage.nodeRates({ throughput: null }, "en"), null);
+});

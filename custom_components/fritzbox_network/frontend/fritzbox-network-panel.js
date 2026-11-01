@@ -23,6 +23,7 @@ import {
   visibleClients,
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
+import { renderInternet } from "./panel-internet.js";
 import { enablePlan, renderDevice, entityState } from "./panel-device.js";
 import { openDialog, showToast } from "./panel-dialogs.js";
 import { pickedMacs, renderHidden, renderStale, staleList } from "./panel-cleanup.js";
@@ -80,7 +81,7 @@ function scrollerOf(el) {
 /** The pages of the panel as tabs; the clean-up tab says how many devices have been gone for long. */
 function renderNav(state, t, stale) {
   const tab = (id, badge) =>
-    `<button role="tab" data-tab="${id}" aria-selected="${state.tab === id}">${escapeHtml(t.tabs[id])}${badge ? `<em>${badge}</em>` : ""}</button>`;
+    `<button role="tab" data-tab="${id}" aria-selected="${state.tab === id || (id === "net" && state.tab === "internet")}">${escapeHtml(t.tabs[id])}${badge ? `<em>${badge}</em>` : ""}</button>`;
   return `${tab("net")}${tab("cleanup", stale)}${tab("filter")}`;
 }
 
@@ -125,14 +126,17 @@ class FritzboxNetworkPanel extends HTMLElement {
       const next = routeFromHash(globalThis.location.hash);
       const entered = next.tab !== state.tab;
       const was = state.sel;
+      const fromInternet = state.tab === "internet";
       state.tab = next.tab;
       state.sel = next.device;
       state.menu = false;
-      if (!next.device) this._openedHere = false;
+      if (!next.device && next.tab !== "internet") this._openedHere = false;
       if (entered) this._enterTab();
       this._update();
       if (state.sel && state.sel !== was) this._showDevicePage();
       else if (!state.sel && was) this._backToList(was);
+      else if (next.tab === "internet" && entered) this._showDevicePage();
+      else if (fromInternet && next.tab === "net") this._backFromInternet();
     };
     this._resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => this._drawLinks());
     this.shadowRoot.addEventListener("click", (event) => this._onClick(event));
@@ -428,6 +432,7 @@ class FritzboxNetworkPanel extends HTMLElement {
             <div id="body"></div>
           </div>
           <div id="device-view" hidden></div>
+          <div id="internet-view" hidden></div>
           <div class="two" id="cleanup-view" hidden>
             <section class="card pad">
               <h2>${t.cleanup.title}</h2><p class="lead">${t.cleanup.lead}</p>
@@ -509,6 +514,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const onDevice = tab === "net" && Boolean(state.sel);
     netView.hidden = !ready || tab !== "net" || onDevice;
     root.querySelector("#device-view").hidden = !ready || !onDevice;
+    root.querySelector("#internet-view").hidden = !ready || tab !== "internet";
     root.querySelector("#cleanup-view").hidden = !ready || tab !== "cleanup";
     root.querySelector("#filter-view").hidden = !ready || tab !== "filter";
     root.querySelector("#live-chip").hidden = !ready;
@@ -519,6 +525,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const master = (state.data.nodes ?? []).find((n) => n.role === "master");
     root.querySelector("#sub").textContent = master ? [master.name, master.model].filter(Boolean).join(" · ") : "";
     this._tick();
+    if (tab === "internet") return this._renderInternet();
     if (tab === "cleanup") return this._renderCleanup();
     if (tab === "filter") return this._renderFilter();
     if (onDevice) return this._renderDetail();
@@ -527,6 +534,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     for (const button of root.querySelectorAll(".viewsw [data-view]")) {
       button.setAttribute("aria-pressed", String(button.dataset.view === state.view));
     }
+    state.language = this._hass?.language;
     const shown = visibleClients(state, now);
     this._set("chips", renderChips(state, t, now));
     this._set("menuhost", renderFilterMenu(state, t, now));
@@ -541,6 +549,14 @@ class FritzboxNetworkPanel extends HTMLElement {
     const state = this._state;
     if (state.view !== "map" || state.sel || state.tab !== "net") return;
     drawLinks(this.shadowRoot);
+  }
+
+  _renderInternet() {
+    const language = this._hass?.language;
+    this._set(
+      "internet-view",
+      renderInternet(this._state.data?.internet ?? null, { t: this._t, language, now: Date.now() })
+    );
   }
 
   _renderCleanup() {
@@ -616,6 +632,13 @@ class FritzboxNetworkPanel extends HTMLElement {
     root.querySelector(`#body [data-dev="${CSS.escape(was)}"]`)?.focus({ preventScroll: true });
   }
 
+  /** Back from the internet page: the map or list where it was, the focus on the node that opened it. */
+  _backFromInternet() {
+    const scroller = scrollerOf(this);
+    if (scroller) scroller.scrollTop = this._listScroll;
+    this.shadowRoot.querySelector('[data-act="internet"]')?.focus({ preventScroll: true });
+  }
+
   _openDevice(id) {
     this._listScroll = scrollerOf(this)?.scrollTop ?? 0;
     this._state.hl = null;
@@ -650,7 +673,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         this._setMenu(false);
         return;
       }
-      if (state.sel && state.tab === "net" && !/SELECT/.test(target.tagName)) {
+      if (((state.sel && state.tab === "net") || state.tab === "internet") && !/SELECT/.test(target.tagName)) {
         event.preventDefault();
         this._leaveDevice();
         return;
@@ -762,6 +785,11 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._enable(ds.enable);
     } else if (ds.act === "show-map") {
       return this._showInMap();
+    } else if (ds.act === "internet") {
+      this._listScroll = scrollerOf(this)?.scrollTop ?? 0;
+      this._openedHere = true;
+      globalThis.location.hash = "#/internet";
+      return;
     } else if (ds.act === "back") {
       this._leaveDevice();
       return;

@@ -14,10 +14,12 @@ from __future__ import annotations
 import logging
 import re
 import threading
+from typing import Any
 
 from fritzconnection import FritzConnection
 from fritzconnection.core.exceptions import (
     FritzActionError,
+    FritzAuthorizationError,
     FritzLookUpError,
     FritzServiceError,
 )
@@ -36,6 +38,21 @@ from .models import (
 _LOGGER = logging.getLogger(__name__)
 
 DEVICEINFO_SERVICE = "DeviceInfo1"
+# the actions that read the internet connection: (service, action), at every poll or now and then
+INTERNET_FAST = (
+    ("WANIPConn1", "GetStatusInfo"),
+    ("WANCommonIFC1", "GetTotalBytesSent"),
+    ("WANCommonIFC1", "GetTotalBytesReceived"),
+)
+INTERNET_SLOW = (
+    ("WANCommonIFC1", "GetCommonLinkProperties"),
+    ("WANIPConn1", "GetExternalIPAddress"),
+    ("WANIPConn1", "X_AVM_DE_GetExternalIPv6Address"),
+    ("WANIPConn1", "X_AVM_DE_GetIPv6Prefix"),
+    ("WANIPConn1", "X_AVM_DE_GetDNSServer"),
+    ("WANIPConn1", "X_AVM_DE_GetIPv6DNSServer"),
+    ("WANDSLInterfaceConfig1", "X_AVM-DE_GetDSLInfo"),
+)
 SECURITY_SERVICE = "LANConfigSecurity1"
 RIGHT_ADMIN = "BoxAdmin"
 
@@ -115,6 +132,33 @@ class FritzNetworkClient:
         with self._lock:
             result = self._connection.call_action(HOSTS_SERVICE, "X_AVM-DE_GetHostListPath")
             return parse_hosts(self._download(result["NewX_AVM-DE_HostListPath"]))
+
+    def get_internet(self, details: bool) -> tuple[dict[str, Any], dict[str, Any]]:
+        """The results of the actions that read the internet connection, by action name.
+
+        The status and the byte counters are read every time, the addresses, link rates and DSL
+        line only with ``details``. An action the box or the user's rights refuse is left out:
+        which ones work differs by model and by provider (DSL, cable, fibre).
+        """
+
+        def read(actions: tuple[tuple[str, str], ...]) -> dict[str, Any]:
+            results: dict[str, Any] = {}
+            for service, action in actions:
+                try:
+                    results[action] = self._connection.call_action(service, action)
+                except (
+                    FritzActionError,
+                    FritzServiceError,
+                    FritzAuthorizationError,
+                    KeyError,
+                ) as err:
+                    _LOGGER.debug("The box does not answer %s/%s: %s", service, action, err)
+            return results
+
+        with self._lock:
+            fast = read(INTERNET_FAST)
+            slow = read(INTERNET_SLOW) if details else {}
+        return fast, slow
 
     def get_host_ip(self, mac: str) -> str | None:
         """The IPv4 address the box has for this MAC now; None if it has none or no entry.

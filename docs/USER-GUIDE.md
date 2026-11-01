@@ -238,6 +238,15 @@ The **network map** shows the internet at the top, the FRITZ!Box below as a wide
 - **New (7 days)** and **Long offline** (30 days) are only known to Home Assistant: "New" counts from when the device was created in Home Assistant, "Long offline" only counts devices whose last time online is known. After a fresh install everything is new at first.
 - **Blocked** means the box reports no internet access for the device. When it reports nothing, the device does not count as blocked.
 
+**Internet.** In the network map the internet is a button with its state (green dot: connected) and the current throughput. A tap opens the page `#/internet` (back or Esc returns to the map):
+
+- **Connection:** connected or disconnected, access type (DSL, cable …), time online, external IPv4, IPv6 prefix, DNS servers and the last error.
+- **Load now** as a bar against the line rate, and a course of the last hours. The box does not report the throughput itself: the panel works it out from the byte counters of the box between two updates, so the first rate shows after the second update. The course is kept in the memory of Home Assistant and starts again after a restart.
+- **Line quality** (DSL only): line rate and what the line could do, noise margin, attenuation and the errors since synchronisation (FEC, CRC). If the noise margin falls or the errors rise, the line is the cause, not a device.
+- **Recent events:** connection lost or set up again and a new external IPv4. The integration notices them itself and keeps the last 20 since it started; they do not go to the logbook.
+
+Which values the box gives depends on the model and the connection; what it does not report is missing on the page. The integration reads three small values more per update for this (status and two byte counters), addresses and line only every ten updates or right after a new connection. If the connection is missing altogether, the node stays a plain word.
+
 **Device.** A tap on a device opens its page (address `#/device/<MAC without colons>`, the back button of the browser works). It takes the place of the list or the map, on every screen width. The button at the top left is named after the view you came from ("List" or "Network map") and takes you back there, with the same filter, the same scroll position and the focus on the device; Esc does the same. With ‹ › or the keys `j` and `k` you page through the devices shown there ("20 / 79"). At the top is the **connection path** (internet → FRITZ!Box → repeater → device, with lines as in the map), below it rate, highest rate, signal and band (the port for LAN). From 900 px wide the actions and the master data stand side by side. "In the network map" shows the device marked in the map. The actions:
 
 | Action | Note |

@@ -130,12 +130,51 @@ class MeshTopology:
         return next((n for n in self.nodes.values() if wanted & n.macs), None)
 
 
+@dataclass(frozen=True)
+class DslInfo:
+    """The DSL line as the box reports it; attenuation and noise margin in dB."""
+
+    modulation: str | None
+    profile: str | None
+    rate_down: int | None
+    rate_up: int | None
+    max_rate_down: int | None
+    max_rate_up: int | None
+    noise_margin_down: float | None
+    noise_margin_up: float | None
+    attenuation_down: float | None
+    attenuation_up: float | None
+    fec_errors: int | None
+    crc_errors: int | None
+
+
+@dataclass(frozen=True)
+class InternetInfo:
+    """The connection of the box to the internet; rates in kbit/s, bytes counted since boot."""
+
+    connected: bool | None
+    uptime: int | None
+    last_error: str | None
+    access_type: str | None
+    rate_down: int | None
+    rate_up: int | None
+    external_ipv4: str | None
+    external_ipv6: str | None
+    ipv6_prefix: str | None
+    ipv6_prefix_length: int | None
+    dns: tuple[str, ...]
+    bytes_sent: int | None
+    bytes_received: int | None
+    dsl: DslInfo | None
+
+
 @dataclass
 class NetworkData:
     """Result of one poll."""
 
     hosts: dict[str, Host]
     mesh: MeshTopology | None
+    internet: InternetInfo | None = None
 
 
 def _text(item: ET.Element, tag: str) -> str | None:
@@ -369,3 +408,90 @@ def parse_rights(xml: str | None) -> dict[str, str]:
     paths = [p.text or "" for p in root.findall("path")]
     access = [a.text or "" for a in root.findall("access")]
     return dict(zip(paths, access, strict=False))
+
+
+def _number(value: Any) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _tenth(value: Any) -> float | None:
+    """A value the box gives in tenths (dB)."""
+    number = _number(value)
+    return None if number is None else number / 10
+
+
+def _address(value: Any) -> str | None:
+    return value.strip() if isinstance(value, str) and value.strip() else None
+
+
+def _dsl(result: dict[str, Any]) -> DslInfo | None:
+    if not result or result.get("NewLinkStatus") != "Up":
+        return None
+    return DslInfo(
+        modulation=_address(result.get("NewModulationType")),
+        profile=_address(result.get("NewCurrentProfile")),
+        rate_down=_number(result.get("NewDownstreamCurrRate")),
+        rate_up=_number(result.get("NewUpstreamCurrRate")),
+        max_rate_down=_number(result.get("NewDownstreamMaxRate")),
+        max_rate_up=_number(result.get("NewUpstreamMaxRate")),
+        noise_margin_down=_tenth(result.get("NewDownstreamNoiseMargin")),
+        noise_margin_up=_tenth(result.get("NewUpstreamNoiseMargin")),
+        attenuation_down=_tenth(result.get("NewDownstreamAttenuation")),
+        attenuation_up=_tenth(result.get("NewUpstreamAttenuation")),
+        fec_errors=_number(result.get("NewFECErrors")),
+        crc_errors=_number(result.get("NewCRCErrors")),
+    )
+
+
+def parse_internet(
+    fast: dict[str, dict[str, Any]], slow: dict[str, dict[str, Any]]
+) -> InternetInfo | None:
+    """The internet connection from the results of the actions, by action name.
+
+    ``fast`` is read at every poll (status and byte counters), ``slow`` now and then (addresses,
+    link rates, DSL line). An action the box refused is missing; None where there is no status.
+    """
+    status = fast.get("GetStatusInfo")
+    if status is None:
+        return None
+    ipv6 = slow.get("X_AVM_DE_GetExternalIPv6Address", {})
+    prefix = slow.get("X_AVM_DE_GetIPv6Prefix", {})
+    link = slow.get("GetCommonLinkProperties", {})
+    dns = [
+        server
+        for result in (
+            slow.get("X_AVM_DE_GetDNSServer", {}),
+            slow.get("X_AVM_DE_GetIPv6DNSServer", {}),
+        )
+        for key, value in sorted(result.items())
+        if key.startswith(("NewIPv4DNSServer", "NewIPv6DNSServer")) and (server := _address(value))
+    ]
+    dsl = _dsl(slow.get("X_AVM-DE_GetDSLInfo", {}))
+    # the line rate is what the link really syncs at; the layer 1 maximum is in bit/s
+    rate_down = dsl.rate_down if dsl else None
+    rate_up = dsl.rate_up if dsl else None
+    if rate_down is None and (bits := _number(link.get("NewLayer1DownstreamMaxBitRate"))):
+        rate_down = bits // 1000
+    if rate_up is None and (bits := _number(link.get("NewLayer1UpstreamMaxBitRate"))):
+        rate_up = bits // 1000
+    return InternetInfo(
+        connected=None
+        if status.get("NewConnectionStatus") is None
+        else status["NewConnectionStatus"] == "Connected",
+        uptime=_number(status.get("NewUptime")),
+        last_error=_address(status.get("NewLastConnectionError")),
+        access_type=_address(link.get("NewWANAccessType")),
+        rate_down=rate_down,
+        rate_up=rate_up,
+        external_ipv4=_address(slow.get("GetExternalIPAddress", {}).get("NewExternalIPAddress")),
+        external_ipv6=_address(ipv6.get("NewExternalIPv6Address")),
+        ipv6_prefix=_address(prefix.get("NewIPv6Prefix")),
+        ipv6_prefix_length=_number(prefix.get("NewPrefixLength")),
+        dns=tuple(dns),
+        bytes_sent=_number(fast.get("GetTotalBytesSent", {}).get("NewTotalBytesSent")),
+        bytes_received=_number(fast.get("GetTotalBytesReceived", {}).get("NewTotalBytesReceived")),
+        dsl=dsl,
+    )

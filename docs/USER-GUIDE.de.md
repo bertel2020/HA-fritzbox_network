@@ -238,6 +238,15 @@ Die **Netzkarte** zeigt oben das Internet, darunter die FRITZ!Box als breite Fl�
 - **Neu (7 Tage)** und **Lange offline** (30 Tage) kennt nur Home Assistant: „Neu“ zählt ab dem Anlegen des Geräts in Home Assistant, „Lange offline“ nur Geräte, deren letzte Online-Zeit bekannt ist. Nach einer Neuinstallation ist deshalb zunächst alles neu.
 - **Gesperrt** heißt: Die Box meldet für das Gerät keinen Internetzugang. Meldet sie nichts, zählt das Gerät nicht als gesperrt.
 
+**Internet.** In der Netzkarte ist das Internet ein Knopf mit Status (grüner Punkt: verbunden) und dem aktuellen Durchsatz. Ein Tipp öffnet die Seite `#/internet` (Zurück oder Esc führt zur Karte):
+
+- **Verbindung:** verbunden oder getrennt, Zugangsart (DSL, Kabel …), Online-Zeit, externe IPv4, IPv6-Präfix, DNS-Server und der letzte Fehler.
+- **Auslastung jetzt** als Balken gegen die Leitungsrate und ein Verlauf der letzten Stunden. Die Box meldet den Durchsatz nicht selbst: Das Panel rechnet ihn aus den Byte-Zählern der Box zwischen zwei Abfragen, die erste Rate erscheint also nach der zweiten Abfrage. Der Verlauf wird im Speicher von Home Assistant gehalten und beginnt nach einem Neustart neu.
+- **Leitungsqualität** (nur bei DSL): Leitungsrate und was die Leitung möglich machen würde, Störabstand, Dämpfung und die Fehler seit der Synchronisation (FEC, CRC). Fällt der Störabstand oder steigen die Fehler, liegt es an der Leitung, nicht an einem Gerät.
+- **Letzte Ereignisse:** Verbindung getrennt oder neu aufgebaut und neue externe IPv4. Die Integration erkennt sie selbst und merkt sich die letzten 20 seit ihrem Start; ins Logbuch gehen sie nicht.
+
+Welche Werte die Box liefert, hängt von Modell und Anschluss ab; was sie nicht meldet, fehlt auf der Seite. Die Integration liest dafür zusätzlich drei kleine Werte pro Abfrage (Status und zwei Byte-Zähler), Adressen und Leitung nur alle zehn Abfragen oder gleich nach einer neuen Verbindung. Fehlt die Verbindung ganz, bleibt der Knoten ein einfaches Wort.
+
 **Gerät.** Ein Tipp auf ein Gerät öffnet seine Seite (Adresse `#/device/<MAC ohne Doppelpunkte>`, der Zurück-Knopf des Browsers funktioniert). Sie ersetzt Liste oder Karte, auf jeder Bildschirmbreite. Der Knopf oben links heißt wie die Ansicht, aus der du kommst („Liste“ oder „Netzkarte“) und führt dorthin zurück, mit demselben Filter, derselben Scrollposition und dem Fokus auf dem Gerät; Esc tut dasselbe. Mit ‹ › oder den Tasten `j` und `k` blätterst du durch die Geräte, die dort gerade angezeigt werden („20 / 79“). Oben steht der **Verbindungsweg** (Internet → FRITZ!Box → Repeater → Gerät, mit Linien wie in der Karte), darunter Rate, höchste Rate, Signal und Band (bei LAN den Anschluss). Ab 900 px Breite stehen die Aktionen und die Stammdaten nebeneinander. „In der Netzkarte“ zeigt das Gerät markiert in der Karte. Die Aktionen:
 
 | Aktion | Hinweis |

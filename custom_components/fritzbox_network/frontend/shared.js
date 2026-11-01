@@ -322,10 +322,11 @@ export function deviceFromHash(hash) {
   return match ? match[1] : null;
 }
 
-/** Which page a #/… route shows: the network (also for a device), the clean-up or the filter. */
+/** Which page a #/… route shows: the network (also for a device), the internet, the clean-up or the filter. */
 export function routeFromHash(hash) {
   const device = deviceFromHash(hash);
   if (device) return { tab: "net", device };
+  if (hash === "#/internet") return { tab: "internet", device: null };
   if (hash === "#/cleanup") return { tab: "cleanup", device: null };
   if (hash === "#/filter") return { tab: "filter", device: null };
   return { tab: "net", device: null };
@@ -465,4 +466,52 @@ export function initials(name) {
     .map((word) => [...word][0])
     .join("")
     .toUpperCase();
+}
+
+/** A rate in kbit/s as "56.3 Mbit/s" (decimal comma by language); a dash for an unknown one. */
+export function formatRate(kbit, language) {
+  if (typeof kbit !== "number" || !Number.isFinite(kbit)) return "–";
+  const format = (value, digits) =>
+    value.toLocaleString(language || "en", { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  if (kbit >= 100000) return `${format(kbit / 1000, 0)} Mbit/s`;
+  if (kbit >= 1000) return `${format(kbit / 1000, 1)} Mbit/s`;
+  return `${format(kbit, 0)} kbit/s`;
+}
+
+/** A duration in seconds as its two largest units: "12 d 3 h", "18 h 11 min", "5 min". */
+export function formatDuration(seconds, units) {
+  if (typeof seconds !== "number" || seconds < 0) return "–";
+  const minutes = Math.floor(seconds / 60);
+  const [days, hours, mins] = [Math.floor(minutes / 1440), Math.floor((minutes % 1440) / 60), minutes % 60];
+  const part = (n, unit) => `${n} ${unit}`;
+  if (days) return `${part(days, units.d)} ${part(hours, units.h)}`;
+  if (hours) return `${part(hours, units.h)} ${part(mins, units.m)}`;
+  return part(mins, units.m);
+}
+
+/**
+ * The lines of the throughput chart: samples [seconds, down, up] as path data in a box of
+ * width × height, the larger of both rates at the top. Needs two samples.
+ */
+export function sparkPaths(samples, width, height) {
+  if (!Array.isArray(samples) || samples.length < 2) return null;
+  const first = samples[0][0];
+  const span = Math.max(samples[samples.length - 1][0] - first, 1);
+  const top = Math.max(1, ...samples.map(([, down, up]) => Math.max(down, up)));
+  const line = (index) =>
+    samples
+      .map((sample, i) => {
+        const x = ((sample[0] - first) / span) * width;
+        const y = height - (sample[index] / top) * (height - 2) - 1;
+        return `${i ? "L" : "M"}${x.toFixed(1)} ${y.toFixed(1)}`;
+      })
+      .join(" ");
+  const down = line(1);
+  return { down, up: line(2), area: `${down} L${width} ${height} L0 ${height}Z`, top, seconds: span };
+}
+
+/** How far a rate is from the rate of the line, in percent, at most 100; null when either is unknown. */
+export function usedPercent(rate, max) {
+  if (typeof rate !== "number" || typeof max !== "number" || max <= 0) return null;
+  return Math.min(100, Math.round((rate / max) * 100));
 }

@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FRITZ!Box Netzwerk: Internet (Mockup)</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#f4f6f9, #0f1216);
+    --surface: light-dark(#fff, #1b1f24);
+    --soft: light-dark(#f5f7f9, #22272e);
+    --line: light-dark(#e1e5ea, #2d333b);
+    --text: light-dark(#1b1f24, #e6e9ed);
+    --muted: light-dark(#5b6270, #9aa4b1);
+    --accent: light-dark(#0a6aa8, #5bb2ea);
+    --accent-soft: light-dark(#eaf3fa, #16324a);
+    --up: light-dark(#7a4bc2, #b79af0);
+    --ok: light-dark(#1e6b34, #7fd49a);
+    --ok-soft: light-dark(#e6f4ea, #173a24);
+    --warn: light-dark(#8a4b00, #f2c27a);
+    --warn-soft: light-dark(#fff1de, #3a2a12);
+    --neutral-soft: light-dark(#eef1f4, #2a3038);
+    --radius: 18px;
+  }
+  :root[data-scheme="light"] { color-scheme: light; }
+  :root[data-scheme="dark"] { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 24px 16px 56px; background: var(--bg); color: var(--text); font: 14px/1.45 Roboto, "Noto Sans", system-ui, sans-serif; }
+  button { font: inherit; color: inherit; cursor: pointer; background: none; border: 0; padding: 0; }
+  :focus-visible { outline: 3px solid #7db8e0; outline-offset: 2px; }
+  svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  h1 { font-size: 20px; font-weight: 500; margin: 0 0 4px; }
+  h2 { font-size: 16px; font-weight: 500; margin: 0 0 12px; }
+  p.lead { color: var(--muted); margin: 0 0 16px; max-width: 72ch; }
+  .tag { display: inline-block; font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+  .cap { font-size: 12px; color: var(--muted); margin: 8px 0 0; max-width: 60ch; }
+  .bar { display: flex; gap: 8px; margin-bottom: 24px; }
+  .bar button { padding: 4px 12px; border: 1px solid var(--line); border-radius: 999px; font-size: 12px; color: var(--muted); }
+  .bar button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--surface); }
+  .wrap { display: grid; grid-template-columns: minmax(280px, 380px) minmax(320px, 1fr); gap: 28px; max-width: 1100px; align-items: start; }
+  @media (max-width: 760px) { .wrap { grid-template-columns: 1fr; } }
+
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; }
+
+  /* the network diagram: Internet at the top */
+  .tree { display: flex; flex-direction: column; align-items: center; }
+  .pill { display: inline-flex; align-items: center; gap: 10px; padding: 10px 18px; border-radius: 999px; background: var(--neutral-soft); font-weight: 500; font-size: 16px; border: 2px solid transparent; }
+  .pill.sel { border-color: var(--accent); background: var(--accent-soft); }
+  .pill .state { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); }
+  .pill small { font-weight: 400; font-size: 12px; color: var(--muted); }
+  .pill .rates { display: flex; flex-direction: column; line-height: 1.15; }
+  .stem { width: 3px; height: 22px; background: var(--muted); opacity: .6; }
+  .box { width: 100%; background: var(--soft); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; display: flex; gap: 10px; align-items: center; }
+  .box b { font-weight: 500; }
+  .box small { color: var(--muted); margin-left: auto; }
+
+  /* the page of the internet connection */
+  .head { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
+  .head .logo { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+  .head b { font-size: 18px; font-weight: 500; display: block; }
+  .head small { color: var(--muted); }
+  .badge { margin-left: auto; padding: 3px 10px; border-radius: 999px; background: var(--ok-soft); color: var(--ok); font-size: 12px; font-weight: 500; }
+  .badge.off { background: var(--warn-soft); color: var(--warn); }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 16px 0; }
+  .fact { background: var(--soft); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+  .fact small { display: block; color: var(--muted); font-size: 12px; }
+  .fact b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .fact em { font-style: normal; font-size: 12px; color: var(--muted); }
+  .sec { margin-top: 20px; }
+  .gauge { display: grid; grid-template-columns: 28px 1fr auto; gap: 4px 10px; align-items: center; margin-bottom: 10px; }
+  .gauge .meter { height: 10px; border-radius: 5px; background: var(--neutral-soft); overflow: hidden; }
+  .gauge .meter i { display: block; height: 100%; border-radius: 5px; }
+  .gauge .dn i { background: var(--accent); }
+  .gauge .upl i { background: var(--up); }
+  .gauge .val { font-variant-numeric: tabular-nums; min-width: 8ch; text-align: right; }
+  .gauge .sub { grid-column: 2 / 4; font-size: 12px; color: var(--muted); margin-top: -4px; }
+  .spark { width: 100%; height: 72px; display: block; }
+  .spark .dn { stroke: var(--accent); fill: color-mix(in srgb, var(--accent) 18%, transparent); }
+  .spark .upl { stroke: var(--up); fill: none; }
+  .spark path { stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+  .spark line { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .legend i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  ol.top { list-style: none; margin: 0; padding: 0; }
+  ol.top li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; padding: 8px 0; border-top: 1px solid var(--line); cursor: pointer; }
+  ol.top li:first-child { border-top: 0; }
+  ol.top li:hover .n { color: var(--accent); }
+  ol.top .n { font-weight: 500; }
+  ol.top .r { text-align: right; font-variant-numeric: tabular-nums; }
+  ol.top .share { grid-column: 1 / 3; height: 4px; border-radius: 2px; background: var(--neutral-soft); overflow: hidden; }
+  ol.top .share i { display: block; height: 100%; background: var(--accent); opacity: .75; }
+  .events { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  .events li { display: flex; gap: 10px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .events li:first-child { border-top: 0; }
+  .events time { color: var(--muted); width: 9ch; flex: none; font-variant-numeric: tabular-nums; }
+  .events .w { color: var(--warn); }
+  .note { font-size: 12px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 10px; margin-top: 12px; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+    <symbol id="router" viewBox="0 0 24 24"><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 17h.01M11 17h.01M8 10a6 6 0 0 1 8 0M5.5 7.5a10 10 0 0 1 13 0"/></symbol>
+    <symbol id="down" viewBox="0 0 24 24"><path d="M12 5v14M6 13l6 6 6-6"/></symbol>
+    <symbol id="up" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></symbol>
+  </defs>
+</svg>
+
+<h1>Internet im Seitenpanel</h1>
+<p class="lead">Der Internet-Knoten zeigt Status und aktuellen Durchsatz. Ein Klick öffnet eine eigene Seite mit Verbindung, Adressen, Auslastung, Leitungsqualität und den letzten Ereignissen. Aufgebaut nach dem, was eine echte VDSL-Box ohne Zusatzrechte meldet; die Zahlen sind gerundete Beispiele daraus.</p>
+<div class="bar" role="group" aria-label="Darstellung">
+  <button aria-pressed="false" data-s="light">Hell</button>
+  <button aria-pressed="false" data-s="dark">Dunkel</button>
+  <button aria-pressed="true" data-s="auto">System</button>
+</div>
+
+<div class="wrap">
+  <!-- the diagram -->
+  <section>
+    <span class="tag">Netzwerk-Ansicht</span>
+    <div class="panel">
+      <div class="tree">
+        <button class="pill sel" aria-label="Internet, verbunden, Details öffnen">
+          <svg class="i"><use href="#globe"/></svg>
+          <span>Internet</span>
+          <span class="state" title="Verbunden"></span>
+          <span class="rates"><small>↓ 38,2 Mbit/s</small><small>↑ 4,1 Mbit/s</small></span>
+        </button>
+        <div class="stem"></div>
+        <div class="box"><svg class="i"><use href="#router"/></svg><b>FRITZ!Box 7590</b><small>9 Geräte</small></div>
+      </div>
+    </div>
+    <p class="cap">Neu am Knoten: grüner Punkt (verbunden) oder Warnfarbe (getrennt) und der aktuelle Durchsatz. Mehr passt nicht, ohne das Diagramm zu überladen.</p>
+  </section>
+
+  <!-- the page -->
+  <section>
+    <span class="tag">Seite „Internet“</span>
+    <div class="panel">
+      <div class="head">
+        <span class="logo"><svg class="i"><use href="#globe"/></svg></span>
+        <div><b>Internet</b><small>VDSL2, Profil 17a · seit 18 Std. online</small></div>
+        <span class="badge">Verbunden</span>
+      </div>
+
+      <div class="facts">
+        <div class="fact"><small>Externe IPv4</small><b>213.153.x.x</b><em>seit dem Verbindungsaufbau</em></div>
+        <div class="fact"><small>IPv6-Präfix</small><b>2a00:…::/56</b><em>Adresse der Box: /64</em></div>
+        <div class="fact"><small>DNS (IPv4)</small><b>62.152.x.x</b><em>und ein zweiter Server</em></div>
+        <div class="fact"><small>Verbindung</small><b>18 Std. 11 Min.</b><em>Letzter Fehler: keiner</em></div>
+      </div>
+
+      <div class="sec">
+        <h2>Auslastung jetzt</h2>
+        <div class="gauge">
+          <svg class="i" style="color:var(--accent)"><use href="#down"/></svg>
+          <span class="meter dn" role="progressbar" aria-valuenow="68" aria-valuemin="0" aria-valuemax="100"><i style="width:68%"></i></span>
+          <span class="val">38,2 Mbit/s</span>
+          <span class="sub">von 56,3 Mbit/s Sync-Rate</span>
+        </div>
+        <div class="gauge">
+          <svg class="i" style="color:var(--up)"><use href="#up"/></svg>
+          <span class="meter upl" role="progressbar" aria-valuenow="36" aria-valuemin="0" aria-valuemax="100"><i style="width:36%"></i></span>
+          <span class="val">4,1 Mbit/s</span>
+          <span class="sub">von 11,3 Mbit/s Sync-Rate</span>
+        </div>
+      </div>
+
+      <div class="sec">
+        <h2>Verlauf, letzte 2 Stunden</h2>
+        <svg class="spark" viewBox="0 0 300 72" preserveAspectRatio="none" role="img" aria-label="Durchsatz der letzten zwei Stunden">
+          <line x1="0" y1="71" x2="300" y2="71"/><line x1="0" y1="36" x2="300" y2="36"/>
+          <path class="dn" d="M0 64 L20 60 L40 62 L60 50 L80 44 L100 52 L120 30 L140 18 L160 24 L180 40 L200 36 L220 20 L240 28 L260 34 L280 30 L300 32 L300 71 L0 71Z"/>
+          <path class="upl" d="M0 68 L40 67 L80 66 L120 62 L160 64 L200 60 L240 65 L280 66 L300 66"/>
+        </svg>
+        <div class="legend"><span><i style="background:var(--accent)"></i>Download</span><span><i style="background:var(--up)"></i>Upload</span></div>
+      </div>
+
+      <div class="sec">
+        <h2>Leitungsqualität</h2>
+        <div class="facts">
+          <div class="fact"><small>Sync-Rate (Down / Up)</small><b>56,3 / 11,3 Mbit/s</b><em>möglich: 96,3 / 35,0</em></div>
+          <div class="fact"><small>Störabstand (Down / Up)</small><b>17,0 / 22,0 dB</b><em>gut</em></div>
+          <div class="fact"><small>Dämpfung (Down / Up)</small><b>7 / 7 dB</b><em>kurze Leitung</em></div>
+          <div class="fact"><small>Fehler seit Sync</small><b>FEC 96 · CRC 0</b><em>unauffällig</em></div>
+        </div>
+        <p class="note">Bei DSL ist das der Teil, der bei „Internet ist langsam“ wirklich hilft: Fällt der Störabstand oder steigen die Fehler, liegt es an der Leitung, nicht an einem Gerät. Bei Kabel oder Glasfaser entfällt der Abschnitt.</p>
+      </div>
+
+      <div class="sec">
+        <h2>Letzte Ereignisse</h2>
+        <ul class="events">
+          <li><time>heute 02:09</time><span>Verbindung neu aufgebaut</span></li>
+          <li><time>heute 02:09</time><span>Externe IPv4 hat sich geändert</span></li>
+          <li><time class="w">vor 3 Tagen</time><span class="w">Störabstand unter 10 dB gefallen</span></li>
+        </ul>
+      </div>
+    </div>
+    <p class="cap">Der Durchsatz wird aus den Byte-Zählern der Box zwischen zwei Abfragen berechnet (die Box meldet ihn nicht direkt). Der Verlauf liegt im Speicher von Home Assistant (240 Messpunkte) und beginnt nach einem Neustart neu. Ereignisse erkennt die Integration selbst: IP-Wechsel und neuer Verbindungsaufbau (Online-Zeit springt zurück).</p>
+  </section>
+</div>
+
+<script>
+  const root = document.documentElement;
+  document.querySelectorAll(".bar button").forEach((b) => b.addEventListener("click", () => {
+    document.querySelectorAll(".bar button").forEach((o) => o.setAttribute("aria-pressed", String(o === b)));
+    if (b.dataset.s === "auto") root.removeAttribute("data-scheme"); else root.dataset.scheme = b.dataset.s;
+  }));
+</script>
+</body>
+</html>

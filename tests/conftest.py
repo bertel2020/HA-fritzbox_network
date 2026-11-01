@@ -22,6 +22,49 @@ BOX = "02:00:00:00:00:05"
 REPEATER = "02:00:00:00:00:0e"
 
 
+# what a VDSL box answers, shortened and with documentation addresses
+INTERNET_FAST = {
+    "GetStatusInfo": {
+        "NewConnectionStatus": "Connected",
+        "NewLastConnectionError": "ERROR_NONE",
+        "NewUptime": 65439,
+    },
+    "GetTotalBytesSent": {"NewTotalBytesSent": 1_000_000},
+    "GetTotalBytesReceived": {"NewTotalBytesReceived": 5_000_000},
+}
+INTERNET_SLOW = {
+    "GetCommonLinkProperties": {
+        "NewLayer1DownstreamMaxBitRate": 55_020_000,
+        "NewLayer1UpstreamMaxBitRate": 11_000_000,
+        "NewPhysicalLinkStatus": "Up",
+        "NewWANAccessType": "DSL",
+    },
+    "GetExternalIPAddress": {"NewExternalIPAddress": "203.0.113.7"},
+    "X_AVM_DE_GetExternalIPv6Address": {"NewExternalIPv6Address": "2001:db8::1"},
+    "X_AVM_DE_GetIPv6Prefix": {"NewIPv6Prefix": "2001:db8:1::", "NewPrefixLength": 56},
+    "X_AVM_DE_GetDNSServer": {
+        "NewIPv4DNSServer1": "198.51.100.1",
+        "NewIPv4DNSServer2": "198.51.100.2",
+    },
+    "X_AVM_DE_GetIPv6DNSServer": {"NewIPv6DNSServer1": "2001:db8::53"},
+    "X_AVM-DE_GetDSLInfo": {
+        "NewLinkStatus": "Up",
+        "NewModulationType": "VDSL",
+        "NewCurrentProfile": "17a",
+        "NewDownstreamCurrRate": 56316,
+        "NewUpstreamCurrRate": 11260,
+        "NewDownstreamMaxRate": 96347,
+        "NewUpstreamMaxRate": 34957,
+        "NewDownstreamNoiseMargin": 170,
+        "NewUpstreamNoiseMargin": 220,
+        "NewDownstreamAttenuation": 70,
+        "NewUpstreamAttenuation": 70,
+        "NewFECErrors": 96,
+        "NewCRCErrors": 0,
+    },
+}
+
+
 class FakeClient:
     model_name = "FRITZ!Box 7590 AX"
     system_version = "8.25"
@@ -35,6 +78,9 @@ class FakeClient:
         self.auto_wol: dict[str, bool] = {}
         self.profiles = {"filtprof1": "Standard", "filtprof2": "Kids"}
         self.calls: list[tuple] = []
+        self.internet_reads: list[bool] = []
+        self.internet_fast: dict = {key: dict(value) for key, value in INTERNET_FAST.items()}
+        self.internet_slow: dict = {key: dict(value) for key, value in INTERNET_SLOW.items()}
 
     def connect(self) -> None:
         return None
@@ -47,6 +93,10 @@ class FakeClient:
 
     def get_hosts(self):
         return list(self.hosts)
+
+    def get_internet(self, details: bool):
+        self.internet_reads.append(details)
+        return self.internet_fast, self.internet_slow if details else {}
 
     def get_host_ip(self, mac: str) -> str | None:
         return next((h.ip for h in self.hosts if h.mac == mac), None)

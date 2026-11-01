@@ -15,6 +15,7 @@ export const PANEL_CSS = `
     --accent-soft: light-dark(#eaf3fa, #16324a);
     --on-accent: light-dark(#fff, #0b1a26);
     --focus: #7db8e0;
+    --up: light-dark(#7a4bc2, #b79af0);
     --ok: light-dark(#1e6b34, #7fd49a);
     --ok-soft: light-dark(#e6f4ea, #173a24);
     --warn: light-dark(#8a4b00, #f2c27a);
@@ -191,7 +192,12 @@ export const PANEL_CSS = `
   .isl svg.links path.wlan { stroke-dasharray: 6 5; }
   .isl svg.links path.unknown { stroke-dasharray: 2 4; }
   .inet { display: flex; justify-content: center; margin-bottom: 22px; }
-  .inet span { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 14px; background: var(--neutral-soft); color: var(--text); font-size: 12px; font-weight: 500; position: relative; }
+  .inet .pill { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 14px; background: var(--neutral-soft); color: var(--text); font: inherit; font-size: 12px; font-weight: 500; position: relative; border: 1px solid transparent; }
+  button.pill { cursor: pointer; }
+  button.pill:hover { border-color: var(--accent); }
+  .inet .pill .dot { width: 8px; height: 8px; }
+  .inet .rates { display: flex; flex-direction: column; line-height: 1.15; }
+  .inet .rates small { font-weight: 400; color: var(--muted); font-size: 11px; white-space: nowrap; }
   .isles { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px 16px; position: relative; }
   .isle { position: relative; border: 1px solid var(--line); border-radius: 16px; background: var(--soft); padding: 12px; min-width: 0; }
   .isle.root { grid-column: 1 / -1; background: color-mix(in srgb, var(--accent-soft) 45%, var(--soft)); }
@@ -332,6 +338,33 @@ export const PANEL_CSS = `
   @container app (min-width: 900px) { .two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .two .card + .card { margin-top: 0; } }
 
   /* dialog + toast */
+  #internet-view .card + .card { margin-top: 16px; }
+  .ihead { display: flex; align-items: center; gap: 12px; }
+  .ihead .ico { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); flex: none; }
+  .ihead .who { flex: 1; min-width: 0; }
+  .ihead .who b { display: block; font-size: 18px; font-weight: 500; }
+  .ihead .who small { color: var(--muted); }
+  .stat.warn { background: var(--warn-soft); color: var(--warn); }
+  .gauge { display: grid; grid-template-columns: 76px 1fr auto; gap: 2px 12px; align-items: center; margin-bottom: 12px; }
+  .gauge .meter { height: 10px; border-radius: 5px; background: var(--neutral-soft); overflow: hidden; }
+  .gauge .meter i { display: block; height: 100%; border-radius: 5px; background: var(--accent); }
+  .gauge.upl .meter i { background: var(--up); }
+  .gauge .gv { font-weight: 500; font-variant-numeric: tabular-nums; text-align: right; min-width: 9ch; }
+  .gauge .gs { grid-column: 2 / 4; color: var(--muted); font-size: 12px; }
+  .spark { width: 100%; height: 72px; display: block; margin-top: 8px; }
+  .spark line { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .spark path { fill: none; stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+  .spark .dn { stroke: var(--accent); }
+  .spark .dn-area { stroke: none; fill: color-mix(in srgb, var(--accent) 16%, transparent); }
+  .spark .upl { stroke: var(--up); }
+  .legend2 { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .legend2 i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 4px; vertical-align: middle; background: var(--accent); }
+  .legend2 i.upl { background: var(--up); }
+  .legend2 .grow { margin-left: auto; }
+  .events { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  .events li { display: flex; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .events li:first-child { border-top: 0; }
+  .events time { color: var(--muted); width: 12ch; flex: none; }
   .backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 40%); display: none; place-items: center; z-index: 20; padding: 16px; }
   .backdrop.open { display: grid; }
   .dialog { width: min(440px, 100%); background: var(--surface); border-radius: 16px; padding: 24px; box-shadow: 0 6px 24px rgb(0 0 0 / 28%); max-height: 90vh; overflow: auto; }

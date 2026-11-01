@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from typing import Any
 
 from homeassistant.components import websocket_api
@@ -77,6 +78,35 @@ def _uplink(mesh: MeshTopology, node: MeshNode) -> dict[str, Any] | None:
         "type": link.link_type.lower(),
         "band": link.band,
         "signal_dbm": link.signal_dbm,
+    }
+
+
+def _internet(coordinator: FritzNetworkCoordinator) -> dict[str, Any] | None:
+    """The internet connection as the panel draws it; None where the box tells nothing about it."""
+    info = coordinator.data.internet
+    if info is None:
+        return None
+    rate = coordinator.internet_rate
+    return {
+        "connected": info.connected,
+        "uptime": info.uptime,
+        "last_error": info.last_error,
+        "access_type": info.access_type,
+        "rate_down": info.rate_down,
+        "rate_up": info.rate_up,
+        "external_ipv4": info.external_ipv4,
+        "external_ipv6": info.external_ipv6,
+        "ipv6_prefix": info.ipv6_prefix,
+        "ipv6_prefix_length": info.ipv6_prefix_length,
+        "dns": list(info.dns),
+        "dsl": asdict(info.dsl) if info.dsl else None,
+        "throughput": None
+        if rate is None
+        else {"down": round(rate[0], 1), "up": round(rate[1], 1)},
+        "samples": [
+            [round(t), round(down, 1), round(up, 1)] for t, down, up in coordinator.internet_samples
+        ],
+        "events": list(coordinator.internet_events),
     }
 
 
@@ -167,6 +197,7 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
                 lr.async_get(hass).async_list_labels(), key=lambda label: label.name.lower()
             )
         ],
+        "internet": _internet(coordinator),
         "nodes": nodes,
         "clients": clients,
     }

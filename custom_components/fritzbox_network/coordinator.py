@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import deque
 from dataclasses import replace
 from datetime import datetime, timedelta
 import logging
@@ -40,12 +41,15 @@ from .const import (
     EVENT_DEVICE_ROAMED,
     EVENT_NEW_DEVICE,
     FILTER_PROFILE_REFRESH_POLLS,
+    INTERNET_DETAIL_POLLS,
+    INTERNET_EVENTS,
+    INTERNET_HISTORY,
     MAX_BACKOFF_SECONDS,
     ROAM_CONFIRM_POLLS,
     WAN_OVERRIDE_SECONDS,
 )
 from .filters import select_hosts
-from .models import Host, MeshNode, MeshTopology, NetworkData
+from .models import Host, InternetInfo, MeshNode, MeshTopology, NetworkData, parse_internet
 from .vendor import vendor_of
 
 _LOGGER = logging.getLogger(__name__)
@@ -53,6 +57,11 @@ _LOGGER = logging.getLogger(__name__)
 type FritzNetworkConfigEntry = ConfigEntry[FritzNetworkCoordinator]
 
 _FETCH_ERRORS = (FritzConnectionException, OSError, ET.ParseError, ValueError, KeyError)
+
+# the byte counters of the box are 32 bit on some models and wrap around
+_COUNTER_WRAP = 2**32
+# a rate beyond this (kbit/s) is a counter that jumped, not traffic
+_MAX_RATE_KBIT = 10_000_000
 
 
 class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
@@ -94,6 +103,13 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         # id -> name of the access profiles of the box, read now and then
         self.filter_profiles: dict[str, str] = {}
         self._polls = 0
+        # the internet connection: the slow part of the last read, the byte counters of the poll
+        # before, the throughput since then, the last hour of it and what happened to the line
+        self._internet_slow: dict[str, Any] = {}
+        self._internet_counters: tuple[float, int, int] | None = None
+        self.internet_rate: tuple[float, float] | None = None
+        self.internet_samples: deque[tuple[float, float, float]] = deque(maxlen=INTERNET_HISTORY)
+        self.internet_events: deque[dict[str, Any]] = deque(maxlen=INTERNET_EVENTS)
         # How long the last and the slowest poll took, shown in the diagnostics.
         self.last_fetch_seconds: float | None = None
         self.slowest_fetch_seconds: float = 0.0
@@ -105,7 +121,27 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
     def _options(self):
         return self.config_entry.options
 
-    def _fetch(self) -> tuple[list[Host], MeshTopology | None]:
+    def _fetch_internet(self) -> tuple[dict[str, Any], dict[str, Any]] | None:
+        """The internet connection; it must never fail the poll of the devices."""
+        previous = self.data.internet if self.data else None
+        try:
+            details = not self._internet_slow or self._polls % INTERNET_DETAIL_POLLS == 0
+            fast, slow = self.client.get_internet(details)
+            uptime = int(fast.get("GetStatusInfo", {}).get("NewUptime", 0))
+            # a new connection may have a new address: read it now, not at the next round
+            if (
+                not details
+                and previous
+                and previous.uptime is not None
+                and uptime < previous.uptime
+            ):
+                slow = self.client.get_internet(True)[1]
+        except (*_FETCH_ERRORS, TypeError) as err:
+            _LOGGER.debug("Internet connection unavailable: %s", err)
+            return None
+        return fast, slow
+
+    def _fetch(self) -> tuple[list[Host], MeshTopology | None, tuple[dict, dict] | None]:
         hosts = self.client.get_hosts()
         try:
             mesh = self.client.get_mesh()
@@ -121,13 +157,14 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 raise
             except _FETCH_ERRORS as err:
                 _LOGGER.debug("Access profiles unavailable: %s", err)
+        internet = self._fetch_internet()
         self._polls += 1
-        return hosts, mesh
+        return hosts, mesh, internet
 
     async def _async_update_data(self) -> NetworkData:
         started = time.monotonic()
         try:
-            hosts, mesh = await self.hass.async_add_executor_job(self._fetch)
+            hosts, mesh, wan = await self.hass.async_add_executor_job(self._fetch)
         except (FritzAuthorizationError, FritzSecurityError) as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except _FETCH_ERRORS as err:
@@ -152,7 +189,80 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
 
         self._remove_filtered_devices(selected)
         self._sync_names(selected)
-        return NetworkData(hosts=selected, mesh=mesh)
+        return NetworkData(hosts=selected, mesh=mesh, internet=self._update_internet(wan))
+
+    def _update_internet(self, wan: tuple[dict, dict] | None) -> InternetInfo | None:
+        """The internet connection, its throughput since the poll before and what changed."""
+        previous = self.data.internet if self.data else None
+        if wan is None:
+            return previous
+        fast, slow = wan
+        if slow:
+            self._internet_slow = slow
+        info = parse_internet(fast, self._internet_slow)
+        if info is None:
+            return previous
+        reconnected = bool(
+            previous
+            and previous.uptime is not None
+            and info.uptime is not None
+            and info.uptime < previous.uptime
+        )
+        self._note_internet_changes(previous, info, reconnected)
+        self._measure_throughput(info, reconnected)
+        return info
+
+    def _note_internet_changes(
+        self, previous: InternetInfo | None, info: InternetInfo, reconnected: bool
+    ) -> None:
+        if previous is None:
+            return
+        if previous.connected and info.connected is False:
+            self._internet_event("disconnected")
+        elif reconnected or (previous.connected is False and info.connected):
+            self._internet_event("reconnected")
+        if (
+            previous.external_ipv4
+            and info.external_ipv4
+            and previous.external_ipv4 != info.external_ipv4
+        ):
+            self._internet_event("ip_changed", info.external_ipv4)
+
+    def _internet_event(self, kind: str, detail: str | None = None) -> None:
+        self.internet_events.appendleft(
+            {"time": dt_util.utcnow().isoformat(), "kind": kind, "detail": detail}
+        )
+
+    def _measure_throughput(self, info: InternetInfo, reconnected: bool) -> None:
+        """The rate between this and the last poll, from the byte counters of the box."""
+        now = time.monotonic()
+        previous, self._internet_counters = (
+            self._internet_counters,
+            (
+                (now, info.bytes_sent, info.bytes_received)
+                if info.bytes_sent is not None and info.bytes_received is not None
+                else None
+            ),
+        )
+        self.internet_rate = None
+        if previous is None or self._internet_counters is None or reconnected:
+            return
+        seconds = now - previous[0]
+        if seconds < 1:
+            return
+        rates = []
+        for old, new in zip(previous[1:], self._internet_counters[1:], strict=True):
+            delta = new - old
+            if delta < 0 and old < _COUNTER_WRAP:
+                delta += _COUNTER_WRAP
+            rate = delta * 8 / 1000 / seconds
+            if not 0 <= rate <= _MAX_RATE_KBIT:
+                return
+            rates.append(rate)
+        # sent goes to the internet (upload), received comes from it (download)
+        up, down = rates
+        self.internet_rate = (down, up)
+        self.internet_samples.append((dt_util.utcnow().timestamp(), down, up))
 
     def _apply_overrides(self, hosts: dict[str, Host]) -> None:
         """Show what was just asked for until the box shows it too."""
@@ -337,7 +447,9 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._overrides[(mac, attr)] = (value, time.monotonic() + WAN_OVERRIDE_SECONDS)
         hosts = dict(self.data.hosts)
         self._apply_overrides(hosts)
-        self.async_set_updated_data(NetworkData(hosts=hosts, mesh=self.data.mesh))
+        self.async_set_updated_data(
+            NetworkData(hosts=hosts, mesh=self.data.mesh, internet=self.data.internet)
+        )
         await self.async_request_refresh()
 
     async def async_set_name(self, host: Host, name: str) -> None:
