@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import timedelta
 import logging
 from pathlib import Path
 
@@ -19,12 +20,21 @@ from homeassistant.helpers import (
     issue_registry as ir,
 )
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceEntry
+from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.loader import async_get_integration
 
 from .api import FritzNetworkClient
-from .const import CONF_HIDDEN_MACS, CONF_SHOW_VENDOR, CONF_USE_TLS, DOMAIN
+from .const import (
+    CONF_HIDDEN_MACS,
+    CONF_SHOW_VENDOR,
+    CONF_STALE_REPAIR,
+    CONF_USE_TLS,
+    DEFAULT_STALE_REPAIR,
+    DOMAIN,
+)
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
+from .repairs import async_remove_stale_issue, async_update_stale_issue
 from .services import async_register as async_register_services
 from .vendor import async_load as async_load_vendors
 from .websocket_api import async_register as async_register_websocket
@@ -41,6 +51,9 @@ PLATFORMS: list[Platform] = [
 ]
 
 ISSUE_MISSING_RIGHTS = "missing_rights"
+
+STALE_CHECK_INTERVAL = timedelta(hours=1)
+STALE_FIRST_CHECK_SECONDS = 60
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
@@ -117,7 +130,25 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
 
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    _setup_stale_check(hass, entry)
     return True
+
+
+def _setup_stale_check(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
+    """Look for long-offline devices now and then, if the option is on.
+
+    The first look comes a minute after the start: the times they were last online
+    are restored by the sensors, which are only there once the platforms are set up.
+    """
+    if not entry.options.get(CONF_STALE_REPAIR, DEFAULT_STALE_REPAIR):
+        async_remove_stale_issue(hass, entry)
+        return
+
+    async def _check(now: object = None) -> None:
+        await async_update_stale_issue(hass, entry)
+
+    entry.async_on_unload(async_track_time_interval(hass, _check, STALE_CHECK_INTERVAL))
+    entry.async_on_unload(async_call_later(hass, STALE_FIRST_CHECK_SECONDS, _check))
 
 
 def _update_rights_issue(

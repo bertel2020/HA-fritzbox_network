@@ -16,4 +16,5 @@ Erste Version.
 - Geräte aufräumen: Offline-Geräte von Hand löschen (sie bleiben ausgeblendet), Filter für Gastnetz, private MAC-Adressen und einzelne Geräte, und eine Option, für Offline-Geräte keine Geräte anzulegen. Repeater werden nie gefiltert.
 - Topologie-Karte für das Dashboard: die Geräte nach Access Point, mit Suche, Filtern und Signal. Sie lädt sich selbst und braucht ein Administratorkonto.
 - Weitere Schalter und Auswahl, standardmäßig aus: Zugangsprofil, Priorisierung und automatisches Wake on LAN pro Gerät. Optional der Hersteller aus der MAC-Adresse, ohne Netzwerkzugriff.
+- Aktionen `set_name` und `wake_on_lan`, Ereignis beim Wechsel des Access Points, Logbuch-Einträge für alle Ereignisse und optional eine Reparatur, die lange offline Geräte zum Ausblenden anbietet.
 - Einrichtung: neue Adresse und neues Kennwort ohne Neueinrichtung, ein Mesh-Repeater wird abgewiesen, Diagnosedaten mit Abfragedauer.

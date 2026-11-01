@@ -16,6 +16,8 @@ CONF_ADOPT_NAMES = "adopt_names"
 CONF_HIDDEN_MACS = "hidden_macs"
 CONF_SKIP_OFFLINE = "skip_offline"
 CONF_SHOW_VENDOR = "show_vendor"
+CONF_STALE_REPAIR = "stale_repair"
+CONF_STALE_DAYS = "stale_days"
 
 FILTER_ALL = "all"
 FILTER_INCLUDE = "include"
@@ -28,6 +30,8 @@ DEFAULT_IGNORE_PRIVATE_MACS = False
 DEFAULT_ADOPT_NAMES = True
 DEFAULT_SKIP_OFFLINE = False
 DEFAULT_SHOW_VENDOR = False
+DEFAULT_STALE_REPAIR = False
+DEFAULT_STALE_DAYS = 30
 
 # After repeated failures the poll interval doubles, never beyond this.
 MAX_BACKOFF_SECONDS = 300

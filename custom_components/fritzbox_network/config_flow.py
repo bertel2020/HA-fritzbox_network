@@ -29,6 +29,8 @@ from .const import (
     CONF_SCAN_INTERVAL,
     CONF_SHOW_VENDOR,
     CONF_SKIP_OFFLINE,
+    CONF_STALE_DAYS,
+    CONF_STALE_REPAIR,
     CONF_USE_TLS,
     DEFAULT_ADOPT_NAMES,
     DEFAULT_CONSIDER_HOME,
@@ -37,6 +39,8 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SHOW_VENDOR,
     DEFAULT_SKIP_OFFLINE,
+    DEFAULT_STALE_DAYS,
+    DEFAULT_STALE_REPAIR,
     DOMAIN,
     FILTER_ALL,
     FILTER_EXCLUDE,
@@ -253,6 +257,14 @@ class FritzNetworkOptionsFlow(OptionsFlow):
                     CONF_SHOW_VENDOR,
                     default=options.get(CONF_SHOW_VENDOR, DEFAULT_SHOW_VENDOR),
                 ): bool,
+                vol.Optional(
+                    CONF_STALE_REPAIR,
+                    default=options.get(CONF_STALE_REPAIR, DEFAULT_STALE_REPAIR),
+                ): bool,
+                vol.Optional(
+                    CONF_STALE_DAYS,
+                    default=options.get(CONF_STALE_DAYS, DEFAULT_STALE_DAYS),
+                ): vol.All(int, vol.Range(min=7, max=365)),
                 vol.Optional(
                     CONF_IGNORE_GUESTS,
                     default=options.get(CONF_IGNORE_GUESTS, DEFAULT_IGNORE_GUESTS),

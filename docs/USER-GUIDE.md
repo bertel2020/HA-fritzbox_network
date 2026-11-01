@@ -72,6 +72,8 @@ Update through HACS and restart Home Assistant. Entity ids do not change.
 |--------|---------|---------|
 | Polling interval | 30 s (15–300) | How often the box is asked. Two requests per poll (host list, mesh). After repeated failures the interval doubles, up to 5 minutes. |
 | Consider home for | 180 s (0–900) | How long a device still counts as home after going offline. |
+| Notify about devices offline for long | off | A repair lists the devices that have been offline longer than the days below and offers to hide them. Nothing is hidden without your choice. Devices without a time on record are left out. Checked every hour, the first time a minute after the start. Dismiss the repair and it stays quiet. |
+| Days offline before a device counts as gone | 30 (7–365) | Only used with the option above. |
 | Show the vendor of a device | off | The vendor comes from the MAC address, from a list that ships with Home Assistant; nothing is sent anywhere. It shows as the manufacturer of the device, in the new device event (`vendor`) and in the topology card. Private (randomized) addresses have none. Turning it off does not remove a manufacturer already entered. |
 | Take over device names | on | The name from the box becomes the device name. Names you set yourself in Home Assistant are never overwritten. |
 | Do not create devices for offline hosts | off | The box remembers every device it ever saw. With this option a device is created only when it comes online. Existing devices stay. |
