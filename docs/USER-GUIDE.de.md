@@ -89,7 +89,8 @@ Die Box selbst und ihre **Repeater** sind nie gefiltert.
 | Sensor | IP-Adresse | an | |
 | Sensor | Verbindung | an | `lan` oder `wlan` |
 | Sensor | Access Point | an | Name der Box oder des Repeaters, an dem das Gerät hängt |
-| Sensor | Zuletzt gesehen | an | Zeitstempel; ändert sich nur beim Online- und Offline-Gehen und bleibt nach einem Neustart erhalten |
+| Sensor | Online seit | an | Zeitstempel des Online-Gehens; unbekannt, solange das Gerät offline ist. Ändert sich nur beim Online-Gehen und bleibt nach einem Neustart erhalten |
+| Sensor | Zuletzt online | an | Zeitstempel der letzten Abfrage, die das Gerät sah; unbekannt, solange es online ist. Ändert sich nur beim Offline-Gehen und bleibt nach einem Neustart erhalten |
 | Schalter | Internetzugang | an | An = darf ins Internet. Nur mit dem Recht „FRITZ!Box Einstellungen“ und nur für Geräte mit IPv4-Adresse. Die Box meldet die Änderung manchmal erst nach etwa einer Minute; der Schalter zeigt sie bis dahin sofort an. |
 | Button | Wake on LAN | aus | Nur mit dem Recht; nicht für Geräte, die als WLAN bekannt sind |
 | Binärsensor | Gastnetz | nur für Gastgeräte an | Diagnose |

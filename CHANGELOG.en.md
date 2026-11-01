@@ -9,7 +9,7 @@ First version.
 ### New
 
 - The network devices of the FRITZ!Box as Home Assistant devices, tracked by MAC address. Entity ids never change, the device name follows the name in the box, names you set yourself are kept.
-  - Presence, IP address, connection type (LAN/WLAN), access point and "last seen".
+  - Presence, IP address, connection type (LAN/WLAN), access point, "online since" and "last online".
   - Block and allow the internet access per device, Wake on LAN.
   - Optional, off by default: signal strength, link rate, Wi-Fi band, network name and a guest network flag.
   - The FRITZ!Box and its repeaters as devices of their own with model, firmware and the number of connected devices.

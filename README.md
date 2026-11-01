@@ -34,7 +34,7 @@ Die Integration arbeitet lokal mit der FRITZ!Box (TR-064) und baut keine Interne
 - **Geräte nach MAC-Adresse**: Ein Home-Assistant-Gerät pro Netzwerkgerät, mit Entity-IDs wie `device_tracker.fritz_3c2af4a1b2c3`. Sie bleiben beim Umbenennen gleich.
 - **Namen folgen der Box**: Ändert sich der Name in der FRITZ!Box, ändert sich der Gerätename in Home Assistant mit. Namen, die du selbst vergibst, werden nie überschrieben.
 - **Anwesenheit**: Device Tracker mit einstellbarer Wartezeit, bevor ein Gerät als abwesend gilt.
-- **Verbindungsdaten pro Gerät**: IP-Adresse, LAN oder WLAN, Access Point und „Zuletzt gesehen“. Optional (standardmäßig aus): Signalstärke, Link-Rate (Download/Upload), WLAN-Band, Netzwerkname und ein Gastnetz-Hinweis.
+- **Verbindungsdaten pro Gerät**: IP-Adresse, LAN oder WLAN, Access Point, „Online seit“ und „Zuletzt online“. Optional (standardmäßig aus): Signalstärke, Link-Rate (Download/Upload), WLAN-Band, Netzwerkname und ein Gastnetz-Hinweis.
 - **Aktionen**: Internetzugang pro Gerät sperren und freigeben, Wake on LAN.
 - **Mesh**: Die FRITZ!Box und ihre Repeater sind eigene Geräte mit Modell, Firmware und der Anzahl der verbundenen Geräte.
 - **Aufgeräumt**: Offline-Geräte lassen sich von Hand löschen und bleiben ausgeblendet. Dazu Filter für Gastnetz, private MAC-Adressen und einzelne Geräte, und eine Option, für Offline-Geräte keine Geräte anzulegen.

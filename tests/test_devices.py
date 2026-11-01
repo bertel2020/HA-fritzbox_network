@@ -152,8 +152,8 @@ async def test_filters_keep_a_device_another_integration_shares(hass, fake_clien
     assert hass.states.get("device_tracker.fritz_020000000003") is None
 
 
-async def test_last_seen_survives_a_restart(hass, fake_client, entry):
-    sensor_id = "sensor.fritz_020000000003_last_seen"
+async def test_online_since_survives_a_restart(hass, fake_client, entry):
+    sensor_id = "sensor.fritz_020000000003_online_since"
     mock_restore_cache_with_extra_data(
         hass,
         [
@@ -289,3 +289,20 @@ async def test_hosts_stay_when_the_mesh_download_fails(hass, fake_client, entry)
     assert coordinator.last_update_success
     assert coordinator.data.mesh is None
     assert hass.states.get("device_tracker.fritz_020000000003").state == "home"
+
+
+async def test_online_since_and_last_online_follow_the_presence(hass, fake_client, entry):
+    coordinator = await _setup(hass, entry)
+    since = "sensor.fritz_020000000003_online_since"
+    last = "sensor.fritz_020000000003_last_online"
+    assert hass.states.get(since).state not in ("unknown", "unavailable")
+    assert hass.states.get(last).state == "unknown"
+
+    fake_client.hosts = [
+        replace(h, active=False) if h.mac == WLAN else h for h in fake_client.hosts
+    ]
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert hass.states.get(since).state == "unknown"
+    assert hass.states.get(last).state not in ("unknown", "unavailable")

@@ -9,7 +9,7 @@ Erste Version.
 ### Neu
 
 - Die Netzwerkgeräte der FRITZ!Box als Home-Assistant-Geräte, geführt über die MAC-Adresse. Die Entity-IDs ändern sich nie, der Gerätename folgt dem Namen in der Box, eigene Namen bleiben erhalten.
-  - Anwesenheit, IP-Adresse, Verbindungsart (LAN/WLAN), Access Point und „Zuletzt gesehen“.
+  - Anwesenheit, IP-Adresse, Verbindungsart (LAN/WLAN), Access Point, „Online seit“ und „Zuletzt online“.
   - Internetzugang pro Gerät sperren und freigeben, Wake on LAN.
   - Optional, standardmäßig aus: Signalstärke, Link-Rate, WLAN-Band, Netzwerkname und ein Gastnetz-Hinweis.
   - Die FRITZ!Box und ihre Repeater als eigene Geräte mit Modell, Firmware und der Anzahl verbundener Geräte.

@@ -27,9 +27,10 @@ from .const import (
     KEY_CLIENTS,
     KEY_CONNECTION_TYPE,
     KEY_IP_ADDRESS,
-    KEY_LAST_SEEN,
+    KEY_LAST_ONLINE,
     KEY_LINK_RATE_DOWNLOAD,
     KEY_LINK_RATE_UPLOAD,
+    KEY_ONLINE_SINCE,
     KEY_SIGNAL_STRENGTH,
     KEY_SSID,
     KEY_WLAN_BAND,
@@ -59,7 +60,8 @@ async def async_setup_entry(
             FritzNetworkIpAddress(coordinator, host),
             FritzNetworkConnectionType(coordinator, host),
             FritzNetworkAccessPoint(coordinator, host),
-            FritzNetworkLastSeen(coordinator, host),
+            FritzNetworkOnlineSince(coordinator, host),
+            FritzNetworkLastOnline(coordinator, host),
         ],
     )
     # only for devices the box has a connection for, so offline devices get
@@ -218,8 +220,8 @@ class FritzNetworkAccessPoint(FritzNetworkClientEntity, SensorEntity):
         return link.ap_name if link else None
 
 
-class FritzNetworkLastSeen(FritzNetworkClientEntity, SensorEntity, RestoreEntity):
-    """When the device was last seen.
+class _ConnectionTime(FritzNetworkClientEntity, SensorEntity, RestoreEntity):
+    """The time of the last transition between online and offline.
 
     The value changes only on a transition, so it does not write a new state
     on every poll: going online sets it to now, going offline to the last poll
@@ -227,11 +229,10 @@ class FritzNetworkLastSeen(FritzNetworkClientEntity, SensorEntity, RestoreEntity
     survive a restart, so a device that stayed online keeps its connect time.
     """
 
-    _attr_translation_key = KEY_LAST_SEEN
     _attr_device_class = SensorDeviceClass.TIMESTAMP
 
-    def __init__(self, coordinator: FritzNetworkCoordinator, host: Host) -> None:
-        super().__init__(coordinator, host, "sensor", KEY_LAST_SEEN)
+    def __init__(self, coordinator: FritzNetworkCoordinator, host: Host, key: str) -> None:
+        super().__init__(coordinator, host, "sensor", key)
         self._value: datetime | None = None
         self._was_active: bool | None = None
 
@@ -266,6 +267,28 @@ class FritzNetworkLastSeen(FritzNetworkClientEntity, SensorEntity, RestoreEntity
         self._track(self.host)
         super()._handle_coordinator_update()
 
+
+class FritzNetworkOnlineSince(_ConnectionTime):
+    """Since when the device is online; unknown while it is offline."""
+
+    _attr_translation_key = KEY_ONLINE_SINCE
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, host: Host) -> None:
+        super().__init__(coordinator, host, KEY_ONLINE_SINCE)
+
     @property
     def native_value(self) -> datetime | None:
-        return self._value
+        return self._value if self._was_active else None
+
+
+class FritzNetworkLastOnline(_ConnectionTime):
+    """When the device was online the last time; unknown while it is online."""
+
+    _attr_translation_key = KEY_LAST_ONLINE
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, host: Host) -> None:
+        super().__init__(coordinator, host, KEY_LAST_ONLINE)
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self._value if self._was_active is False else None

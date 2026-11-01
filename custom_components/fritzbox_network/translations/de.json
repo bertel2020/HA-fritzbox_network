@@ -91,8 +91,11 @@
       "access_point": {
         "name": "Access Point"
       },
-      "last_seen": {
-        "name": "Zuletzt gesehen"
+      "online_since": {
+        "name": "Online seit"
+      },
+      "last_online": {
+        "name": "Zuletzt online"
       },
       "clients": {
         "name": "Verbundene Geräte"

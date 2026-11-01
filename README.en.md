@@ -34,7 +34,7 @@ The integration works locally with the FRITZ!Box (TR-064) and makes no connectio
 - **Devices by MAC address**: One Home Assistant device per network device, with entity ids like `device_tracker.fritz_3c2af4a1b2c3`. They stay the same when a device is renamed.
 - **Names follow the box**: When the name changes in the FRITZ!Box, the device name in Home Assistant changes with it. Names you set yourself are never overwritten.
 - **Presence**: Device tracker with an adjustable wait before a device counts as away.
-- **Connection data per device**: IP address, LAN or Wi-Fi, access point and "last seen". Optional (off by default): signal strength, link rate (download/upload), Wi-Fi band, network name and a guest network flag.
+- **Connection data per device**: IP address, LAN or Wi-Fi, access point, "online since" and "last online". Optional (off by default): signal strength, link rate (download/upload), Wi-Fi band, network name and a guest network flag.
 - **Actions**: Block and allow the internet access per device, Wake on LAN.
 - **Mesh**: The FRITZ!Box and its repeaters are devices of their own with model, firmware and the number of connected devices.
 - **Tidy**: Offline devices can be deleted by hand and stay hidden. Plus filters for the guest network, private MAC addresses and single devices, and an option not to create devices for offline hosts.
