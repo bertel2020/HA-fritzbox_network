@@ -174,7 +174,7 @@ title: Netzwerk
 | `title` | Überschrift der Karte |
 | `entry_id` | Nur bei mehr als einer Box nötig: die ID des Config-Eintrags |
 
-Die Karte hat eine Suche (Name, IP oder MAC) und die Filter Alle, WLAN, LAN und Offline. Die Zahlen neben einem Access Point sind angezeigt / gesamt. Geräte, die die Box keinem Access Point zuordnet, stehen am Ende. Ohne Mesh-Topologie gibt es keine Access Points, und alle Geräte stehen in dieser Gruppe.
+Die Karte hat eine Suche (Name, IP, MAC oder Hersteller) und die Filter Alle, WLAN, LAN, Offline und Schwache Verbindung. Ein Gerät hängt an einer schwachen Verbindung, wenn es online ist und seine aktuelle Rate unter einem Drittel der höchsten Rate liegt, die seine Verbindung kann, in einer der beiden Richtungen; die Karte markiert es mit einem Warnsymbol, das den Prozentwert zeigt. Ein Gerät im Leerlauf kann eine Weile mit niedrigerer Rate laufen, lies die Markierung also als Hinweis und nicht als Fehler. Die Zahlen neben einem Access Point sind angezeigt / gesamt. Geräte, die die Box keinem Access Point zuordnet, stehen am Ende. Ohne Mesh-Topologie gibt es keine Access Points, und alle Geräte stehen in dieser Gruppe.
 
 Die Karte braucht ein Administratorkonto, weil sie MAC- und IP-Adressen zeigt. Sie lädt sich selbst; nach dem Update bringt ein harter Reload des Browsers die neue Version.
 

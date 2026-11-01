@@ -128,3 +128,16 @@ async def test_topology_carries_the_vendor_when_the_option_is_on(
     vendors = {c["mac"]: c["vendor"] for c in topology["clients"]}
     assert vendors["24:0a:c4:00:00:01"] == "Espressif Inc."
     assert vendors[WLAN] is None  # a private fake MAC
+
+
+async def test_topology_carries_the_highest_rates_of_the_link(
+    hass, hass_ws_client, fake_client, entry
+):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    topology = await _subscribe(client)
+
+    wlan = {c["mac"]: c for c in topology["clients"]}[WLAN]
+    assert wlan["rate_max_download"] and wlan["rate_max_upload"]
+    assert wlan["rate_download"] <= wlan["rate_max_download"]

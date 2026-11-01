@@ -174,7 +174,7 @@ title: Network
 | `title` | Heading of the card |
 | `entry_id` | Only needed with more than one box: the id of the config entry |
 
-The card has a search (name, IP or MAC) and the filters All, Wi-Fi, LAN and Offline. The numbers next to an access point are shown / total. Devices the box does not assign to an access point are listed at the end. Without a mesh topology there are no access points and all devices sit in that group.
+The card has a search (name, IP, MAC or vendor) and the filters All, Wi-Fi, LAN, Offline and Weak link. A device is on a weak link when it is online and its current rate is below a third of the highest rate its link can do, in one direction or the other; the card marks it with a warning icon that shows the percentage. A device that is idle can run at a lower rate for a while, so read the mark as a hint, not as a fault. The numbers next to an access point are shown / total. Devices the box does not assign to an access point are listed at the end. Without a mesh topology there are no access points and all devices sit in that group.
 
 The card needs an administrator account because it shows MAC and IP addresses. It loads automatically, a hard refresh of the browser after the update brings the new version.
 

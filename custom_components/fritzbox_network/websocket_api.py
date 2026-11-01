@@ -54,6 +54,8 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
                 "signal_dbm": link.signal_dbm if link else None,
                 "rate_download": link.rate_download if link else None,
                 "rate_upload": link.rate_upload if link else None,
+                "rate_max_download": link.max_rate_download if link else None,
+                "rate_max_upload": link.max_rate_upload if link else None,
             }
         )
     return {"nodes": nodes, "clients": clients}

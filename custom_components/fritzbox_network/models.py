@@ -82,6 +82,8 @@ class ClientLink:
     rate_upload: float | None = None
     ssid: str | None = None
     band: str | None = None
+    max_rate_download: float | None = None
+    max_rate_upload: float | None = None
 
 
 @dataclass
@@ -324,6 +326,12 @@ def parse_mesh(raw: str | bytes) -> MeshTopology:
                     ),
                     rate_upload=_mbit(
                         link.get("cur_data_rate_rx" if side == 1 else "cur_data_rate_tx")
+                    ),
+                    max_rate_download=_mbit(
+                        link.get("max_data_rate_tx" if side == 1 else "max_data_rate_rx")
+                    ),
+                    max_rate_upload=_mbit(
+                        link.get("max_data_rate_rx" if side == 1 else "max_data_rate_tx")
                     ),
                     ssid=ap_side.get("ssid") if link.get("type") == "WLAN" else None,
                     band=_band(ap_side) if link.get("type") == "WLAN" else None,

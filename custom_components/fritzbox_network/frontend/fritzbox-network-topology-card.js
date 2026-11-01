@@ -1,7 +1,11 @@
 /* FRITZ!Box Network topology card: the devices of the network by access point. */
 
 const CARD_TYPE = "fritzbox-network-topology-card";
-const FILTERS = ["all", "wifi", "lan", "offline"];
+const FILTERS = ["all", "wifi", "lan", "offline", "weak"];
+
+// A device is on a weak link when its current rate is below this part of the
+// highest rate the link can do, in one direction or the other.
+const WEAK_LINK_RATIO = 1 / 3;
 
 const TEXT = {
   en: {
@@ -10,6 +14,8 @@ const TEXT = {
     wifi: "Wi-Fi",
     lan: "LAN",
     offline: "Offline",
+    weak: "Weak link",
+    weakTitle: "Weak link: only {percent} % of the possible rate",
     search: "Search name, IP, MAC or vendor",
     unassigned: "Without access point",
     empty: "No devices match.",
@@ -24,6 +30,8 @@ const TEXT = {
     wifi: "WLAN",
     lan: "LAN",
     offline: "Offline",
+    weak: "Schwache Verbindung",
+    weakTitle: "Schwache Verbindung: nur {percent} % der möglichen Rate",
     search: "Name, IP, MAC oder Hersteller suchen",
     unassigned: "Ohne Access Point",
     empty: "Keine passenden Geräte.",
@@ -49,7 +57,25 @@ function matches(client, filter, query) {
   if (filter === "wifi") return client.link_type === "wlan";
   if (filter === "lan") return client.link_type === "lan";
   if (filter === "offline") return !client.online;
+  if (filter === "weak") return isWeak(client);
   return true;
+}
+
+/** The lower of the current/highest rate ratios of both directions; null if unknown. */
+function linkRatio(client) {
+  const ratios = [
+    [client.rate_download, client.rate_max_download],
+    [client.rate_upload, client.rate_max_upload],
+  ]
+    .filter(([current, max]) => typeof current === "number" && typeof max === "number" && max > 0)
+    .map(([current, max]) => current / max);
+  return ratios.length ? Math.min(...ratios) : null;
+}
+
+/** Only for online devices: the rate of a device that is gone says nothing. */
+function isWeak(client) {
+  const ratio = linkRatio(client);
+  return Boolean(client.online) && ratio !== null && ratio < WEAK_LINK_RATIO;
 }
 
 /** Groups the clients by access point: the box first, the unassigned ones last. */
@@ -186,6 +212,7 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
         .name small { color: var(--secondary-text-color); margin-left: 6px; }
         .rate { font-size: 12px; color: var(--secondary-text-color); white-space: nowrap; }
         .link { --mdc-icon-size: 16px; color: var(--secondary-text-color); }
+        .weak { --mdc-icon-size: 16px; color: var(--warning-color, #ffa600); }
         .bars { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; width: 18px; flex: none; }
         .bars i { width: 3px; background: var(--divider-color); border-radius: 1px; display: block; }
         .bars i.on { background: var(--success-color, #43a047); }
@@ -284,6 +311,12 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
             .join("")}</span>`
         : "";
     const icon = client.link_type === "lan" ? "mdi:ethernet-cable" : client.link_type === "wlan" ? "mdi:wifi" : "mdi:help";
+    const ratio = linkRatio(client);
+    const weak = isWeak(client)
+      ? `<ha-icon class="weak" icon="mdi:wifi-alert" title="${escapeHtml(
+          t.weakTitle.replace("{percent}", Math.round(ratio * 100))
+        )}"></ha-icon>`
+      : "";
     const entity = client.entity_id ? ` data-entity="${escapeHtml(client.entity_id)}"` : "";
     return `
       <div class="row${client.entity_id ? " click" : ""}"${entity}>
@@ -291,6 +324,7 @@ class FritzboxNetworkTopologyCard extends HTMLElement {
         <ha-icon class="link" icon="${icon}"></ha-icon>
         <span class="name">${escapeHtml(client.name)}${client.vendor ? `<small>${escapeHtml(client.vendor)}</small>` : ""}${client.guest ? `<small>${escapeHtml(t.guest)}</small>` : ""}</span>
         <span class="rate">${escapeHtml(rateText(client))}</span>
+        ${weak}
         ${signal}
       </div>`;
   }
@@ -307,5 +341,5 @@ if (typeof customElements !== "undefined" && !customElements.get(CARD_TYPE)) {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { groupTopology, signalBars, rateText, matches, escapeHtml };
+  module.exports = { groupTopology, signalBars, rateText, matches, escapeHtml, linkRatio, isWeak };
 }

@@ -61,6 +61,28 @@ test("the search also looks at the vendor", () => {
   assert.deepEqual(names, ["tv"]);
 });
 
+test("the link ratio is the lower one of both directions", () => {
+  const client = { rate_download: 150, rate_max_download: 150, rate_upload: 45, rate_max_upload: 150 };
+  assert.equal(card.linkRatio(client), 0.3);
+  assert.equal(card.linkRatio({ rate_download: 100, rate_max_download: 200 }), 0.5);
+  assert.equal(card.linkRatio({ rate_download: 100 }), null);
+  assert.equal(card.linkRatio({ rate_download: 1, rate_max_download: 0 }), null);
+});
+
+test("a weak link needs an online device and a low ratio", () => {
+  const slow = { online: true, rate_download: 45, rate_max_download: 150 };
+  assert.equal(card.isWeak(slow), true);
+  assert.equal(card.isWeak({ ...slow, online: false }), false);
+  assert.equal(card.isWeak({ online: true, rate_download: 100, rate_max_download: 150 }), false);
+  assert.equal(card.isWeak({ online: true }), false);
+});
+
+test("the weak filter shows only the weak ones", () => {
+  const weak = { mac: "09", name: "slow", online: true, ap_mac: "aa", link_type: "wlan", rate_download: 40, rate_max_download: 150 };
+  const names = card.groupTopology({ nodes: data.nodes, clients: [...data.clients, weak] }, "weak").flatMap((g) => g.clients.map((c) => c.name));
+  assert.deepEqual(names, ["slow"]);
+});
+
 test("the group without an access point only exists when needed", () => {
   const groups = card.groupTopology({ nodes: data.nodes, clients: [data.clients[0]] });
   assert.equal(groups.length, 2);
