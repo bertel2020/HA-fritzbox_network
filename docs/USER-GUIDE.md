@@ -173,8 +173,18 @@ title: Network
 |--------|---------|
 | `title` | Heading of the card |
 | `entry_id` | Only needed with more than one box: the id of the config entry |
+| `default_filter` | Filter at the start: `all`, `wifi`, `lan`, `offline` or `weak` (default `all`) |
+| `collapsed` | `true`: the access points start collapsed (default `false`) |
+| `compact` | `true`: hide search and filters (default `false`) |
+| `max_height` | Maximum height of the list in pixels, it scrolls beyond that; 0 or empty: no limit |
+| `weak_threshold` | Weak link below this percentage of the highest rate (1–99, default 33) |
+| `hide_vendor`, `hide_rate`, `hide_signal` | Hide the vendor, the rate or the signal (default `false`) |
+| `tap_action` | `more-info` (default) opens the device, `none` does nothing |
 
-The card has a search (name, IP, MAC or vendor) and the filters All, Wi-Fi, LAN, Offline and Weak link. A device is on a weak link when it is online and its current rate is below a third of the highest rate its link can do, in one direction or the other; the card marks it with a warning icon that shows the percentage. A device that is idle can run at a lower rate for a while, so read the mark as a hint, not as a fault. The numbers next to an access point are shown / total. Devices the box does not assign to an access point are listed at the end. Without a mesh topology there are no access points and all devices sit in that group.
+All options are also in the visual editor of the card. The Offline and Weak filters show the number of devices they would find; the Weak filter only appears while there are such devices.
+
+
+The card has a search (name, IP, MAC or vendor) and the filters All, Wi-Fi, LAN, Offline and Weak. A device is on a weak link when it is online and its current rate is below a third (adjustable with `weak_threshold`) of the highest rate its link can do, in one direction or the other; the card marks it with a warning icon that shows the percentage. A device that is idle can run at a lower rate for a while, so read the mark as a hint, not as a fault. The numbers next to an access point are shown / total. Devices the box does not assign to an access point are listed at the end. Without a mesh topology there are no access points and all devices sit in that group.
 
 The card needs an administrator account because it shows MAC and IP addresses. It loads automatically, a hard refresh of the browser after the update brings the new version.
 

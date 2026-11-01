@@ -103,6 +103,70 @@ test("rate text", () => {
   assert.equal(card.rateText({}), "");
 });
 
+test("the weak threshold can be changed", () => {
+  const client = { online: true, rate_download: 60, rate_max_download: 100 };
+  assert.equal(card.isWeak(client), false);
+  assert.equal(card.isWeak(client, 0.7), true);
+  const weak = { mac: "09", name: "slow", online: true, ap_mac: "aa", link_type: "wlan", ...client };
+  const names = (threshold) =>
+    card.groupTopology({ nodes: data.nodes, clients: [weak] }, "weak", "", threshold).flatMap((g) => g.clients.map((c) => c.name));
+  assert.deepEqual(names(0.5), []);
+  assert.deepEqual(names(0.7), ["slow"]);
+});
+
+test("the filters with a number count offline and weak devices", () => {
+  const weak = { mac: "09", name: "slow", online: true, rate_download: 40, rate_max_download: 150 };
+  assert.deepEqual(card.countFilters({ clients: [...data.clients, weak] }), { offline: 3, weak: 1 });
+  assert.deepEqual(card.countFilters(null), { offline: 0, weak: 0 });
+});
+
+test("the config gets its defaults and drops values that make no sense", () => {
+  assert.deepEqual(card.normalizeConfig(), {
+    title: undefined,
+    entry_id: undefined,
+    default_filter: "all",
+    collapsed: false,
+    compact: false,
+    max_height: 0,
+    weak_threshold: 33,
+    hide_vendor: false,
+    hide_rate: false,
+    hide_signal: false,
+    tap_action: "more-info",
+  });
+  const config = card.normalizeConfig({
+    title: "",
+    default_filter: "bogus",
+    max_height: -5,
+    weak_threshold: 500,
+    tap_action: "explode",
+    compact: 1,
+  });
+  assert.equal(config.title, undefined);
+  assert.equal(config.default_filter, "all");
+  assert.equal(config.max_height, 0);
+  assert.equal(config.weak_threshold, 33);
+  assert.equal(config.tap_action, "more-info");
+  assert.equal(config.compact, true);
+  const set = card.normalizeConfig({ default_filter: "weak", max_height: 300, weak_threshold: 50, tap_action: "none" });
+  assert.deepEqual(
+    [set.default_filter, set.max_height, set.weak_threshold, set.tap_action],
+    ["weak", 300, 50, "none"]
+  );
+});
+
+test("the editor form names every option of the config", async () => {
+  const form = await card.FritzboxNetworkTopologyCard.getConfigForm();
+  const names = form.schema.flatMap((item) => (item.schema ? item.schema : [item])).map((item) => item.name);
+  assert.deepEqual(
+    names.sort(),
+    Object.keys(card.normalizeConfig()).sort()
+  );
+  for (const name of names) {
+    assert.notEqual(form.computeLabel({ name }), name, `${name} has a label`);
+  }
+});
+
 test("names are escaped", () => {
   assert.equal(card.escapeHtml('<b>"x"&'), "&lt;b&gt;&quot;x&quot;&amp;");
 });
