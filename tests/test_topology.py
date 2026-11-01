@@ -106,10 +106,24 @@ async def test_topology_of_an_unknown_entry_is_an_error(hass, hass_ws_client, fa
 
 
 def test_the_card_is_shipped_with_the_integration():
-    from custom_components.fritzbox_network import CARD_FILE, CARD_URL
+    from custom_components.fritzbox_network.panel import CARD_FILE, FRONTEND_DIR
 
-    assert CARD_FILE.is_file()
-    assert CARD_URL.endswith(CARD_FILE.name)
+    assert CARD_FILE.is_file() and CARD_FILE.parent == FRONTEND_DIR
+    assert (FRONTEND_DIR / "shared.js").is_file()
+
+
+def test_the_frontend_version_follows_every_file(tmp_path, monkeypatch):
+    from custom_components.fritzbox_network import panel
+
+    (tmp_path / "a.js").write_text("one")
+    monkeypatch.setattr(panel, "FRONTEND_DIR", tmp_path)
+    first = panel.frontend_version()
+    assert first == panel.frontend_version()
+    (tmp_path / "b.js").write_text("two")
+    second = panel.frontend_version()
+    assert second != first
+    (tmp_path / "a.js").write_text("changed")
+    assert panel.frontend_version() != second
 
 
 async def test_topology_carries_the_vendor_when_the_option_is_on(

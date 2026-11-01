@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
-from pathlib import Path
 
 from fritzconnection.core.exceptions import (
     FritzAuthorizationError,
@@ -22,7 +21,6 @@ from homeassistant.helpers import (
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceEntry
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
-from homeassistant.loader import async_get_integration
 
 from .api import FritzNetworkClient
 from .const import (
@@ -34,6 +32,7 @@ from .const import (
     DOMAIN,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
+from .panel import CARD_FILE, FRONTEND_DIR, STATIC_ROOT, frontend_version
 from .repairs import async_remove_stale_issue, async_update_stale_issue
 from .services import async_register as async_register_services
 from .vendor import async_load as async_load_vendors
@@ -57,9 +56,6 @@ STALE_FIRST_CHECK_SECONDS = 60
 
 CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
 
-CARD_FILE = Path(__file__).parent / "frontend" / "fritzbox-network-topology-card.js"
-CARD_URL = f"/{DOMAIN}/fritzbox-network-topology-card.js"
-
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Register what is shared by all entries: the topology command and card."""
@@ -70,7 +66,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 
 async def _async_register_card(hass: HomeAssistant) -> None:
-    """Serve the topology card and load it in the frontend.
+    """Serve the frontend files and load the dashboard cards in the frontend.
 
     Skipped where there is no frontend (tests, headless installs).
     """
@@ -79,9 +75,9 @@ async def _async_register_card(hass: HomeAssistant) -> None:
     from homeassistant.components.frontend import add_extra_js_url  # noqa: PLC0415
     from homeassistant.components.http import StaticPathConfig  # noqa: PLC0415
 
-    await hass.http.async_register_static_paths([StaticPathConfig(CARD_URL, str(CARD_FILE), True)])
-    version = (await async_get_integration(hass, DOMAIN)).version
-    add_extra_js_url(hass, f"{CARD_URL}?v={version}")
+    base = f"{STATIC_ROOT}/{await hass.async_add_executor_job(frontend_version)}"
+    await hass.http.async_register_static_paths([StaticPathConfig(base, str(FRONTEND_DIR), True)])
+    add_extra_js_url(hass, f"{base}/{CARD_FILE.name}")
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> bool:

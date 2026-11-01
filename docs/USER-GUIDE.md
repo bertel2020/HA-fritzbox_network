@@ -285,7 +285,7 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
 .venv/bin/ruff check custom_components tests tools
 .venv/bin/pytest
-node --test tests/js/
+node --test tests/js/*.test.mjs
 ```
 
 The last line tests the logic of the topology card and needs Node.js.

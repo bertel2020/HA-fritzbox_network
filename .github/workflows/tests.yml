@@ -31,4 +31,4 @@ jobs:
       - name: Test
         run: pytest
       - name: Test the topology card
-        run: node --test tests/js/
+        run: node --test tests/js/*.test.mjs

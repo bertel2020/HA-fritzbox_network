@@ -1,15 +1,11 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-const path = require("node:path");
+import assert from "node:assert/strict";
+import test from "node:test";
 
 globalThis.HTMLElement = class {};
 
-const card = require(
-  path.join(
-    __dirname,
-    "../../custom_components/fritzbox_network/frontend/fritzbox-network-topology-card.js"
-  )
-);
+const shared = await import("../../custom_components/fritzbox_network/frontend/shared.js");
+const cards = await import("../../custom_components/fritzbox_network/frontend/fritzbox-network-topology-card.js");
+const card = { ...shared, ...cards };
 
 const data = {
   nodes: [
