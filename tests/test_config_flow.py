@@ -126,6 +126,8 @@ async def test_reauth_updates_the_password(hass, fake_client, entry):
 
     assert result["reason"] == "reauth_successful"
     assert entry.data["password"] == "new"
+    # the entry reloads in the background; do not leave that to the teardown
+    await hass.async_block_till_done()
 
 
 async def test_reauth_and_reconfigure_show_connection_errors(hass, fake_client, entry, monkeypatch):
