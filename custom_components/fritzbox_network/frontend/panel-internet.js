@@ -73,7 +73,25 @@ function lineQuality(dsl, language, t) {
       ${tile(i.lineAtt, pair(dsl.attenuation_down, dsl.attenuation_up, "dB"))}
       ${tile(i.lineErrors, errors)}
     </div>
+    ${spectrum(dsl, t)}
     <p class="hint">${escapeHtml(i.lineHint)}</p></section>`;
+}
+
+/** One bar chart of the signal over the frequency; a gap is a band the line does not use. */
+function spectrumChart(values, max, label) {
+  if (!values?.length) return "";
+  const bar = (value, i) =>
+    value ? `<rect x="${i}" y="${(100 - (value / max) * 100).toFixed(1)}" width="0.8" height="${((value / max) * 100).toFixed(1)}"/>` : "";
+  return `<figure class="spec"><svg viewBox="0 0 ${values.length} 100" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(label)}">${values.map(bar).join("")}</svg><figcaption>${escapeHtml(label)}</figcaption></figure>`;
+}
+
+function spectrum(dsl, t) {
+  const values = [...(dsl.spectrum_down ?? []), ...(dsl.spectrum_up ?? [])];
+  if (!values.some(Boolean)) return "";
+  const max = Math.max(...values);
+  return `<div class="spectrum"><span class="label">${escapeHtml(t.inet.spectrum)}</span>
+    ${spectrumChart(dsl.spectrum_down, max, t.inet.spectrumDown)}${spectrumChart(dsl.spectrum_up, max, t.inet.spectrumUp)}
+    <p class="hint">${escapeHtml(t.inet.spectrumHint)}</p></div>`;
 }
 
 function events(internet, t, now) {

@@ -146,6 +146,9 @@ class DslInfo:
     attenuation_up: float | None
     fec_errors: int | None
     crc_errors: int | None
+    # the signal to noise over the frequency, as many values as SPECTRUM_BUCKETS; 0 = not used
+    spectrum_down: tuple[int, ...] = ()
+    spectrum_up: tuple[int, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -427,6 +430,35 @@ def _address(value: Any) -> str | None:
     return value.strip() if isinstance(value, str) and value.strip() else None
 
 
+# the box gives a value per group of tones, several hundred of them; the panel draws this many
+SPECTRUM_BUCKETS = 64
+
+
+def spectrum(value: Any, buckets: int = SPECTRUM_BUCKETS) -> tuple[int, ...]:
+    """The comma separated values per tone group as ``buckets`` averages, 0 for an unused bucket.
+
+    The box writes 0 for a tone group the line does not use (the gaps between the bands of VDSL),
+    so those do not count into an average. Without a usable list the result is empty.
+    """
+    if not isinstance(value, str):
+        return ()
+    tones = [number for part in value.split(",") if (number := _number(part)) is not None]
+    if not tones or not any(tones):
+        return ()
+    size = len(tones) / buckets
+    result = []
+    for bucket in range(buckets):
+        used = [
+            t
+            for t in tones[
+                int(bucket * size) : max(int((bucket + 1) * size), int(bucket * size) + 1)
+            ]
+            if t > 0
+        ]
+        result.append(round(sum(used) / len(used)) if used else 0)
+    return tuple(result)
+
+
 def _dsl(result: dict[str, Any]) -> DslInfo | None:
     if not result or result.get("NewLinkStatus") != "Up":
         return None
@@ -443,6 +475,8 @@ def _dsl(result: dict[str, Any]) -> DslInfo | None:
         attenuation_up=_tenth(result.get("NewUpstreamAttenuation")),
         fec_errors=_number(result.get("NewFECErrors")),
         crc_errors=_number(result.get("NewCRCErrors")),
+        spectrum_down=spectrum(result.get("NewSNRpsds")),
+        spectrum_up=spectrum(result.get("NewSNRpsus")),
     )
 
 

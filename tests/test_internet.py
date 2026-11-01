@@ -7,7 +7,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import async_capture_events
 
 from custom_components.fritzbox_network import coordinator as coordinator_module
-from custom_components.fritzbox_network.models import parse_internet
+from custom_components.fritzbox_network.models import parse_internet, spectrum
 
 from .conftest import INTERNET_FAST, INTERNET_SLOW
 
@@ -56,6 +56,28 @@ def test_the_internet_connection_is_read_from_the_actions():
     assert info.dsl.noise_margin_down == 17.0
     assert info.dsl.attenuation_up == 7.0
     assert (info.dsl.fec_errors, info.dsl.crc_errors) == (96, 0)
+
+
+def test_the_spectrum_averages_the_used_tones_and_leaves_gaps_empty():
+    assert spectrum("10,20,0,0,30,50", buckets=3) == (15, 0, 40)
+    assert spectrum("10,20,30", buckets=6) == (10, 10, 20, 20, 30, 30)
+    assert spectrum("0,0,0,0", buckets=2) == ()
+    assert spectrum("", buckets=2) == ()
+    assert spectrum(None) == ()
+    # what is not a number is skipped
+    assert spectrum("10,x,30", buckets=2) == (10, 30)
+
+
+def test_a_line_that_gives_a_spectrum_has_it_in_the_info():
+    slow = {k: dict(v) for k, v in INTERNET_SLOW.items()}
+    slow["X_AVM-DE_GetDSLInfo"]["NewSNRpsds"] = ",".join(["0"] * 10 + ["100"] * 54)
+    slow["X_AVM-DE_GetDSLInfo"]["NewSNRpsus"] = "50,60"
+    info = parse_internet(INTERNET_FAST, slow)
+    assert len(info.dsl.spectrum_down) == 64
+    assert info.dsl.spectrum_down[0] == 0 and info.dsl.spectrum_down[-1] == 100
+    assert len(info.dsl.spectrum_up) == 64
+    # a box that does not give them leaves the spectrum empty
+    assert parse_internet(INTERNET_FAST, INTERNET_SLOW).dsl.spectrum_down == ()
 
 
 def test_without_the_dsl_line_the_rate_is_the_one_of_the_link():

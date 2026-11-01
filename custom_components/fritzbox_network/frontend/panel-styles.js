@@ -339,6 +339,12 @@ export const PANEL_CSS = `
 
   /* dialog + toast */
   #internet-view .card + .card { margin-top: 16px; }
+  .spectrum { margin-top: 16px; }
+  figure.spec { margin: 8px 0 0; }
+  figure.spec svg { width: 100%; height: 56px; display: block; background: var(--soft); border-radius: 8px; }
+  figure.spec rect { fill: var(--accent); }
+  figure.spec:last-of-type rect { fill: var(--up); }
+  figure.spec figcaption { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .hints { padding: 8px 16px; }
   .hintline { display: flex; align-items: center; gap: 10px; margin: 6px 0; font-size: 14px; }
   .hintline.bad { color: var(--bad); }

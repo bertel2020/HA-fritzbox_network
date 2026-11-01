@@ -586,3 +586,19 @@ test("the hints show on the page and in both languages", () => {
   const html = internetPage.renderInternet({ ...internet, connected: false }, { t: texts.panelTexts("de"), language: "de", now: Date.now() });
   assert.match(html, /Die Box hat keine Internetverbindung/);
 });
+
+test("the line quality shows the spectrum only when the box gave one", () => {
+  const t = texts.panelTexts("en");
+  const ctx = { t, language: "en", now: Date.now() };
+  const withSpectrum = { ...internet, dsl: { ...internet.dsl, spectrum_down: [0, 50, 100, 0], spectrum_up: [20, 40] } };
+  const html = internetPage.renderInternet(withSpectrum, ctx);
+  assert.match(html, /Signal over the frequency/);
+  assert.equal((html.match(/<figure class="spec">/g) ?? []).length, 2);
+  // a gap draws no bar: two of four bars of the download, both of the upload
+  assert.equal((html.match(/<rect /g) ?? []).length, 4);
+  assert.doesNotMatch(internetPage.renderInternet(internet, ctx), /Signal over the frequency/);
+  assert.doesNotMatch(
+    internetPage.renderInternet({ ...internet, dsl: { ...internet.dsl, spectrum_down: [0, 0], spectrum_up: [] } }, ctx),
+    /Signal over the frequency/
+  );
+});
