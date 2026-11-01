@@ -128,7 +128,17 @@ def main() -> int:
 
     for name, wanted in (
         ("X_AVM-DE_HostFilter1", None),
-        ("Hosts1", ("X_AVM-DE_WakeOnLANByMACAddress", "X_AVM-DE_SetFriendlyNameByMAC")),
+        (
+            "Hosts1",
+            (
+                "X_AVM-DE_WakeOnLANByMACAddress",
+                "X_AVM-DE_SetFriendlyNameByMAC",
+                "X_AVM-DE_SetPrioritizationByIP",
+                "X_AVM-DE_GetAutoWakeOnLANByMACAddress",
+                "X_AVM-DE_SetAutoWakeOnLANByMACAddress",
+                "GetSpecificHostEntry",
+            ),
+        ),
     ):
         service = fc.services.get(name)
         for action_name, action in sorted(service.actions.items() if service else []):
@@ -149,6 +159,22 @@ def main() -> int:
 
     for action in ("X_AVM-DE_GetChangeCounter", "GetHostNumberOfEntries"):
         probe(fc, "Hosts1", action)
+
+    # reading only: what the access profiles look like, and what the box answers
+    # for one host (the integration relies on these answers)
+    profiles = probe(fc, "X_AVM-DE_HostFilter1", "GetFilterProfiles")
+    if profiles:
+        files["filter_profiles.xml"] = str(profiles.get("NewFilterProfileList", ""))
+    first_mac = re.search(r"<MACAddress>([^<]+)</MACAddress>", files.get("hosts.xml", ""))
+    if first_mac:
+        mac = first_mac.group(1)
+        for action in ("GetSpecificHostEntry", "X_AVM-DE_GetAutoWakeOnLANByMACAddress"):
+            try:
+                result = fc.call_action("Hosts1", action, NewMACAddress=mac)
+            except (FritzConnectionException, KeyError) as err:
+                log(f"[--] Hosts1/{action}: {type(err).__name__}: {err}")
+            else:
+                log(f"[ok] Hosts1/{action}: keys={sorted(result)}")
     rights = probe(fc, "LANConfigSecurity1", "X_AVM-DE_GetCurrentUser")
     if rights:
         rights["NewX_AVM-DE_CurrentUsername"] = "user"
