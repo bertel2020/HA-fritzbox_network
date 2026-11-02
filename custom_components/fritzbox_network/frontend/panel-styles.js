@@ -45,26 +45,32 @@ export const PANEL_CSS = `
   svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
   .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-  /* header */
+  /* header: logo and title on the left, the pages as pills and the link to the settings on the right */
   .header { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--line); display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
-    padding: 0 max(16px, calc((100% - 1200px) / 2 + 24px)); }
-  .brand { display: flex; align-items: center; gap: 12px; padding: 12px 0 6px; min-height: 60px; min-width: 0; }
+    border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px;
+    padding: 0 max(16px, calc((100% - 1200px) / 2 + 24px)); min-height: 68px; }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 10px 0; min-width: 0; flex: 1 1 auto; }
+  .brand > div { min-width: 0; }
   .menu { display: none; width: 40px; height: 40px; margin-left: -10px; place-items: center; border-radius: 50%; color: var(--text); }
   .menu:hover { background: var(--neutral-soft); }
-  .logo { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); border: 1px solid var(--line); }
-  .brand b { display: block; font-size: 18px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+  .logo { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; flex: none; }
+  .brand b { display: block; font-size: 18px; font-weight: 500; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .brand small { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  nav { grid-column: 1 / -1; grid-row: 2; display: flex; gap: 24px; overflow-x: auto; scrollbar-width: none; }
-  nav button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 2px; margin-bottom: -1px; font-weight: 500; color: var(--muted); white-space: nowrap; border-bottom: 3px solid transparent; transition: color .15s, border-color .15s; }
-  nav button:hover { color: var(--text); }
-  nav button[aria-selected="true"] { color: var(--accent-hover); border-bottom-color: var(--accent); }
+  nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 4px 0; }
+  nav button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 18px; font-weight: 500; color: var(--muted); white-space: nowrap; border-radius: 22px; transition: color .15s, background .15s; }
+  nav button:hover { color: var(--text); background: var(--neutral-soft); }
+  nav button[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
   nav em { font-style: normal; font-size: 11px; font-weight: 600; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--warn-soft); color: var(--warn); }
-  .header-end { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 8px; }
+  .header-end { display: flex; align-items: center; gap: 14px; flex: none; }
+  .intlink { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 18px; border: 1px solid var(--input-line); border-radius: 22px; background: var(--surface); color: var(--accent-hover); font-weight: 500; text-decoration: none; white-space: nowrap; }
+  .intlink:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .intlink svg.i { width: 18px; height: 18px; }
   .fresh { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; white-space: nowrap; }
   .fresh .dot { width: 8px; height: 8px; box-shadow: 0 0 0 3px var(--ok-soft); }
   nav .dot { width: 7px; height: 7px; }
+  @container app (max-width: 1040px) { nav { order: 3; flex: 1 1 100%; padding-bottom: 8px; } }
   @container app (max-width: 760px) { .menu { display: grid; } }
+  @container app (max-width: 520px) { .fresh .t { display: none; } .intlink span { display: none; } .intlink { padding: 0 12px; } .header-end { gap: 10px; } }
 
   main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; }
   @container app (max-width: 600px) { main { padding: 16px 16px 56px; } }

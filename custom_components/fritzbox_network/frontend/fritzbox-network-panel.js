@@ -109,6 +109,9 @@ function scrollerOf(el) {
  * The pages of the panel as tabs. The internet tab carries a dot for the state of the line, the
  * clean-up tab says how many devices have been gone for long.
  */
+// the logo of the integration, served next to the scripts
+const ICON_URL = new URL("./brand/icon.png", import.meta.url).href;
+
 export function renderNav(state, t, stale) {
   const line = state.data?.internet;
   const tab = (id, extra = "", label = "") =>
@@ -494,13 +497,14 @@ class FritzboxNetworkPanel extends HTMLElement {
         <header class="header">
           <div class="brand">
             <ha-menu-button></ha-menu-button>
-            <span class="logo">${ic("router")}</span>
+            <img class="logo" src="${ICON_URL}" alt="" width="40" height="40">
             <div><b>${t.title}</b><small id="sub"></small></div>
           </div>
           <nav role="tablist" id="nav" aria-label="${t.navLabel}"></nav>
           <div class="header-end">
             <select id="box" aria-label="${t.box}" hidden></select>
             <span class="fresh" id="live-chip" hidden><span class="dot on"></span><span class="t" id="live"></span></span>
+            <a class="intlink" href="/config/integrations/integration/${DOMAIN}" data-act="integration" title="${escapeHtml(t.integrationTitle)}">${ic("external")}<span>${t.integration}</span></a>
           </div>
         </header>
         <main>
@@ -1204,7 +1208,7 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _onClick(event) {
     const t = this._t;
-    const target = event.target.closest("button, [data-filter], [data-ap], [data-dev], [data-act], [data-aip]");
+    const target = event.target.closest("button, a[data-act], [data-filter], [data-ap], [data-dev], [data-act], [data-aip]");
     if (!target || target.disabled) return;
     const ds = target.dataset;
     const state = this._state;
@@ -1272,6 +1276,12 @@ class FritzboxNetworkPanel extends HTMLElement {
       return;
     } else if (ds.act === "internet") {
       globalThis.location.hash = "#/internet";
+      return;
+    } else if (ds.act === "integration") {
+      // the settings of the integration, inside Home Assistant and without loading it again
+      event.preventDefault();
+      globalThis.history.pushState(null, "", target.getAttribute("href"));
+      globalThis.dispatchEvent(new CustomEvent("location-changed", { composed: true }));
       return;
     } else if (ds.act === "reconnect" || ds.act === "reboot") {
       return this._interrupt(ds.act);

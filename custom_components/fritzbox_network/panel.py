@@ -15,6 +15,7 @@ from homeassistant.core import HomeAssistant, callback
 from .const import DOMAIN
 
 FRONTEND_DIR = Path(__file__).parent / "frontend"
+BRAND_DIR = Path(__file__).parent / "brand"
 STATIC_ROOT = f"/{DOMAIN}_static"
 CARD_FILE = FRONTEND_DIR / "fritzbox-network-topology-card.js"
 PANEL_FILE = FRONTEND_DIR / "fritzbox-network-panel.js"
@@ -30,6 +31,8 @@ def frontend_version() -> str:
     for path in sorted(FRONTEND_DIR.glob("*.js")):
         digest.update(path.name.encode())
         digest.update(path.read_bytes())
+    if (icon := BRAND_DIR / "icon.png").is_file():
+        digest.update(icon.read_bytes())
     return digest.hexdigest()[:8]
 
 
@@ -44,7 +47,13 @@ async def async_serve_frontend(hass: HomeAssistant) -> None:
     from homeassistant.components.http import StaticPathConfig  # noqa: PLC0415
 
     base = f"{STATIC_ROOT}/{await hass.async_add_executor_job(frontend_version)}"
-    await hass.http.async_register_static_paths([StaticPathConfig(base, str(FRONTEND_DIR), True)])
+    await hass.http.async_register_static_paths(
+        [
+            StaticPathConfig(base, str(FRONTEND_DIR), True),
+            # the logo in the header of the panel, next to the scripts that load it
+            StaticPathConfig(f"{base}/brand", str(BRAND_DIR), True),
+        ]
+    )
     add_extra_js_url(hass, f"{base}/{CARD_FILE.name}")
     hass.data[KEY_BASE_URL] = base
 

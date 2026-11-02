@@ -27,6 +27,8 @@ All notable changes to this integration are recorded here.
 
 ### Changed
 
+- Side panel: the header follows the look of the other integrations: the **logo** of the integration and the title on the left, the pages as pills (the active one filled) and on the right the status with the **Integration** button, which opens the settings of the integration in Home Assistant. On a phone logo, status and button stay in one row and the pages scroll below. The integration serves the logo itself (`brand/icon.png`).
+
 - Side panel: new header. **Internet** and **Address space** are tabs now, next to Network, Clean up and Include, instead of buttons at the top right. A dot on the "Internet" tab shows whether the line is connected. The status pill is a small text with a dot ("19 s ago"), and the back arrows on both pages are gone.
 
 - Side panel: the vendor of a device (from its MAC address) is always shown, even when the option "Show the vendor of a device" is off. The option only controls the manufacturer of the device in Home Assistant and in the new device event. A private MAC address says "none (private MAC address)" instead of "unknown".

@@ -48,3 +48,20 @@ async def test_the_panel_goes_with_the_last_box(hass, monkeypatch):
     hass.data[frontend.DATA_PANELS] = {panel.PANEL_PATH: object()}
     panel.async_drop_panel(hass)
     remove.assert_called_once_with(hass, panel.PANEL_PATH)
+
+
+async def test_the_logo_is_served_next_to_the_scripts_and_counts_for_the_version(hass, monkeypatch):
+    assert (panel.BRAND_DIR / "icon.png").is_file()  # the header of the panel shows it
+
+    served = []
+    hass.http = MagicMock()
+    hass.http.async_register_static_paths = AsyncMock(side_effect=served.extend)
+    hass.config.components.add("frontend")
+    monkeypatch.setattr("homeassistant.components.frontend.add_extra_js_url", MagicMock())
+
+    await panel.async_serve_frontend(hass)
+
+    base = hass.data[panel.KEY_BASE_URL]
+    by_url = {config.url_path: config.path for config in served}
+    assert by_url[base] == str(panel.FRONTEND_DIR)
+    assert by_url[f"{base}/brand"] == str(panel.BRAND_DIR)
