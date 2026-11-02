@@ -26,6 +26,8 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Geändert
 
+- Seitenpanel: Neue Kopfzeile. **Internet** und **Adressraum** sind jetzt Tabs neben Netzwerk, Aufräumen und Einbinden, statt Knöpfe oben rechts. Am Tab „Internet“ zeigt ein Punkt, ob die Leitung verbunden ist. Die Statuspille ist ein kleiner Text mit Punkt („vor 19 s“), die Zurück-Pfeile auf den beiden Seiten entfallen.
+
 - Seitenpanel: Der Hersteller eines Geräts (aus der MAC-Adresse) wird immer angezeigt, auch wenn die Option „Hersteller eines Geräts anzeigen“ aus ist. Die Option steuert nur noch den Hersteller des Geräts in Home Assistant und im Ereignis für neue Geräte. Bei einer privaten MAC-Adresse steht „keiner (private MAC-Adresse)“ statt „unbekannt“.
 
 - Seitenpanel: **Aufräumen** und **Filter** sind neu aufgebaut. Der Tab „Filter“ heißt **Einbinden**, weil er festlegt, für welche Geräte Home Assistant Geräte und Entitäten anlegt, und nicht, was das Panel zeigt. Einbinden: die drei Modi als erklärte Karten, die zwei Zusatzregeln, die Geräteliste mit Zähler sowie „Angezeigte wählen“ und „Keine wählen“, und unten eine feste Leiste mit „bleiben / kommen dazu / werden entfernt“ und dem Knopf **Änderungen anwenden**. Aufräumen: die am längsten offline zuerst mit Dauer, Suche, „Alle wählen“ und „Keine wählen“ und einer festen Aktionsleiste. „Ausblenden“ heißt jetzt **Entfernen** (es entfernt die Geräte samt Entitäten aus Home Assistant), die entfernten Geräte stehen in einem aufklappbaren Bereich und lassen sich **wieder einbinden**.

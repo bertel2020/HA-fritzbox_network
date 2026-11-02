@@ -61,16 +61,16 @@ export const PANEL_CSS = `
   nav button[aria-selected="true"] { color: var(--accent-hover); border-bottom-color: var(--accent); }
   nav em { font-style: normal; font-size: 11px; font-weight: 600; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--warn-soft); color: var(--warn); }
   .header-end { grid-column: 2; grid-row: 1; display: flex; align-items: center; gap: 8px; }
-  @container app (max-width: 760px) { .menu { display: grid; } .header-end .chip.live span.t { display: none; } }
+  .fresh { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; white-space: nowrap; }
+  .fresh .dot { width: 8px; height: 8px; box-shadow: 0 0 0 3px var(--ok-soft); }
+  nav .dot { width: 7px; height: 7px; }
+  @container app (max-width: 760px) { .menu { display: grid; } }
 
   main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; }
   @container app (max-width: 600px) { main { padding: 16px 16px 56px; } }
 
   /* shared bits */
   .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 11px; border-radius: 13px; background: var(--neutral-soft); color: var(--muted); font-size: 12px; font-weight: 500; white-space: nowrap; }
-  button.inet-link { border: 1px solid transparent; font: inherit; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; }
-  button.inet-link:hover { border-color: var(--accent); }
-  button.inet-link .dot { width: 8px; height: 8px; }
   .chip.ok { background: var(--ok-soft); color: var(--ok); }
   .chip.warn { background: var(--warn-soft); color: var(--warn); }
   .chip.bad { background: var(--bad-soft); color: var(--bad); }
@@ -528,7 +528,7 @@ export const PANEL_CSS = `
 
   /* address page */
   #addresses-view > * + *, #addresses-view .alayout + * { margin-top: 16px; }
-  #addresses-view .alead { margin: 6px 0 16px; }
+  #internet-view .phead, #addresses-view .phead { margin-bottom: 16px; }
   #addresses-view .atiles { margin-top: 0; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
   #addresses-view .tile b, #addresses-view .tile small { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
   #addresses-view .tile { box-shadow: var(--shadow); border: 1px solid var(--line); background: var(--surface); }

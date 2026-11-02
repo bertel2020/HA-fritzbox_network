@@ -3,6 +3,7 @@
 const en = {
   title: "FRITZ!Box Network",
   live: "updated {n} s ago",
+  liveShort: "{n} s ago",
   loading: "Loading…",
   admin: "The panel needs an administrator account.",
   failed: "Could not load the network.",
@@ -291,7 +292,7 @@ const en = {
     nodeUp: "connected",
     nodeDown: "disconnected",
   },
-  tabs: { net: "Network", cleanup: "Clean up", filter: "Include" },
+  tabs: { net: "Network", internet: "Internet", addresses: "Address space", cleanup: "Clean up", filter: "Include" },
   navLabel: "Pages",
   cleanup: {
     title: "Clean up",
@@ -353,7 +354,6 @@ const en = {
     unchanged: "Nothing changes with this setting.",
   },
   addr: {
-    open: "Address space",
     title: "Address space",
     lead: "All addresses of the home network at a glance: who has them, whether they are fixed, and what is still free.",
     on: "on",
@@ -512,6 +512,7 @@ const en = {
 const de = {
   title: "FRITZ!Box Netzwerk",
   live: "aktualisiert vor {n} s",
+  liveShort: "vor {n} s",
   loading: "Lädt…",
   admin: "Das Panel braucht ein Administratorkonto.",
   failed: "Das Netzwerk konnte nicht geladen werden.",
@@ -800,7 +801,7 @@ const de = {
     nodeUp: "verbunden",
     nodeDown: "getrennt",
   },
-  tabs: { net: "Netzwerk", cleanup: "Aufräumen", filter: "Einbinden" },
+  tabs: { net: "Netzwerk", internet: "Internet", addresses: "Adressraum", cleanup: "Aufräumen", filter: "Einbinden" },
   navLabel: "Seiten",
   cleanup: {
     title: "Aufräumen",
@@ -862,7 +863,6 @@ const de = {
     unchanged: "Mit diesem Filter ändert sich nichts.",
   },
   addr: {
-    open: "Adressraum",
     title: "Adressraum",
     lead: "Alle Adressen des Heimnetzes auf einen Blick: wer sie hat, ob sie fest sind und was noch frei ist.",
     on: "an",

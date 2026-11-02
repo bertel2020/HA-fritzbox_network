@@ -891,3 +891,14 @@ test("the pool card is only offered to someone who may write, and warns before i
   assert.match(html, /Neuer Bereich \.130 – \.180: 51 Adressen/);
   assert.match(addresses.renderAddresses({ ...ctx, canWrite: true, addr: { ...addr, poolDraft: { first: "9", last: "5" } } }), /die erste nicht größer als die zweite/);
 });
+
+test("all pages are tabs, the internet tab carries the state of the line and clean-up its count", () => {
+  const html = panel.renderNav({ tab: "internet", data: { internet: { connected: false } } }, t, 3);
+  const labels = [...html.matchAll(/<button[^>]*>([^<]+)/g)].map((m) => m[1]);
+  assert.deepEqual(labels, ["Netzwerk", "Internet", "Adressraum", "Aufräumen", "Einbinden"]);
+  assert.match(html, /data-tab="internet" aria-selected="true" aria-label="Internet, Getrennt"/);
+  assert.match(html, /<i class="dot " aria-hidden="true"><\/i>/);
+  assert.match(html, /Aufräumen<em>3<\/em>/);
+  assert.match(panel.renderNav({ tab: "net", data: { internet: { connected: true } } }, t, 0), /<i class="dot on"/);
+  assert.doesNotMatch(panel.renderNav({ tab: "net", data: null }, t, 0), /<i class="dot|<em>/);
+});

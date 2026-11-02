@@ -26,6 +26,8 @@ All notable changes to this integration are recorded here.
 
 ### Changed
 
+- Side panel: new header. **Internet** and **Address space** are tabs now, next to Network, Clean up and Include, instead of buttons at the top right. A dot on the "Internet" tab shows whether the line is connected. The status pill is a small text with a dot ("19 s ago"), and the back arrows on both pages are gone.
+
 - Side panel: the vendor of a device (from its MAC address) is always shown, even when the option "Show the vendor of a device" is off. The option only controls the manufacturer of the device in Home Assistant and in the new device event. A private MAC address says "none (private MAC address)" instead of "unknown".
 
 - Side panel: **Clean up** and **Filter** are rebuilt. The "Filter" tab is now called **Include**, because it decides for which devices Home Assistant creates devices and entities, not what the panel shows. Include: the three modes as explained cards, the two extra rules, the device list with a counter and "Select shown" and "Select none", and a bar at the bottom with "stay / come back / are removed" and the button **Apply changes**. Clean up: the longest offline first with the duration, search, "Select all" and "Select none" and an action bar that stays in view. "Hide" is now **Remove** (it removes the devices with their entities from Home Assistant), the removed devices sit in a fold-out section and can be **added again**.

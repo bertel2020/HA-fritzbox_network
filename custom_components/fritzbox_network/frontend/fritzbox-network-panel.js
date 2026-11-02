@@ -26,7 +26,7 @@ import {
   visibleClients,
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
-import { nodeLabel as internetLabel, renderInternet } from "./panel-internet.js";
+import { renderInternet } from "./panel-internet.js";
 import { BLOCK_COLORS, addressModel, checkBlock, emptyOwn, poolChange, renderAddresses } from "./panel-addresses.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
@@ -104,15 +104,24 @@ function scrollerOf(el) {
   return document.scrollingElement ?? document.documentElement;
 }
 
-/** The pages of the panel as tabs; the clean-up tab says how many devices have been gone for long. */
-function renderNav(state, t, stale) {
-  const tab = (id, badge) =>
-    `<button role="tab" data-tab="${id}" aria-selected="${state.tab === id || (id === "net" && SUB_TABS.includes(state.tab))}">${escapeHtml(t.tabs[id])}${badge ? `<em>${badge}</em>` : ""}</button>`;
-  return `${tab("net")}${tab("cleanup", stale)}${tab("filter")}`;
+/**
+ * The pages of the panel as tabs. The internet tab carries a dot for the state of the line, the
+ * clean-up tab says how many devices have been gone for long.
+ */
+export function renderNav(state, t, stale) {
+  const line = state.data?.internet;
+  const tab = (id, extra = "", label = "") =>
+    `<button role="tab" data-tab="${id}" aria-selected="${state.tab === id}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${escapeHtml(t.tabs[id])}${extra}</button>`;
+  const dot = line ? `<i class="dot ${line.connected === false ? "" : "on"}" aria-hidden="true"></i>` : "";
+  const label = line ? `${t.tabs.internet}, ${line.connected === false ? t.inet.state.down : t.inet.state.up}` : "";
+  return [
+    tab("net"),
+    tab("internet", dot, label),
+    tab("addresses"),
+    tab("cleanup", stale ? `<em>${stale}</em>` : ""),
+    tab("filter"),
+  ].join("");
 }
-
-// the pages that open from the network page and lead back to it
-const SUB_TABS = ["internet", "addresses"];
 
 class FritzboxNetworkPanel extends HTMLElement {
   constructor() {
@@ -165,17 +174,14 @@ class FritzboxNetworkPanel extends HTMLElement {
       const next = routeFromHash(globalThis.location.hash);
       const entered = next.tab !== state.tab;
       const was = state.sel;
-      const fromSub = SUB_TABS.includes(state.tab) ? state.tab : null;
       state.tab = next.tab;
       state.sel = next.device;
       state.menu = false;
-      if (!next.device && !SUB_TABS.includes(next.tab)) this._openedHere = false;
+      if (!next.device) this._openedHere = false;
       if (entered) this._enterTab();
       this._update();
       if (state.sel && state.sel !== was) this._showDevicePage();
       else if (!state.sel && was) this._backToList(was);
-      else if (SUB_TABS.includes(next.tab) && entered) this._showDevicePage();
-      else if (fromSub && next.tab === "net") this._backFromInternet(fromSub);
     };
     this._resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => this._drawLinks());
     this.shadowRoot.addEventListener("click", (event) => this._onClick(event));
@@ -493,8 +499,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <nav role="tablist" id="nav" aria-label="${t.navLabel}"></nav>
           <div class="header-end">
             <select id="box" aria-label="${t.box}" hidden></select>
-            <span id="inet-link"></span>
-            <span class="chip ok live" id="live-chip" hidden><span class="dot on"></span><span class="t" id="live"></span></span>
+            <span class="fresh" id="live-chip" hidden><span class="dot on"></span><span class="t" id="live"></span></span>
           </div>
         </header>
         <main>
@@ -585,7 +590,9 @@ class FritzboxNetworkPanel extends HTMLElement {
   _tick() {
     const live = this.shadowRoot.querySelector("#live");
     if (!live || !this._updatedAt) return;
-    live.textContent = fill(this._t.live, { n: Math.round((Date.now() - this._updatedAt) / 1000) });
+    const n = Math.round((Date.now() - this._updatedAt) / 1000);
+    live.textContent = fill(this._t.liveShort, { n });
+    live.parentElement.title = fill(this._t.live, { n });
   }
 
   _update() {
@@ -608,17 +615,6 @@ class FritzboxNetworkPanel extends HTMLElement {
     root.querySelector("#live-chip").hidden = !ready;
     const stale = ready ? panelCounts(state.data, Date.now(), state.threshold).stale : 0;
     this._set("nav", ready ? renderNav(state, t, stale) : "");
-    // the map has the internet node of its own; the list gets a button to the page in the header
-    const internet = ready && tab === "net" && !onDevice && state.view !== "map" ? state.data.internet : null;
-    const links = [
-      internet
-        ? `<button class="chip inet-link" data-act="internet" data-k="internet" aria-label="${escapeHtml(internetLabel(internet, t, this._hass?.language))}" title="${escapeHtml(t.inet.open)}">${ic("globe")}${escapeHtml(t.internetNode)}<i class="dot ${internet.connected === false ? "" : "on"}" aria-hidden="true"></i></button>`
-        : "",
-      ready && tab === "net" && !onDevice
-        ? `<button class="chip inet-link" data-act="addresses" data-k="addresses" title="${escapeHtml(t.addr.lead)}">${ic("lan")}${escapeHtml(t.addr.open)}</button>`
-        : "",
-    ];
-    this._set("inet-link", links.join(""));
     if (!ready) return;
     const now = Date.now();
     const master = (state.data.nodes ?? []).find((n) => n.role === "master");
@@ -724,7 +720,6 @@ class FritzboxNetworkPanel extends HTMLElement {
         clients: this._state.data?.clients ?? [],
         nodes: this._state.data?.nodes ?? [],
         canWrite: Boolean(this._state.data?.can_write),
-        backIcon: ic("back"),
       })
     );
   }
@@ -1020,13 +1015,6 @@ class FritzboxNetworkPanel extends HTMLElement {
     root.querySelector(`#body [data-dev="${CSS.escape(was)}"]`)?.focus({ preventScroll: true });
   }
 
-  /** Back from the internet page: the map or list where it was, the focus on the node that opened it. */
-  _backFromInternet(from = "internet") {
-    const scroller = scrollerOf(this);
-    if (scroller) scroller.scrollTop = this._listScroll;
-    this.shadowRoot.querySelector(`[data-act="${from}"]`)?.focus({ preventScroll: true });
-  }
-
   _openDevice(id) {
     this._listScroll = scrollerOf(this)?.scrollTop ?? 0;
     this._state.hl = null;
@@ -1061,7 +1049,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         this._setMenu(false);
         return;
       }
-      if (((state.sel && state.tab === "net") || SUB_TABS.includes(state.tab)) && !/SELECT/.test(target.tagName)) {
+      if ((state.sel && state.tab === "net") && !/SELECT/.test(target.tagName)) {
         event.preventDefault();
         this._leaveDevice();
         return;
@@ -1218,14 +1206,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._showInMap();
     } else if (state.tab === "addresses" && this._onAddressClick(ds, target)) {
       return;
-    } else if (ds.act === "addresses") {
-      this._listScroll = scrollerOf(this)?.scrollTop ?? 0;
-      this._openedHere = true;
-      globalThis.location.hash = "#/addresses";
-      return;
     } else if (ds.act === "internet") {
-      this._listScroll = scrollerOf(this)?.scrollTop ?? 0;
-      this._openedHere = true;
       globalThis.location.hash = "#/internet";
       return;
     } else if (ds.act === "reconnect" || ds.act === "reboot") {

@@ -495,14 +495,13 @@ function zonesCard(m, t, language) {
 }
 
 /**
- * The page. ctx: { t, language, now, addr } with addr the state of the page: { status, network,
+ * The page. ctx: { t, language, now, addr, clients, nodes, canWrite } with addr the state of the page: { status, network,
  * own, fixed, filter, query, view, sel, blockMessage, progress }.
  */
 export function renderAddresses(ctx) {
   const { t, addr, clients, nodes } = ctx;
   const a = t.addr;
-  const back = `<div class="dhead"><button class="back" data-act="back" data-k="back">${ctx.backIcon}${escapeHtml(t.tabs.net)}</button>
-    <h1 id="dtitle" tabindex="-1">${escapeHtml(a.title)}</h1></div><p class="lead alead">${escapeHtml(a.lead)}</p>`;
+  const back = `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(a.title)}</h1><p class="lead">${escapeHtml(a.lead)}</p></div>`;
   if (addr.status === "loading") return `${back}<div class="card"><div class="empty"><span>${escapeHtml(t.loading)}</span></div></div>`;
   if (addr.status === "failed") return `${back}<div class="card"><div class="empty"><b>${escapeHtml(a.failed)}</b></div></div>`;
   const own = addr.own ?? emptyOwn();

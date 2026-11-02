@@ -275,8 +275,7 @@ function actions(canWrite, t) {
 export function renderInternet(internet, ctx) {
   const { t, language, now, canWrite, ports: portState } = ctx;
   const i = t.inet;
-  const back = `<div class="dhead"><button class="back" data-act="back" data-k="back">${ic("back")}${escapeHtml(t.tabs.net)}</button>
-    <h1 id="dtitle" tabindex="-1">${escapeHtml(i.title)}</h1></div>`;
+  const back = `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(i.title)}</h1></div>`;
   if (!internet) return `${back}<div class="card"><div class="empty"><b>${escapeHtml(i.noData)}</b></div></div>`;
   const up = internet.connected !== false;
   const sub = [
