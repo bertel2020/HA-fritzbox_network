@@ -27,7 +27,7 @@ import {
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { nodeLabel as internetLabel, renderInternet } from "./panel-internet.js";
-import { BLOCK_COLORS, checkBlock, emptyOwn, renderAddresses } from "./panel-addresses.js";
+import { BLOCK_COLORS, addressModel, checkBlock, emptyOwn, poolChange, renderAddresses } from "./panel-addresses.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice, entityState } from "./panel-device.js";
@@ -183,9 +183,10 @@ class FritzboxNetworkPanel extends HTMLElement {
     this.shadowRoot.addEventListener("change", (event) => this._onChange(event));
     this.shadowRoot.addEventListener("keydown", (event) => this._onKey(event));
     this.shadowRoot.addEventListener("submit", (event) => {
-      if (event.target.id !== "a-blockform") return;
+      if (event.target.id !== "a-blockform" && event.target.id !== "a-poolform") return;
       event.preventDefault();
-      this._onAddressForm(event.target);
+      if (event.target.id === "a-poolform") this._applyPool();
+      else this._onAddressForm(event.target);
     });
     this.shadowRoot.addEventListener("pointermove", (event) => this._onPlot(event));
     this.shadowRoot.addEventListener("pointerleave", () => this._hidePlots());
@@ -712,7 +713,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const root = this.shadowRoot;
     const active = root.activeElement;
     // typing a note or a name: the page is drawn again when the field is left, not under the fingers
-    if (active && root.querySelector("#addresses-view")?.contains(active) && active.matches("textarea, [data-aown], #a-bn, #a-bf, #a-bt")) return;
+    if (active && root.querySelector("#addresses-view")?.contains(active) && active.matches("textarea, [data-aown], #a-bn, #a-bf, #a-bt, #a-pf, #a-pt")) return;
     this._set(
       "addresses-view",
       renderAddresses({
@@ -722,6 +723,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         addr: this._state.addr,
         clients: this._state.data?.clients ?? [],
         nodes: this._state.data?.nodes ?? [],
+        canWrite: Boolean(this._state.data?.can_write),
         backIcon: ic("back"),
       })
     );
@@ -792,6 +794,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       addr.sel = n;
     } else if (ds.afilter) addr.filter = ds.afilter;
     else if (ds.aview) addr.view = ds.aview;
+    else if (ds.apool === "reset") addr.poolDraft = null;
     else if (ds.ahint) {
       if (ds.an === undefined) return true;
       addr.sel = Number(ds.an);
@@ -812,6 +815,52 @@ class FritzboxNetworkPanel extends HTMLElement {
     addr.own = own;
     this._update();
     return true;
+  }
+
+  /** Leaves the field in the address page, so that the page is drawn again with what was entered. */
+  _leaveField() {
+    const active = this.shadowRoot.activeElement;
+    if (active?.matches?.("input, textarea, select")) active.blur();
+  }
+
+  /** The model of the page as the clients and the box say it now. */
+  _addressModel() {
+    const addr = this._state.addr;
+    return addressModel({ network: addr.network, clients: this._state.data?.clients ?? [], nodes: this._state.data?.nodes ?? [], fixed: addr.fixed, own: addr.own ?? emptyOwn() });
+  }
+
+  /** The range the box hands out now, as last octets for the fields. */
+  _currentPool() {
+    const m = this._addressModel();
+    return { first: m?.hasPool ? String(m.poolFrom) : "", last: m?.hasPool ? String(m.poolTo) : "" };
+  }
+
+  /** The new DHCP range, after the user has seen which devices it touches. */
+  async _applyPool() {
+    const t = this._t;
+    const addr = this._state.addr;
+    const m = this._addressModel();
+    const draft = addr.poolDraft;
+    const change = m && draft ? poolChange(m, draft.first, draft.last) : null;
+    if (!change || change.error || change.same || change.tooSmall) return;
+    const ok = await openDialog(this.shadowRoot, t, {
+      title: t.addr.pool.dialogTitle,
+      body: fill(t.addr.pool.dialogBody, { from: change.from, to: change.to }),
+      list: change.outside.map((d) => `${d.name} (${m.baseText}${d.n})`),
+      ok: t.addr.pool.dialogOk,
+      danger: change.outside.length > 0,
+    });
+    if (!ok) return;
+    try {
+      await this._ws("address/pool", { first: `${m.baseText}${change.from}`, last: `${m.baseText}${change.to}` });
+      addr.poolDraft = null;
+      showToast(this.shadowRoot, t.addr.pool.toastDone);
+      this._leaveField();
+      await this._loadAddresses();
+    } catch (err) {
+      const text = t.addr.pool.errors[err?.message] ?? err?.message ?? err;
+      showToast(this.shadowRoot, fill(t.toastFailed, { error: text }));
+    }
   }
 
   /** "192.168.79." of the network the page shows. */
@@ -850,6 +899,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     // the form is drawn anew, empty after a block and with the message after a mistake
     form.reset();
+    this._leaveField();
     this._renderAddresses();
   }
 
@@ -1080,10 +1130,15 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (el.id === "q") {
       this._state.query = el.value;
       this._update();
-    } else if (el.id === "a-q") {
-      this._state.addr.query = el.value;
+    } else if (el.id === "a-q" || el.id === "a-pf" || el.id === "a-pt") {
+      const addr = this._state.addr;
+      if (el.id === "a-q") addr.query = el.value;
+      else {
+        const draft = addr.poolDraft ?? this._currentPool();
+        addr.poolDraft = { ...draft, [el.id === "a-pf" ? "first" : "last"]: el.value };
+      }
       this._renderAddresses();
-      const box = this.shadowRoot.querySelector("#a-q");
+      const box = this.shadowRoot.querySelector(`#${el.id}`);
       box?.focus({ preventScroll: true });
       box?.setSelectionRange?.(el.value.length, el.value.length);
     } else if (el.id === "c-search") {

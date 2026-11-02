@@ -221,6 +221,16 @@ class FritzNetworkClient:
                 return None
         return parse_network(result)
 
+    def set_address_range(self, first: str, last: str) -> None:
+        """Set the range the DHCP server of the box hands out."""
+        with self._lock:
+            self._connection.call_action(
+                "LANHostConfigManagement1",
+                "SetAddressRange",
+                NewMinAddress=first,
+                NewMaxAddress=last,
+            )
+
     def get_ip_reservations(self, macs: list[str], max_age: float = 600) -> dict[str, Any]:
         """The fixed-address state of several devices; one read per device, kept for a while."""
         now = time.monotonic()

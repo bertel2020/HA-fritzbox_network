@@ -622,6 +622,9 @@ export const PANEL_CSS = `
   .blockform .afield { margin-top: 0; }
   @container app (max-width: 800px) { .blockform { grid-template-columns: 1fr 1fr; } }
   .formmsg { font-size: 12px; min-height: 16px; margin-top: 8px; color: var(--bad); }
+  .poolform { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 12px; }
+  .poolform .afield { margin-top: 0; width: 90px; }
+  .poolform .poolbase { padding-bottom: 10px; color: var(--muted); }
   .abar { display: flex; height: 34px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); margin: 4px 0 18px; }
   .abar div { display: grid; place-items: center; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; }
   .abar .z-low, .abar .z-high { background: var(--fixed-soft); color: var(--fixed); }

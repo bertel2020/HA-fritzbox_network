@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import ipaddress
 import json
 import re
 from typing import Any
@@ -443,6 +444,29 @@ def parse_network(result: dict[str, Any]) -> dict[str, Any] | None:
         "pool_to": _address(result.get("NewMaxAddress")),
         "reserved": split(result.get("NewReservedAddresses")),
     }
+
+
+def check_address_range(network: dict[str, Any], first: str, last: str) -> str | None:
+    """Why a new DHCP range does not fit the network of the box; None when it does.
+
+    The codes: "invalid" (not addresses), "order" (first above last), "outside" (not in the
+    network), "edge" (network or broadcast address), "gateway" (the box would be in the range).
+    """
+    try:
+        net = ipaddress.ip_network(f"{network['gateway']}/{network['mask']}", strict=False)
+        low, high = ipaddress.IPv4Address(first), ipaddress.IPv4Address(last)
+        box = ipaddress.IPv4Address(network["gateway"])
+    except (KeyError, ValueError, TypeError):
+        return "invalid"
+    if low > high:
+        return "order"
+    if low not in net or high not in net:
+        return "outside"
+    if low == net.network_address or high == net.broadcast_address:
+        return "edge"
+    if low <= box <= high:
+        return "gateway"
+    return None
 
 
 def parse_ip_form(form: Any) -> dict[str, Any] | None:

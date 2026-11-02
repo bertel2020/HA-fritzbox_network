@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 
 from custom_components.fritzbox_network.addresses import AddressNotes, empty_notes
 from custom_components.fritzbox_network.const import DOMAIN
-from custom_components.fritzbox_network.models import parse_network
+from custom_components.fritzbox_network.models import check_address_range, parse_network
 
 from .conftest import BOX, LAN
 
@@ -125,3 +125,64 @@ async def test_the_address_commands_need_an_administrator_and_a_known_box(
     for command, extra in ((OVERVIEW, {}), (SAVE, {"own": empty_notes()})):
         result = await _call(client, command, entry_id=entry.entry_id, **extra)
         assert result["error"]["code"] == "unauthorized", command
+
+
+POOL = f"{DOMAIN}/address/pool"
+
+
+def test_a_new_dhcp_range_has_to_fit_the_network_of_the_box():
+    network = {"mask": "255.255.255.0", "gateway": "192.168.79.1"}
+    check = lambda first, last: check_address_range(network, first, last)  # noqa: E731
+    assert check("192.168.79.100", "192.168.79.200") is None
+    assert check("192.168.79.2", "192.168.79.254") is None
+    assert check("192.168.79.200", "192.168.79.100") == "order"
+    assert check("192.168.78.100", "192.168.79.200") == "outside"
+    assert check("192.168.79.0", "192.168.79.200") == "edge"
+    assert check("192.168.79.100", "192.168.79.255") == "edge"
+    assert check("192.168.79.1", "192.168.79.200") == "gateway"
+    assert check("nonsense", "192.168.79.200") == "invalid"
+    assert check_address_range({}, "192.168.79.1", "192.168.79.2") == "invalid"
+
+
+async def test_the_dhcp_range_is_changed_when_it_fits(hass, hass_ws_client, fake_client, entry):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    result = await _call(
+        client, POOL, entry_id=entry.entry_id, first="192.168.178.50", last="192.168.178.150"
+    )
+    assert result["success"] is True
+    assert result["result"]["network"]["pool_from"] == "192.168.178.50"
+    assert ("pool", "192.168.178.50", "192.168.178.150") in fake_client.calls
+
+
+async def test_a_range_that_does_not_fit_or_a_missing_right_changes_nothing(
+    hass, hass_ws_client, fake_client, entry
+):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    for first, last in (
+        ("192.168.178.150", "192.168.178.50"),
+        ("192.168.178.1", "192.168.178.50"),
+        ("10.0.0.5", "10.0.0.50"),
+    ):
+        result = await _call(client, POOL, entry_id=entry.entry_id, first=first, last=last)
+        assert result["error"]["code"] == "invalid_range", (first, last)
+    not_ip = await _call(client, POOL, entry_id=entry.entry_id, first="x", last="y")
+    assert not_ip["success"] is False
+    pool_calls = lambda: [c for c in fake_client.calls if c[0] == "pool"]  # noqa: E731
+    assert pool_calls() == []
+
+    fake_client.fail_actions = True
+    refused = await _call(
+        client, POOL, entry_id=entry.entry_id, first="192.168.178.50", last="192.168.178.150"
+    )
+    assert refused["error"]["code"] == "unknown_error"
+    assert len(pool_calls()) == 1  # tried once, the box said no
+
+    fake_client.fail_actions = False
+    entry.runtime_data.can_write = False
+    forbidden = await _call(
+        client, POOL, entry_id=entry.entry_id, first="192.168.178.50", last="192.168.178.150"
+    )
+    assert forbidden["error"]["code"] == "unauthorized"
+    assert len(pool_calls()) == 1

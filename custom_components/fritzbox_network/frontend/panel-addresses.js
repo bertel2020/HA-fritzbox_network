@@ -203,6 +203,66 @@ export function addressHints(m, { fixedKnown }) {
   return hints.sort((a, b) => order[a.level] - order[b.level]);
 }
 
+/**
+ * What a new DHCP range (last octets, as typed) would mean: null while nothing is typed, else
+ * { error } with the key of the problem, or { size, used, outside, fixedInside, tooSmall, same }
+ * with the devices it touches.
+ */
+export function poolChange(m, first, last) {
+  const a = Number(first);
+  const b = Number(last);
+  if (String(first).trim() === "" || String(last).trim() === "") return null;
+  if (!Number.isInteger(a) || !Number.isInteger(b) || a < 1 || b > 254 || a > b) return { error: "range" };
+  if (m.cells[a].state === "na" || m.cells[b].state === "na") return { error: "outside" };
+  if (m.gatewayOctet !== null && a <= m.gatewayOctet && m.gatewayOctet <= b) return { error: "gateway" };
+  const inside = (n) => n >= a && n <= b;
+  const devices = [...m.devices.values()].filter((d) => d.kind !== "box");
+  const dynamic = devices.filter((d) => d.kind === "dyn");
+  const outside = dynamic.filter((d) => !inside(d.n));
+  const size = m.cells.filter((c) => inside(c.n) && c.state !== "na").length;
+  return {
+    from: a,
+    to: b,
+    size,
+    used: devices.filter((d) => inside(d.n)).length,
+    outside,
+    fixedInside: devices.filter((d) => d.kind === "fix" && inside(d.n)),
+    tooSmall: size < dynamic.length,
+    same: m.hasPool && a === m.poolFrom && b === m.poolTo,
+  };
+}
+
+const namesOf = (list, t) => {
+  const shown = list.slice(0, 6).map((d) => d.name).join(", ");
+  return list.length > 6 ? `${shown} ${fill(t.addr.pool.more, { n: list.length - 6 })}` : shown;
+};
+
+function poolCard(m, ctx) {
+  const { t, addr } = ctx;
+  const p = t.addr.pool;
+  const draft = addr.poolDraft ?? { first: m.hasPool ? String(m.poolFrom) : "", last: m.hasPool ? String(m.poolTo) : "" };
+  const change = poolChange(m, draft.first, draft.last);
+  const line = (level, text) => `<div class="ahint ${level} flat"><span class="hbody"><span aria-hidden="true">${{ warn: "⚠", info: "ℹ", bad: "⛔" }[level]}</span><span>${text}</span></span></div>`;
+  let preview = "";
+  if (change?.error) preview = line("bad", escapeHtml(p.errors[change.error]));
+  else if (change) {
+    preview = `<p class="hint">${escapeHtml(fill(p.preview, { from: change.from, to: change.to, size: change.size, used: change.used }))}</p>`;
+    if (change.outside.length) preview += line("warn", fill(p.outside, { n: change.outside.length, names: escapeHtml(namesOf(change.outside, t)) }));
+    if (change.fixedInside.length) preview += line("info", fill(p.fixedInside, { n: change.fixedInside.length, names: escapeHtml(namesOf(change.fixedInside, t)) }));
+    if (change.tooSmall) preview += line("bad", fill(p.tooSmall, { n: [...m.devices.values()].filter((d) => d.kind === "dyn").length }));
+  }
+  const ok = change && !change.error && !change.same && !change.tooSmall;
+  return `<section class="card sec"><span class="label">${escapeHtml(p.title)}</span><p class="hint">${escapeHtml(p.lead)}</p>
+    <form class="poolform" id="a-poolform" autocomplete="off">
+      <span class="mono poolbase">${escapeHtml(m.baseText)}</span>
+      <div class="afield"><label for="a-pf">${escapeHtml(p.from)}</label><input id="a-pf" data-k="a-pf" inputmode="numeric" value="${escapeHtml(draft.first)}"></div>
+      <span class="poolbase">–</span>
+      <div class="afield"><label for="a-pt">${escapeHtml(p.to)}</label><input id="a-pt" data-k="a-pt" inputmode="numeric" value="${escapeHtml(draft.last)}"></div>
+      <button class="btn p" type="submit" ${ok ? "" : "disabled"}>${escapeHtml(p.apply)}</button>
+      <button class="btn" type="button" data-apool="reset" ${addr.poolDraft ? "" : "disabled"}>${escapeHtml(p.reset)}</button></form>
+    ${change?.same ? `<p class="hint">${escapeHtml(p.same)}</p>` : preview}</section>`;
+}
+
 /** The block of the user an address is in. */
 export function blockOf(own, n) {
   return (own.blocks ?? []).find((b) => n >= b.from && n <= b.to) ?? null;
@@ -465,5 +525,5 @@ export function renderAddresses(ctx) {
         ${addr.view === "map" ? mapView(model, c) : listView(model, c)}</section>
       <aside class="card sec adetail" aria-live="polite">${detail(model, c)}</aside>
     </div>
-    ${blocksCard(model, c)}${zonesCard(model, t, ctx.language)}`;
+    ${blocksCard(model, c)}${zonesCard(model, t, ctx.language)}${ctx.canWrite && model.dhcp ? poolCard(model, c) : ""}`;
 }

@@ -863,3 +863,31 @@ test("the address page draws the map, escapes names and says what it is still re
   assert.doesNotMatch(list, /<tr class="arow" data-aip="10"/);
   assert.match(addresses.renderAddresses({ t, language: "de", now: NOW, addr: { ...addr, network: null }, clients: [], nodes: [], backIcon: "" }), /meldet ihr Netz nicht/);
 });
+
+test("a new DHCP range says which devices it touches and what is wrong with it", () => {
+  const m = addresses.addressModel(lan);
+  assert.equal(addresses.poolChange(m, "", ""), null);
+  assert.equal(addresses.poolChange(m, "200", "100").error, "range");
+  assert.equal(addresses.poolChange(m, "abc", "100").error, "range");
+  assert.equal(addresses.poolChange(m, "0", "100").error, "range");
+  assert.equal(addresses.poolChange(m, "1", "100").error, "gateway");
+  assert.equal(addresses.poolChange(m, "100", "200").same, true);
+  const change = addresses.poolChange(m, "130", "180");
+  assert.equal(change.size, 51);
+  assert.deepEqual(change.outside.map((d) => d.name), ["Phone"]);
+  assert.deepEqual(change.fixedInside.map((d) => d.name), ["Wallbox"]);
+  assert.equal(change.tooSmall, false);
+  const tiny = addresses.addressModel({ ...lan, clients: [...lan.clients, { id: "d7", mac: "M7", ip: "192.168.79.130", name: "A", online: true }, { id: "d8", mac: "M8", ip: "192.168.79.131", name: "B", online: true }], fixed: { ...lan.fixed, M7: { fixed: false }, M8: { fixed: false } } });
+  assert.equal(addresses.poolChange(tiny, "130", "130").tooSmall, true);
+});
+
+test("the pool card is only offered to someone who may write, and warns before it is applied", () => {
+  const addr = { status: "ready", network: lan.network, own: lan.own, fixed: lan.fixed, filter: "all", query: "", view: "map", sel: null, blockMessage: "", progress: null, poolDraft: { first: "130", last: "180" } };
+  const ctx = { t, language: "de", now: NOW, addr, clients: lan.clients, nodes: lan.nodes, backIcon: "" };
+  assert.doesNotMatch(addresses.renderAddresses(ctx), /a-poolform/);
+  const html = addresses.renderAddresses({ ...ctx, canWrite: true });
+  assert.match(html, /a-poolform/);
+  assert.match(html, /1 dynamische Geräte<\/b> haben eine Adresse außerhalb des neuen Bereichs \(Phone\)/);
+  assert.match(html, /Neuer Bereich \.130 – \.180: 51 Adressen/);
+  assert.match(addresses.renderAddresses({ ...ctx, canWrite: true, addr: { ...addr, poolDraft: { first: "9", last: "5" } } }), /die erste nicht größer als die zweite/);
+});

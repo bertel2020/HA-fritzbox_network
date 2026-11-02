@@ -38,7 +38,7 @@ from .const import (
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .filters import FILTER_OPTIONS, select_hosts
-from .models import MeshNode, MeshTopology, is_private_mac, mac_id
+from .models import MeshNode, MeshTopology, check_address_range, is_private_mac, mac_id
 from .repairs import async_update_stale_issue, last_online
 
 COMMAND = f"{DOMAIN}/subscribe_topology"
@@ -53,11 +53,13 @@ IP_COMMAND = f"{DOMAIN}/device/ip"
 ADDRESS_OVERVIEW_COMMAND = f"{DOMAIN}/address/overview"
 ADDRESS_FIXED_COMMAND = f"{DOMAIN}/address/fixed"
 ADDRESS_SAVE_COMMAND = f"{DOMAIN}/address/save"
+ADDRESS_POOL_COMMAND = f"{DOMAIN}/address/pool"
 HISTORY_COMMAND = f"{DOMAIN}/history/summary"
 HISTORY_DEVICE_COMMAND = f"{DOMAIN}/history/device"
 FILTER_PREVIEW_COMMAND = f"{DOMAIN}/filter/preview"
 FILTER_APPLY_COMMAND = f"{DOMAIN}/filter/apply"
 ERR_CHANGED = "changed"
+ERR_INVALID_RANGE = "invalid_range"
 
 FILTER_OPTIONS_SCHEMA = vol.Schema(
     {
@@ -584,6 +586,47 @@ def ws_address_save(
 
 
 @websocket_api.websocket_command(
+    {
+        vol.Required("type"): ADDRESS_POOL_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("first"): _ipv4,
+        vol.Required("last"): _ipv4,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_address_pool(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Change the range the DHCP server of the box hands out, if it fits the network."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    coordinator = found[1]
+    if not coordinator.can_write:
+        connection.send_error(
+            msg["id"], websocket_api.ERR_UNAUTHORIZED, "No right to change settings"
+        )
+        return
+    network = await hass.async_add_executor_job(coordinator.client.get_network)
+    if network is None:
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "The box tells no network")
+        return
+    if problem := check_address_range(network, msg["first"], msg["last"]):
+        connection.send_error(msg["id"], ERR_INVALID_RANGE, problem)
+        return
+    try:
+        await hass.async_add_executor_job(
+            coordinator.client.set_address_range, msg["first"], msg["last"]
+        )
+    except FritzConnectionException as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    connection.send_result(
+        msg["id"], {"network": await hass.async_add_executor_job(coordinator.client.get_network)}
+    )
+
+
+@websocket_api.websocket_command(
     {vol.Required("type"): HISTORY_COMMAND, vol.Required("entry_id"): str}
 )
 @callback
@@ -770,6 +813,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_address_overview)
     websocket_api.async_register_command(hass, ws_address_fixed)
     websocket_api.async_register_command(hass, ws_address_save)
+    websocket_api.async_register_command(hass, ws_address_pool)
     websocket_api.async_register_command(hass, ws_history_summary)
     websocket_api.async_register_command(hass, ws_history_device)
     websocket_api.async_register_command(hass, ws_reconnect)

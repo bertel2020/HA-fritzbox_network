@@ -114,6 +114,12 @@ class FakeClient:
     def get_network(self) -> dict | None:
         return self.network
 
+    def set_address_range(self, first: str, last: str) -> None:
+        self.calls.append(("pool", first, last))
+        if self.fail_actions:
+            raise FritzActionError("refused")
+        self.network = {**self.network, "pool_from": first, "pool_to": last}
+
     def get_ip_reservations(self, macs: list[str], max_age: float = 600) -> dict:
         return {mac: {"fixed": mac == BOX, "editable": True} for mac in macs}
 
