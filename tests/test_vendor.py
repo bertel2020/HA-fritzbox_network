@@ -66,3 +66,22 @@ async def test_the_new_device_event_carries_the_vendor(hass, fake_client, entry)
     await hass.async_block_till_done()
 
     assert [e.data["vendor"] for e in events] == ["Espressif Inc."]
+
+
+async def test_the_panel_shows_the_vendor_whatever_the_option_says(
+    hass, hass_ws_client, fake_client, entry
+):
+    fake_client.hosts = [*fake_client.hosts, _esp_host(fake_client)]
+    coordinator = await _setup(hass, entry)
+
+    assert coordinator.vendor(ESP) is None  # the option is off: no manufacturer in Home Assistant
+    assert coordinator.panel_vendor(ESP) == "Espressif Inc."
+
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id(
+        {"type": "fritzbox_network/subscribe_topology", "entry_id": entry.entry_id}
+    )
+    await client.receive_json()
+    event = await client.receive_json()
+    vendors = {c["mac"]: c["vendor"] for c in event["event"]["clients"]}
+    assert vendors[ESP] == "Espressif Inc."

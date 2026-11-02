@@ -26,7 +26,6 @@ from .addresses import AddressNotes
 from .api import FritzNetworkClient
 from .const import (
     CONF_HIDDEN_MACS,
-    CONF_SHOW_VENDOR,
     CONF_STALE_REPAIR,
     CONF_USE_TLS,
     DEFAULT_STALE_REPAIR,
@@ -110,8 +109,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
         configuration_url=f"http://{entry.data[CONF_HOST]}",
     )
 
-    if entry.options.get(CONF_SHOW_VENDOR):
-        await async_load_vendors()
+    # the list comes from disk and costs nothing; the panel shows vendors whatever the option says
+    await async_load_vendors()
 
     history = await DeviceHistory.async_load(hass, entry.entry_id)
     coordinator = FritzNetworkCoordinator(hass, entry, client, serial, can_write, box.id, history)

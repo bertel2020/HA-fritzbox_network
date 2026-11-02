@@ -226,7 +226,7 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
                 "ip": host.ip,
                 "online": coordinator.is_connected(host),
                 "guest": host.guest,
-                "vendor": coordinator.vendor(host.mac),
+                "vendor": coordinator.panel_vendor(host.mac),
                 "entity_id": registry.async_get_entity_id("device_tracker", DOMAIN, host.mac),
                 "ap_mac": link.ap_mac if link else None,
                 "link_type": link.link_type.lower() if link else None,
@@ -391,7 +391,7 @@ def ws_cleanup_list(
         stale.append(
             {
                 **_device(host),
-                "vendor": coordinator.vendor(host.mac),
+                "vendor": coordinator.panel_vendor(host.mac),
                 "last_online": last.isoformat(),
                 "days": max(0, (now - last).days),
             }

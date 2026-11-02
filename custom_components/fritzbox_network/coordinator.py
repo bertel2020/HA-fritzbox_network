@@ -413,6 +413,11 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             return None
         return vendor_of(mac)
 
+    @staticmethod
+    def panel_vendor(mac: str) -> str | None:
+        """The vendor of a MAC address for the panel, which shows it whatever the option says."""
+        return vendor_of(mac)
+
     def node_name(self, node: MeshNode) -> str:
         """The name of a mesh node: the one its host entry has, else the mesh name."""
         for host in self.all_hosts.values():

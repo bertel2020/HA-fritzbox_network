@@ -26,6 +26,8 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Geändert
 
+- Seitenpanel: Der Hersteller eines Geräts (aus der MAC-Adresse) wird immer angezeigt, auch wenn die Option „Hersteller eines Geräts anzeigen“ aus ist. Die Option steuert nur noch den Hersteller des Geräts in Home Assistant und im Ereignis für neue Geräte. Bei einer privaten MAC-Adresse steht „keiner (private MAC-Adresse)“ statt „unbekannt“.
+
 - Seitenpanel: **Aufräumen** und **Filter** sind neu aufgebaut. Der Tab „Filter“ heißt **Einbinden**, weil er festlegt, für welche Geräte Home Assistant Geräte und Entitäten anlegt, und nicht, was das Panel zeigt. Einbinden: die drei Modi als erklärte Karten, die zwei Zusatzregeln, die Geräteliste mit Zähler sowie „Angezeigte wählen“ und „Keine wählen“, und unten eine feste Leiste mit „bleiben / kommen dazu / werden entfernt“ und dem Knopf **Änderungen anwenden**. Aufräumen: die am längsten offline zuerst mit Dauer, Suche, „Alle wählen“ und „Keine wählen“ und einer festen Aktionsleiste. „Ausblenden“ heißt jetzt **Entfernen** (es entfernt die Geräte samt Entitäten aus Home Assistant), die entfernten Geräte stehen in einem aufklappbaren Bereich und lassen sich **wieder einbinden**.
 
 - Seitenpanel: Die Seiten stehen als unterstrichene Tabs links unter dem Titel. Die Linien im Verbindungsweg liegen auf einer Höhe, die Beschriftung hängt darunter. „Aufräumen“ nimmt feste Stufen (3, 7, 14, 30, 90 Tage, 1 Jahr) als Knöpfe statt des Schiebers. Die Gruppe „Ohne Access Point“ heißt „Nicht zugeordnet“.
