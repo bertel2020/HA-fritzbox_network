@@ -1,8 +1,8 @@
 """Read-only probe: can a FRITZ!Box give a device a fixed IP address, and where does it say so?
 
-Credentials come from the environment, never from arguments:
-    FRITZ_HOST (default 192.168.178.1), FRITZ_USER, FRITZ_PASSWORD, FRITZ_TLS=1 for https
-    FRITZ_DEVICE_MAC (optional): the device to read the edit form of, else the first one listed
+Host, user and password are asked for when the script starts (the password is not shown), never
+taken from arguments. The environment can fill them in: FRITZ_HOST, FRITZ_USER, FRITZ_PASSWORD,
+FRITZ_TLS=1 for https, FRITZ_DEVICE_MAC (the device to read the edit form of, else the first one).
 
 Does three things, none of them writes:
   1. lists the actions of the TR-064 services that could hold a fixed IP (names and arguments),
@@ -13,6 +13,7 @@ Writes spike_out/fixedip.txt; addresses and MACs are masked there. Nothing is ch
 
 from __future__ import annotations
 
+import getpass
 import hashlib
 import json
 import os
@@ -151,10 +152,20 @@ def webform(web: Web, wanted_mac: str | None) -> None:
             log(f"       {path}")
 
 
+def ask(name: str, prompt: str, default: str = "", secret: bool = False) -> str:
+    """The value from the environment, else asked for on the terminal."""
+    if value := os.environ.get(name):
+        return value
+    if secret:
+        return getpass.getpass(f"{prompt}: ")
+    return input(f"{prompt}{f' [{default}]' if default else ''}: ").strip() or default
+
+
 def main() -> None:
-    host = os.environ.get("FRITZ_HOST", "192.168.178.1")
+    host = ask("FRITZ_HOST", "Address of the box", "192.168.178.1")
     tls = os.environ.get("FRITZ_TLS") == "1"
-    user, password = os.environ.get("FRITZ_USER", ""), os.environ.get("FRITZ_PASSWORD", "")
+    user = ask("FRITZ_USER", "User")
+    password = ask("FRITZ_PASSWORD", "Password", secret=True)
     tr064(FritzConnection(address=host, user=user or None, password=password or None, use_tls=tls))
     web = Web(host, tls)
     if not web.login(user, password):
