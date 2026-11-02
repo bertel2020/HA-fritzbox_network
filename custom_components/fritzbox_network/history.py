@@ -14,6 +14,8 @@ from .const import (
     HISTORY_FINE_SECONDS,
     HISTORY_OFFLINE_SECONDS,
     HISTORY_SAVE_DELAY,
+    INTERNET_ADDRESSES_KEPT,
+    INTERNET_EVENTS_KEPT,
     TRAFFIC_DAYS,
 )
 
@@ -51,11 +53,16 @@ class DeviceHistory:
         store: Store,
         data: dict[str, dict[str, list[Point]]],
         traffic: dict[str, dict[str, Any]] | None = None,
+        connection: dict[str, Any] | None = None,
     ) -> None:
         self._store = store
         self._data = data
         # per device: the last counters and the bytes per day, [received, sent]
         self._traffic = traffic if traffic is not None else {}
+        # the internet connection: the events, and per kind of address when it was in use
+        self._connection = connection if connection is not None else {}
+        self._connection.setdefault("events", [])
+        self._connection.setdefault("addresses", {})
 
     @classmethod
     async def async_load(cls, hass: HomeAssistant, entry_id: str) -> DeviceHistory:
@@ -63,11 +70,48 @@ class DeviceHistory:
         stored = await store.async_load()
         data = stored.get("devices") if isinstance(stored, dict) else None
         traffic = stored.get("traffic") if isinstance(stored, dict) else None
+        connection = stored.get("connection") if isinstance(stored, dict) else None
         return cls(
             store,
             data if isinstance(data, dict) else {},
             traffic if isinstance(traffic, dict) else {},
+            connection if isinstance(connection, dict) else {},
         )
+
+    def record_connection_event(self, time: str, kind: str, detail: str | None) -> None:
+        """Keep an event of the internet connection, the newest last."""
+        events = self._connection["events"]
+        events.append({"time": time, "kind": kind, "detail": detail})
+        del events[:-INTERNET_EVENTS_KEPT]
+        self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
+
+    def connection_events(self) -> list[dict[str, Any]]:
+        """The kept events of the connection, the newest first."""
+        return list(reversed(self._connection["events"]))
+
+    def note_address(self, now: str, kind: str, value: str | None) -> None:
+        """Note the address of a kind in use: a new value closes the one before.
+
+        A box that has no address of the kind (None) closes the one before as well.
+        """
+        periods = self._connection["addresses"].setdefault(kind, [])
+        last = periods[-1] if periods else None
+        if last and last["until"] is None:
+            if last["value"] == value:
+                return
+            last["until"] = now
+        elif last is None and value is None:
+            return
+        if value is not None:
+            periods.append({"value": value, "since": now, "until": None})
+            del periods[:-INTERNET_ADDRESSES_KEPT]
+        self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
+
+    def addresses(self) -> dict[str, list[dict[str, Any]]]:
+        """Per kind the addresses that were in use, the newest first."""
+        return {
+            kind: list(reversed(periods)) for kind, periods in self._connection["addresses"].items()
+        }
 
     def record_traffic(self, day: str, mac: str, received: int, sent: int) -> None:
         """Add what a device moved since the last counters to its day; a fallen one starts anew."""
@@ -122,7 +166,7 @@ class DeviceHistory:
         self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
 
     def _snapshot(self) -> dict[str, Any]:
-        return {"devices": self._data, "traffic": self._traffic}
+        return {"devices": self._data, "traffic": self._traffic, "connection": self._connection}
 
     async def async_flush(self) -> None:
         await self._store.async_save(self._snapshot())

@@ -120,3 +120,33 @@ def test_the_traffic_of_all_devices_is_served_per_mac():
     history.record_traffic("2026-11-01", MAC, 150, 20)
     history.record_traffic("2026-11-01", "aa:bb:cc:dd:ee:02", 5, 5)
     assert history.traffic_all() == {MAC: {"2026-11-01": [50, 10]}}
+
+
+def test_an_address_that_changes_closes_the_one_before():
+    history = _history()
+    history.note_address("2026-01-01T10:00:00+00:00", "ipv4", "203.0.113.7")
+    history.note_address("2026-01-01T11:00:00+00:00", "ipv4", "203.0.113.7")
+    assert len(history.addresses()["ipv4"]) == 1
+    history.note_address("2026-01-02T10:00:00+00:00", "ipv4", "203.0.113.99")
+    newest, oldest = history.addresses()["ipv4"]
+    assert (newest["value"], newest["until"]) == ("203.0.113.99", None)
+    assert (oldest["value"], oldest["until"]) == ("203.0.113.7", "2026-01-02T10:00:00+00:00")
+
+
+def test_a_box_without_an_address_closes_the_one_before_and_starts_none():
+    history = _history()
+    history.note_address("2026-01-01T10:00:00+00:00", "ipv6", "2001:db8::1")
+    history.note_address("2026-01-01T12:00:00+00:00", "ipv6", None)
+    history.note_address("2026-01-01T13:00:00+00:00", "ipv6", None)
+    assert [(a["value"], a["until"]) for a in history.addresses()["ipv6"]] == [
+        ("2001:db8::1", "2026-01-01T12:00:00+00:00")
+    ]
+
+
+def test_the_connection_events_are_kept_newest_first_and_limited():
+    history = _history()
+    for n in range(250):
+        history.record_connection_event(f"t{n}", "reconnected", None)
+    events = history.connection_events()
+    assert len(events) == 200
+    assert events[0]["time"] == "t249"

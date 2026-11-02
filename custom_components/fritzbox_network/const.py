@@ -58,6 +58,9 @@ HISTORY_DAYS = 7
 TRAFFIC_DAYS = 35
 HISTORY_SAVE_DELAY = 300
 INTERNET_EVENTS = 20
+# what the history keeps of the connection: events, and the addresses per kind
+INTERNET_EVENTS_KEPT = 200
+INTERNET_ADDRESSES_KEPT = 20
 # What counts as a problem worth a repair: a noise margin below this many dB for this many seconds,
 # or this many new connections within a day.
 INTERNET_NOISE_WARN_DB = 10

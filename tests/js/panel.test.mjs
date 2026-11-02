@@ -510,6 +510,12 @@ const internet = {
   throughput: { down: 38200, up: 4100 },
   samples: [[1000, 10, 5], [1030, 20000, 100]],
   events: [{ time: "2026-11-01T01:00:00Z", kind: "ip_changed", detail: "203.0.113.9" }],
+  addresses: {
+    ipv4: [
+      { value: "203.0.113.9", since: "2026-11-01T01:00:00Z", until: null },
+      { value: "203.0.113.7", since: "2026-10-01T01:00:00Z", until: "2026-11-01T01:00:00Z" },
+    ],
+  },
 };
 
 test("the internet page shows the connection, the load, the line and the events", () => {
@@ -527,17 +533,24 @@ test("the internet page shows the connection, the load, the line and the events"
   assert.match(html, /External IPv4 changed to 203\.0\.113\.9/);
   assert.match(html, /aria-valuenow="68"/);
   assert.match(html, /<svg class="spark"/);
+  // every DNS server is listed, and the addresses that were in use before
+  assert.match(html, /<code>198\.51\.100\.2<\/code>/);
+  assert.match(html, /<code>2001:db8::53<\/code>/);
+  assert.match(html, /Earlier addresses/);
+  assert.match(html, /<code>203\.0\.113\.7<\/code>/);
+  assert.match(html, /in use/);
 });
 
 test("without a line, a rate or a history the page still draws and says what is missing", () => {
   const t = texts.panelTexts("de");
-  const bare = { ...internet, dsl: null, throughput: null, samples: [], events: [], connected: false };
+  const bare = { ...internet, dsl: null, throughput: null, samples: [], events: [], addresses: {}, connected: false };
   const html = internetPage.renderInternet(bare, { t, language: "de", now: Date.now() });
   assert.doesNotMatch(html, /Leitungsqualität/);
   assert.match(html, /Getrennt/);
   assert.match(html, /nach der nächsten/);
   assert.match(html, /Der Verlauf erscheint/);
-  assert.match(html, /Seit dem Start von Home Assistant nichts/);
+  assert.match(html, /Noch nichts vermerkt/);
+  assert.match(html, /Noch keine frühere Adresse/);
   assert.match(internetPage.renderInternet(null, { t, language: "de", now: 0 }), /meldet ihre Internetverbindung nicht/);
 });
 

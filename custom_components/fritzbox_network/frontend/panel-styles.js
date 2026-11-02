@@ -454,6 +454,11 @@ export const PANEL_CSS = `
   .legend2 i { display: inline-block; width: 10px; height: 3px; border-radius: 2px; margin-right: 4px; vertical-align: middle; background: var(--accent); }
   .legend2 i.upl { background: var(--up); }
   .legend2 .grow { margin-left: auto; }
+  .addrs { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  .addrs li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .addrs li:first-child { border-top: 0; }
+  .addrs code { overflow-wrap: anywhere; }
+  .addrs small { color: var(--muted); text-align: right; flex: none; }
   .events { list-style: none; margin: 0; padding: 0; font-size: 13px; }
   .events li { display: flex; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); }
   .events li:first-child { border-top: 0; }

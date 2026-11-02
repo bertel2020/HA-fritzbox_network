@@ -135,7 +135,9 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         # since when the noise margin of the DSL line has been below the limit
         self.internet_low_margin_since: datetime | None = None
         self.internet_samples: deque[tuple[float, float, float]] = deque(maxlen=INTERNET_HISTORY)
-        self.internet_events: deque[dict[str, Any]] = deque(maxlen=INTERNET_EVENTS)
+        self.internet_events: deque[dict[str, Any]] = deque(
+            history.connection_events()[:INTERNET_EVENTS] if history else (), maxlen=INTERNET_EVENTS
+        )
         # How long the last and the slowest poll took, shown in the diagnostics.
         self.last_fetch_seconds: float | None = None
         self.slowest_fetch_seconds: float = 0.0
@@ -297,6 +299,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             and info.uptime < previous.uptime
         )
         self._note_internet_changes(previous, info, reconnected)
+        self._note_addresses(info)
         self._track_line_margin(info)
         self._measure_throughput(info, reconnected)
         return info
@@ -323,6 +326,15 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 {"old_ip": previous.external_ipv4, "new_ip": info.external_ipv4},
             )
 
+    def _note_addresses(self, info: InternetInfo) -> None:
+        """Keep which external addresses were in use and since when."""
+        if self.history is None:
+            return
+        now = dt_util.utcnow().isoformat()
+        self.history.note_address(now, "ipv4", info.external_ipv4)
+        self.history.note_address(now, "ipv6", info.external_ipv6)
+        self.history.note_address(now, "prefix", info.ipv6_prefix)
+
     def _track_line_margin(self, info: InternetInfo) -> None:
         margins = (
             [m for m in (info.dsl.noise_margin_down, info.dsl.noise_margin_up) if m is not None]
@@ -341,9 +353,10 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         detail: str | None = None,
         data: dict[str, Any] | None = None,
     ) -> None:
-        self.internet_events.appendleft(
-            {"time": dt_util.utcnow().isoformat(), "kind": kind, "detail": detail}
-        )
+        event = {"time": dt_util.utcnow().isoformat(), "kind": kind, "detail": detail}
+        self.internet_events.appendleft(event)
+        if self.history is not None:
+            self.history.record_connection_event(event["time"], kind, detail)
         self.hass.bus.async_fire(event_type, data or {})
 
     def _measure_throughput(self, info: InternetInfo, reconnected: bool) -> None:

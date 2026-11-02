@@ -170,6 +170,42 @@ function volumeCard(ctx) {
     <p class="hint">${escapeHtml(i.topHint)}</p></section>`;
 }
 
+/** The DNS servers of the box, the IPv4 ones first, then the IPv6 ones, as the box lists them. */
+function dnsList(servers, t) {
+  if (!servers?.length) return "";
+  const items = servers.map((server) => `<li><code>${escapeHtml(server)}</code></li>`).join("");
+  return `<div class="subhead">${escapeHtml(t.inet.dnsList)}</div><ul class="addrs">${items}</ul>`;
+}
+
+/** The addresses that were in use, per kind, the newest first; the one in use now is marked. */
+function addressHistory(addresses, language, t) {
+  const i = t.inet;
+  const day = (iso) => new Date(iso).toLocaleDateString(language, { day: "numeric", month: "short", year: "numeric" });
+  const groups = ["ipv4", "ipv6", "prefix"]
+    .filter((kind) => addresses?.[kind]?.length)
+    .map((kind) => {
+      const rows = addresses[kind]
+        .map(
+          (a) =>
+            `<li><code>${escapeHtml(a.value)}</code><small>${escapeHtml(a.until ? fill(i.addressRange, { from: day(a.since), to: day(a.until) }) : `${day(a.since)} · ${i.addressNow}`)}</small></li>`
+        )
+        .join("");
+      return `<div class="subhead">${escapeHtml(i.addressKinds[kind])}</div><ul class="addrs">${rows}</ul>`;
+    })
+    .join("");
+  // one address per kind is the one in use: only a second one is history
+  const earlier = Object.values(addresses ?? {}).some((list) => list.length > 1);
+  return `<div class="trendhead"><span class="label">${escapeHtml(i.addressHistory)}</span></div>
+    ${groups && earlier ? groups : `<p class="hint">${escapeHtml(i.addressNone)}</p>`}`;
+}
+
+function addressesCard(internet, language, t) {
+  return `<section class="card sec"><span class="label">${escapeHtml(t.inet.addressesTitle)}</span>
+    ${dnsList(internet.dns, t)}
+    ${addressHistory(internet.addresses, language, t)}
+    <p class="hint">${escapeHtml(t.inet.addressHint)}</p></section>`;
+}
+
 function events(internet, t, now) {
   const i = t.inet;
   const items = (internet.events ?? [])
@@ -312,6 +348,7 @@ export function renderInternet(internet, ctx) {
     ${volumeCard({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}
     </div>
     ${internet.dsl ? lineQuality(internet.dsl, language, t) : ""}
+    ${addressesCard(internet, language, t)}
     ${events(internet, t, now)}
     ${ports(portState, t)}
     ${actions(canWrite, t)}`;

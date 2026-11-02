@@ -170,6 +170,7 @@ def _internet(coordinator: FritzNetworkCoordinator) -> dict[str, Any] | None:
             [round(t), round(down, 1), round(up, 1)] for t, down, up in coordinator.internet_samples
         ],
         "events": list(coordinator.internet_events),
+        "addresses": coordinator.history.addresses() if coordinator.history else {},
     }
 
 
