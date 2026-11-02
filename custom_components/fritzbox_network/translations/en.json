@@ -268,7 +268,7 @@
         "step": {
           "init": {
             "title": "Hide devices offline for long",
-            "description": "Tick the devices to hide. They stay hidden until you show them again in the options. Offline for more than {days} days.",
+            "description": "{count} devices have been offline for more than {days} days. Tick the devices to hide. Hiding them removes their entities; they stay hidden until you show them again in the options.",
             "data": {
               "macs": "Devices to hide"
             }
@@ -277,8 +277,7 @@
         "abort": {
           "not_loaded": "The integration is not running."
         }
-      },
-      "description": "{count} devices have been offline for more than {days} days. Hiding them removes their entities; you can show them again in the options."
+      }
     },
     "internet_line": {
       "title": "The DSL line is weak",

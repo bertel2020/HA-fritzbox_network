@@ -9,6 +9,6 @@
   "iot_class": "local_polling",
   "issue_tracker": "https://github.com/bertel2020/HA-fritzbox_network/issues",
   "loggers": ["fritzconnection"],
-  "requirements": ["fritzconnection==1.15.1", "aiooui>=0.1.9"],
-  "version": "0.2.0"
+  "requirements": ["fritzconnection>=1.15.1", "aiooui>=0.1.9"],
+  "version": "1.0.0"
 }

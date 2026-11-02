@@ -268,7 +268,7 @@
         "step": {
           "init": {
             "title": "Lange offline Geräte ausblenden",
-            "description": "Hake die Geräte zum Ausblenden an. Sie bleiben ausgeblendet, bis du sie in den Optionen wieder einblendest. Länger als {days} Tage offline.",
+            "description": "{count} Geräte sind seit mehr als {days} Tagen offline. Hake die Geräte zum Ausblenden an. Das entfernt ihre Entitäten; sie bleiben ausgeblendet, bis du sie in den Optionen wieder einblendest.",
             "data": {
               "macs": "Geräte zum Ausblenden"
             }
@@ -277,8 +277,7 @@
         "abort": {
           "not_loaded": "Die Integration läuft nicht."
         }
-      },
-      "description": "{count} Geräte sind seit mehr als {days} Tagen offline. Ausblenden entfernt ihre Entitäten; in den Optionen kannst du sie wieder einblenden."
+      }
     },
     "internet_line": {
       "title": "Die DSL-Leitung ist schwach",

@@ -174,7 +174,8 @@ class StaleDevicesFlow(RepairsFlow):
             step_id="init",
             data_schema=schema,
             description_placeholders={
-                "days": str(entry.options.get(CONF_STALE_DAYS, DEFAULT_STALE_DAYS))
+                "count": str(len(stale)),
+                "days": str(entry.options.get(CONF_STALE_DAYS, DEFAULT_STALE_DAYS)),
             },
         )
 

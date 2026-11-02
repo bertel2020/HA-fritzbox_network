@@ -1,7 +1,5 @@
 set_name:
   target:
-    device:
-      integration: fritzbox_network
     entity:
       integration: fritzbox_network
   fields:
@@ -13,7 +11,5 @@ set_name:
 
 wake_on_lan:
   target:
-    device:
-      integration: fritzbox_network
     entity:
       integration: fritzbox_network
