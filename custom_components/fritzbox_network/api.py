@@ -16,6 +16,7 @@ import json
 import logging
 import re
 import threading
+import time
 from typing import Any
 import xml.etree.ElementTree as ET
 
@@ -38,6 +39,7 @@ from .models import (
     parse_hosts,
     parse_ip_form,
     parse_mesh,
+    parse_network,
     parse_rights,
 )
 
@@ -110,6 +112,8 @@ class FritzNetworkClient:
         # the session of the web interface, which the fixed addresses are read from
         self._web_sid: str | None = None
         self._web_uids: dict[str, str] = {}
+        # what the edit forms said, per MAC: (when, answer); the address page reads many
+        self._reservations: dict[str, tuple[float, dict[str, Any] | None]] = {}
 
     def connect(self) -> None:
         """Open the connection; raises fritzconnection exceptions on failure."""
@@ -207,6 +211,28 @@ class FritzNetworkClient:
                 if attempt:
                     raise
         return None  # pragma: no cover
+
+    def get_network(self) -> dict[str, Any] | None:
+        """Mask, gateway, DHCP range and reserved addresses of the home network, or None."""
+        with self._lock:
+            try:
+                result = self._connection.call_action("LANHostConfigManagement1", "GetInfo")
+            except (FritzActionError, FritzServiceError, FritzLookUpError):
+                return None
+        return parse_network(result)
+
+    def get_ip_reservations(self, macs: list[str], max_age: float = 600) -> dict[str, Any]:
+        """The fixed-address state of several devices; one read per device, kept for a while."""
+        now = time.monotonic()
+        result: dict[str, Any] = {}
+        for mac in macs:
+            cached = self._reservations.get(mac)
+            if cached and now - cached[0] < max_age:
+                result[mac] = cached[1]
+                continue
+            result[mac] = self.get_ip_reservation(mac)
+            self._reservations[mac] = (now, result[mac])
+        return result
 
     def get_ip_reservation(self, mac: str) -> dict[str, Any] | None:
         """Whether the box gives a device always the same IP address: {"fixed", "editable"}.

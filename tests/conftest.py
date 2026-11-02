@@ -84,6 +84,14 @@ class FakeClient:
         self.guest_wifi: bool | None = False
         self.ports: list[dict] = []
         self.firmware: dict = {"NewUpgradeAvailable": False}
+        self.network: dict | None = {
+            "mask": "255.255.255.0",
+            "gateway": "192.168.178.1",
+            "dhcp": True,
+            "pool_from": "192.168.178.20",
+            "pool_to": "192.168.178.200",
+            "reserved": [],
+        }
         self.internet_fast: dict = {key: dict(value) for key, value in INTERNET_FAST.items()}
         self.internet_slow: dict = {key: dict(value) for key, value in INTERNET_SLOW.items()}
 
@@ -102,6 +110,12 @@ class FakeClient:
     def get_internet(self, details: bool):
         self.internet_reads.append(details)
         return self.internet_fast, self.internet_slow if details else {}
+
+    def get_network(self) -> dict | None:
+        return self.network
+
+    def get_ip_reservations(self, macs: list[str], max_age: float = 600) -> dict:
+        return {mac: {"fixed": mac == BOX, "editable": True} for mac in macs}
 
     def get_port_mappings(self) -> list[dict]:
         return [dict(p) for p in self.ports]

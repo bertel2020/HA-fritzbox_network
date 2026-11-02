@@ -23,6 +23,7 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
+from .addresses import AddressNotes
 from .api import FritzNetworkClient
 from .const import (
     BACKOFF_AFTER_FAILURES,
@@ -105,6 +106,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.can_write = can_write
         self.box_device_id = box_device_id
         self.history = history
+        # what the user noted about the address space; set up with the entry
+        self.addresses: AddressNotes | None = None
         # Unfiltered host list: the options flow offers it for selection.
         self.all_hosts: dict[str, Host] = {}
         # None until the first poll: what the box lists then is not new.

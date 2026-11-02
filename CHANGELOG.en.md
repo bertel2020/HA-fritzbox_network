@@ -6,6 +6,10 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Side panel: new page **Address space** (button in the header of the main page, address `#/addresses`). It shows the /24 around the box as a map of 256 tiles (dynamic, fixed, offline, free, reserved, planned) or as a list, with filters and search, tiles for network, gateway, DHCP range, usage, fixed and free addresses, the split into fixed zones and DHCP range, and things that stand out (duplicate addresses, a fixed address inside the DHCP range, a reservation without a device, offline devices with a fixed address, an almost full pool, DHCP off). A click on an address shows device, type, area and connection.
+- Own entries in the address space: a note per address, a display name per device, "planned" for free addresses, own blocks with name and colour (with usage) and hints that can be hidden. They are kept in the `.storage` of Home Assistant and change nothing in the box. New websocket commands `address/overview`, `address/fixed` and `address/save`, all for administrators only.
+- Whether an address is fixed is read from the web interface of the box, a few devices per request and cached for ten minutes. Where the box does not say, the addresses show as dynamic, with a hint.
+
 - Side panel, device page: **data volume** per device (today, 7 and 30 days, download and upload). The integration reads the per-device internet counters from the mesh topology of the box, adds up the difference per day (a counter that was reset starts anew) and keeps 35 days in `.storage`. The history starts with the first poll after the update. `history/device` and `history/summary` also return `traffic`.
 - Side panel: the table has the sortable column **Volume (7 d)**, the internet page the ranking **Data volume per device** (today, 7 or 30 days, the ten largest devices with bars and the sum of all devices).
 - Side panel: the charts show time and value on hover (or tap). The LAN icon is a network now instead of a plug. An **Internet** button in the header of the main page opens the internet page.

@@ -332,6 +332,7 @@ export function routeFromHash(hash) {
   const device = deviceFromHash(hash);
   if (device) return { tab: "net", device };
   if (hash === "#/internet") return { tab: "internet", device: null };
+  if (hash === "#/addresses") return { tab: "addresses", device: null };
   if (hash === "#/cleanup") return { tab: "cleanup", device: null };
   if (hash === "#/filter") return { tab: "filter", device: null };
   return { tab: "net", device: null };

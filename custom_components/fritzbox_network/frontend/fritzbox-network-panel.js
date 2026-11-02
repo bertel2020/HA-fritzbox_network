@@ -27,6 +27,7 @@ import {
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { nodeLabel as internetLabel, renderInternet } from "./panel-internet.js";
+import { BLOCK_COLORS, checkBlock, emptyOwn, renderAddresses } from "./panel-addresses.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice, entityState } from "./panel-device.js";
@@ -106,9 +107,12 @@ function scrollerOf(el) {
 /** The pages of the panel as tabs; the clean-up tab says how many devices have been gone for long. */
 function renderNav(state, t, stale) {
   const tab = (id, badge) =>
-    `<button role="tab" data-tab="${id}" aria-selected="${state.tab === id || (id === "net" && state.tab === "internet")}">${escapeHtml(t.tabs[id])}${badge ? `<em>${badge}</em>` : ""}</button>`;
+    `<button role="tab" data-tab="${id}" aria-selected="${state.tab === id || (id === "net" && SUB_TABS.includes(state.tab))}">${escapeHtml(t.tabs[id])}${badge ? `<em>${badge}</em>` : ""}</button>`;
   return `${tab("net")}${tab("cleanup", stale)}${tab("filter")}`;
 }
+
+// the pages that open from the network page and lead back to it
+const SUB_TABS = ["internet", "addresses"];
 
 class FritzboxNetworkPanel extends HTMLElement {
   constructor() {
@@ -132,6 +136,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       pageSize: rememberedPageSize(),
       history: null,
       ip: null,
+      addr: { status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", progress: null },
       traffic: null,
       trafficRange: 7,
       trend: null,
@@ -160,23 +165,28 @@ class FritzboxNetworkPanel extends HTMLElement {
       const next = routeFromHash(globalThis.location.hash);
       const entered = next.tab !== state.tab;
       const was = state.sel;
-      const fromInternet = state.tab === "internet";
+      const fromSub = SUB_TABS.includes(state.tab) ? state.tab : null;
       state.tab = next.tab;
       state.sel = next.device;
       state.menu = false;
-      if (!next.device && next.tab !== "internet") this._openedHere = false;
+      if (!next.device && !SUB_TABS.includes(next.tab)) this._openedHere = false;
       if (entered) this._enterTab();
       this._update();
       if (state.sel && state.sel !== was) this._showDevicePage();
       else if (!state.sel && was) this._backToList(was);
-      else if (next.tab === "internet" && entered) this._showDevicePage();
-      else if (fromInternet && next.tab === "net") this._backFromInternet();
+      else if (SUB_TABS.includes(next.tab) && entered) this._showDevicePage();
+      else if (fromSub && next.tab === "net") this._backFromInternet(fromSub);
     };
     this._resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => this._drawLinks());
     this.shadowRoot.addEventListener("click", (event) => this._onClick(event));
     this.shadowRoot.addEventListener("input", (event) => this._onInput(event));
     this.shadowRoot.addEventListener("change", (event) => this._onChange(event));
     this.shadowRoot.addEventListener("keydown", (event) => this._onKey(event));
+    this.shadowRoot.addEventListener("submit", (event) => {
+      if (event.target.id !== "a-blockform") return;
+      event.preventDefault();
+      this._onAddressForm(event.target);
+    });
     this.shadowRoot.addEventListener("pointermove", (event) => this._onPlot(event));
     this.shadowRoot.addEventListener("pointerleave", () => this._hidePlots());
     this.shadowRoot.addEventListener("pointerout", (event) => {
@@ -260,6 +270,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           this._update();
           this._maybeLoadHistory();
           if (this._state.tab === "cleanup") this._loadCleanup();
+          if (this._state.tab === "addresses" && this._state.addr.status === "ready") this._loadFixed();
         },
         { type: `${DOMAIN}/subscribe_topology`, entry_id: this._entryId }
       );
@@ -292,6 +303,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (this._state.tab === "cleanup") this._loadCleanup();
     else if (this._state.tab === "filter") this._loadFilter();
     else if (this._state.tab === "internet") this._loadPorts();
+    else if (this._state.tab === "addresses") this._loadAddresses();
   }
 
   _ws(type, extra = {}) {
@@ -506,6 +518,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           </div>
           <div id="device-view" hidden></div>
           <div id="internet-view" hidden></div>
+          <div id="addresses-view" hidden></div>
           <div class="col" id="cleanup-view" hidden>
             <div class="phead"><h1>${t.cleanup.title}</h1><p class="lead">${t.cleanup.lead}</p></div>
             <section class="card pad">
@@ -588,6 +601,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     netView.hidden = !ready || tab !== "net" || onDevice;
     root.querySelector("#device-view").hidden = !ready || !onDevice;
     root.querySelector("#internet-view").hidden = !ready || tab !== "internet";
+    root.querySelector("#addresses-view").hidden = !ready || tab !== "addresses";
     root.querySelector("#cleanup-view").hidden = !ready || tab !== "cleanup";
     root.querySelector("#filter-view").hidden = !ready || tab !== "filter";
     root.querySelector("#live-chip").hidden = !ready;
@@ -595,18 +609,22 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._set("nav", ready ? renderNav(state, t, stale) : "");
     // the map has the internet node of its own; the list gets a button to the page in the header
     const internet = ready && tab === "net" && !onDevice && state.view !== "map" ? state.data.internet : null;
-    this._set(
-      "inet-link",
+    const links = [
       internet
         ? `<button class="chip inet-link" data-act="internet" data-k="internet" aria-label="${escapeHtml(internetLabel(internet, t, this._hass?.language))}" title="${escapeHtml(t.inet.open)}">${ic("globe")}${escapeHtml(t.internetNode)}<i class="dot ${internet.connected === false ? "" : "on"}" aria-hidden="true"></i></button>`
-        : ""
-    );
+        : "",
+      ready && tab === "net" && !onDevice
+        ? `<button class="chip inet-link" data-act="addresses" data-k="addresses" title="${escapeHtml(t.addr.lead)}">${ic("lan")}${escapeHtml(t.addr.open)}</button>`
+        : "",
+    ];
+    this._set("inet-link", links.join(""));
     if (!ready) return;
     const now = Date.now();
     const master = (state.data.nodes ?? []).find((n) => n.role === "master");
     root.querySelector("#sub").textContent = master ? [master.name, master.model].filter(Boolean).join(" · ") : "";
     this._tick();
     if (tab === "internet") return this._renderInternet();
+    if (tab === "addresses") return this._renderAddresses();
     if (tab === "cleanup") return this._renderCleanup();
     if (tab === "filter") return this._renderFilter();
     if (onDevice) return this._renderDetail();
@@ -688,6 +706,151 @@ class FritzboxNetworkPanel extends HTMLElement {
         clients: this._state.data?.clients ?? [],
       })
     );
+  }
+
+  _renderAddresses() {
+    const root = this.shadowRoot;
+    const active = root.activeElement;
+    // typing a note or a name: the page is drawn again when the field is left, not under the fingers
+    if (active && root.querySelector("#addresses-view")?.contains(active) && active.matches("textarea, [data-aown], #a-bn, #a-bf, #a-bt")) return;
+    this._set(
+      "addresses-view",
+      renderAddresses({
+        t: this._t,
+        language: this._hass?.language,
+        now: Date.now(),
+        addr: this._state.addr,
+        clients: this._state.data?.clients ?? [],
+        nodes: this._state.data?.nodes ?? [],
+        backIcon: ic("back"),
+      })
+    );
+  }
+
+  /** The network of the box and the notes of the user are read when the page opens; the fixed addresses follow. */
+  async _loadAddresses() {
+    const addr = this._state.addr;
+    if (addr.network === null) addr.status = "loading";
+    // what the box said about the fixed addresses is read again after a while, not at every visit
+    if (Date.now() - (addr.fixedAt ?? 0) > 600000) {
+      addr.fixed = {};
+      addr.fixedAt = Date.now();
+    }
+    this._update();
+    try {
+      const result = await this._ws("address/overview");
+      addr.network = result.network;
+      addr.own = { ...emptyOwn(), ...(result.own ?? {}) };
+      addr.status = "ready";
+    } catch {
+      addr.status = "failed";
+    }
+    this._update();
+    if (addr.status === "ready") this._loadFixed();
+  }
+
+  /** Which addresses are fixed: the box says it per device, so a few at a time while the page is open. */
+  async _loadFixed() {
+    const addr = this._state.addr;
+    if (this._fixedBusy) return;
+    this._fixedBusy = true;
+    try {
+      while (this._state.tab === "addresses") {
+        const todo = (this._state.data?.clients ?? []).filter((c) => c.ip && !(c.mac in addr.fixed)).map((c) => c.mac);
+        const total = Object.keys(addr.fixed).length + todo.length;
+        if (!todo.length) break;
+        addr.progress = { done: Object.keys(addr.fixed).length, total };
+        this._update();
+        const { reservations } = await this._ws("address/fixed", { macs: todo.slice(0, 8) });
+        for (const mac of todo.slice(0, 8)) addr.fixed[mac] = reservations[mac] ?? null;
+      }
+    } catch {
+      // without the answers the devices show as dynamic and the hint says so
+    } finally {
+      addr.progress = null;
+      this._fixedBusy = false;
+      this._update();
+    }
+  }
+
+  async _saveOwn() {
+    const addr = this._state.addr;
+    try {
+      await this._ws("address/save", { own: addr.own });
+    } catch (err) {
+      showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
+    }
+  }
+
+  /** The clicks of the address page; false where the click is none of its own. */
+  _onAddressClick(ds) {
+    const addr = this._state.addr;
+    const own = addr.own ?? emptyOwn();
+    if (ds.aip !== undefined) {
+      const n = Number(ds.aip);
+      if (addr.sel === n) return true;
+      addr.sel = n;
+    } else if (ds.afilter) addr.filter = ds.afilter;
+    else if (ds.aview) addr.view = ds.aview;
+    else if (ds.ahint) {
+      if (ds.an === undefined) return true;
+      addr.sel = Number(ds.an);
+    } else if (ds.amute) {
+      if (!own.muted.includes(ds.amute)) own.muted.push(ds.amute);
+      this._saveOwn();
+    } else if (ds.aunmute !== undefined) {
+      own.muted = [];
+      this._saveOwn();
+    } else if (ds.adel) {
+      own.blocks = own.blocks.filter((b) => String(b.id) !== ds.adel);
+      this._saveOwn();
+    } else if (ds.amark) {
+      const ip = `${this._addressBase()}${ds.amark}`;
+      own.marks = own.marks.includes(ip) ? own.marks.filter((m) => m !== ip) : [...own.marks, ip];
+      this._saveOwn();
+    } else return false;
+    addr.own = own;
+    this._update();
+    return true;
+  }
+
+  /** "192.168.79." of the network the page shows. */
+  _addressBase() {
+    const m = /^(\d+\.\d+\.\d+)\./.exec(this._state.addr.network?.gateway ?? "");
+    return m ? `${m[1]}.` : "";
+  }
+
+  _onAddressOwn(el) {
+    const addr = this._state.addr;
+    const own = addr.own ?? emptyOwn();
+    const value = el.value.trim();
+    const [store, key] = el.dataset.aown === "note" ? [own.notes, el.dataset.ip] : [own.names, el.dataset.mac];
+    if (value) store[key] = value;
+    else delete store[key];
+    addr.own = own;
+    this._saveOwn();
+    // the field is still focused while the change event runs: draw the page when the focus has left
+    setTimeout(() => this._update(), 0);
+  }
+
+  _onAddressForm(form) {
+    const addr = this._state.addr;
+    const own = addr.own ?? emptyOwn();
+    const data = new FormData(form);
+    const block = { name: String(data.get("name") ?? "").trim(), from: Number(data.get("from")), to: Number(data.get("to")) };
+    const problem = checkBlock(own, block);
+    if (problem) {
+      addr.blockMessage = fill(this._t.addr.blocks[problem.key], problem.values ?? {});
+    } else {
+      const color = BLOCK_COLORS.includes(data.get("color")) ? data.get("color") : BLOCK_COLORS[0];
+      own.blocks.push({ id: Date.now(), ...block, color });
+      addr.own = own;
+      addr.blockMessage = "";
+      this._saveOwn();
+    }
+    // the form is drawn anew, empty after a block and with the message after a mistake
+    form.reset();
+    this._renderAddresses();
   }
 
   _renderCleanup() {
@@ -808,10 +971,10 @@ class FritzboxNetworkPanel extends HTMLElement {
   }
 
   /** Back from the internet page: the map or list where it was, the focus on the node that opened it. */
-  _backFromInternet() {
+  _backFromInternet(from = "internet") {
     const scroller = scrollerOf(this);
     if (scroller) scroller.scrollTop = this._listScroll;
-    this.shadowRoot.querySelector('[data-act="internet"]')?.focus({ preventScroll: true });
+    this.shadowRoot.querySelector(`[data-act="${from}"]`)?.focus({ preventScroll: true });
   }
 
   _openDevice(id) {
@@ -848,7 +1011,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         this._setMenu(false);
         return;
       }
-      if (((state.sel && state.tab === "net") || state.tab === "internet") && !/SELECT/.test(target.tagName)) {
+      if (((state.sel && state.tab === "net") || SUB_TABS.includes(state.tab)) && !/SELECT/.test(target.tagName)) {
         event.preventDefault();
         this._leaveDevice();
         return;
@@ -890,6 +1053,7 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _onChange(event) {
     const el = event.target;
+    if (el.dataset?.aown) return this._onAddressOwn(el);
     if (el.id === "sort") {
       this._state.sort = el.value;
       this._state.sortDesc = false;
@@ -916,6 +1080,12 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (el.id === "q") {
       this._state.query = el.value;
       this._update();
+    } else if (el.id === "a-q") {
+      this._state.addr.query = el.value;
+      this._renderAddresses();
+      const box = this.shadowRoot.querySelector("#a-q");
+      box?.focus({ preventScroll: true });
+      box?.setSelectionRange?.(el.value.length, el.value.length);
     } else if (el.id === "c-search") {
       this._state.cleanupQuery = el.value;
       this._renderCleanup();
@@ -927,7 +1097,7 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _onClick(event) {
     const t = this._t;
-    const target = event.target.closest("button, [data-filter], [data-ap], [data-dev], [data-act]");
+    const target = event.target.closest("button, [data-filter], [data-ap], [data-dev], [data-act], [data-aip]");
     if (!target || target.disabled) return;
     const ds = target.dataset;
     const state = this._state;
@@ -991,6 +1161,13 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._enable(ds.enable);
     } else if (ds.act === "show-map") {
       return this._showInMap();
+    } else if (state.tab === "addresses" && this._onAddressClick(ds, target)) {
+      return;
+    } else if (ds.act === "addresses") {
+      this._listScroll = scrollerOf(this)?.scrollTop ?? 0;
+      this._openedHere = true;
+      globalThis.location.hash = "#/addresses";
+      return;
     } else if (ds.act === "internet") {
       this._listScroll = scrollerOf(this)?.scrollTop ?? 0;
       this._openedHere = true;

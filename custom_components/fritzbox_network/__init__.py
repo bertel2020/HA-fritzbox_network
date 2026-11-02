@@ -22,6 +22,7 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, Device
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
+from .addresses import AddressNotes
 from .api import FritzNetworkClient
 from .const import (
     CONF_HIDDEN_MACS,
@@ -115,9 +116,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
     history = await DeviceHistory.async_load(hass, entry.entry_id)
     coordinator = FritzNetworkCoordinator(hass, entry, client, serial, can_write, box.id, history)
     await coordinator.async_config_entry_first_refresh()
+    coordinator.addresses = await AddressNotes.async_load(hass, entry.entry_id)
     entry.runtime_data = coordinator
 
     entry.async_on_unload(history.async_flush)
+    entry.async_on_unload(coordinator.addresses.async_flush)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     entry.async_on_unload(
         coordinator.async_add_listener(lambda: async_update_internet_issues(hass, entry))

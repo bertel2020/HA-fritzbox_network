@@ -776,3 +776,90 @@ test("the filter page explains each mode and counts the picked devices", () => {
   assert.equal(filter.renderPickerHead({ ...page, draft: { ...page.draft, filter_mode: "all" } }, t), "");
   assert.deepEqual(filter.pickable({ ...page, search: "lost" }).map((d) => d.mac), ["y"]);
 });
+
+const addresses = await import(`${base}panel-addresses.js`);
+
+const lan = {
+  network: { mask: "255.255.255.0", gateway: "192.168.79.1", dhcp: true, pool_from: "192.168.79.100", pool_to: "192.168.79.200", reserved: ["192.168.79.250"] },
+  nodes: [{ mac: "M0", name: "FRITZ!Box 7590", role: "master" }],
+  clients: [
+    { id: "d1", mac: "M1", ip: "192.168.79.10", name: "NAS", online: true },
+    { id: "d2", mac: "M2", ip: "192.168.79.150", name: "Wallbox", online: true },
+    { id: "d3", mac: "M3", ip: "192.168.79.120", name: "Phone", online: true },
+    { id: "d4", mac: "M4", ip: "192.168.79.37", name: "Printer", online: false },
+    { id: "d5", mac: "M5", ip: "192.168.79.1", name: "box", online: true },
+  ],
+  fixed: { M1: { fixed: true }, M2: { fixed: true }, M3: { fixed: false }, M4: { fixed: true }, M5: null },
+  own: { notes: {}, names: {}, marks: ["192.168.79.45"], muted: [], blocks: [] },
+};
+
+test("masks and addresses are read as numbers", () => {
+  assert.equal(addresses.ipToInt("192.168.79.1"), 0xc0a84f01);
+  assert.equal(addresses.ipToInt("192.168.79.256"), null);
+  assert.equal(addresses.intToIp(0xc0a84f01), "192.168.79.1");
+  assert.equal(addresses.prefixOf("255.255.255.0"), 24);
+  assert.equal(addresses.prefixOf("255.255.254.0"), 23);
+  assert.equal(addresses.prefixOf("255.0.255.0"), null);
+});
+
+test("the model sorts the addresses of the /24 by what they are", () => {
+  const m = addresses.addressModel(lan);
+  const state = (n) => m.cells[n].state;
+  assert.equal(m.baseText, "192.168.79.");
+  assert.deepEqual([state(0), state(255), state(1), state(10), state(120), state(150), state(37), state(45), state(250), state(60)], ["na", "na", "box", "fix", "dyn", "fix", "offfix", "plan", "res", "free"]);
+  assert.equal(m.cells[1].device.name, "FRITZ!Box 7590");
+  assert.equal(m.usable, 254);
+  assert.equal(m.used, 5);
+  assert.equal(m.fixed, 4);
+  assert.equal(m.poolSize, 101);
+  assert.equal(m.poolUsed, 2);
+  assert.equal(m.free, 254 - 5 - 1);
+  assert.deepEqual(m.zones.map((z) => [z.id, z.from, z.to]), [["low", 1, 99], ["pool", 100, 200], ["high", 201, 254]]);
+});
+
+test("a network smaller than a /24 leaves the rest unusable, a missing gateway still finds the network", () => {
+  const small = addresses.addressModel({ ...lan, network: { ...lan.network, mask: "255.255.255.192", pool_from: null, pool_to: null } });
+  assert.equal(small.usable, 62);
+  assert.equal(small.cells[64].state, "na");
+  assert.equal(small.hasPool, false);
+  assert.deepEqual(small.zones.map((z) => z.id), ["whole"]);
+  assert.equal(addresses.addressModel({ ...lan, network: null }), null);
+  assert.ok(addresses.addressModel({ ...lan, network: { ...lan.network, gateway: null } }));
+});
+
+test("the hints name what stands out, the worst first", () => {
+  const m = addresses.addressModel({ ...lan, clients: [...lan.clients, { id: "d6", mac: "M6", ip: "192.168.79.120", name: "Twin", online: true }] });
+  const ids = addresses.addressHints(m, { fixedKnown: true }).map((h) => h.id);
+  assert.equal(ids[0], "dup:120");
+  assert.ok(ids.includes("res:250"));
+  assert.ok(ids.includes("pool-fix:150"));
+  assert.ok(ids.includes("offline-fix"));
+  assert.ok(ids.includes("pool-usage"));
+  assert.ok(!ids.includes("fixed-unknown"));
+  assert.ok(addresses.addressHints(m, { fixedKnown: false }).some((h) => h.id === "fixed-unknown"));
+});
+
+test("a block must be a range of the network and may not overlap another", () => {
+  const own = { blocks: [{ id: 1, name: "Cams", from: 60, to: 69, color: "--b2" }] };
+  assert.equal(addresses.checkBlock(own, { name: "Servers", from: 1, to: 19 }), null);
+  assert.equal(addresses.checkBlock(own, { name: "", from: 1, to: 19 }).key, "errRange");
+  assert.equal(addresses.checkBlock(own, { name: "x", from: 20, to: 10 }).key, "errRange");
+  assert.equal(addresses.checkBlock(own, { name: "x", from: 0, to: 10 }).key, "errRange");
+  assert.deepEqual(addresses.checkBlock(own, { name: "x", from: 65, to: 70 }), { key: "errOverlap", values: { name: "Cams", from: 60, to: 69 } });
+  assert.equal(addresses.blockOf(own, 65).name, "Cams");
+  assert.equal(addresses.blockOf(own, 70), null);
+});
+
+test("the address page draws the map, escapes names and says what it is still reading", () => {
+  const addr = { status: "ready", network: lan.network, own: { ...lan.own, notes: { "192.168.79.10": "<b>x</b>" } }, fixed: lan.fixed, filter: "all", query: "", view: "map", sel: 150, blockMessage: "", progress: { done: 2, total: 5 } };
+  const html = addresses.renderAddresses({ t, language: "de", now: NOW, addr, clients: lan.clients, nodes: lan.nodes, backIcon: "" });
+  assert.equal((html.match(/data-aip="/g) ?? []).length, 256);
+  assert.match(html, /Lese, welche Adressen fest sind … 2 von 5/);
+  assert.match(html, /Wallbox/);
+  assert.match(html, /feste Adresse mitten im DHCP-Bereich/);
+  assert.doesNotMatch(html, /<b>x<\/b>/);
+  const list = addresses.renderAddresses({ t, language: "de", now: NOW, addr: { ...addr, view: "list", query: "wall" }, clients: lan.clients, nodes: lan.nodes, backIcon: "" });
+  assert.match(list, /<tr class="arow" data-aip="150"/);
+  assert.doesNotMatch(list, /<tr class="arow" data-aip="10"/);
+  assert.match(addresses.renderAddresses({ t, language: "de", now: NOW, addr: { ...addr, network: null }, clients: [], nodes: [], backIcon: "" }), /meldet ihr Netz nicht/);
+});

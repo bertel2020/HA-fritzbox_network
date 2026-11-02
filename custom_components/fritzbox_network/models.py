@@ -421,6 +421,30 @@ def parse_mesh(raw: str | bytes) -> MeshTopology:
     return topology
 
 
+def parse_network(result: dict[str, Any]) -> dict[str, Any] | None:
+    """The home network from LANHostConfigManagement1/GetInfo: mask, gateway, DHCP range, reserved.
+
+    None where the box gives no mask. Addresses are plain strings; the list of reserved addresses
+    is cut at commas and spaces.
+    """
+    mask = _address(result.get("NewSubnetMask"))
+    if not mask:
+        return None
+
+    def split(value: Any) -> list[str]:
+        return [part for part in re.split(r"[,\s]+", str(value or "")) if part]
+
+    routers = split(result.get("NewIPRouters"))
+    return {
+        "mask": mask,
+        "gateway": routers[0] if routers else None,
+        "dhcp": bool(result.get("NewDHCPServerEnable")),
+        "pool_from": _address(result.get("NewMinAddress")),
+        "pool_to": _address(result.get("NewMaxAddress")),
+        "reserved": split(result.get("NewReservedAddresses")),
+    }
+
+
 def parse_ip_form(form: Any) -> dict[str, Any] | None:
     """What the edit form of a device (data.lua, page edit_device) says about its IPv4 address.
 

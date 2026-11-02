@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+import ipaddress
 import time
 from typing import Any
 
@@ -49,6 +50,9 @@ RECONNECT_COMMAND = f"{DOMAIN}/internet/reconnect"
 REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
 PORTS_COMMAND = f"{DOMAIN}/ports/list"
 IP_COMMAND = f"{DOMAIN}/device/ip"
+ADDRESS_OVERVIEW_COMMAND = f"{DOMAIN}/address/overview"
+ADDRESS_FIXED_COMMAND = f"{DOMAIN}/address/fixed"
+ADDRESS_SAVE_COMMAND = f"{DOMAIN}/address/save"
 HISTORY_COMMAND = f"{DOMAIN}/history/summary"
 HISTORY_DEVICE_COMMAND = f"{DOMAIN}/history/device"
 FILTER_PREVIEW_COMMAND = f"{DOMAIN}/filter/preview"
@@ -61,6 +65,43 @@ FILTER_OPTIONS_SCHEMA = vol.Schema(
         vol.Optional(CONF_FILTER_DEVICES): [str],
         vol.Optional(CONF_IGNORE_GUESTS): bool,
         vol.Optional(CONF_IGNORE_PRIVATE_MACS): bool,
+    }
+)
+
+BLOCK_COLORS = ["--b1", "--b2", "--b3", "--b4", "--b5"]
+
+
+def _ipv4(value: Any) -> str:
+    return str(ipaddress.IPv4Address(value))
+
+
+def _mac(value: Any) -> str:
+    return format_mac(str(value))
+
+
+_OCTET = vol.All(int, vol.Range(min=1, max=254))
+OWN_ADDRESSES_SCHEMA = vol.Schema(
+    {
+        vol.Required("notes"): vol.All(
+            {_ipv4: vol.All(str, vol.Length(max=300))}, vol.Length(max=500)
+        ),
+        vol.Required("names"): vol.All(
+            {_mac: vol.All(str, vol.Length(max=60))}, vol.Length(max=500)
+        ),
+        vol.Required("marks"): vol.All([_ipv4], vol.Length(max=500)),
+        vol.Required("muted"): vol.All([vol.All(str, vol.Length(max=60))], vol.Length(max=100)),
+        vol.Required("blocks"): vol.All(
+            [
+                {
+                    vol.Required("id"): int,
+                    vol.Required("name"): vol.All(str, vol.Length(min=1, max=30)),
+                    vol.Required("from"): _OCTET,
+                    vol.Required("to"): _OCTET,
+                    vol.Required("color"): vol.In(BLOCK_COLORS),
+                }
+            ],
+            vol.Length(max=50),
+        ),
     }
 )
 
@@ -484,6 +525,65 @@ async def ws_device_ip(
 
 
 @websocket_api.websocket_command(
+    {vol.Required("type"): ADDRESS_OVERVIEW_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_address_overview(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The home network of the box and what the user noted about its addresses."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    coordinator = found[1]
+    network = await hass.async_add_executor_job(coordinator.client.get_network)
+    notes = coordinator.addresses.data if coordinator.addresses else {}
+    connection.send_result(msg["id"], {"network": network, "own": notes})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): ADDRESS_FIXED_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("macs"): vol.All([vol.All(str, vol.Length(max=40))], vol.Length(max=12)),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_address_fixed(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Whether the box always gives these devices the same address (a few per call)."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    macs = [format_mac(m) for m in msg["macs"]]
+    reservations = await hass.async_add_executor_job(found[1].client.get_ip_reservations, macs)
+    connection.send_result(msg["id"], {"reservations": reservations})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): ADDRESS_SAVE_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("own"): OWN_ADDRESSES_SCHEMA,
+    }
+)
+@websocket_api.require_admin
+@callback
+def ws_address_save(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Keep the notes, names, plans and blocks of the user; nothing is written to the box."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    if found[1].addresses is None:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, "Nothing to save to")
+        return
+    found[1].addresses.replace(msg["own"])
+    connection.send_result(msg["id"], {})
+
+
+@websocket_api.websocket_command(
     {vol.Required("type"): HISTORY_COMMAND, vol.Required("entry_id"): str}
 )
 @callback
@@ -667,6 +767,9 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_unhide_devices)
     websocket_api.async_register_command(hass, ws_ports)
     websocket_api.async_register_command(hass, ws_device_ip)
+    websocket_api.async_register_command(hass, ws_address_overview)
+    websocket_api.async_register_command(hass, ws_address_fixed)
+    websocket_api.async_register_command(hass, ws_address_save)
     websocket_api.async_register_command(hass, ws_history_summary)
     websocket_api.async_register_command(hass, ws_history_device)
     websocket_api.async_register_command(hass, ws_reconnect)

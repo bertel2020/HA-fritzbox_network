@@ -6,6 +6,10 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Seitenpanel: Neue Seite **Adressraum** (Knopf in der Kopfzeile der Hauptseite, Adresse `#/addresses`). Sie zeigt das /24 um die Box als Karte mit 256 Kacheln (dynamisch, fest, offline, frei, reserviert, geplant) oder als Liste, mit Filtern und Suche, Kacheln für Netz, Gateway, DHCP-Bereich, Belegung, feste Adressen und freie Adressen, der Aufteilung in feste Zonen und DHCP-Bereich und Auffälligkeiten (doppelte Adressen, feste Adresse im DHCP-Bereich, Reservierung ohne Gerät, offline Geräte mit fester Adresse, fast voller Pool, DHCP aus). Ein Klick auf eine Adresse zeigt Gerät, Art, Bereich und Anbindung.
+- Eigene Angaben im Adressraum: Notiz pro Adresse, Anzeigename pro Gerät, „geplant“ für freie Adressen, eigene Blöcke mit Name und Farbe (mit Belegung) und ausblendbare Hinweise. Sie liegen im `.storage` von Home Assistant und ändern nichts in der Box. Neue Websocket-Befehle `address/overview`, `address/fixed` und `address/save`, alle nur für Administratoren.
+- Ob eine Adresse fest ist, liest die Integration aus der Weboberfläche der Box, mit wenigen Geräten pro Anfrage und zehn Minuten zwischengespeichert. Meldet die Box es nicht, erscheinen die Adressen als dynamisch, mit einem Hinweis.
+
 - Seitenpanel: Die Liste ist standardmäßig **flach** und eine sortierbare Tabelle (Klick auf die Spaltenköpfe) mit Verbindung, Rate, Signal, Sparkline der letzten 24 Stunden und „Zuletzt online“, mit Seiten (50 Zeilen, wählbar 25/50/100/alle, das Panel merkt sich die Wahl). Die Gruppierung nach Access Point, Band und Gruppe bleibt wählbar.
 - Die Integration speichert pro Gerät Online-Zeiten, Signal und Rate (einen Tag im Fünf-Minuten-Takt, eine Woche stündlich) im `.storage` von Home Assistant, damit die Sparklines einen Neustart überstehen. Neue Websocket-Befehle `history/summary` und `history/device`.
 - Seitenpanel, Geräteseite: Verlauf von Signal und Rate über 24 Stunden oder 7 Tage mit niedrigstem, mittlerem und höchstem Wert.
