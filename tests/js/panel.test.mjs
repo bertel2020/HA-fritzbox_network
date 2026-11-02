@@ -902,3 +902,59 @@ test("all pages are tabs, the internet tab carries the state of the line and cle
   assert.match(panel.renderNav({ tab: "net", data: { internet: { connected: true } } }, t, 0), /<i class="dot on"/);
   assert.doesNotMatch(panel.renderNav({ tab: "net", data: null }, t, 0), /<i class="dot|<em>/);
 });
+
+const exporter = await import(`${base}panel-export.js`);
+
+test("the rows of the export are the addresses in use, free ones only when asked for", () => {
+  const own = { ...lan.own, names: { M3: "Handy Anna" }, notes: { "192.168.79.150": "Garage; Wand" } };
+  const m = addresses.addressModel({ ...lan, own });
+  const rows = exporter.addressRows(m, own, t, { free: false });
+  assert.deepEqual(rows.map((r) => r.ip), ["192.168.79.1", "192.168.79.10", "192.168.79.37", "192.168.79.45", "192.168.79.120", "192.168.79.150", "192.168.79.250"]);
+  assert.deepEqual(rows.map((r) => r.kind), ["box", "fixed", "fixed", "planned", "dynamic", "fixed", "reserved"]);
+  assert.equal(rows.find((r) => r.ip.endsWith(".120")).name, "Handy Anna");
+  assert.equal(rows.find((r) => r.ip.endsWith(".120")).boxName, "Phone");
+  assert.equal(exporter.addressRows(m, own, t, { free: true }).length, 254);
+});
+
+test("the CSV has a byte order mark, semicolons and quotes where a cell needs them", () => {
+  const own = { ...lan.own, notes: { "192.168.79.150": 'Garage; "Wand"' } };
+  const m = addresses.addressModel({ ...lan, own });
+  const csv = exporter.toCsv(exporter.addressRows(m, own, t, {}), t, { mac: true });
+  assert.ok(csv.startsWith("﻿Adresse;Gerät;Art;Status;Hersteller;MAC;Anbindung;Zuletzt online;Block;Bereich;Notiz\r\n"));
+  assert.match(csv, /192\.168\.79\.150;Wallbox;Fest;online;;M2;;;;DHCP-Bereich;"Garage; ""Wand"""\r\n/);
+  assert.ok(csv.endsWith("\r\n"));
+  assert.doesNotMatch(exporter.toCsv(exporter.addressRows(m, own, t, {}), t, { mac: false }), /;MAC;|;M2;/);
+});
+
+test("the JSON keeps the network, the numbers and what the user noted", () => {
+  const m = addresses.addressModel(lan);
+  const json = JSON.parse(exporter.toJson(m, lan.own, exporter.addressRows(m, lan.own, t, {}), { mac: false, now: new Date("2026-11-02T10:00:00Z") }));
+  assert.equal(json.network.address, "192.168.79.0/24");
+  assert.deepEqual(json.network.dhcp_range, { from: "192.168.79.100", to: "192.168.79.200" });
+  assert.equal(json.summary.used, 5);
+  assert.equal(json.addresses[1].address, "192.168.79.10");
+  assert.equal("mac" in json.addresses[1], false);
+  assert.deepEqual(json.own.planned, ["192.168.79.45"]);
+  assert.equal(json.generated, "2026-11-02T10:00:00.000Z");
+});
+
+test("the file name carries the network and the day", () => {
+  const m = addresses.addressModel(lan);
+  assert.equal(exporter.fileName(m, "csv", new Date(2026, 10, 2)), "adressraum-192-168-79-0-24-2026-11-02.csv");
+});
+
+test("the print sheet is an A4 document with the numbers, the map, the list and no raw markup", () => {
+  const own = { ...lan.own, notes: { "192.168.79.150": "<script>x</script>" }, blocks: [{ id: 1, name: "Kameras", from: 60, to: 69, color: "--b2" }] };
+  const m = addresses.addressModel({ ...lan, own });
+  const html = exporter.printSheet({ m, own, t, language: "de", opts: { map: true, mac: true }, now: new Date(2026, 10, 2, 14, 35) });
+  assert.match(html, /@page \{ size: A4 portrait/);
+  assert.match(html, /<h1>Adressraum<\/h1>/);
+  assert.match(html, /Stand 2\. November 2026/);
+  assert.equal((html.match(/class="cell /g) ?? []).length >= 256, true);
+  assert.match(html, /Kameras/);
+  assert.match(html, /Adressen in Benutzung \(7\)/);
+  assert.doesNotMatch(html, /<script>x/);
+  const lean = exporter.printSheet({ m, own, t, language: "de", opts: { map: false, mac: false }, now: new Date() });
+  assert.doesNotMatch(lean, /Karte der Adressen/);
+  assert.doesNotMatch(lean, /<th>MAC<\/th>/);
+});

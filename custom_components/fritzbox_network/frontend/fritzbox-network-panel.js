@@ -27,7 +27,8 @@ import {
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
-import { BLOCK_COLORS, addressModel, checkBlock, emptyOwn, poolChange, renderAddresses } from "./panel-addresses.js";
+import { BLOCK_COLORS, addressModel, checkBlock, emptyOwn, fixedKnownOf, poolChange, renderAddresses } from "./panel-addresses.js";
+import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice, entityState } from "./panel-device.js";
@@ -145,7 +146,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       pageSize: rememberedPageSize(),
       history: null,
       ip: null,
-      addr: { status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", progress: null },
+      addr: { status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", progress: null, exportOpts: { free: false, mac: true, map: true } },
       traffic: null,
       trafficRange: 7,
       trend: null,
@@ -789,6 +790,11 @@ class FritzboxNetworkPanel extends HTMLElement {
       addr.sel = n;
     } else if (ds.afilter) addr.filter = ds.afilter;
     else if (ds.aview) addr.view = ds.aview;
+    else if (ds.aexport) {
+      if (ds.aexport === "scroll") this.shadowRoot.querySelector("#a-export")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      else this._exportAddresses(ds.aexport);
+      return true;
+    }
     else if (ds.apool === "reset") addr.poolDraft = null;
     else if (ds.ahint) {
       if (ds.an === undefined) return true;
@@ -810,6 +816,60 @@ class FritzboxNetworkPanel extends HTMLElement {
     addr.own = own;
     this._update();
     return true;
+  }
+
+  /** The address space as a file or as the sheet; what is asked for is in the options of the card. */
+  _exportAddresses(kind) {
+    const m = this._addressModel();
+    if (!m) return;
+    const addr = this._state.addr;
+    const own = addr.own ?? emptyOwn();
+    const t = this._t;
+    const opts = addr.exportOpts;
+    const now = new Date();
+    if (kind === "print") {
+      this._openSheet(printSheet({ m, own, t, language: this._hass?.language, opts, now, fixedKnown: fixedKnownOf(addr.fixed) }));
+      return;
+    }
+    const rows = addressRows(m, own, t, { free: opts.free });
+    if (kind === "csv") this._download(fileName(m, "csv", now), "text/csv;charset=utf-8", toCsv(rows, t, { mac: opts.mac }));
+    else this._download(fileName(m, "json", now), "application/json", toJson(m, own, rows, { mac: opts.mac, now }));
+  }
+
+  _download(name, type, text) {
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(new Blob([text], { type }));
+    link.download = name;
+    this.shadowRoot.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+
+  /** The sheet in a window of its own, where it can be looked at and printed; from a frame where a window is refused. */
+  _openSheet(html) {
+    const win = globalThis.open("", "_blank");
+    if (win) {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+      win.document.getElementById("print")?.addEventListener("click", () => win.print());
+      setTimeout(() => {
+        win.focus();
+        win.print();
+      }, 500);
+      return;
+    }
+    const frame = document.createElement("iframe");
+    frame.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+    document.body.append(frame);
+    frame.contentDocument.open();
+    frame.contentDocument.write(html);
+    frame.contentDocument.close();
+    setTimeout(() => {
+      frame.contentWindow.print();
+      setTimeout(() => frame.remove(), 60000);
+    }, 500);
   }
 
   /** Leaves the field in the address page, so that the page is drawn again with what was entered. */
@@ -1092,6 +1152,10 @@ class FritzboxNetworkPanel extends HTMLElement {
   _onChange(event) {
     const el = event.target;
     if (el.dataset?.aown) return this._onAddressOwn(el);
+    if (el.dataset?.aopt) {
+      this._state.addr.exportOpts = { ...this._state.addr.exportOpts, [el.dataset.aopt]: el.checked };
+      return this._update();
+    }
     if (el.id === "sort") {
       this._state.sort = el.value;
       this._state.sortDesc = false;

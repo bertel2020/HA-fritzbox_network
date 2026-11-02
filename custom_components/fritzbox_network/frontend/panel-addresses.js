@@ -263,6 +263,28 @@ function poolCard(m, ctx) {
     ${change?.same ? `<p class="hint">${escapeHtml(p.same)}</p>` : preview}</section>`;
 }
 
+/** Whether the box told for at least one device whether its address is fixed (or nothing was asked yet). */
+export function fixedKnownOf(fixed) {
+  const results = Object.values(fixed ?? {});
+  return results.length === 0 || results.some((r) => r !== null && r !== undefined);
+}
+
+/** The card for the files and the sheet: the options and the three buttons. */
+function exportCard(m, ctx) {
+  const { t, addr } = ctx;
+  const e = t.addr.export;
+  const opts = addr.exportOpts ?? { free: false, mac: true, map: true };
+  const check = (key, label) =>
+    `<label class="acheck"><input type="checkbox" data-aopt="${key}" ${opts[key] ? "checked" : ""}><span>${escapeHtml(label)}</span></label>`;
+  const incomplete = addr.progress ? `<p class="hint">${escapeHtml(fill(e.incomplete, addr.progress))}</p>` : "";
+  return `<section class="card sec" id="a-export"><span class="label">${escapeHtml(e.title)}</span><p class="hint">${escapeHtml(e.lead)}</p>
+    <div class="aopts">${check("free", e.optFree)}${check("mac", e.optMac)}${check("map", e.optMap)}</div>${incomplete}
+    <div class="btn-row"><button class="btn" data-aexport="csv" data-k="x-csv">${escapeHtml(e.csv)}</button>
+      <button class="btn" data-aexport="json" data-k="x-json">${escapeHtml(e.json)}</button>
+      <button class="btn p" data-aexport="print" data-k="x-print">${escapeHtml(e.print)}</button></div>
+    <p class="hint">${escapeHtml(e.printHint)}</p></section>`;
+}
+
 /** The block of the user an address is in. */
 export function blockOf(own, n) {
   return (own.blocks ?? []).find((b) => n >= b.from && n <= b.to) ?? null;
@@ -297,7 +319,7 @@ function countFor(m, filter, ctx) {
   return m.cells.filter((c) => matches(m, c, { ...ctx, filter, query: "" })).length;
 }
 
-const displayName = (d, own) => own.names[d.mac] || d.name;
+export const displayName = (d, own) => own.names[d.mac] || d.name;
 
 function tiles(m, t) {
   const a = t.addr;
@@ -394,7 +416,7 @@ function listView(m, ctx) {
     <tbody>${rows || `<tr><td colspan="6" class="muted">${escapeHtml(a.nothingFound)}</td></tr>`}</tbody></table></div>`;
 }
 
-function linkText(d, t) {
+export function linkText(d, t) {
   if (d.linkType === "lan") return d.port ? `LAN ${d.port}` : "LAN";
   if (d.linkType === "wlan") return `WLAN${d.band ? ` ${t.addr.bands[d.band] ?? d.band}` : ""}`;
   return "";
@@ -501,15 +523,14 @@ function zonesCard(m, t, language) {
 export function renderAddresses(ctx) {
   const { t, addr, clients, nodes } = ctx;
   const a = t.addr;
-  const back = `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(a.title)}</h1><p class="lead">${escapeHtml(a.lead)}</p></div>`;
+  const back = `<div class="phead"><div class="pheadrow"><h1 id="dtitle" tabindex="-1">${escapeHtml(a.title)}</h1>
+    ${addr.status === "ready" ? `<button class="btn" data-aexport="scroll" data-k="x-scroll">${escapeHtml(a.export.open)}</button>` : ""}</div><p class="lead">${escapeHtml(a.lead)}</p></div>`;
   if (addr.status === "loading") return `${back}<div class="card"><div class="empty"><span>${escapeHtml(t.loading)}</span></div></div>`;
   if (addr.status === "failed") return `${back}<div class="card"><div class="empty"><b>${escapeHtml(a.failed)}</b></div></div>`;
   const own = addr.own ?? emptyOwn();
   const model = addressModel({ network: addr.network, clients, nodes, fixed: addr.fixed, own });
   if (!model) return `${back}<div class="card"><div class="empty"><b>${escapeHtml(a.noNetwork)}</b></div></div>`;
-  const results = Object.values(addr.fixed ?? {});
-  const fixedKnown = results.length === 0 || results.some((r) => r !== null && r !== undefined);
-  const hints = addressHints(model, { fixedKnown });
+  const hints = addressHints(model, { fixedKnown: fixedKnownOf(addr.fixed) });
   const c = { ...ctx, own, filter: addr.filter, query: addr.query, sel: addr.sel, hints, blockMessage: addr.blockMessage };
   const chips = FILTERS.map(
     (f) => `<button class="achip" data-afilter="${f}" data-k="f-${f}" aria-pressed="${addr.filter === f}">${escapeHtml(a.filters[f])}<em>${countFor(model, f, c)}</em></button>`
@@ -524,5 +545,5 @@ export function renderAddresses(ctx) {
         ${addr.view === "map" ? mapView(model, c) : listView(model, c)}</section>
       <aside class="card sec adetail" aria-live="polite">${detail(model, c)}</aside>
     </div>
-    ${blocksCard(model, c)}${zonesCard(model, t, ctx.language)}${ctx.canWrite && model.dhcp ? poolCard(model, c) : ""}`;
+    ${blocksCard(model, c)}${zonesCard(model, t, ctx.language)}${ctx.canWrite && model.dhcp ? poolCard(model, c) : ""}${exportCard(model, c)}`;
 }

@@ -625,6 +625,10 @@ export const PANEL_CSS = `
   .poolform { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 12px; }
   .poolform .afield { margin-top: 0; width: 90px; }
   .poolform .poolbase { padding-bottom: 10px; color: var(--muted); }
+  .pheadrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+  .pheadrow h1 { margin: 4px 0 0; }
+  .aopts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 4px 0 12px; }
+  .acheck { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
   .abar { display: flex; height: 34px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); margin: 4px 0 18px; }
   .abar div { display: grid; place-items: center; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; }
   .abar .z-low, .abar .z-high { background: var(--fixed-soft); color: var(--fixed); }
