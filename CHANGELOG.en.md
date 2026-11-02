@@ -6,6 +6,9 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Side panel, device page: **data volume** per device (today, 7 and 30 days, download and upload). The integration reads the per-device internet counters from the mesh topology of the box, adds up the difference per day (a counter that was reset starts anew) and keeps 35 days in `.storage`. The history starts with the first poll after the update. `history/device` and `history/summary` also return `traffic`.
+- Side panel: the table has the sortable column **Volume (7 d)**, the internet page the ranking **Data volume per device** (today, 7 or 30 days, the ten largest devices with bars and the sum of all devices).
+- Side panel: the charts show time and value on hover (or tap). The LAN icon is a network now instead of a plug. An **Internet** button in the header of the main page opens the internet page.
 - Side panel: the list is **flat** by default and a sortable table (click the column heads) with connection, rate, signal, a sparkline of the last 24 hours and "Last online", with pages (50 rows, choose 25/50/100/all, the panel remembers the choice). Grouping by access point, band and group stays available.
 - The integration keeps online times, signal and rate per device (a day in steps of five minutes, a week in hours) in the `.storage` of Home Assistant, so the sparklines survive a restart. New websocket commands `history/summary` and `history/device`.
 - Side panel, device page: history of signal and rate over 24 hours or 7 days with the lowest, mean and highest value.

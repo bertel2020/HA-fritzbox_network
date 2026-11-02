@@ -1,6 +1,8 @@
 /* The network tab of the panel: the filters, the access points and the devices as HTML. */
 
 import {
+  TABLE_DAYS,
+  sumVolumes,
   BANDS,
   BUSY_UTILIZATION,
   bulkPlan,
@@ -108,6 +110,7 @@ export function visibleClients(state, now) {
     desc: state.sortDesc,
     now,
     threshold: state.threshold,
+    volumes: state.sort === "traffic" ? sumVolumes(state.traffic, TABLE_DAYS) : null,
   });
 }
 

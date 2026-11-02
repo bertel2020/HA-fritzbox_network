@@ -259,6 +259,11 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 link.signal_dbm if link else None,
                 rate or None,
             )
+        if mesh:
+            day = dt_util.as_local(dt_util.utcnow()).date().isoformat()
+            for mac in selected:
+                if counted := mesh.traffic.get(mac):
+                    self.history.record_traffic(day, mac, *counted)
         self.history.prune(now)
 
     def _apply_guest_override(self, polled: bool | None) -> bool | None:

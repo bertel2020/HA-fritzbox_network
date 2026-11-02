@@ -12,6 +12,9 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Seitenpanel: Netzkarte als zweite Ansicht neben der Liste (Umschalter **Liste | Netzkarte**, das Panel merkt sich die Wahl). Die FRITZ!Box und jeder Repeater sind eigene Flächen, die Geräte hängen als Knöpfe mit Initialen an Leitungen für LAN und die WLAN-Bänder. Die Linie zum Repeater zeigt, ob er per LAN oder WLAN angebunden ist. Gefilterte Geräte fehlen in der Karte, mit dem Hinweis „N durch den Filter ausgeblendet“.
 - Die Topologie liefert pro Repeater additiv `uplink` mit Art, Band und Signal der Anbindung aus der Mesh-Topologie.
 - Eine Aktion, deren Entität in Home Assistant ausgeschaltet ist, zeigt den bekannten Wert (Zugangsprofil, Priorisierung) und den Knopf **Einschalten**, bei zwei oder mehr auch **Alle einschalten**. Danach lädt Home Assistant die Integration kurz neu.
+- Seitenpanel, Geräteseite: **Datenvolumen** pro Gerät (heute, 7 und 30 Tage, Download und Upload). Die Integration liest die Internet-Zähler pro Gerät aus der Mesh-Topologie der Box, summiert die Differenz pro Tag (ein zurückgesetzter Zähler beginnt neu) und behält 35 Tage im `.storage`. Der Verlauf beginnt mit dem ersten Abruf nach dem Update. `history/device` und `history/summary` liefern zusätzlich `traffic`.
+- Seitenpanel: Die Tabelle hat die sortierbare Spalte **Volumen (7 T)**, die Internetseite die Rangliste **Datenvolumen pro Gerät** (heute, 7 oder 30 Tage, die zehn größten Geräte mit Balken und der Summe aller Geräte).
+- Seitenpanel: Die Verläufe zeigen beim Darüberfahren (oder Antippen) Uhrzeit und Wert. Das LAN-Symbol ist jetzt ein Netzwerk statt eines Steckers. Auf der Hauptseite führt ein Knopf **Internet** in der Kopfzeile zur Internetseite.
 
 ### Geändert
 

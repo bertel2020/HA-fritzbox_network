@@ -476,7 +476,13 @@ def ws_history_summary(
     if (found := _loaded_coordinator(hass, connection, msg)) is None:
         return
     history = found[1].history
-    connection.send_result(msg["id"], {"devices": history.summary(time.time()) if history else {}})
+    connection.send_result(
+        msg["id"],
+        {
+            "devices": history.summary(time.time()) if history else {},
+            "traffic": history.traffic_all() if history else {},
+        },
+    )
 
 
 @websocket_api.websocket_command(
@@ -495,7 +501,7 @@ def ws_history_device(
         return
     history = found[1].history
     connection.send_result(
-        msg["id"], history.device(format_mac(msg["mac"])) if history else {"day": [], "week": []}
+        msg["id"], history.device(format_mac(msg["mac"])) if history else {"day": [], "week": [], "traffic": {}}
     )
 
 

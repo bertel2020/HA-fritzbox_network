@@ -60,6 +60,9 @@ export const PANEL_CSS = `
 
   /* shared bits */
   .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 11px; border-radius: 13px; background: var(--neutral-soft); color: var(--muted); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  button.inet-link { border: 1px solid transparent; font: inherit; font-size: 12px; font-weight: 500; color: var(--text); cursor: pointer; }
+  button.inet-link:hover { border-color: var(--accent); }
+  button.inet-link .dot { width: 8px; height: 8px; }
   .chip.ok { background: var(--ok-soft); color: var(--ok); }
   .chip.warn { background: var(--warn-soft); color: var(--warn); }
   .chip.bad { background: var(--bad-soft); color: var(--bad); }
@@ -436,6 +439,24 @@ export const PANEL_CSS = `
   .trendhead .seg { grid-auto-flow: column; width: auto; }
   .trendhead .seg button { min-height: 32px; text-align: center; border-top: 0; }
   .trends { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px 24px; margin-top: 8px; }
+  .topdev { list-style: none; margin: 8px 0 0; padding: 0; }
+  .topdev li { display: grid; grid-template-columns: minmax(90px, 200px) 1fr auto; align-items: center; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); }
+  .topdev li:first-child { border-top: 0; }
+  .topdev .tlink { text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .topdev .bar { height: 8px; border-radius: 4px; background: var(--soft); overflow: hidden; }
+  .topdev .bar i { display: block; height: 100%; background: var(--accent); }
+  .topdev .amount { text-align: right; white-space: nowrap; }
+  .topdev small, .vol small { color: var(--muted); font-size: 12px; }
+  @media (max-width: 560px) { .topdev li { grid-template-columns: 1fr auto; } .topdev .bar { grid-column: 1 / -1; order: 3; } }
+  .volume { margin-top: 18px; }
+  .vols { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px 24px; margin-top: 6px; }
+  .vols div { display: flex; flex-direction: column; }
+  .vols b { font-size: 16px; font-weight: 500; }
+  .vols small { color: var(--muted); font-size: 12px; }
+  .trend .plot { position: relative; touch-action: pan-y; }
+  .trend .plot svg { margin: 6px 0 2px; }
+  .trend .cursor { position: absolute; top: 6px; height: 90px; width: 0; border-left: 1px dashed var(--muted); pointer-events: none; }
+  .trend .tip { position: absolute; top: 10px; transform: translateX(-50%); padding: 3px 8px; border-radius: 8px; background: var(--text); color: var(--bg, #fff); font-size: 12px; font-weight: 500; white-space: nowrap; pointer-events: none; }
   .trend svg { width: 100%; height: 90px; display: block; margin: 6px 0 2px; background: var(--soft); border-radius: 10px; }
   .trend path { fill: none; stroke: var(--accent); stroke-width: 1.8; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
   .trend path.area { fill: var(--accent); opacity: .12; stroke: none; }

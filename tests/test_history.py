@@ -53,7 +53,7 @@ def test_what_is_not_noted_for_a_week_is_forgotten():
     history = _history()
     history.record(NOW, MAC, True, None, None)
     history.prune(NOW + 8 * 86400)
-    assert history.device(MAC) == {"day": [], "week": []}
+    assert history.device(MAC) == {"day": [], "week": [], "traffic": {}}
 
 
 async def test_the_history_is_kept_by_the_coordinator_and_served(
@@ -75,3 +75,46 @@ async def test_the_history_is_kept_by_the_coordinator_and_served(
     )
     result = (await client.receive_json())["result"]
     assert len(result["day"]) == 1
+
+
+def test_the_traffic_of_a_device_is_added_up_per_day():
+    history = _history()
+    history.record_traffic("2026-11-01", MAC, 1000, 100)
+    assert history.traffic(MAC) == {}
+    history.record_traffic("2026-11-01", MAC, 1500, 150)
+    history.record_traffic("2026-11-02", MAC, 1600, 150)
+    assert history.traffic(MAC) == {"2026-11-01": [500, 50], "2026-11-02": [100, 0]}
+
+
+def test_a_counter_that_fell_started_anew():
+    history = _history()
+    history.record_traffic("2026-11-01", MAC, 5000, 500)
+    history.record_traffic("2026-11-01", MAC, 200, 20)
+    assert history.traffic(MAC) == {"2026-11-01": [200, 20]}
+
+
+def test_only_the_last_35_days_of_traffic_are_kept():
+    history = _history()
+    history.record_traffic("2026-01-01", MAC, 0, 0)
+    for day in range(1, 41):
+        history.record_traffic(f"2026-02-{day:02d}" if day < 29 else f"2026-03-{day - 28:02d}", MAC, day, day)
+    assert len(history.traffic(MAC)) == 35
+
+
+def test_the_mesh_reads_the_bytes_counted_per_device():
+    from custom_components.fritzbox_network.models import parse_mesh
+
+    mesh = parse_mesh(
+        '{"nodes":[{"uid":"n1","device_mac_address":"AA:BB:CC:DD:EE:01",'
+        '"metrics":{"wan_counters":{"bytes":{"rx":10,"tx":4}}}},'
+        '{"uid":"n2","device_mac_address":"AA:BB:CC:DD:EE:02","metrics":{}}]}'
+    )
+    assert mesh.traffic == {"aa:bb:cc:dd:ee:01": (10, 4)}
+
+
+def test_the_traffic_of_all_devices_is_served_per_mac():
+    history = _history()
+    history.record_traffic("2026-11-01", MAC, 100, 10)
+    history.record_traffic("2026-11-01", MAC, 150, 20)
+    history.record_traffic("2026-11-01", "aa:bb:cc:dd:ee:02", 5, 5)
+    assert history.traffic_all() == {MAC: {"2026-11-01": [50, 10]}}

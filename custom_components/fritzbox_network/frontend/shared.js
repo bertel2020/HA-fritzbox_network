@@ -248,24 +248,26 @@ const SORTS = {
   signal: (a, b) => (b.signal_dbm ?? -999) - (a.signal_dbm ?? -999),
   rate: (a, b) => (b.rate_download ?? -1) - (a.rate_download ?? -1),
   last: (a, b) => Date.parse(b.last_online ?? 0) - Date.parse(a.last_online ?? 0),
+  traffic: (a, b, volumes) => (volumes?.[b.mac] ?? -1) - (volumes?.[a.mac] ?? -1),
   link: (a, b) => `${a.link_type ?? "~"}${a.band ?? ""}`.localeCompare(`${b.link_type ?? "~"}${b.band ?? ""}`),
 };
 
 /** Online devices first, then by the chosen key, the other way round when `desc` is set. */
-export function sortClients(clients, sort = "name", desc = false) {
+export function sortClients(clients, sort = "name", desc = false, volumes = null) {
   const key = SORTS[sort] ?? SORTS.name;
   const sign = desc ? -1 : 1;
-  return [...clients].sort((a, b) => Number(Boolean(b.online)) - Number(Boolean(a.online)) || sign * key(a, b));
+  return [...clients].sort((a, b) => Number(Boolean(b.online)) - Number(Boolean(a.online)) || sign * key(a, b, volumes));
 }
 
 /** The clients the panel shows: the filter, the search, the sorting. */
-export function panelClients(data, { filter = "all", query = "", sort = "name", desc = false, now = Date.now(), threshold } = {}) {
+export function panelClients(data, { filter = "all", query = "", sort = "name", desc = false, now = Date.now(), threshold, volumes = null } = {}) {
   return sortClients(
     (data?.clients ?? []).filter(
       (c) => panelMatches(c, filter, now, threshold) && matches(c, "all", query)
     ),
     sort,
-    desc
+    desc,
+    volumes
   );
 }
 
@@ -487,6 +489,53 @@ export function formatRate(kbit, language) {
   if (kbit >= 100000) return `${format(kbit / 1000, 0)} Mbit/s`;
   if (kbit >= 1000) return `${format(kbit / 1000, 1)} Mbit/s`;
   return `${format(kbit, 0)} kbit/s`;
+}
+
+/** A data volume in bytes: "812 KB", "3.4 MB", "1.27 GB" (decimal units, as the box and providers count). */
+export function formatBytes(bytes, language) {
+  if (typeof bytes !== "number" || !Number.isFinite(bytes) || bytes < 0) return "–";
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let value = bytes;
+  let unit = 0;
+  while (value >= 1000 && unit < units.length - 1) {
+    value /= 1000;
+    unit += 1;
+  }
+  const digits = unit === 0 || value >= 100 ? 0 : value >= 10 ? 1 : 2;
+  return `${value.toLocaleString(language || "en", { minimumFractionDigits: digits, maximumFractionDigits: digits })} ${units[unit]}`;
+}
+
+/** The traffic of the last n days up to today ({date: [received, sent]}, local dates), as [received, sent]. */
+export function trafficSum(days, n, now = new Date()) {
+  let received = 0;
+  let sent = 0;
+  for (let i = 0; i < n; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    received += days?.[key]?.[0] ?? 0;
+    sent += days?.[key]?.[1] ?? 0;
+  }
+  return [received, sent];
+}
+
+/** The traffic of every device over the last n days: {mac: [received, sent]}; devices without any are left out. */
+export function trafficByDevice(traffic, n, now = new Date()) {
+  const result = {};
+  for (const [mac, days] of Object.entries(traffic ?? {})) {
+    const sum = trafficSum(days, n, now);
+    if (sum[0] || sum[1]) result[mac] = sum;
+  }
+  return result;
+}
+
+/** The days the table column of the data volume adds up. */
+export const TABLE_DAYS = 7;
+
+/** The bytes per device over the last n days, received and sent together: {mac: bytes}. */
+export function sumVolumes(traffic, n, now = new Date()) {
+  return Object.fromEntries(
+    Object.entries(trafficByDevice(traffic, n, now)).map(([mac, [down, up]]) => [mac, down + up])
+  );
 }
 
 /** A duration in seconds as its two largest units: "12 d 3 h", "18 h 11 min", "5 min". */

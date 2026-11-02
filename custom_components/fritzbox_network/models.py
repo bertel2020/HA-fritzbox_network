@@ -115,6 +115,8 @@ class MeshTopology:
 
     nodes: dict[str, MeshNode] = field(default_factory=dict)
     links: dict[str, ClientLink] = field(default_factory=dict)
+    # bytes the box has counted per device on the way to and from the internet: mac -> (received, sent)
+    traffic: dict[str, tuple[int, int]] = field(default_factory=dict)
 
     @property
     def master(self) -> MeshNode | None:
@@ -317,6 +319,19 @@ def _radios(node: dict[str, Any]) -> dict[str, Radio]:
     return radios
 
 
+def _wan_bytes(node: dict[str, Any]) -> tuple[int, int] | None:
+    """The internet traffic the box counted for a node: (received, sent) in bytes."""
+    metrics = node.get("metrics")
+    counters = metrics.get("wan_counters") if isinstance(metrics, dict) else None
+    counted = counters.get("bytes") if isinstance(counters, dict) else None
+    if not isinstance(counted, dict):
+        return None
+    received, sent = counted.get("rx"), counted.get("tx")
+    if isinstance(received, int) and isinstance(sent, int) and received >= 0 and sent >= 0:
+        return received, sent
+    return None
+
+
 def parse_mesh(raw: str | bytes) -> MeshTopology:
     """Parse the JSON behind ``X_AVM-DE_GetMeshListPath``."""
     data = json.loads(raw)
@@ -335,6 +350,8 @@ def parse_mesh(raw: str | bytes) -> MeshTopology:
     topology = MeshTopology()
     for uid, node in nodes_by_uid.items():
         node_mac = _mac(node.get("device_mac_address"))
+        if node_mac and (counted := _wan_bytes(node)) is not None:
+            topology.traffic[node_mac] = counted
         if node.get("is_meshed") and node_mac:
             topology.nodes[uid] = MeshNode(
                 uid=uid,

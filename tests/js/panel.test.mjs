@@ -724,3 +724,29 @@ test("the table sorts by the header, pages and escapes names", () => {
   assert.match(html, /1–2 von 2|1–2 von 2/);
   assert.doesNotMatch(html, /tv <b>/);
 });
+
+test("a data volume is written in decimal units and the traffic of the last days is summed", () => {
+  assert.equal(shared.formatBytes(812, "en"), "812 B");
+  assert.equal(shared.formatBytes(3_400_000, "en"), "3.40 MB");
+  assert.equal(shared.formatBytes(1_270_000_000, "en"), "1.27 GB");
+  assert.equal(shared.formatBytes(null, "en"), "–");
+  const days = { "2026-11-02": [100, 10], "2026-11-01": [50, 5], "2026-10-01": [7, 7] };
+  const now = new Date(2026, 10, 2);
+  assert.deepEqual(shared.trafficSum(days, 1, now), [100, 10]);
+  assert.deepEqual(shared.trafficSum(days, 7, now), [150, 15]);
+  assert.deepEqual(shared.trafficSum(days, 30, now), [150, 15]);
+  assert.deepEqual(shared.trafficSum(days, 35, now), [157, 22]);
+});
+
+test("devices can be sorted by their data volume, the largest first", () => {
+  const now = new Date(2026, 10, 2);
+  const traffic = {
+    a: { "2026-11-02": [10, 5] },
+    b: { "2026-11-01": [500, 50], "2026-09-01": [9999, 9999] },
+    c: {},
+  };
+  const volumes = shared.sumVolumes(traffic, 7, now);
+  assert.deepEqual(volumes, { a: 15, b: 550 });
+  const clients = ["a", "b", "c"].map((mac) => ({ mac, name: mac, online: true }));
+  assert.deepEqual(shared.sortClients(clients, "traffic", false, volumes).map((c) => c.mac), ["b", "a", "c"]);
+});

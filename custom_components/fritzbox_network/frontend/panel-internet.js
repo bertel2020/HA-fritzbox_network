@@ -1,6 +1,6 @@
 /* The internet page of the panel: the connection of the box, its load and, on a DSL line, its quality. */
 
-import { escapeHtml, formatDuration, formatRate, sparkPaths, usedPercent } from "./shared.js";
+import { escapeHtml, formatBytes, formatDuration, formatRate, sparkPaths, trafficByDevice, usedPercent } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { whenText } from "./panel-network.js";
@@ -102,6 +102,35 @@ function spectrum(dsl, t) {
   return `<div class="spectrum"><span class="label">${escapeHtml(t.inet.spectrum)}</span>
     ${spectrumChart(dsl.spectrum_down, max, t.inet.spectrumDown)}${spectrumChart(dsl.spectrum_up, max, t.inet.spectrumUp)}
     <p class="hint">${escapeHtml(t.inet.spectrumHint)}</p></div>`;
+}
+
+const TOP_DEVICES = 10;
+
+/** Who used the most: the devices with their data volume over the chosen days, as bars. */
+function topDevices(ctx) {
+  const { t, language, traffic, clients, range } = ctx;
+  const i = t.inet;
+  const names = new Map((clients ?? []).map((c) => [c.mac, c]));
+  const rows = Object.entries(trafficByDevice(traffic, range))
+    .map(([mac, [down, up]]) => ({ mac, down, up, total: down + up, client: names.get(mac) }))
+    .sort((a, b) => b.total - a.total);
+  const sum = rows.reduce((acc, r) => [acc[0] + r.down, acc[1] + r.up], [0, 0]);
+  const top = rows[0]?.total || 1;
+  const buttons = [1, 7, 30]
+    .map((n) => `<button data-trange="${n}" aria-pressed="${n === range}">${escapeHtml(t.trafficRanges[n])}</button>`)
+    .join("");
+  const list = rows
+    .slice(0, TOP_DEVICES)
+    .map((r) => {
+      const name = escapeHtml(r.client?.name ?? r.mac);
+      const who = r.client ? `<button class="tlink" data-dev="${escapeHtml(r.client.id)}">${name}</button>` : `<span>${name}</span>`;
+      return `<li>${who}<span class="bar" aria-hidden="true"><i style="width:${Math.max(2, (r.total / top) * 100).toFixed(1)}%"></i></span>
+        <span class="amount"><b>${escapeHtml(formatBytes(r.total, language))}</b> <small>↓ ${escapeHtml(formatBytes(r.down, language))} · ↑ ${escapeHtml(formatBytes(r.up, language))}</small></span></li>`;
+    })
+    .join("");
+  return `<section class="card sec"><div class="trendhead"><span class="label">${escapeHtml(i.topTitle)}</span><div class="seg" role="group" aria-label="${escapeHtml(i.topTitle)}">${buttons}</div></div>
+    ${rows.length ? `<p class="hint">${escapeHtml(fill(i.topSum, { down: formatBytes(sum[0], language), up: formatBytes(sum[1], language) }))}</p><ol class="topdev">${list}</ol>` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}
+    <p class="hint">${escapeHtml(i.topHint)}</p></section>`;
 }
 
 function events(internet, t, now) {
@@ -241,6 +270,7 @@ export function renderInternet(internet, ctx) {
       ${gauge("upl", i.up, rate?.up, internet.rate_up, language, t)}
       ${chart(internet, language, t)}
       <p class="hint">${escapeHtml(i.measureNote)}</p></section>
+    ${topDevices({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}
     ${internet.dsl ? lineQuality(internet.dsl, language, t) : ""}
     ${events(internet, t, now)}
     ${ports(portState, t)}

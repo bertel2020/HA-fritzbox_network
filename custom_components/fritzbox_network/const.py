@@ -54,6 +54,8 @@ HISTORY_FINE_SECONDS = 300
 HISTORY_OFFLINE_SECONDS = 1800
 HISTORY_COARSE_SECONDS = 3600
 HISTORY_DAYS = 7
+# the data volume per day is kept for this many days
+TRAFFIC_DAYS = 35
 HISTORY_SAVE_DELAY = 300
 INTERNET_EVENTS = 20
 # What counts as a problem worth a repair: a noise margin below this many dB for this many seconds,

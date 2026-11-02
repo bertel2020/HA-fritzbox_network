@@ -25,7 +25,7 @@ import {
   visibleClients,
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
-import { renderInternet } from "./panel-internet.js";
+import { nodeLabel as internetLabel, renderInternet } from "./panel-internet.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice, entityState } from "./panel-device.js";
@@ -130,6 +130,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       page: 0,
       pageSize: rememberedPageSize(),
       history: null,
+      traffic: null,
+      trafficRange: 7,
       trend: null,
       closed: new Set(),
       sel: route.device,
@@ -173,6 +175,11 @@ class FritzboxNetworkPanel extends HTMLElement {
     this.shadowRoot.addEventListener("input", (event) => this._onInput(event));
     this.shadowRoot.addEventListener("change", (event) => this._onChange(event));
     this.shadowRoot.addEventListener("keydown", (event) => this._onKey(event));
+    this.shadowRoot.addEventListener("pointermove", (event) => this._onPlot(event));
+    this.shadowRoot.addEventListener("pointerleave", () => this._hidePlots());
+    this.shadowRoot.addEventListener("pointerout", (event) => {
+      if (!event.relatedTarget?.closest?.(".plot")) this._hidePlots();
+    });
   }
 
   set hass(hass) {
@@ -294,7 +301,9 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (this._historyBusy || (this._historyAt && Date.now() - this._historyAt < HISTORY_REFRESH_MS)) return;
     this._historyBusy = true;
     try {
-      this._state.history = (await this._ws("history/summary")).devices;
+      const summary = await this._ws("history/summary");
+      this._state.history = summary.devices;
+      this._state.traffic = summary.traffic ?? {};
       this._historyAt = Date.now();
       this._update();
     } catch {
@@ -469,6 +478,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <nav role="tablist" id="nav" aria-label="${t.navLabel}"></nav>
           <div class="header-end">
             <select id="box" aria-label="${t.box}" hidden></select>
+            <span id="inet-link"></span>
             <span class="chip ok live" id="live-chip" hidden><span class="dot on"></span><span class="t" id="live"></span></span>
           </div>
         </header>
@@ -581,6 +591,14 @@ class FritzboxNetworkPanel extends HTMLElement {
     root.querySelector("#live-chip").hidden = !ready;
     const stale = ready ? panelCounts(state.data, Date.now(), state.threshold).stale : 0;
     this._set("nav", ready ? renderNav(state, t, stale) : "");
+    // the map has the internet node of its own; the list gets a button to the page in the header
+    const internet = ready && tab === "net" && !onDevice && state.view !== "map" ? state.data.internet : null;
+    this._set(
+      "inet-link",
+      internet
+        ? `<button class="chip inet-link" data-act="internet" data-k="internet" aria-label="${escapeHtml(internetLabel(internet, t, this._hass?.language))}" title="${escapeHtml(t.inet.open)}">${ic("globe")}${escapeHtml(t.internetNode)}<i class="dot ${internet.connected === false ? "" : "on"}" aria-hidden="true"></i></button>`
+        : ""
+    );
     if (!ready) return;
     const now = Date.now();
     const master = (state.data.nodes ?? []).find((n) => n.role === "master");
@@ -613,6 +631,36 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._drawLinks();
   }
 
+  /** The value under the pointer on a chart of the trend: a cursor line and the time with the value. */
+  _onPlot(event) {
+    const plot = event.target?.closest?.(".plot");
+    if (!plot) return this._hidePlots();
+    const pts = JSON.parse(plot.dataset.pts);
+    const box = plot.getBoundingClientRect();
+    if (pts.length < 2 || !box.width) return;
+    const ratio = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+    const i = Math.round(ratio * (pts.length - 1));
+    const [ts, value] = pts[i];
+    const x = (i / (pts.length - 1)) * box.width;
+    const cursor = plot.querySelector(".cursor");
+    const tip = plot.querySelector(".tip");
+    const language = this._hass?.language;
+    const when = new Date(ts * 1000).toLocaleString(
+      language,
+      plot.dataset.range === "week"
+        ? { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }
+        : { hour: "2-digit", minute: "2-digit" }
+    );
+    tip.textContent = `${when} · ${value === null ? "–" : `${value.toLocaleString(language)} ${plot.dataset.unit}`}`;
+    cursor.style.left = `${x}px`;
+    cursor.hidden = tip.hidden = false;
+    tip.style.left = `${Math.min(Math.max(x, tip.offsetWidth / 2), box.width - tip.offsetWidth / 2)}px`;
+  }
+
+  _hidePlots() {
+    for (const el of this.shadowRoot.querySelectorAll(".plot .cursor, .plot .tip")) el.hidden = true;
+  }
+
   /** The lines of the map follow the islands: after each drawing and when the width changes. */
   _drawLinks() {
     const state = this._state;
@@ -630,6 +678,9 @@ class FritzboxNetworkPanel extends HTMLElement {
         now: Date.now(),
         canWrite: Boolean(this._state.data?.can_write),
         ports: this._state.ports,
+        traffic: this._state.traffic,
+        trafficRange: this._state.trafficRange,
+        clients: this._state.data?.clients ?? [],
       })
     );
   }
@@ -680,6 +731,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         view: state.view,
         enabling: state.enabling,
         trend: state.trend,
+        language: this._hass?.language,
       })
     );
     this._maybeLoadTrend();
@@ -863,6 +915,11 @@ class FritzboxNetworkPanel extends HTMLElement {
       if (state.trend) state.trend.range = ds.range;
       this._update();
       this.shadowRoot.querySelector(`[data-range="${ds.range}"]`)?.focus();
+      return;
+    } else if (ds.trange) {
+      state.trafficRange = Number(ds.trange);
+      this._update();
+      this.shadowRoot.querySelector(`[data-trange="${ds.trange}"]`)?.focus();
       return;
     } else if (ds.sort) {
       state.sortDesc = state.sort === ds.sort ? !state.sortDesc : false;

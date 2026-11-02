@@ -10,8 +10,11 @@ import {
   isWeak,
   pageSlice,
   rateText,
+  TABLE_DAYS,
+  formatBytes,
   signalBars,
   sparkLine,
+  trafficByDevice,
 } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
@@ -24,6 +27,7 @@ const COLUMNS = [
   { id: "link", sort: "link", wide: true },
   { id: "rate", sort: "rate" },
   { id: "history" },
+  { id: "traffic", sort: "traffic", wide: true },
   { id: "last", sort: "last", wide: true },
 ];
 
@@ -46,7 +50,12 @@ function connectionText(client, nodes, t) {
   return [ap, how].filter(Boolean).join(" · ");
 }
 
-function row(client, state, t, now) {
+function volumeText(client, volumes, language) {
+  const volume = volumes[client.mac];
+  return volume ? `↓ ${formatBytes(volume[0], language)} <small>↑ ${formatBytes(volume[1], language)}</small>` : "–";
+}
+
+function row(client, state, t, now, volumes) {
   const weak = isWeak(client, state.threshold);
   const level = client.signal_dbm > -65 ? "" : client.signal_dbm > -75 ? "mid" : "low";
   const bars = signalBars(client.signal_dbm);
@@ -65,12 +74,13 @@ function row(client, state, t, now) {
     <td class="wide">${escapeHtml(connectionText(client, state.data?.nodes ?? [], t))}</td>
     <td class="num">${escapeHtml(client.online ? rateText(client) : "–")}${signal}<span class="chips2">${chips}</span></td>
     <td class="hist">${sparkHtml(client, state.history, t)}</td>
+    <td class="wide num vol">${volumeText(client, volumes, state.language)}</td>
     <td class="wide num">${escapeHtml(client.online ? t.nowText : whenText(client.last_online, now, t))}</td></tr>`;
 }
 
 function head(column, state, t) {
   const label = escapeHtml(t.columns[column.id]);
-  const cls = [column.wide ? "wide" : "", column.id === "rate" || column.id === "last" ? "num" : ""].filter(Boolean).join(" ");
+  const cls = [column.wide ? "wide" : "", ["rate", "last", "traffic"].includes(column.id) ? "num" : ""].filter(Boolean).join(" ");
   if (!column.sort) return `<th class="${cls}" scope="col">${label}</th>`;
   const sorted = state.sort === column.sort;
   const order = sorted ? (state.sortDesc ? "descending" : "ascending") : "none";
@@ -78,6 +88,7 @@ function head(column, state, t) {
 }
 
 export function renderTable(state, t, now, clients) {
+  const volumes = trafficByDevice(state.traffic, TABLE_DAYS);
   const page = pageSlice(clients, state.page ?? 0, state.pageSize ?? DEFAULT_PAGE_SIZE);
   state.page = page.page;
   const pager = `<div class="tpager"><label>${escapeHtml(t.rowsPerPage)}
@@ -87,5 +98,5 @@ export function renderTable(state, t, now, clients) {
     <button class="btn" data-act="page-next" aria-label="${escapeHtml(t.pageNext)}" ${page.page < page.pages - 1 ? "" : "disabled"}>${ic("right")}</button></div>`;
   return `<section class="card tablecard"><div class="tablewrap"><table class="devtable">
     <thead><tr>${COLUMNS.map((c) => head(c, state, t)).join("")}</tr></thead>
-    <tbody>${page.items.map((c) => row(c, state, t, now)).join("")}</tbody></table></div>${page.pages > 1 || state.pageSize !== 0 ? pager : ""}</section>`;
+    <tbody>${page.items.map((c) => row(c, state, t, now, volumes)).join("")}</tbody></table></div>${page.pages > 1 || state.pageSize !== 0 ? pager : ""}</section>`;
 }
