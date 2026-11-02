@@ -340,7 +340,28 @@ export const PANEL_CSS = `
   @container app (min-width: 900px) { .two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .two .card + .card { margin-top: 0; } }
 
   /* dialog + toast */
-  #internet-view .card + .card { margin-top: 16px; }
+  #internet-view .card + .card, #internet-view .card + .two, #internet-view .two + .card { margin-top: 16px; }
+  #internet-view .two > .card { margin-top: 0; }
+  .hero { background: linear-gradient(135deg, var(--accent-soft), transparent 70%), var(--surface); }
+  .live { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .live b { display: block; font-size: 26px; font-weight: 500; line-height: 1.2; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .live .dn b { color: var(--accent); }
+  .live .upl b { color: var(--up); }
+  .live .gl { color: var(--muted); font-size: 12px; }
+  .subhead { margin: 16px 0 6px; font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+  .plot { position: relative; touch-action: pan-y; }
+  .plot .cursor { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--muted); pointer-events: none; }
+  .plot .tip { position: absolute; top: 4px; transform: translateX(-50%); padding: 3px 8px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 500; white-space: nowrap; pointer-events: none; z-index: 1; }
+  #internet-view svg.spark { width: 100%; height: 72px; }
+  #internet-view svg.spark.days { height: 90px; }
+  .live ~ .gauge .gv { display: none; }
+  .live ~ .gauge .gs { grid-column: 2 / 4; }
+  .spark.days rect.bd { fill: var(--accent); }
+  .spark.days rect.bu { fill: var(--up); }
+  .topdev .rank { display: none; }
+  .topdev .bar { display: flex; }
+  .topdev .bar i.bd { background: var(--accent); }
+  .topdev .bar i.bu { background: var(--up); }
   .spectrum { margin-top: 16px; }
   figure.spec { margin: 8px 0 0; }
   figure.spec svg { width: 100%; height: 56px; display: block; background: var(--soft); border-radius: 8px; }

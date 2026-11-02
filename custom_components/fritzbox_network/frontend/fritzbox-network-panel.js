@@ -8,6 +8,7 @@ import {
   nearestStep,
   pagerFor,
   panelCounts,
+  plotText,
   routeFromHash,
   toggleMac,
 } from "./shared.js";
@@ -639,19 +640,22 @@ class FritzboxNetworkPanel extends HTMLElement {
     const box = plot.getBoundingClientRect();
     if (pts.length < 2 || !box.width) return;
     const ratio = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
-    const i = Math.round(ratio * (pts.length - 1));
-    const [ts, value] = pts[i];
-    const x = (i / (pts.length - 1)) * box.width;
+    // a chart drawn by time (the load of the line) is read by time, the others by the number of the point
+    let i = Math.round(ratio * (pts.length - 1));
+    let x = (i / (pts.length - 1)) * box.width;
+    if (plot.dataset.mode === "time") {
+      const first = pts[0][0];
+      const span = Math.max(pts[pts.length - 1][0] - first, 1);
+      const wanted = first + ratio * span;
+      i = pts.reduce((best, p, k) => (Math.abs(p[0] - wanted) < Math.abs(pts[best][0] - wanted) ? k : best), 0);
+      x = ((pts[i][0] - first) / span) * box.width;
+    } else if (plot.dataset.mode === "bars") {
+      i = Math.min(pts.length - 1, Math.floor(ratio * pts.length));
+      x = ((i + 0.5) / pts.length) * box.width;
+    }
     const cursor = plot.querySelector(".cursor");
     const tip = plot.querySelector(".tip");
-    const language = this._hass?.language;
-    const when = new Date(ts * 1000).toLocaleString(
-      language,
-      plot.dataset.range === "week"
-        ? { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }
-        : { hour: "2-digit", minute: "2-digit" }
-    );
-    tip.textContent = `${when} · ${value === null ? "–" : `${value.toLocaleString(language)} ${plot.dataset.unit}`}`;
+    tip.textContent = plotText(pts[i], plot.dataset, this._hass?.language);
     cursor.style.left = `${x}px`;
     cursor.hidden = tip.hidden = false;
     tip.style.left = `${Math.min(Math.max(x, tip.offsetWidth / 2), box.width - tip.offsetWidth / 2)}px`;

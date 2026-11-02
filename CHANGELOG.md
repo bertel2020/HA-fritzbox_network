@@ -16,6 +16,8 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Seitenpanel: Die Tabelle hat die sortierbare Spalte **Volumen (7 T)**, die Internetseite die Rangliste **Datenvolumen pro Gerät** (heute, 7 oder 30 Tage, die zehn größten Geräte mit Balken und der Summe aller Geräte).
 - Seitenpanel: Die Verläufe zeigen beim Darüberfahren (oder Antippen) Uhrzeit und Wert. Das LAN-Symbol ist jetzt ein Netzwerk statt eines Steckers. Auf der Hauptseite führt ein Knopf **Internet** in der Kopfzeile zur Internetseite.
 
+- Seitenpanel, Internetseite: Neu gestaltet. Verbindung oben mit Verlaufsfläche, darunter nebeneinander die Auslastung (große Live-Werte für Download und Upload, Verlauf mit Tooltip pro Messpunkt) und das **Datenvolumen** (Heute, 7 und 30 Tage, Balken pro Tag mit Tooltip, die zehn am meisten genutzten Geräte als Rangliste mit Download- und Upload-Anteil).
+
 ### Geändert
 
 - Seitenpanel: Die Seiten stehen als unterstrichene Tabs links unter dem Titel. Die Linien im Verbindungsweg liegen auf einer Höhe, die Beschriftung hängt darunter. „Aufräumen“ nimmt feste Stufen (3, 7, 14, 30, 90 Tage, 1 Jahr) als Knöpfe statt des Schiebers. Die Gruppe „Ohne Access Point“ heißt „Nicht zugeordnet“.

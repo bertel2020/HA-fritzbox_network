@@ -511,7 +511,7 @@ export function trafficSum(days, n, now = new Date()) {
   let sent = 0;
   for (let i = 0; i < n; i++) {
     const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const key = dayKey(d);
     received += days?.[key]?.[0] ?? 0;
     sent += days?.[key]?.[1] ?? 0;
   }
@@ -526,6 +526,46 @@ export function trafficByDevice(traffic, n, now = new Date()) {
     if (sum[0] || sum[1]) result[mac] = sum;
   }
   return result;
+}
+
+const dayKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+/**
+ * What the whole line moved per day over the last n days, oldest first, from the traffic of all
+ * devices: [{ ts (local midnight, epoch seconds), down, up }]. A day without data counts 0.
+ */
+export function dailyTotals(traffic, n, now = new Date()) {
+  const rows = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+    const key = dayKey(d);
+    let down = 0;
+    let up = 0;
+    for (const days of Object.values(traffic ?? {})) {
+      down += days?.[key]?.[0] ?? 0;
+      up += days?.[key]?.[1] ?? 0;
+    }
+    rows.push({ ts: d.getTime() / 1000, down, up });
+  }
+  return rows;
+}
+
+/**
+ * The text of the tooltip of a chart for one point [epoch seconds, value …]: the time and the
+ * values as the chart's unit ("bytes", "rate" or a plain unit); two values are down and up.
+ */
+export function plotText(point, { unit = "", fmt = "", range = "day" } = {}, language) {
+  const [ts, ...values] = point;
+  const options = {
+    day: { hour: "2-digit", minute: "2-digit" },
+    week: { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" },
+    date: { weekday: "short", day: "numeric", month: "short" },
+  }[range] ?? { hour: "2-digit", minute: "2-digit" };
+  const when = new Date(ts * 1000).toLocaleString(language, options);
+  const show = (v) =>
+    typeof v !== "number" ? "–" : fmt === "bytes" ? formatBytes(v, language) : fmt === "rate" ? formatRate(v, language) : `${v.toLocaleString(language)} ${unit}`;
+  const arrows = values.length > 1 ? ["↓ ", "↑ "] : [""];
+  return `${when} · ${values.map((v, k) => `${arrows[k] ?? ""}${show(v)}`).join(" · ")}`;
 }
 
 /** The days the table column of the data volume adds up. */

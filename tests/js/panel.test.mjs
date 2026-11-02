@@ -750,3 +750,12 @@ test("devices can be sorted by their data volume, the largest first", () => {
   const clients = ["a", "b", "c"].map((mac) => ({ mac, name: mac, online: true }));
   assert.deepEqual(shared.sortClients(clients, "traffic", false, volumes).map((c) => c.mac), ["b", "a", "c"]);
 });
+
+test("the days of the line are summed over all devices and the tooltip names time and values", () => {
+  const now = new Date(2026, 10, 2);
+  const rows = shared.dailyTotals({ a: { "2026-11-02": [10, 1], "2026-11-01": [5, 5] }, b: { "2026-11-02": [20, 2] } }, 3, now);
+  assert.equal(rows.length, 3);
+  assert.deepEqual(rows.map((r) => [r.down, r.up]), [[0, 0], [5, 5], [30, 3]]);
+  assert.match(shared.plotText([1_800_000_000, 1500, 200], { fmt: "rate", range: "day" }, "en"), /↓ 1\.5 Mbit\/s · ↑ 200 kbit\/s$/);
+  assert.match(shared.plotText([1_800_000_000, -67], { unit: "dBm" }, "en"), /-67 dBm$/);
+});

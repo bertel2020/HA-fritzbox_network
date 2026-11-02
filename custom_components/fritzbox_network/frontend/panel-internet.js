@@ -1,6 +1,6 @@
 /* The internet page of the panel: the connection of the box, its load and, on a DSL line, its quality. */
 
-import { escapeHtml, formatBytes, formatDuration, formatRate, sparkPaths, trafficByDevice, usedPercent } from "./shared.js";
+import { dailyTotals, escapeHtml, formatBytes, formatDuration, formatRate, sparkPaths, trafficByDevice, usedPercent } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { whenText } from "./panel-network.js";
@@ -61,9 +61,12 @@ function chart(internet, language, t) {
   const paths = sparkPaths(internet.samples, CHART.width, CHART.height);
   if (!paths) return `<p class="hint">${escapeHtml(t.inet.historyNone)}</p>`;
   const span = formatDuration(paths.seconds, t.inet.units);
-  return `<svg class="spark" viewBox="0 0 ${CHART.width} ${CHART.height}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(`${t.inet.history}, ${fill(t.inet.historySpan, { time: span })}`)}">
+  // the rates are kbit/s: the tooltip reads them as rates
+  return `<div class="plot" data-mode="time" data-fmt="rate" data-range="day" data-pts="${escapeHtml(JSON.stringify(internet.samples))}">
+    <svg class="spark" viewBox="0 0 ${CHART.width} ${CHART.height}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(`${t.inet.history}, ${fill(t.inet.historySpan, { time: span })}`)}">
       <line x1="0" y1="${CHART.height - 0.5}" x2="${CHART.width}" y2="${CHART.height - 0.5}"/>
       <path class="dn-area" d="${paths.area}"/><path class="dn" d="${paths.down}"/><path class="upl" d="${paths.up}"/></svg>
+    <i class="cursor" hidden></i><b class="tip" hidden></b></div>
     <div class="legend2"><span><i class="dn"></i>${escapeHtml(t.inet.down)}</span><span><i class="upl"></i>${escapeHtml(t.inet.up)}</span>
       <span class="grow">${escapeHtml(fill(t.inet.historySpan, { time: span }))} · max ${escapeHtml(formatRate(paths.top, language))}</span></div>`;
 }
@@ -106,30 +109,64 @@ function spectrum(dsl, t) {
 
 const TOP_DEVICES = 10;
 
-/** Who used the most: the devices with their data volume over the chosen days, as bars. */
-function topDevices(ctx) {
+/** The bars of the days: down below, up above, with a tooltip per day. */
+function dayBars(rows, language, t) {
+  const top = Math.max(1, ...rows.map((r) => r.down + r.up));
+  const width = 300 / rows.length;
+  const bars = rows
+    .map((r, i) => {
+      const down = (r.down / top) * 86;
+      const up = (r.up / top) * 86;
+      const x = (i * width + width * 0.15).toFixed(1);
+      const w = (width * 0.7).toFixed(1);
+      return `<rect class="bd" x="${x}" y="${(88 - down).toFixed(1)}" width="${w}" height="${down.toFixed(1)}"/><rect class="bu" x="${x}" y="${(88 - down - up).toFixed(1)}" width="${w}" height="${up.toFixed(1)}"/>`;
+    })
+    .join("");
+  const first = new Date(rows[0].ts * 1000).toLocaleDateString(language, { day: "numeric", month: "short" });
+  const last = new Date(rows[rows.length - 1].ts * 1000).toLocaleDateString(language, { day: "numeric", month: "short" });
+  return `<div class="plot" data-mode="bars" data-fmt="bytes" data-range="date" data-pts="${escapeHtml(JSON.stringify(rows.map((r) => [r.ts, r.down, r.up])))}">
+    <svg class="spark days" viewBox="0 0 300 90" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(t.inet.perDay)}"><line x1="0" y1="89.5" x2="300" y2="89.5"/>${bars}</svg>
+    <i class="cursor" hidden></i><b class="tip" hidden></b></div>
+    <div class="legend2"><span><i></i>${escapeHtml(t.inet.down)}</span><span><i class="upl"></i>${escapeHtml(t.inet.up)}</span>
+      <span class="grow">${escapeHtml(`${first} – ${last}`)} · max ${escapeHtml(formatBytes(top, language))}</span></div>`;
+}
+
+/** The data volume of the line: today, 7 and 30 days, the bars per day and who used the most. */
+function volumeCard(ctx) {
   const { t, language, traffic, clients, range } = ctx;
   const i = t.inet;
+  const known = Object.keys(traffic ?? {}).length > 0;
+  const tile = (n) => {
+    const rows = dailyTotals(traffic, n);
+    const down = rows.reduce((a, r) => a + r.down, 0);
+    const up = rows.reduce((a, r) => a + r.up, 0);
+    return `<div class="tile"><span class="label">${escapeHtml(t.trafficRanges[n])}</span><b>${escapeHtml(formatBytes(down + up, language))}</b><small>↓ ${escapeHtml(formatBytes(down, language))} · ↑ ${escapeHtml(formatBytes(up, language))}</small></div>`;
+  };
+  const days = range === 30 ? 30 : 14;
   const names = new Map((clients ?? []).map((c) => [c.mac, c]));
   const rows = Object.entries(trafficByDevice(traffic, range))
     .map(([mac, [down, up]]) => ({ mac, down, up, total: down + up, client: names.get(mac) }))
     .sort((a, b) => b.total - a.total);
-  const sum = rows.reduce((acc, r) => [acc[0] + r.down, acc[1] + r.up], [0, 0]);
   const top = rows[0]?.total || 1;
   const buttons = [1, 7, 30]
     .map((n) => `<button data-trange="${n}" aria-pressed="${n === range}">${escapeHtml(t.trafficRanges[n])}</button>`)
     .join("");
   const list = rows
     .slice(0, TOP_DEVICES)
-    .map((r) => {
+    .map((r, k) => {
       const name = escapeHtml(r.client?.name ?? r.mac);
       const who = r.client ? `<button class="tlink" data-dev="${escapeHtml(r.client.id)}">${name}</button>` : `<span>${name}</span>`;
-      return `<li>${who}<span class="bar" aria-hidden="true"><i style="width:${Math.max(2, (r.total / top) * 100).toFixed(1)}%"></i></span>
+      return `<li><span class="rank" aria-hidden="true">${k + 1}</span>${who}<span class="bar" aria-hidden="true"><i class="bd" style="width:${((r.down / top) * 100).toFixed(1)}%"></i><i class="bu" style="width:${((r.up / top) * 100).toFixed(1)}%"></i></span>
         <span class="amount"><b>${escapeHtml(formatBytes(r.total, language))}</b> <small>↓ ${escapeHtml(formatBytes(r.down, language))} · ↑ ${escapeHtml(formatBytes(r.up, language))}</small></span></li>`;
     })
     .join("");
-  return `<section class="card sec"><div class="trendhead"><span class="label">${escapeHtml(i.topTitle)}</span><div class="seg" role="group" aria-label="${escapeHtml(i.topTitle)}">${buttons}</div></div>
-    ${rows.length ? `<p class="hint">${escapeHtml(fill(i.topSum, { down: formatBytes(sum[0], language), up: formatBytes(sum[1], language) }))}</p><ol class="topdev">${list}</ol>` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}
+  const rest = rows.slice(TOP_DEVICES);
+  const more = rest.length ? `<p class="hint">${escapeHtml(fill(i.topMore, { n: rest.length, size: formatBytes(rest.reduce((a, r) => a + r.total, 0), language) }))}</p>` : "";
+  return `<section class="card sec"><div class="trendhead"><span class="label">${escapeHtml(i.volume)}</span><div class="seg" role="group" aria-label="${escapeHtml(i.volume)}">${buttons}</div></div>
+    ${known ? `<div class="tiles">${[1, 7, 30].map(tile).join("")}</div>
+    <div class="subhead">${escapeHtml(i.perDay)}</div>${dayBars(dailyTotals(traffic, days), language, t)}
+    <div class="subhead">${escapeHtml(fill(i.topTitle, { range: t.trafficRanges[range] }))}</div>
+    ${rows.length ? `<ol class="topdev">${list}</ol>${more}` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}
     <p class="hint">${escapeHtml(i.topHint)}</p></section>`;
 }
 
@@ -255,7 +292,7 @@ export function renderInternet(internet, ctx) {
   const rate = internet.throughput;
   return `${back}
     ${hintsHtml(internet, t, now)}
-    <section class="card sec">
+    <section class="card sec hero">
       <div class="ihead"><span class="ico">${ic("globe")}</span>
         <span class="who"><b>${escapeHtml(i.connection)}</b><small>${escapeHtml(sub)}</small></span>
         <span class="stat ${up ? "ok" : "warn"}">${escapeHtml(up ? i.state.up : i.state.down)}</span></div>
@@ -265,12 +302,16 @@ export function renderInternet(internet, ctx) {
         ${tile(i.dns, dns?.[0] ?? "–", dns?.[1] ?? "")}
         ${tile(i.lastError, internet.last_error && internet.last_error !== "ERROR_NONE" ? internet.last_error : i.noError)}
       </div></section>
+    <div class="two">
     <section class="card sec"><span class="label">${escapeHtml(i.load)}</span>
+      <div class="live"><div class="dn"><span class="gl">↓ ${escapeHtml(i.down)}</span><b>${escapeHtml(formatRate(rate?.down ?? null, language))}</b></div>
+        <div class="upl"><span class="gl">↑ ${escapeHtml(i.up)}</span><b>${escapeHtml(formatRate(rate?.up ?? null, language))}</b></div></div>
       ${gauge("dn", i.down, rate?.down, internet.rate_down, language, t)}
       ${gauge("upl", i.up, rate?.up, internet.rate_up, language, t)}
       ${chart(internet, language, t)}
       <p class="hint">${escapeHtml(i.measureNote)}</p></section>
-    ${topDevices({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}
+    ${volumeCard({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}
+    </div>
     ${internet.dsl ? lineQuality(internet.dsl, language, t) : ""}
     ${events(internet, t, now)}
     ${ports(portState, t)}

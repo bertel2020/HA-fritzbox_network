@@ -16,6 +16,8 @@ All notable changes to this integration are recorded here.
 - The topology adds `uplink` per repeater: type, band and signal of its link, from the mesh topology.
 - An action whose entity is switched off in Home Assistant shows the known value (access profile, priority) and an **Enable** button, with two or more also **Enable all**. Home Assistant then reloads the integration briefly.
 
+- Side panel, internet page: redesigned. The connection on top with a tinted header, below it side by side the load (large live values for download and upload, the course with a tooltip per point) and the **data volume** (today, 7 and 30 days, bars per day with a tooltip, the ten most used devices as a ranking with their download and upload share).
+
 ### Changed
 
 - Side panel: the pages are underlined tabs at the left under the title. The lines of the connection path sit at the same height, with the label below. "Clean up" takes fixed steps (3, 7, 14, 30, 90 days, 1 year) as buttons instead of the slider. The group "No access point" is now "Not assigned".
