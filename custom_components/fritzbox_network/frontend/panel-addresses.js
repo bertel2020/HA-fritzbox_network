@@ -321,19 +321,34 @@ function countFor(m, filter, ctx) {
 
 export const displayName = (d, own) => own.names[d.mac] || d.name;
 
+/** Used, fixed and free in one tile: a bar of the four kinds of address, the numbers below. */
+function usageTile(m, a) {
+  const count = (...states) => m.cells.filter((c) => states.includes(c.state)).length;
+  const parts = [
+    ["fix", count("fix", "offfix", "box"), "var(--fixed)"],
+    ["dyn", count("dyn"), "var(--accent)"],
+    ["off", count("off"), "color-mix(in srgb, var(--accent) 35%, transparent)"],
+  ];
+  const total = m.usable || 1;
+  const bar = `<div class="ameter" role="img" aria-label="${escapeHtml(fill(a.tiles.usedValue, { used: m.used, total: m.usable }))}">${parts
+    .filter(([, n]) => n)
+    .map(([, n, color]) => `<i style="width:${((n / total) * 100).toFixed(2)}%;background:${color}"></i>`)
+    .join("")}</div>`;
+  const sub = fill(a.tiles.usageSub, { dyn: parts[1][1], off: parts[2][1], fixed: parts[0][1], free: m.free });
+  return `<div class="tile wide"><span class="label">${escapeHtml(a.tiles.usage)}</span><b>${escapeHtml(fill(a.tiles.usedValue, { used: m.used, total: m.usable }))}</b>${bar}<small>${escapeHtml(sub)}</small></div>`;
+}
+
 function tiles(m, t) {
   const a = t.addr;
   const percent = m.poolSize ? Math.round((m.poolUsed / m.poolSize) * 100) : 0;
-  const tile = (label, value, sub, meter = "") =>
-    `<div class="tile"><span class="label">${escapeHtml(label)}</span><b>${escapeHtml(value)}</b>${meter}<small>${escapeHtml(sub)}</small></div>`;
+  const tile = (label, value, sub, meter = "", cls = "") =>
+    `<div class="tile${cls}"><span class="label">${escapeHtml(label)}</span><b>${escapeHtml(value)}</b>${meter}<small>${escapeHtml(sub)}</small></div>`;
   const meter = (share, color) => `<div class="ameter"><i style="width:${Math.min(100, share * 100).toFixed(1)}%;background:${color}"></i></div>`;
   return `<div class="tiles atiles">
     ${tile(a.tiles.net, `${m.baseText}0/${m.prefix}`, fill(a.tiles.mask, { mask: m.mask }))}
     ${tile(a.tiles.gateway, m.gateway ?? "–", fill(a.tiles.gatewaySub, { name: m.gatewayName, dhcp: m.dhcp ? a.on : a.off }))}
-    ${tile(a.tiles.pool, m.hasPool ? `.${m.poolFrom} – .${m.poolTo}` : a.tiles.noPool, m.hasPool ? fill(a.tiles.poolSub, { n: m.poolSize, used: m.poolUsed, percent }) : "", m.hasPool ? meter(m.poolUsed / (m.poolSize || 1), percent >= 80 ? "var(--warn)" : "var(--accent)") : "")}
-    ${tile(a.tiles.used, fill(a.tiles.usedValue, { used: m.used, total: m.usable }), fill(a.tiles.usedSub, { online: m.online, offline: m.used - m.online }), meter(m.used / (m.usable || 1), "var(--accent)"))}
-    ${tile(a.tiles.fixed, String(m.fixed), a.tiles.fixedSub)}
-    ${tile(a.tiles.free, String(m.free), m.hasPool ? fill(a.tiles.freeSub, { n: m.poolSize - m.poolUsed }) : "")}
+    ${tile(a.tiles.pool, m.hasPool ? `.${m.poolFrom} – .${m.poolTo}` : a.tiles.noPool, m.hasPool ? fill(a.tiles.poolSub, { n: m.poolSize, used: m.poolUsed, free: m.poolSize - m.poolUsed, percent }) : "", m.hasPool ? meter(m.poolUsed / (m.poolSize || 1), percent >= 80 ? "var(--warn)" : "var(--accent)") : "")}
+    ${usageTile(m, a)}
   </div>`;
 }
 

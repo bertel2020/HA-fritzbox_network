@@ -303,7 +303,7 @@ export function printSheet({ m, own, t, language, opts, now = new Date(), fixedK
   <div class="stats">
     ${stat(a.tiles.net, `${m.baseText}0/${m.prefix}`, fill(a.tiles.mask, { mask: m.mask }))}
     ${stat(a.tiles.gateway, m.gateway ?? "–", fill(a.tiles.gatewaySub, { name: m.gatewayName, dhcp: m.dhcp ? a.on : a.off }))}
-    ${stat(a.tiles.pool, m.hasPool ? `.${m.poolFrom} – .${m.poolTo}` : a.tiles.noPool, m.hasPool ? fill(a.tiles.poolSub, { n: m.poolSize, used: m.poolUsed, percent }) : "")}
+    ${stat(a.tiles.pool, m.hasPool ? `.${m.poolFrom} – .${m.poolTo}` : a.tiles.noPool, m.hasPool ? fill(a.tiles.poolSub, { n: m.poolSize, used: m.poolUsed, free: m.poolSize - m.poolUsed, percent }) : "")}
     ${stat(a.tiles.used, fill(a.tiles.usedValue, { used: m.used, total: m.usable }), fill(a.tiles.usedSub, { online: m.online, offline: m.used - m.online }))}
     ${stat(a.tiles.fixed, String(m.fixed), a.tiles.fixedSub)}
     ${stat(a.tiles.free, String(m.free), m.hasPool ? fill(a.tiles.freeSub, { n: m.poolSize - m.poolUsed }) : "")}

@@ -544,6 +544,8 @@ export const PANEL_CSS = `
   #addresses-view .tile b, #addresses-view .tile small { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
   #addresses-view .tile { box-shadow: var(--shadow); border: 1px solid var(--line); background: var(--surface); }
   #addresses-view .tile b { font-size: 20px; }
+  #addresses-view .tile.wide { grid-column: span 2; }
+  @media (max-width: 520px) { #addresses-view .tile.wide { grid-column: 1 / -1; } }
   .ameter { height: 8px; border-radius: 4px; background: var(--free); overflow: hidden; margin: 8px 0 4px; display: flex; }
   .ameter i { display: block; height: 100%; }
   .ahints { display: grid; gap: 8px; }

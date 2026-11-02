@@ -868,6 +868,11 @@ test("the address page draws the map, escapes names and says what it is still re
   const html = addresses.renderAddresses({ t, language: "de", now: NOW, addr, clients: lan.clients, nodes: lan.nodes, backIcon: "" });
   assert.equal((html.match(/data-aip="/g) ?? []).length, 256);
   assert.match(html, /Lese, welche Adressen fest sind … 2 von 5/);
+  // used, fixed and free are one tile with a bar of the kinds; the old single tiles are gone
+  assert.equal((html.match(/class="tile wide"/g) ?? []).length, 1);
+  assert.match(html, /Belegung/);
+  assert.match(html, /\d+ online · \d+ offline · \d+ fest · \d+ frei/);
+  assert.doesNotMatch(html, /Feste Adressen<\/span>/);
   assert.match(html, /Wallbox/);
   assert.match(html, /feste Adresse mitten im DHCP-Bereich/);
   assert.doesNotMatch(html, /<b>x<\/b>/);
