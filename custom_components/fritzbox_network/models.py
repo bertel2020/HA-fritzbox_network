@@ -544,7 +544,7 @@ def _address(value: Any) -> str | None:
 
 
 # the box gives a value per group of tones, several hundred of them; the panel draws this many
-SPECTRUM_BUCKETS = 64
+SPECTRUM_BUCKETS = 256
 
 
 def spectrum(value: Any, buckets: int = SPECTRUM_BUCKETS) -> tuple[int, ...]:

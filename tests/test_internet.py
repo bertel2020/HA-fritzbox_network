@@ -76,9 +76,9 @@ def test_a_line_that_gives_a_spectrum_has_it_in_the_info():
     slow["X_AVM-DE_GetDSLInfo"]["NewSNRpsds"] = ",".join(["0"] * 10 + ["100"] * 54)
     slow["X_AVM-DE_GetDSLInfo"]["NewSNRpsus"] = "50,60"
     info = parse_internet(INTERNET_FAST, slow)
-    assert len(info.dsl.spectrum_down) == 64
+    assert len(info.dsl.spectrum_down) == 256
     assert info.dsl.spectrum_down[0] == 0 and info.dsl.spectrum_down[-1] == 100
-    assert len(info.dsl.spectrum_up) == 64
+    assert len(info.dsl.spectrum_up) == 256
     # a box that does not give them leaves the spectrum empty
     assert parse_internet(INTERNET_FAST, INTERNET_SLOW).dsl.spectrum_down == ()
 

@@ -86,24 +86,99 @@ function lineQuality(dsl, language, t) {
       ${tile(i.lineAtt, pair(dsl.attenuation_down, dsl.attenuation_up, "dB"))}
       ${tile(i.lineErrors, errors)}
     </div>
-    ${spectrum(dsl, t)}
+    ${spectrum(dsl, t, language)}
     <p class="hint">${escapeHtml(i.lineHint)}</p></section>`;
 }
 
-/** One bar chart of the signal over the frequency; a gap is a band the line does not use. */
-function spectrumChart(values, max, label) {
-  if (!values?.length) return "";
-  const bar = (value, i) =>
-    value ? `<rect x="${i}" y="${(100 - (value / max) * 100).toFixed(1)}" width="0.8" height="${((value / max) * 100).toFixed(1)}"/>` : "";
-  return `<figure class="spec"><svg viewBox="0 0 ${values.length} 100" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(label)}">${values.map(bar).join("")}</svg><figcaption>${escapeHtml(label)}</figcaption></figure>`;
+// the box gives the signal to noise per tone group in tenths of a dB (assumed, the unit is not documented)
+const DB_PER_UNIT = 0.1;
+// the highest frequency of a VDSL profile in MHz; a profile that is not known has no frequency axis
+const PROFILE_MHZ = { 8: 8.832, 12: 12, 17: 17.664, 30: 30, 35: 35.328 };
+// the bands of the plan 998 (profiles 8, 12, 17): [name, from, to] in MHz
+const BANDS = { down: [["DS1", 0.138, 3.75], ["DS2", 5.2, 8.5], ["DS3", 12, 17.664]], up: [["US1", 3.75, 5.2], ["US2", 8.5, 12]] };
+// a tone group this far under the average is a dip
+const DIP_DB = 4;
+
+const oneDecimal = (n, language) => n.toLocaleString(language, { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+
+/** The tone groups of one direction as points [MHz or null, dB or null, band or ""] and the mean of the used ones. */
+function spectrumPoints(values, mhz, plan, direction) {
+  const dB = values.map((v) => (v > 0 ? v * DB_PER_UNIT : null));
+  const used = dB.filter((v) => v !== null);
+  const average = used.length ? used.reduce((a, b) => a + b, 0) / used.length : 0;
+  const points = dB.map((v, i) => {
+    const f = mhz ? ((i + 0.5) / values.length) * mhz : null;
+    const band = f !== null && plan ? (BANDS[direction].find(([, a, z]) => f >= a && f < z)?.[0] ?? "") : "";
+    return [f === null ? null : Math.round(f * 100) / 100, v === null ? null : Math.round(v * 10) / 10, band];
+  });
+  return { points, average };
 }
 
-function spectrum(dsl, t) {
-  const values = [...(dsl.spectrum_down ?? []), ...(dsl.spectrum_up ?? [])];
-  if (!values.some(Boolean)) return "";
-  const max = Math.max(...values);
+/** The stretches of frequency where the signal is far under the average: [[from, to], ...]. */
+function dipRuns(points, average) {
+  const runs = [];
+  let run = null;
+  for (const [f, v] of points) {
+    if (f !== null && v !== null && v < average - DIP_DB) {
+      if (!run) run = [f, f];
+      run[1] = f;
+    } else if (run) {
+      runs.push(run);
+      run = null;
+    }
+  }
+  if (run) runs.push(run);
+  return runs;
+}
+
+/** One chart of the signal over the frequency: dB on the left, MHz below, the average dashed, dips marked. */
+function spectrumChart({ points, average }, { max, mhz, label, cls, t, language }) {
+  const n = points.length;
+  const bars = points
+    .map(([, v], i) =>
+      v === null ? "" : `<rect${v < average - DIP_DB ? ' class="dip"' : ""} x="${i}" y="${(100 - (v / max) * 100).toFixed(1)}" width="0.85" height="${((v / max) * 100).toFixed(1)}"/>`
+    )
+    .join("");
+  const ticks = [0, 10, 20, 30, 40, 50, 60].filter((v) => v <= max);
+  const grid = ticks.map((v) => `<line x1="0" x2="${n}" y1="${(100 - (v / max) * 100).toFixed(1)}" y2="${(100 - (v / max) * 100).toFixed(1)}"/>`).join("");
+  const y = ticks.map((v) => `<span style="bottom:${(v / max) * 100}%">${v}</span>`).join("");
+  const step = mhz > 20 ? 5 : 2;
+  const x = mhz ? [...Array(Math.floor(mhz / step) + 1).keys()].map((k) => `<span style="left:${((k * step) / mhz) * 100}%">${k * step}</span>`).join("") + `<em>MHz</em>` : "";
+  const avgY = (100 - (average / max) * 100).toFixed(1);
+  return `<figure class="spec ${cls}"><figcaption>${escapeHtml(label)} <small>${escapeHtml(fill(t.inet.spectrumAverage, { n: oneDecimal(average, language) }))}</small></figcaption>
+    <div class="specbox"><div class="yax" aria-hidden="true">${y}</div>
+      <div class="plot" data-mode="bars" data-fmt="spec" data-unused="${escapeHtml(t.inet.spectrumUnused)}" data-pts="${escapeHtml(JSON.stringify(points))}">
+        <svg viewBox="0 0 ${n} 100" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(label)}"><g class="sgrid">${grid}</g>${bars}<line class="savg" x1="0" x2="${n}" y1="${avgY}" y2="${avgY}"/></svg>
+        <i class="cursor" hidden></i><b class="tip" hidden></b></div></div>
+    <div class="xax" aria-hidden="true">${x}</div></figure>`;
+}
+
+function spectrum(dsl, t, language) {
+  const down = dsl.spectrum_down ?? [];
+  const up = dsl.spectrum_up ?? [];
+  if (!down.some(Boolean) && !up.some(Boolean)) return "";
+  const profile = Number.parseInt(dsl.profile ?? "", 10);
+  const mhz = PROFILE_MHZ[profile] ?? null;
+  const plan = [8, 12, 17].includes(profile);
+  const charts = [
+    ["down", down, t.inet.spectrumDown, "sd"],
+    ["up", up, t.inet.spectrumUp, "su"],
+  ]
+    .filter(([, values]) => values.some(Boolean))
+    .map(([direction, values, label, cls]) => ({ direction, label, cls, ...spectrumPoints(values, mhz, plan, direction) }));
+  const peak = Math.max(...charts.flatMap((c) => c.points.map((p) => p[1] ?? 0)));
+  const max = Math.max(10, Math.ceil(peak / 10) * 10);
+  const verdict = charts
+    .map((c) => ({ c, runs: mhz ? dipRuns(c.points, c.average) : [] }))
+    .filter(({ runs }) => runs.length);
+  const where = (runs) => runs.map(([a, z]) => (z - a > 0.1 ? `${oneDecimal(a, language)}–${oneDecimal(z, language)}` : oneDecimal(a, language))).join(", ");
+  const summary = verdict.length
+    ? `<p class="specverdict bad">${verdict.map(({ c, runs }) => escapeHtml(fill(t.inet.spectrumDips, { direction: c.label, n: runs.length, where: where(runs) }))).join("<br>")}</p>`
+    : mhz
+      ? `<p class="specverdict">${escapeHtml(t.inet.spectrumClean)}</p>`
+      : "";
   return `<div class="spectrum"><span class="label">${escapeHtml(t.inet.spectrum)}</span>
-    ${spectrumChart(dsl.spectrum_down, max, t.inet.spectrumDown)}${spectrumChart(dsl.spectrum_up, max, t.inet.spectrumUp)}
+    ${charts.map((c) => spectrumChart(c, { max, mhz, label: c.label, cls: c.cls, t, language })).join("")}${summary}
     <p class="hint">${escapeHtml(t.inet.spectrumHint)}</p></div>`;
 }
 

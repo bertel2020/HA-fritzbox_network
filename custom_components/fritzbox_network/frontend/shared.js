@@ -555,7 +555,14 @@ export function dailyTotals(traffic, n, now = new Date()) {
  * The text of the tooltip of a chart for one point [epoch seconds, value …]: the time and the
  * values as the chart's unit ("bytes", "rate" or a plain unit); two values are down and up.
  */
-export function plotText(point, { unit = "", fmt = "", range = "day" } = {}, language) {
+export function plotText(point, { unit = "", fmt = "", range = "day", unused = "" } = {}, language) {
+  if (fmt === "spec") {
+    // [MHz or null, dB or null, band]: a tone group the line does not use has no value
+    const [mhz, dB, band] = point;
+    const one = (n) => n.toLocaleString(language, { maximumFractionDigits: 1, minimumFractionDigits: 1 });
+    const where = mhz === null ? "" : `${one(mhz)} MHz · `;
+    return dB === null ? `${where}${unused}` : `${where}${one(dB)} dB${band ? ` · ${band}` : ""}`;
+  }
   const [ts, ...values] = point;
   const options = {
     day: { hour: "2-digit", minute: "2-digit" },

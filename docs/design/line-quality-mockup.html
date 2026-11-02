@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leitungsqualität – Mockup</title>
+<style>
+  :root { --bg: #f4f6f9; --card: #fff; --fg: #1b1f24; --mute: #6b7280; --line: #e3e7ec; --tile: #f4f6f9; --dn: #0a6aa8; --up: #7a4bc2; --warn: #d9730d; --band: rgb(10 106 168 / 7%); --ok: #1e6b34 }
+  @media (prefers-color-scheme: dark) { :root { --bg: #14171b; --card: #1d2126; --fg: #e8eaed; --mute: #9aa4b1; --line: #2c323a; --tile: #262b31; --dn: #5bb2ea; --up: #b093e8; --warn: #f0a050; --band: rgb(91 178 234 / 9%); --ok: #6fcf8a } }
+  * { box-sizing: border-box }
+  body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif }
+  .wrap { max-width: 1000px; margin: 0 auto; display: grid; gap: 16px }
+  .note { background: #fff8e1; color: #3b2f00; border-left: 4px solid #b36a00; padding: 12px 16px; border-radius: 8px; font-size: 13px }
+  .note ul { margin: 6px 0 0; padding-left: 18px }
+  .card { background: var(--card); border-radius: 24px; padding: 24px; box-shadow: 0 1px 6px rgb(0 0 0 / 10%) }
+  .label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--mute) }
+  .hint { color: var(--mute); margin: 8px 0 }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin: 16px 0 }
+  .tile { background: var(--tile); border-radius: 18px; padding: 14px 18px }
+  .tile b { display: block; font-size: 20px; font-weight: 600 } .tile small { color: var(--mute) }
+  .head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; margin-top: 20px }
+  .seg { display: inline-flex; background: var(--tile); border-radius: 20px; padding: 3px }
+  .seg button { border: 0; background: none; color: var(--fg); font: inherit; padding: 5px 16px; border-radius: 17px; cursor: pointer }
+  .seg button[aria-pressed=true] { background: var(--card); box-shadow: 0 1px 3px rgb(0 0 0 / 20%); font-weight: 600 }
+  .plot { position: relative; margin-top: 8px; touch-action: none }
+  svg { display: block; width: 100%; height: auto; overflow: visible }
+  svg text { fill: var(--mute); font: 11px system-ui, sans-serif }
+  .grid line { stroke: var(--line); stroke-width: 1 }
+  .bar { fill: var(--c) } .bar.dip { fill: var(--warn) } .bar.hot { filter: brightness(1.25) }
+  .avg { stroke: var(--fg); stroke-width: 1; stroke-dasharray: 4 3; opacity: .55 }
+  .bandbg { fill: var(--band) } .bandname { font-weight: 600 }
+  .unused { fill: var(--mute); opacity: .7; font-style: italic }
+  .cursor { stroke: var(--fg); stroke-width: 1; opacity: .5 }
+  .tip { position: absolute; pointer-events: none; background: var(--fg); color: var(--card); border-radius: 10px; padding: 6px 10px; font-size: 12px; line-height: 1.35; white-space: nowrap; transform: translate(-50%, -100%); z-index: 2 }
+  .tip small { opacity: .75; display: block }
+  .legend2 { display: flex; flex-wrap: wrap; gap: 6px 18px; color: var(--mute); font-size: 12px; margin-top: 6px }
+  .legend2 i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; vertical-align: -1px }
+  .verdict { display: flex; gap: 10px; align-items: baseline; margin-top: 14px; padding: 10px 14px; border-radius: 12px; background: var(--tile) }
+  .verdict b { color: var(--ok) } .verdict.bad b { color: var(--warn) }
+</style></head><body>
+<div class="wrap">
+  <div class="note"><b>Mockup – Leitungsqualität.</b> Die Messwerte sind <u>erfunden</u> (VDSL 17a, Bänder DS1/US1/DS2/US2/DS3 nach Bandplan 998). Einheit der Rohwerte und die Zuordnung Wert → Frequenz sind noch an der echten Box zu prüfen.
+    <ul>
+      <li>Achsen: dB links, MHz unten, Bänder benannt, ungenutzte Bereiche als „nicht genutzt“.</li>
+      <li>Hover/Touch: Frequenz, Störabstand, Abstand zum Durchschnitt, Band.</li>
+      <li>Gestrichelt: Durchschnitt. Orange: Balken deutlich darunter (Störstelle).</li>
+      <li>Umschalter Download / Upload statt zwei gleich großer Blöcke, dazu ein Satz als Fazit.</li>
+    </ul></div>
+
+  <section class="card">
+    <span class="label">Leitungsqualität</span>
+    <p class="hint">VDSL, Profil 17a</p>
+    <div class="tiles">
+      <div class="tile"><span class="label">Leitungsrate (Down / Up)</span><b>56,3 / 11,3 Mbit/s</b><small>möglich: 96,3 Mbit/s / 35,0 Mbit/s</small></div>
+      <div class="tile"><span class="label">Störabstand (Down / Up)</span><b>17 / 22 dB</b></div>
+      <div class="tile"><span class="label">Dämpfung (Down / Up)</span><b>7 / 7 dB</b></div>
+      <div class="tile"><span class="label">Fehler seit Sync</span><b>FEC 96 · CRC 0</b></div>
+    </div>
+    <div class="head"><span class="label">Störabstand über die Frequenz</span>
+      <span class="seg" role="group"><button id="bDown" aria-pressed="true">Download</button><button id="bUp" aria-pressed="false">Upload</button></span></div>
+    <div class="plot" id="plot"></div>
+    <div class="legend2"><span><i style="background:var(--c)" id="swatch"></i><span id="legName">Download</span></span><span><i style="background:var(--warn)"></i>deutlich unter dem Durchschnitt</span><span>– – Durchschnitt <span id="avgText"></span></span></div>
+    <div class="verdict" id="verdict"></div>
+    <p class="hint">Gemessen wird der Abstand des Signals zum Rauschen je Frequenz. Höher ist besser. Einbrüche zeigen Störungen genau dieser Frequenz, etwa durch Funk, Dimmer oder Netzteile; fallen die Werte überall oder steigen die Fehler, liegt es an der Leitung, nicht an einem Gerät.</p>
+  </section>
+</div>
+
+<script>
+// ---- erfundene Daten: ein Wert je 69 kHz, 0 … 17,664 MHz ----
+const STEP = 0.069, N = Math.round(17.664 / STEP);
+const BANDS = {
+  down: [["DS1", 0.138, 3.75], ["DS2", 5.2, 8.5], ["DS3", 12, 17.664]],
+  up: [["US1", 3.75, 5.2], ["US2", 8.5, 12]]
+};
+let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+function series(bands, base, slope, dips) {
+  return Array.from({ length: N }, (_, i) => {
+    const f = i * STEP + STEP / 2, b = bands.find(([, a, z]) => f >= a && f < z);
+    if (!b) return null;
+    let v = base - slope * f + (rnd() - .5) * 1.6;
+    for (const [c, w, d] of dips) v -= d * Math.exp(-((f - c) ** 2) / (2 * w * w));
+    return Math.max(2, v);
+  });
+}
+const DATA = {
+  down: { name: "Download", color: "var(--dn)", vals: series(BANDS.down, 25, 0.62, [[1.9, .07, 7], [6.9, .05, 9], [14.3, .06, 6]]), bands: BANDS.down },
+  up:   { name: "Upload",   color: "var(--up)", vals: series(BANDS.up, 31, 0.9, [[9.6, .06, 8]]), bands: BANDS.up }
+};
+const fmt = n => n.toFixed(1).replace(".", ",");
+
+// ---- Zeichnen ----
+const W = 1000, H = 280, L = 40, R = 8, T = 22, B = 34, PW = W - L - R, PH = H - T - B, FMAX = 17.664, DBMAX = 40;
+const X = f => L + (f / FMAX) * PW, Y = v => T + PH - (v / DBMAX) * PH;
+const plot = document.getElementById("plot");
+let cur = "down";
+
+function draw() {
+  const d = DATA[cur], used = d.vals.filter(v => v !== null), avg = used.reduce((a, b) => a + b) / used.length;
+  const bw = PW / N;
+  let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Störabstand ${d.name} über die Frequenz">`;
+  s += `<g class="grid">${[0, 10, 20, 30, 40].map(v => `<line x1="${L}" x2="${W - R}" y1="${Y(v)}" y2="${Y(v)}"/><text x="${L - 6}" y="${Y(v) + 4}" text-anchor="end" style="stroke:none">${v}</text>`).join("")}</g>`;
+  s += `<text x="${L - 6}" y="${T - 8}" text-anchor="end">dB</text>`;
+  // Bänder und ungenutzte Bereiche
+  let last = 0;
+  for (const [name, a, z] of d.bands) {
+    if (a > last + 0.4) s += `<text class="unused" x="${(X(last) + X(a)) / 2}" y="${Y(DBMAX) + 14}" text-anchor="middle">nicht genutzt</text>`;
+    s += `<rect class="bandbg" x="${X(a)}" y="${T}" width="${X(z) - X(a)}" height="${PH}"/><text class="bandname" x="${X(a) + 6}" y="${T + 12}">${name}</text>`;
+    last = z;
+  }
+  // Balken
+  d.vals.forEach((v, i) => { if (v === null) return;
+    const dip = v < avg - 4;
+    s += `<rect class="bar${dip ? " dip" : ""}" data-i="${i}" style="--c:${d.color}" x="${L + i * bw}" y="${Y(v)}" width="${bw * .85}" height="${Y(0) - Y(v)}"/>`; });
+  s += `<line class="avg" x1="${L}" x2="${W - R}" y1="${Y(avg)}" y2="${Y(avg)}"/>`;
+  s += `<text x="${W - R}" y="${Y(avg) - 4}" text-anchor="end">Ø ${fmt(avg)} dB</text>`;
+  // x-Achse
+  for (let f = 0; f <= 16; f += 2) s += `<text x="${X(f)}" y="${H - 14}" text-anchor="middle">${f}</text>`;
+  s += `<text x="${W - R}" y="${H - 1}" text-anchor="end">MHz</text>`;
+  s += `<line class="cursor" id="cur" y1="${T}" y2="${T + PH}" hidden/></svg><div class="tip" id="tip" hidden></div>`;
+  plot.innerHTML = s;
+  document.getElementById("swatch").style.setProperty("--c", d.color);
+  document.getElementById("swatch").style.background = d.color;
+  document.getElementById("legName").textContent = d.name;
+  document.getElementById("avgText").textContent = "Ø " + fmt(avg) + " dB";
+  const dips = []; let run = null;
+  d.vals.forEach((v, i) => { const f = i * STEP; if (v !== null && v < avg - 4) { if (!run) run = [f, f]; run[1] = f; } else if (run) { dips.push(run); run = null; } });
+  if (run) dips.push(run);
+  const v = document.getElementById("verdict");
+  v.className = "verdict" + (dips.length ? " bad" : "");
+  v.innerHTML = dips.length
+    ? `<b>${dips.length} Störstelle${dips.length > 1 ? "n" : ""}</b><span>bei ${dips.map(([a, z]) => fmt(a) + (z - a > .1 ? "–" + fmt(z) : "") + " MHz").join(", ")} – Störungen auf diesen Frequenzen, nicht die Leitung insgesamt.</span>`
+    : `<b>Keine Störstellen</b><span>Der Störabstand ist über alle genutzten Frequenzen gleichmäßig.</span>`;
+  bind(d, avg);
+}
+
+function bind(d, avg) {
+  const svg = plot.querySelector("svg"), tip = document.getElementById("tip"), cursor = document.getElementById("cur");
+  const move = e => {
+    const r = svg.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * W;
+    const i = Math.min(N - 1, Math.max(0, Math.floor((x - L) / (PW / N))));
+    const v = d.vals[i], f = i * STEP + STEP / 2;
+    plot.querySelectorAll(".hot").forEach(el => el.classList.remove("hot"));
+    if (x < L || x > W - R || v === null) { tip.hidden = cursor.hidden = true; return; }
+    plot.querySelector(`[data-i="${i}"]`)?.classList.add("hot");
+    const band = d.bands.find(([, a, z]) => f >= a && f < z)[0], diff = v - avg;
+    cursor.setAttribute("x1", X(f)); cursor.setAttribute("x2", X(f)); cursor.hidden = false;
+    tip.hidden = false;
+    tip.innerHTML = `<b>${fmt(f)} MHz · ${fmt(v)} dB</b><small>Band ${band} · ${diff >= 0 ? "+" : "−"}${fmt(Math.abs(diff))} dB zum Durchschnitt</small>`;
+    tip.style.left = Math.min(r.width - 80, Math.max(80, X(f) / W * r.width)) + "px";
+    tip.style.top = (Y(v) / H * r.height - 6) + "px";
+  };
+  svg.addEventListener("pointermove", move);
+  svg.addEventListener("pointerdown", move);
+  svg.addEventListener("pointerleave", () => { tip.hidden = cursor.hidden = true; plot.querySelectorAll(".hot").forEach(el => el.classList.remove("hot")); });
+}
+
+for (const [id, k] of [["bDown", "down"], ["bUp", "up"]]) document.getElementById(id).onclick = () => {
+  cur = k; bDown.setAttribute("aria-pressed", k === "down"); bUp.setAttribute("aria-pressed", k === "up"); draw();
+};
+draw();
+</script>
+</body></html>

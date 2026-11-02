@@ -413,11 +413,24 @@ export const PANEL_CSS = `
   .topdev .bar i.bd { background: var(--accent); }
   .topdev .bar i.bu { background: var(--up); }
   .spectrum { margin-top: 16px; }
-  figure.spec { margin: 8px 0 0; }
-  figure.spec svg { width: 100%; height: 56px; display: block; background: var(--soft); border-radius: 8px; }
-  figure.spec rect { fill: var(--accent); }
-  figure.spec:last-of-type rect { fill: var(--up); }
-  figure.spec figcaption { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  figure.spec { margin: 14px 0 0; }
+  figure.spec figcaption { font-size: 13px; margin-bottom: 4px; }
+  figure.spec figcaption small { color: var(--muted); font-size: 12px; margin-left: 6px; }
+  .specbox { position: relative; padding-left: 26px; }
+  .specbox .yax { position: absolute; left: 0; top: 0; bottom: 0; width: 22px; }
+  .specbox .yax span { position: absolute; right: 0; transform: translateY(50%); font-size: 11px; color: var(--muted); }
+  .specbox .plot svg { width: 100%; height: 150px; display: block; background: var(--soft); border-radius: 8px; }
+  .specbox .plot .tip { top: -4px; transform: translate(-50%, -100%); }
+  .specbox rect { fill: var(--accent); }
+  figure.spec.su rect { fill: var(--up); }
+  .specbox rect.dip { fill: var(--warn); }
+  .sgrid line { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+  .savg { stroke: var(--text); stroke-width: 1; stroke-dasharray: 4 3; opacity: .55; vector-effect: non-scaling-stroke; }
+  .xax { position: relative; height: 16px; margin-left: 26px; }
+  .xax span { position: absolute; transform: translateX(-50%); font-size: 11px; color: var(--muted); }
+  .xax em { position: absolute; right: 0; font-style: normal; font-size: 11px; color: var(--muted); }
+  .specverdict { margin: 12px 0 0; padding: 8px 12px; border-radius: 10px; background: var(--soft); }
+  .specverdict.bad { background: var(--warn-soft); color: var(--warn); }
   ul.ports { list-style: none; margin: 0; padding: 0; font-size: 13px; }
   ul.ports li { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; padding: 8px 0; border-top: 1px solid var(--line); }
   ul.ports li:first-child { border-top: 0; }

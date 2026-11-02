@@ -609,15 +609,34 @@ test("the line quality shows the spectrum only when the box gave one", () => {
   const ctx = { t, language: "en", now: Date.now() };
   const withSpectrum = { ...internet, dsl: { ...internet.dsl, spectrum_down: [0, 50, 100, 0], spectrum_up: [20, 40] } };
   const html = internetPage.renderInternet(withSpectrum, ctx);
-  assert.match(html, /Signal over the frequency/);
-  assert.equal((html.match(/<figure class="spec">/g) ?? []).length, 2);
+  assert.match(html, /Signal to noise over the frequency/);
+  assert.equal((html.match(/<figure class="spec s[du]">/g) ?? []).length, 2);
   // a gap draws no bar: two of four bars of the download, both of the upload
   assert.equal((html.match(/<rect /g) ?? []).length, 4);
-  assert.doesNotMatch(internetPage.renderInternet(internet, ctx), /Signal over the frequency/);
+  assert.doesNotMatch(internetPage.renderInternet(internet, ctx), /Signal to noise over the frequency/);
   assert.doesNotMatch(
     internetPage.renderInternet({ ...internet, dsl: { ...internet.dsl, spectrum_down: [0, 0], spectrum_up: [] } }, ctx),
-    /Signal over the frequency/
+    /Signal to noise over the frequency/
   );
+});
+
+test("the spectrum has axes, average and the dips named by frequency, and the tip reads a point", () => {
+  const t = texts.panelTexts("en");
+  const ctx = { t, language: "en", now: Date.now() };
+  const down = Array(100).fill(300);
+  down[10] = down[11] = 100;
+  const line = { ...internet, dsl: { ...internet.dsl, profile: "17a", spectrum_down: down, spectrum_up: [] } };
+  const html = internetPage.renderInternet(line, ctx);
+  assert.match(html, /average 29\.6 dB/);
+  assert.match(html, /<em>MHz<\/em>/);
+  assert.equal((html.match(/class="dip"/g) ?? []).length, 2);
+  assert.match(html, /Download: dips at 1\.[89]–2\.0 MHz/);
+  assert.match(html, /class="savg"/);
+  assert.equal(shared.plotText([1.93, 30, "DS1"], { fmt: "spec" }, "en"), "1.9 MHz · 30.0 dB · DS1");
+  assert.equal(shared.plotText([5.0, null, ""], { fmt: "spec", unused: "not used" }, "en"), "5.0 MHz · not used");
+  // an unknown profile has no frequency axis and no named dips
+  const unknown = internetPage.renderInternet({ ...line, dsl: { ...line.dsl, profile: null } }, ctx);
+  assert.doesNotMatch(unknown, /<em>MHz<\/em>|dips at/);
 });
 
 test("the access type is named in the language of the page, an unknown one as the box says it", () => {
