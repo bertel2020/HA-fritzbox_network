@@ -172,17 +172,13 @@ def formfields(web: Web, uid: str) -> None:
     scripts = sorted(set(re.findall(r'src=["\']([^"\']*\.js[^"\']*)["\']', html)))
     log(f"scripts: {', '.join(re.sub(r'sid=[0-9a-f]+', 'sid=x', s) for s in scripts) or '-'}")
     for src in scripts:
-        if "edit_device" not in src and "netdev" not in src.lower():
-            continue
-        code = web._open(src if src.startswith("http") else f"{web.base}/{src.lstrip('/')}")
-        hits = sorted(
-            set(
-                re.findall(
-                    r"[\"']((?:static|dhcp|ipv4|ip_?addr|alwaysSameIp)[A-Za-z0-9_.]*)[\"']", code
-                )
-            )
-        )
-        log(f"in {re.sub(r'sid=[0-9a-f]+', 'sid=x', src)}: {', '.join(hits) or '-'}")
+        url = src if src.startswith("http") else f"{web.base}/{src.lstrip('/')}"
+        code = web._open(url)
+        name = re.sub(r"sid=[0-9a-f]+", "sid=x", src)
+        log(f"in {name} ({len(code)} characters):")
+        for match in re.finditer(r"static_?dhcp|dev_ip|alwaysSameIp|dhcp", code, re.IGNORECASE):
+            start = max(0, match.start() - 90)
+            log(f"       ...{code[start : match.end() + 90]!r}...")
 
 
 def main() -> None:
