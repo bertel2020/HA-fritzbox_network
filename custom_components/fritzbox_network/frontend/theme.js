@@ -96,7 +96,7 @@ export function scaleFonts(css) {
   });
 }
 
-/** The menu behind the brush in the header: the theme, light or dark, and the size. */
+/** The menu behind the palette in the header: the theme, light or dark, and the size. */
 export function renderLookMenu(look, t, open) {
   if (!open) return "";
   const group = (key, ids, names, label) => `<span class="label" aria-hidden="true">${escapeHtml(label)}</span>
@@ -112,5 +112,5 @@ export function renderLookMenu(look, t, open) {
 
 /** The text of the button that opens the menu, for the label of the icon. */
 export function lookButton(t, open) {
-  return `<button class="iconbtn" id="lookbtn" data-act="look" data-k="look" aria-haspopup="dialog" aria-expanded="${open}" aria-controls="lookmenu" title="${escapeHtml(t.lookTitle)}" aria-label="${escapeHtml(t.lookTitle)}">${ic("brush")}</button>`;
+  return `<button class="iconbtn" id="lookbtn" data-act="look" data-k="look" aria-haspopup="dialog" aria-expanded="${open}" aria-controls="lookmenu" title="${escapeHtml(t.lookTitle)}" aria-label="${escapeHtml(t.lookTitle)}">${ic("palette")}</button>`;
 }
