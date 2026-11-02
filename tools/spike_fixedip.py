@@ -150,6 +150,7 @@ def webform(web: Web, wanted_mac: str | None) -> None:
         log("       no field about IP / DHCP; all keys follow")
         for path, _ in walk(form):
             log(f"       {path}")
+    formfields(web, str(uid))
 
 
 def ask(name: str, prompt: str, default: str = "", secret: bool = False) -> str:
@@ -159,6 +160,29 @@ def ask(name: str, prompt: str, default: str = "", secret: bool = False) -> str:
     if secret:
         return getpass.getpass(f"{prompt}: ")
     return input(f"{prompt}{f' [{default}]' if default else ''}: ").strip() or default
+
+
+def formfields(web: Web, uid: str) -> None:
+    """The names of the fields of the edit page and of the scripts it loads (nothing is sent)."""
+    log("")
+    log("== 4. Web interface: the fields the edit page sends ==")
+    html = web._open(f"{web.base}/index.lua?sid={web.sid}&page=edit_device&dev={uid}")
+    names = sorted(set(re.findall(r'name=["\']([^"\']+)["\']', html)))
+    log(f"fields of the page: {', '.join(names) or '-'}")
+    scripts = sorted(set(re.findall(r'src=["\']([^"\']*\.js[^"\']*)["\']', html)))
+    log(f"scripts: {', '.join(re.sub(r'sid=[0-9a-f]+', 'sid=x', s) for s in scripts) or '-'}")
+    for src in scripts:
+        if "edit_device" not in src and "netdev" not in src.lower():
+            continue
+        code = web._open(src if src.startswith("http") else f"{web.base}/{src.lstrip('/')}")
+        hits = sorted(
+            set(
+                re.findall(
+                    r"[\"']((?:static|dhcp|ipv4|ip_?addr|alwaysSameIp)[A-Za-z0-9_.]*)[\"']", code
+                )
+            )
+        )
+        log(f"in {re.sub(r'sid=[0-9a-f]+', 'sid=x', src)}: {', '.join(hits) or '-'}")
 
 
 def main() -> None:
