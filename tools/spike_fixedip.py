@@ -128,9 +128,7 @@ def webform(web: Web, wanted_mac: str | None) -> None:
     log("")
     log("== 2. Web interface: the device list ==")
     listed = devices(web)
-    log(
-        f"{len(listed)} devices listed; keys of the first: {sorted(listed[0]) if listed else '-'}"
-    )
+    log(f"{len(listed)} devices listed; keys of the first: {sorted(listed[0]) if listed else '-'}")
     if not listed:
         return
     pick = next(
@@ -161,9 +159,7 @@ def main() -> None:
     web = Web(host, tls)
     if not web.login(user, password):
         log("")
-        log(
-            "[--] the web login failed: wrong user or password, or no right for the web interface"
-        )
+        log("[--] the web login failed: wrong user or password, or no right for the web interface")
     else:
         webform(web, os.environ.get("FRITZ_DEVICE_MAC"))
     OUT.mkdir(exist_ok=True)
