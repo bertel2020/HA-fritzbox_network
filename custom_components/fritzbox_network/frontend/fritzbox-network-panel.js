@@ -131,6 +131,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       page: 0,
       pageSize: rememberedPageSize(),
       history: null,
+      ip: null,
       traffic: null,
       trafficRange: 7,
       trend: null,
@@ -735,10 +736,29 @@ class FritzboxNetworkPanel extends HTMLElement {
         view: state.view,
         enabling: state.enabling,
         trend: state.trend,
+        ip: state.ip,
         language: this._hass?.language,
       })
     );
     this._maybeLoadTrend();
+    this._maybeLoadIp();
+  }
+
+  /** Whether the box always gives the open device the same address: read once when its page opens. */
+  async _maybeLoadIp() {
+    const client = this._selected();
+    const known = this._state.ip;
+    if (!client || this._ipBusy || (known?.mac === client.mac && Date.now() - known.at < HISTORY_REFRESH_MS)) return;
+    this._ipBusy = true;
+    try {
+      const { reservation } = await this._ws("device/ip", { mac: client.mac });
+      this._state.ip = { mac: client.mac, reservation, at: Date.now() };
+    } catch {
+      this._state.ip = { mac: client.mac, reservation: null, at: Date.now() };
+    } finally {
+      this._ipBusy = false;
+    }
+    if (this._selected()?.mac === client.mac) this._renderDetail();
   }
 
   /** The history of the open device, read when it is opened and now and then while it stays open. */

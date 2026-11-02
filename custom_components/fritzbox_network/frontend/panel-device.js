@@ -236,7 +236,7 @@ export function renderDevice(client, ctx) {
 
   const master = [
     [t.mac, `<span class="mono">${escapeHtml(client.mac)}</span>`],
-    [t.ip, `<span class="mono">${escapeHtml(client.ip ?? t.unknown)}</span>`],
+    [t.ip, `<span class="mono">${escapeHtml(client.ip ?? t.unknown)}</span>${ipBadge(ctx.ip, client, t)}`],
     [t.vendor, escapeHtml(client.vendor ?? t.unknown)],
     [t.accessPoint, escapeHtml(node?.name ?? t.notAssigned)],
     client.ssid ? [t.network, escapeHtml(client.ssid)] : null,
@@ -276,6 +276,13 @@ export function renderDevice(client, ctx) {
         ${groupsSection(client, data, t)}
         ${historySection(client, t)}</section>
     </div>`;
+}
+
+/** "fixed" or "automatic" next to the address, once the box has said; nothing before or where it does not. */
+function ipBadge(state, client, t) {
+  const reservation = state?.mac === client.mac ? state.reservation : null;
+  if (!reservation) return "";
+  return ` <span class="chip ${reservation.fixed ? "info" : ""}" title="${escapeHtml(reservation.fixed ? t.ipFixedTitle : t.ipAutoTitle)}">${escapeHtml(reservation.fixed ? t.ipFixed : t.ipAuto)}</span>`;
 }
 
 /** One chart of the trend: the line, the area below and the lowest, mean and highest value. */

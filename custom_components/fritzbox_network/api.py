@@ -11,10 +11,13 @@ Per poll the client reads two documents, never one request per host:
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import re
 import threading
 from typing import Any
+import xml.etree.ElementTree as ET
 
 from fritzconnection import FritzConnection
 from fritzconnection.core.exceptions import (
@@ -25,6 +28,7 @@ from fritzconnection.core.exceptions import (
     FritzServiceError,
 )
 from homeassistant.helpers.device_registry import format_mac
+import requests
 
 from .const import HOST_FILTER_SERVICE_PREFIX, HOSTS_SERVICE
 from .models import (
@@ -32,6 +36,7 @@ from .models import (
     MeshTopology,
     parse_filter_profiles,
     parse_hosts,
+    parse_ip_form,
     parse_mesh,
     parse_rights,
 )
@@ -68,6 +73,19 @@ MAX_PORT_MAPPINGS = 128
 REQUEST_TIMEOUT = 10
 
 
+def web_login_response(challenge: str, password: str) -> str:
+    """The answer to the challenge of the login of the web interface (PBKDF2 or the old MD5)."""
+    if challenge.startswith("2$"):
+        _, iterations_1, salt_1, iterations_2, salt_2 = challenge.split("$")
+        hash_1 = hashlib.pbkdf2_hmac(
+            "sha256", password.encode(), bytes.fromhex(salt_1), int(iterations_1)
+        )
+        hash_2 = hashlib.pbkdf2_hmac("sha256", hash_1, bytes.fromhex(salt_2), int(iterations_2))
+        return f"{salt_2}${hash_2.hex()}"
+    digest = hashlib.md5(f"{challenge}-{password}".encode("utf-16-le")).hexdigest()  # noqa: S324
+    return f"{challenge}-{digest}"
+
+
 class FritzNetworkClient:
     """Thin wrapper around fritzconnection."""
 
@@ -89,6 +107,9 @@ class FritzNetworkClient:
         # the WLANConfiguration service of the guest network: looked for once, then known
         self._guest_service: str | None = None
         self._guest_searched = False
+        # the session of the web interface, which the fixed addresses are read from
+        self._web_sid: str | None = None
+        self._web_uids: dict[str, str] = {}
 
     def connect(self) -> None:
         """Open the connection; raises fritzconnection exceptions on failure."""
@@ -138,6 +159,86 @@ class FritzNetworkClient:
         with fc.session.get(f"{fc.address}:{fc.port}{path}", timeout=REQUEST_TIMEOUT) as response:
             response.raise_for_status()
             return response.text
+
+    def _web_base(self) -> str:
+        return f"{'https' if self._use_tls else 'http'}://{self._host}"
+
+    def _web_post(self, path: str, data: dict[str, str]) -> str:
+        session = self._connection.session
+        response = session.post(
+            f"{self._web_base()}{path}",
+            data=data,
+            timeout=REQUEST_TIMEOUT,
+            verify=False,  # noqa: S501
+        )
+        response.raise_for_status()
+        return response.text
+
+    def _web_login(self) -> str:
+        """Log in to the web interface with the account of the integration."""
+        url = "/login_sid.lua?version=2"
+        root = ET.fromstring(self._web_post(url, {}))
+        challenge = root.findtext("Challenge") or ""
+        answer = ET.fromstring(
+            self._web_post(
+                url,
+                {
+                    "username": self._username,
+                    "response": web_login_response(challenge, self._password),
+                },
+            )
+        )
+        sid = answer.findtext("SID") or ""
+        if not sid or set(sid) == {"0"}:
+            raise PermissionError("the box did not accept the login to the web interface")
+        self._web_sid = sid
+        return sid
+
+    def _web_data(self, **fields: str) -> Any:
+        """One answer of data.lua; the session is renewed once when the box has dropped it."""
+        for attempt in (0, 1):
+            sid = self._web_sid or self._web_login()
+            try:
+                return json.loads(
+                    self._web_post("/data.lua", {"sid": sid, "xhr": "1", "lang": "en", **fields})
+                )
+            except (requests.RequestException, ValueError):
+                self._web_sid = None
+                if attempt:
+                    raise
+        return None  # pragma: no cover
+
+    def get_ip_reservation(self, mac: str) -> dict[str, Any] | None:
+        """Whether the box gives a device always the same IP address: {"fixed", "editable"}.
+
+        Read from the web interface, which has no counterpart in TR-064, so it is read on demand
+        and only; None where the box does not tell (another firmware, no right for the interface).
+        """
+        with self._lock:
+            try:
+                uid = self._web_uids.get(mac)
+                if uid is None:
+                    listed = self._web_data(page="netDev", xhrId="all")["data"]
+                    self._web_uids = {
+                        format_mac(str(d["mac"])): str(d["UID"])
+                        for group in ("active", "passive")
+                        for d in listed.get(group, [])
+                        if d.get("mac") and d.get("UID")
+                    }
+                    uid = self._web_uids.get(mac)
+                if uid is None:
+                    return None
+                return parse_ip_form(self._web_data(page="edit_device", dev=uid))
+            except (
+                requests.RequestException,
+                ValueError,
+                KeyError,
+                TypeError,
+                PermissionError,
+                ET.ParseError,
+            ) as err:
+                _LOGGER.debug("The fixed IP of %s could not be read: %s", mac, err)
+                return None
 
     def get_hosts(self) -> list[Host]:
         with self._lock:

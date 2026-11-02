@@ -48,6 +48,7 @@ UNHIDE_COMMAND = f"{DOMAIN}/devices/unhide"
 RECONNECT_COMMAND = f"{DOMAIN}/internet/reconnect"
 REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
 PORTS_COMMAND = f"{DOMAIN}/ports/list"
+IP_COMMAND = f"{DOMAIN}/device/ip"
 HISTORY_COMMAND = f"{DOMAIN}/history/summary"
 HISTORY_DEVICE_COMMAND = f"{DOMAIN}/history/device"
 FILTER_PREVIEW_COMMAND = f"{DOMAIN}/filter/preview"
@@ -466,6 +467,23 @@ async def ws_ports(
 
 
 @websocket_api.websocket_command(
+    {vol.Required("type"): IP_COMMAND, vol.Required("entry_id"): str, vol.Required("mac"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_device_ip(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Whether the box always gives a device the same IP address; read when its page opens."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    reservation = await hass.async_add_executor_job(
+        found[1].client.get_ip_reservation, format_mac(msg["mac"])
+    )
+    connection.send_result(msg["id"], {"reservation": reservation})
+
+
+@websocket_api.websocket_command(
     {vol.Required("type"): HISTORY_COMMAND, vol.Required("entry_id"): str}
 )
 @callback
@@ -501,7 +519,10 @@ def ws_history_device(
         return
     history = found[1].history
     connection.send_result(
-        msg["id"], history.device(format_mac(msg["mac"])) if history else {"day": [], "week": [], "traffic": {}}
+        msg["id"],
+        history.device(format_mac(msg["mac"]))
+        if history
+        else {"day": [], "week": [], "traffic": {}},
     )
 
 
@@ -645,6 +666,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_hide_devices)
     websocket_api.async_register_command(hass, ws_unhide_devices)
     websocket_api.async_register_command(hass, ws_ports)
+    websocket_api.async_register_command(hass, ws_device_ip)
     websocket_api.async_register_command(hass, ws_history_summary)
     websocket_api.async_register_command(hass, ws_history_device)
     websocket_api.async_register_command(hass, ws_reconnect)

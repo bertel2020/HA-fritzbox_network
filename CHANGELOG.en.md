@@ -17,6 +17,7 @@ All notable changes to this integration are recorded here.
 - An action whose entity is switched off in Home Assistant shows the known value (access profile, priority) and an **Enable** button, with two or more also **Enable all**. Home Assistant then reloads the integration briefly.
 
 - Side panel, internet page: redesigned. The connection on top with a tinted header, below it side by side the load (large live values for download and upload, the course with a tooltip per point) and the **data volume** (today, 7 and 30 days, bars per day with a tooltip, the ten most used devices as a ranking with their download and upload share).
+- Side panel, device page: next to the IP address it says **fixed** or **automatic**, depending on whether the box always gives the device the same address (reservation). The integration reads it from the web interface of the box (`data.lua`, with the account of the integration) when the page opens, because TR-064 does not offer it. New websocket command `device/ip`, for administrators only. Where the box says nothing, the label stays away.
 
 ### Changed
 

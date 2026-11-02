@@ -97,7 +97,9 @@ def test_only_the_last_35_days_of_traffic_are_kept():
     history = _history()
     history.record_traffic("2026-01-01", MAC, 0, 0)
     for day in range(1, 41):
-        history.record_traffic(f"2026-02-{day:02d}" if day < 29 else f"2026-03-{day - 28:02d}", MAC, day, day)
+        history.record_traffic(
+            f"2026-02-{day:02d}" if day < 29 else f"2026-03-{day - 28:02d}", MAC, day, day
+        )
     assert len(history.traffic(MAC)) == 35
 
 

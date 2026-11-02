@@ -218,3 +218,27 @@ def test_built_in_filter_profiles_are_named_after_their_type():
         "filtprof7301": "Samsung OTN",
         "filtprof9": "filtprof9",
     }
+
+
+def test_the_edit_form_of_a_device_says_whether_its_ip_is_fixed():
+    from custom_components.fritzbox_network.models import parse_ip_form
+
+    def form(fixed, editable=True):
+        return {
+            "data": {
+                "vars": {"dev": {"ipv4": {"editable": editable, "dhcp": {"alwaysSameIp": fixed}}}}
+            }
+        }
+
+    assert parse_ip_form(form(True)) == {"fixed": True, "editable": True}
+    assert parse_ip_form(form(False, False)) == {"fixed": False, "editable": False}
+    assert parse_ip_form({"data": {"vars": {"dev": {}}}}) is None
+    assert parse_ip_form(None) is None
+
+
+def test_the_login_of_the_web_interface_answers_both_kinds_of_challenge():
+    from custom_components.fritzbox_network.api import web_login_response
+
+    assert web_login_response("1234567z", "äbc") == "1234567z-9e224a41eeefa284df7bb0f26c2913e2"
+    answer = web_login_response("2$10000$aabbccdd$2000$11223344", "geheim")
+    assert answer.startswith("11223344$") and len(answer) == 9 + 64

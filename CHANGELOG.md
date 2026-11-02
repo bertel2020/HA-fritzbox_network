@@ -17,6 +17,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Seitenpanel: Die Verläufe zeigen beim Darüberfahren (oder Antippen) Uhrzeit und Wert. Das LAN-Symbol ist jetzt ein Netzwerk statt eines Steckers. Auf der Hauptseite führt ein Knopf **Internet** in der Kopfzeile zur Internetseite.
 
 - Seitenpanel, Internetseite: Neu gestaltet. Verbindung oben mit Verlaufsfläche, darunter nebeneinander die Auslastung (große Live-Werte für Download und Upload, Verlauf mit Tooltip pro Messpunkt) und das **Datenvolumen** (Heute, 7 und 30 Tage, Balken pro Tag mit Tooltip, die zehn am meisten genutzten Geräte als Rangliste mit Download- und Upload-Anteil).
+- Seitenpanel, Geräteseite: Neben der IP-Adresse steht **fest** oder **automatisch**, je nachdem ob die Box dem Gerät immer dieselbe Adresse gibt (Reservierung). Das liest die Integration beim Öffnen der Seite aus der Weboberfläche der Box (`data.lua`, mit dem Konto der Integration), weil TR-064 es nicht anbietet. Neuer Websocket-Befehl `device/ip`, nur für Administratoren. Wo die Box nichts meldet, bleibt die Anzeige weg.
 
 ### Geändert
 

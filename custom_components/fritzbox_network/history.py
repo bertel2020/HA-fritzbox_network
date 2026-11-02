@@ -54,7 +54,7 @@ class DeviceHistory:
     ) -> None:
         self._store = store
         self._data = data
-        # per device the last counters seen and the bytes of every day: {"last": [rx, tx], "days": {date: [rx, tx]}}
+        # per device: the last counters and the bytes per day, [received, sent]
         self._traffic = traffic if traffic is not None else {}
 
     @classmethod
@@ -70,7 +70,7 @@ class DeviceHistory:
         )
 
     def record_traffic(self, day: str, mac: str, received: int, sent: int) -> None:
-        """Add what a device moved since the last counters to its day; a counter that fell started anew."""
+        """Add what a device moved since the last counters to its day; a fallen one starts anew."""
         entry = self._traffic.setdefault(mac, {"last": None, "days": {}})
         last = entry["last"]
         entry["last"] = [received, sent]
@@ -78,7 +78,8 @@ class DeviceHistory:
             self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
             return
         delta = [
-            now - before if now >= before else now for now, before in ((received, last[0]), (sent, last[1]))
+            now - before if now >= before else now
+            for now, before in ((received, last[0]), (sent, last[1]))
         ]
         if any(delta):
             total = entry["days"].setdefault(day, [0, 0])
@@ -90,7 +91,11 @@ class DeviceHistory:
 
     def traffic_all(self) -> dict[str, dict[str, list[int]]]:
         """The bytes of every device per day: {mac: {date: [received, sent]}}."""
-        return {mac: dict(entry.get("days", {})) for mac, entry in self._traffic.items() if entry.get("days")}
+        return {
+            mac: dict(entry.get("days", {}))
+            for mac, entry in self._traffic.items()
+            if entry.get("days")
+        }
 
     def traffic(self, mac: str) -> dict[str, list[int]]:
         """The bytes a device moved per day: {date: [received, sent]}."""

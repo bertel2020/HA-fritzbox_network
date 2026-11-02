@@ -115,7 +115,7 @@ class MeshTopology:
 
     nodes: dict[str, MeshNode] = field(default_factory=dict)
     links: dict[str, ClientLink] = field(default_factory=dict)
-    # bytes the box has counted per device on the way to and from the internet: mac -> (received, sent)
+    # bytes counted per device to and from the internet: mac -> (received, sent)
     traffic: dict[str, tuple[int, int]] = field(default_factory=dict)
 
     @property
@@ -419,6 +419,22 @@ def parse_mesh(raw: str | bytes) -> MeshTopology:
                     band=_band(ap_side) if link.get("type") == "WLAN" else None,
                 )
     return topology
+
+
+def parse_ip_form(form: Any) -> dict[str, Any] | None:
+    """What the edit form of a device (data.lua, page edit_device) says about its IPv4 address.
+
+    {"fixed": the box always gives the device the same address, "editable": the form lets it be
+    changed}; None where the form does not say.
+    """
+    try:
+        ipv4 = form["data"]["vars"]["dev"]["ipv4"]
+        fixed = ipv4["dhcp"]["alwaysSameIp"]
+    except (KeyError, TypeError):
+        return None
+    if not isinstance(fixed, bool):
+        return None
+    return {"fixed": fixed, "editable": ipv4.get("editable") is True}
 
 
 # The built-in profiles come without a name; the box derives it from the type.
