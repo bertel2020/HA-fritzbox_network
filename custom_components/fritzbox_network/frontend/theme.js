@@ -96,14 +96,14 @@ export function scaleFonts(css) {
   });
 }
 
-/** The menu behind the palette in the header: the theme, light or dark, and the size. */
+/** The menu behind the palette in the header: the colour scheme, light or dark, and the size, as lists to choose from. */
 export function renderLookMenu(look, t, open) {
   if (!open) return "";
   const group = (key, ids, names, label) => `<span class="label" aria-hidden="true">${escapeHtml(label)}</span>
-    <div class="lookrow" role="radiogroup" aria-label="${escapeHtml(label)}">${ids.map((id) =>
-      `<button role="radio" aria-checked="${look[key] === id}" data-look="${key}" data-value="${id}">${key === "theme" ? `<i class="swatch ${id}"></i>` : ""}${escapeHtml(names[id])}</button>`).join("")}</div>`;
+    <div role="group" aria-label="${escapeHtml(label)}">${ids.map((id) =>
+      `<button role="menuitemradio" aria-checked="${look[key] === id}" data-look="${key}" data-value="${id}" tabindex="-1">${key === "theme" ? `<i class="swatch ${id}"></i>` : ""}<span class="t">${escapeHtml(names[id])}</span></button>`).join("")}</div>`;
   return `<div class="sheet-scrim" data-act="look-close"></div>
-    <div class="fmenu lookmenu" id="lookmenu" role="dialog" aria-label="${escapeHtml(t.lookTitle)}">
+    <div class="fmenu lookmenu" id="lookmenu" role="menu" aria-label="${escapeHtml(t.lookTitle)}">
       ${group("theme", THEME_IDS, t.lookThemes, t.lookTheme)}
       ${group("mode", MODE_IDS, t.lookModes, t.lookMode)}
       ${group("size", SIZE_IDS, t.lookSizes, t.lookSize)}

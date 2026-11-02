@@ -151,11 +151,11 @@ export const PANEL_CSS = `
   .iconbtn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--input-line); background: var(--surface); color: var(--accent-hover); }
   .iconbtn:hover, .iconbtn[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); }
   /* outside the header, which holds fixed boxes inside itself because of its blur */
-  .fmenu.lookmenu { position: fixed; top: 76px; left: auto; right: max(16px, calc((100vw - 1200px) / 2 + 24px)); width: 320px; max-width: calc(100vw - 32px); padding: 8px 12px 12px; }
-  .lookrow { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0 4px; }
-  .lookrow button { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--input-line); background: var(--surface); color: var(--text); }
-  .lookrow button:hover { background: var(--soft); }
-  .lookrow button[aria-checked="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-hover); font-weight: 500; }
+  .fmenu.lookmenu { position: fixed; top: 76px; left: auto; right: max(16px, calc((100vw - 1200px) / 2 + 24px)); width: 320px; max-width: calc(100vw - 32px); padding: 8px; }
+  .lookmenu [role="group"] + .label { margin-top: 4px; border-top: 1px solid var(--line-2); padding-top: 12px; }
+  .lookmenu [aria-checked="true"] { font-weight: 500; }
+  .fmenu.lookmenu { max-height: calc(100vh - 92px); }
+  .fmenu.lookmenu [aria-checked="true"], .fmenu.lookmenu [aria-checked="true"]:focus-visible { background: var(--accent-soft); }
   .swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--muted); }
   .swatch.ocean { background: #0a6aa8; }
   .swatch.forest { background: #0f7a6b; }
@@ -171,7 +171,7 @@ export const PANEL_CSS = `
   @container app (max-width: 600px) {
     .sheet-scrim { background: rgb(0 0 0 / 35%); }
     .fmenu { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; max-width: none; max-height: 75vh; border-radius: 20px 20px 0 0; padding: 8px 12px 20px; }
-    .fmenu.lookmenu { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-width: none; padding: 8px 12px 20px; }
+    .fmenu.lookmenu { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-width: none; max-height: 85vh; padding: 8px 12px 20px; }
     .fmenu::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--input-line); margin: 4px auto 8px; }
     .fmenu [role="menuitemradio"] { min-height: 48px; }
   }

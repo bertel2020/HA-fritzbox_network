@@ -1123,6 +1123,22 @@ class FritzboxNetworkPanel extends HTMLElement {
         return;
       }
     }
+    const look = root.querySelector("#lookmenu");
+    if (state.look && look?.contains(target)) {
+      const items = [...look.querySelectorAll('[role="menuitemradio"]')];
+      const at = items.indexOf(target);
+      const to = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 }[event.key];
+      if (to !== undefined && items.length) {
+        event.preventDefault();
+        items[(to + items.length) % items.length].focus();
+        return;
+      }
+      if (event.key === "Tab") {
+        state.look = false;
+        this._update();
+        return;
+      }
+    }
     if (event.key === "Escape") {
       if (state.look) {
         event.preventDefault();
