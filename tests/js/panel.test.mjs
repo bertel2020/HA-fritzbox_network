@@ -250,7 +250,9 @@ test("the clean-up page offers the devices gone for long enough, names are escap
   assert.match(html, /mid/);
   assert.doesNotMatch(html, /fresh/);
   assert.match(html, /1 ausgewählt/);
-  assert.match(html, /1 Geräte ausblenden/);
+  assert.match(html, /1 Geräte entfernen/);
+  assert.match(html, /2 Geräte sind seit mindestens 50 Tagen offline/);
+  assert.ok(html.indexOf("old") < html.indexOf("mid"), "the device gone for longest comes first");
 });
 
 test("a device that fell out of the offer is no longer picked", () => {
@@ -261,8 +263,10 @@ test("a device that fell out of the offer is no longer picked", () => {
 test("the clean-up page says when all is tidy, and lists the hidden devices", () => {
   assert.match(cleanup.renderStale({ ...cleanupState, cleanupDays: 365 }, t, NOW), /Alles aufgeräumt/);
   assert.match(cleanup.renderStale({ cleanup: null, picked: new Set() }, t, NOW), /Lädt/);
-  assert.match(cleanup.renderHidden(cleanupState, t), /data-unhide="z"/);
-  assert.match(cleanup.renderHidden({ cleanup: { hidden: [] } }, t), /Nichts ausgeblendet/);
+  assert.doesNotMatch(cleanup.renderHidden(cleanupState, t), /data-unhide/);
+  assert.match(cleanup.renderHidden(cleanupState, t), /aria-expanded="false"/);
+  assert.match(cleanup.renderHidden({ ...cleanupState, hiddenOpen: true }, t), /data-unhide="z"/);
+  assert.match(cleanup.renderHidden({ cleanup: { hidden: [] } }, t), /Noch nichts entfernt/);
 });
 
 const page = {
@@ -758,4 +762,17 @@ test("the days of the line are summed over all devices and the tooltip names tim
   assert.deepEqual(rows.map((r) => [r.down, r.up]), [[0, 0], [5, 5], [30, 3]]);
   assert.match(shared.plotText([1_800_000_000, 1500, 200], { fmt: "rate", range: "day" }, "en"), /↓ 1\.5 Mbit\/s · ↑ 200 kbit\/s$/);
   assert.match(shared.plotText([1_800_000_000, -67], { unit: "dBm" }, "en"), /-67 dBm$/);
+});
+
+test("the clean-up search narrows the list and the picker only offers what it shows", () => {
+  const found = { ...cleanupState, cleanupQuery: "acme" };
+  assert.deepEqual(cleanup.visibleStale(found).map((d) => d.mac), ["a"]);
+  assert.match(cleanup.renderStale({ ...cleanupState, cleanupQuery: "zzz" }, t), /Kein Gerät passt zur Suche/);
+});
+
+test("the filter page explains each mode and counts the picked devices", () => {
+  assert.match(filter.renderFilterControls(page, t), /Nur die Geräte, die du unten ankreuzt/);
+  assert.match(filter.renderPickerHead(page, t), /1 ausgewählt/);
+  assert.equal(filter.renderPickerHead({ ...page, draft: { ...page.draft, filter_mode: "all" } }, t), "");
+  assert.deepEqual(filter.pickable({ ...page, search: "lost" }).map((d) => d.mac), ["y"]);
 });

@@ -1,4 +1,4 @@
-/* The filter page of the panel: the device filter with its preview, as HTML. */
+/* The page that decides which devices Home Assistant gets: modes, extra rules, the picker and the preview. */
 
 import { escapeHtml, filterChanged } from "./shared.js";
 import { fill } from "./texts.js";
@@ -10,32 +10,48 @@ function toggle(key, label, hint, on) {
     <button class="switch" role="switch" aria-checked="${on}" aria-label="${escapeHtml(label)}" data-ft="${key}"></button></div>`;
 }
 
-/** The mode and the two switches: they are drawn again after each choice. */
+/** The three modes as cards, each saying what it does, and the two extra rules below. */
 export function renderFilterControls(page, t) {
   const f = t.filter;
   if (!page) return "";
   const draft = page.draft;
-  return `<span class="label">${escapeHtml(f.mode)}</span>
-    <div class="seg-wrap"><div class="seg" role="group">${MODES.map(
-      (m) => `<button data-mode="${m}" aria-pressed="${draft.filter_mode === m}">${escapeHtml(f.modes[m])}</button>`
-    ).join("")}</div></div>
-    <div class="opts">${toggle("ignore_guests", f.ignoreGuests, f.ignoreGuestsHint, draft.ignore_guests)}${toggle(
-      "ignore_private_macs",
-      f.ignorePrivate,
-      f.ignorePrivateHint,
-      draft.ignore_private_macs
-    )}</div>`;
+  const cards = MODES.map(
+    (m) => `<button class="modecard" data-mode="${m}" aria-pressed="${draft.filter_mode === m}">
+      <b>${escapeHtml(f.modes[m])}</b><small>${escapeHtml(f.modeHints[m])}</small></button>`
+  ).join("");
+  return `<div class="modecards" role="group" aria-label="${escapeHtml(f.mode)}">${cards}</div>
+    <section class="card pad"><h2>${escapeHtml(f.rulesTitle)}</h2>
+      ${toggle("ignore_guests", f.ignoreGuests, f.ignoreGuestsHint, draft.ignore_guests)}${toggle(
+        "ignore_private_macs",
+        f.ignorePrivate,
+        f.ignorePrivateHint,
+        draft.ignore_private_macs
+      )}</section>`;
 }
 
-/** The devices to pick from; only for "only selected" and "all except selected". */
+/** The devices matching the search of the picker; only for "only selected" and "all except selected". */
+export function pickable(page) {
+  if (!page || page.draft.filter_mode === "all") return [];
+  const query = (page.search ?? "").toLowerCase();
+  return (page.preview?.devices ?? []).filter((d) => !query || `${d.name} ${d.mac}`.toLowerCase().includes(query));
+}
+
+/** How many are chosen and the buttons for all of the shown and none. */
+export function renderPickerHead(page, t) {
+  if (!page || page.draft.filter_mode === "all") return "";
+  const f = t.filter;
+  const chosen = page.draft.filter_devices.length;
+  return `<span class="count">${escapeHtml(fill(f.chosen, { n: chosen }))}</span>
+    <span class="btn-row tight"><button class="btn" data-act="fpick-all" ${pickable(page).length ? "" : "disabled"}>${escapeHtml(f.pickAll)}</button>
+    <button class="btn" data-act="fpick-none" ${chosen ? "" : "disabled"}>${escapeHtml(f.pickNoneBtn)}</button></span>`;
+}
+
+/** The devices to pick from. */
 export function renderPicker(page, t) {
   if (!page || page.draft.filter_mode === "all") return "";
   const f = t.filter;
-  const query = (page.search ?? "").toLowerCase();
   const chosen = new Set(page.draft.filter_devices);
-  const devices = (page.preview?.devices ?? []).filter(
-    (d) => !query || `${d.name} ${d.mac}`.toLowerCase().includes(query)
-  );
+  const devices = pickable(page);
   const rows = devices.length
     ? devices
         .map(
@@ -51,16 +67,18 @@ function names(devices) {
   return devices.map((d) => d.name).join(", ");
 }
 
+/** What applying does, in a bar that stays at the bottom: the three numbers, the warning, the button. */
 export function renderPreview(page, t) {
   const f = t.filter;
   if (!page?.preview) return `<div class="empty"><span>${escapeHtml(t.loading)}</span></div>`;
   const { keep, add, remove } = page.preview;
   const changed = filterChanged(page.current, page.draft);
-  const stat = (key, list, cls = "") =>
-    `<div class="stat ${cls}"><span class="label">${escapeHtml(f[key])}</span><b>${list.length}</b></div>`;
-  return `<div class="stats">${stat("keep", keep)}${stat("add", add, add.length ? "ok" : "")}${stat("remove", remove, remove.length ? "bad" : "")}</div>
+  const pill = (key, list, cls = "") =>
+    `<span class="pill2 ${cls}"><b>${list.length}</b> ${escapeHtml(f[key])}</span>`;
+  return `<div class="applybar sticky">
+    <div class="sum">${pill("keep", keep)}${pill("add", add, add.length ? "ok" : "")}${pill("remove", remove, remove.length ? "bad" : "")}</div>
     ${remove.length ? `<div class="note bad">${escapeHtml(fill(f.removeNote, { names: names(remove) }))}</div>` : ""}
-    ${add.length ? `<p class="muted spaced">${escapeHtml(fill(f.addNote, { names: names(add) }))}</p>` : ""}
-    ${!changed ? `<p class="muted spaced">${escapeHtml(f.unchanged)}</p>` : ""}
-    <div class="btn-row"><button class="btn p" data-act="apply" ${changed ? "" : "disabled"}>${escapeHtml(f.apply)}</button></div>`;
+    ${add.length ? `<p class="muted">${escapeHtml(fill(f.addNote, { names: names(add) }))}</p>` : ""}
+    ${!changed ? `<p class="muted">${escapeHtml(f.unchanged)}</p>` : ""}
+    <div class="btn-row"><button class="btn p ${remove.length ? "danger" : ""}" data-act="apply" ${changed ? "" : "disabled"}>${escapeHtml(f.apply)}</button></div></div>`;
 }

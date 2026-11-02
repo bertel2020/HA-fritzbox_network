@@ -31,8 +31,8 @@ import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice, entityState } from "./panel-device.js";
 import { openDialog, showToast } from "./panel-dialogs.js";
-import { pickedMacs, renderHidden, renderStale, staleList } from "./panel-cleanup.js";
-import { renderFilterControls, renderPicker, renderPreview } from "./panel-filter.js";
+import { pickedMacs, renderHidden, renderStale, staleList, visibleStale } from "./panel-cleanup.js";
+import { pickable, renderFilterControls, renderPicker, renderPickerHead, renderPreview } from "./panel-filter.js";
 
 const DOMAIN = "fritzbox_network";
 const BOX_KEY = `${DOMAIN}_panel_box`;
@@ -458,7 +458,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         .muted.spaced { margin: 12px 0 0; }
         .note.bad { background: var(--bad-soft); color: var(--bad); }
         .seg-wrap { margin: 8px 0; }
-        .picker { max-height: 320px; overflow: auto; margin-top: 8px; }
+        .picker { max-height: 360px; overflow: auto; margin-top: 4px; }
         label.row { cursor: pointer; }
         .pickhead { margin-top: 16px; }
         .groupbar { margin-top: 16px; display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
@@ -506,25 +506,25 @@ class FritzboxNetworkPanel extends HTMLElement {
           </div>
           <div id="device-view" hidden></div>
           <div id="internet-view" hidden></div>
-          <div class="two" id="cleanup-view" hidden>
+          <div class="col" id="cleanup-view" hidden>
+            <div class="phead"><h1>${t.cleanup.title}</h1><p class="lead">${t.cleanup.lead}</p></div>
             <section class="card pad">
-              <h2>${t.cleanup.title}</h2><p class="lead">${t.cleanup.lead}</p>
               <div class="range"><span id="days-head">${t.cleanup.since}</span><div id="days-seg"></div></div>
+              <label class="search"><span class="sr">${t.cleanup.search}</span>${ic("search")}<input type="search" id="c-search" placeholder="${t.cleanup.search}" aria-label="${t.cleanup.search}"></label>
               <div id="stale"></div>
             </section>
-            <section class="card pad"><h2>${t.cleanup.hiddenTitle}</h2><p class="lead">${t.cleanup.hiddenLead}</p><div id="hidden"></div></section>
+            <section class="card pad" id="hidden"></section>
           </div>
-          <div class="two" id="filter-view" hidden>
-            <section class="card pad">
-              <h2>${t.filter.title}</h2><p class="lead">${t.filter.lead}</p>
-              <div id="f-controls"></div>
-              <div id="f-picker-wrap" hidden>
-                <h2 class="pickhead">${t.filter.pickTitle}</h2>
-                <label class="search"><span class="sr">${t.filter.pickSearch}</span>${ic("search")}<input type="search" id="f-search" placeholder="${t.filter.pickSearch}" aria-label="${t.filter.pickSearch}"></label>
-                <div id="f-picker"></div>
-              </div>
+          <div class="col" id="filter-view" hidden>
+            <div class="phead"><h1>${t.filter.title}</h1><p class="lead">${t.filter.lead}</p></div>
+            <div id="f-controls"></div>
+            <section class="card pad" id="f-picker-wrap" hidden>
+              <h2>${t.filter.pickTitle}</h2>
+              <label class="search"><span class="sr">${t.filter.pickSearch}</span>${ic("search")}<input type="search" id="f-search" placeholder="${t.filter.pickSearch}" aria-label="${t.filter.pickSearch}"></label>
+              <div class="selhead" id="f-picker-head"></div>
+              <div id="f-picker"></div>
             </section>
-            <section class="card pad"><h2>${t.filter.preview}</h2><p class="lead">${t.filter.previewLead}</p><div id="f-preview"></div></section>
+            <div id="f-preview"></div>
           </div>
         </main>
       </div>
@@ -700,7 +700,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         (n) => `<button role="radio" aria-checked="${n === days}" aria-pressed="${n === days}" data-days="${n}">${escapeHtml(fill(t.cleanup[n === 365 ? "year" : "days"], { n }))}</button>`
       ).join("")}</div>`
     );
-    this._set("stale", renderStale(state, t, Date.now()));
+    this._set("stale", renderStale(state, t));
     this._set("hidden", renderHidden(state, t));
   }
 
@@ -710,6 +710,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._set("f-controls", renderFilterControls(page, t));
     const wrap = this.shadowRoot.querySelector("#f-picker-wrap");
     if (wrap) wrap.hidden = !page || page.draft.filter_mode === "all";
+    this._set("f-picker-head", renderPickerHead(page, t));
     this._set("f-picker", renderPicker(page, t));
     this._set("f-preview", renderPreview(page, t));
   }
@@ -915,6 +916,9 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (el.id === "q") {
       this._state.query = el.value;
       this._update();
+    } else if (el.id === "c-search") {
+      this._state.cleanupQuery = el.value;
+      this._renderCleanup();
     } else if (el.id === "f-search" && this._state.filterPage) {
       this._state.filterPage.search = el.value;
       this._renderFilter();
@@ -1017,7 +1021,20 @@ class FritzboxNetworkPanel extends HTMLElement {
       globalThis.location.hash = ds.tab === "net" ? "#/" : `#/${ds.tab}`;
       return;
     } else if (ds.act === "pick-all") {
-      for (const d of staleList(state)) state.picked.add(d.mac);
+      for (const d of visibleStale(state)) state.picked.add(d.mac);
+    } else if (ds.act === "pick-none") {
+      state.picked.clear();
+    } else if (ds.act === "toggle-hidden") {
+      state.hiddenOpen = !state.hiddenOpen;
+    } else if (ds.act === "fpick-all") {
+      const page = state.filterPage;
+      const chosen = new Set(page.draft.filter_devices);
+      for (const d of pickable(page)) chosen.add(d.mac);
+      page.draft.filter_devices = [...chosen];
+      this._schedulePreview();
+    } else if (ds.act === "fpick-none") {
+      state.filterPage.draft.filter_devices = [];
+      this._schedulePreview();
     } else if (ds.act === "hide") {
       return this._hide();
     } else if (ds.unhide) {

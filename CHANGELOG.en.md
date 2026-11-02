@@ -21,6 +21,8 @@ All notable changes to this integration are recorded here.
 
 ### Changed
 
+- Side panel: **Clean up** and **Filter** are rebuilt. The "Filter" tab is now called **Include**, because it decides for which devices Home Assistant creates devices and entities, not what the panel shows. Include: the three modes as explained cards, the two extra rules, the device list with a counter and "Select shown" and "Select none", and a bar at the bottom with "stay / come back / are removed" and the button **Apply changes**. Clean up: the longest offline first with the duration, search, "Select all" and "Select none" and an action bar that stays in view. "Hide" is now **Remove** (it removes the devices with their entities from Home Assistant), the removed devices sit in a fold-out section and can be **added again**.
+
 - Side panel: the pages are underlined tabs at the left under the title. The lines of the connection path sit at the same height, with the label below. "Clean up" takes fixed steps (3, 7, 14, 30, 90 days, 1 year) as buttons instead of the slider. The group "No access point" is now "Not assigned".
 - Side panel: a device opens as a page of its own instead of a column on the right. Back leads to the list or the map with filter, scroll position and focus; ‹ › or `j`/`k` page through the devices shown. New at the top of the page is the connection path (internet, FRITZ!Box, repeater, device); from 900 px the actions and the master data stand side by side.
 - Side panel: instead of a long row of filters there are three fixed ones (All, Online, Offline) and the "More" menu with the other filters and the groups, on a phone as a sheet from the bottom. The row and the radio boxes wrap instead of scrolling sideways.
