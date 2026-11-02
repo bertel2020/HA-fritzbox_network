@@ -964,13 +964,15 @@ test("the file name carries the network and the day", () => {
 test("the print sheet is an A4 document with the numbers, the map, the list and no raw markup", () => {
   const own = { ...lan.own, notes: { "192.168.79.150": "<script>x</script>" }, blocks: [{ id: 1, name: "Kameras", from: 60, to: 69, color: "--b2" }] };
   const m = addresses.addressModel({ ...lan, own });
-  const html = exporter.printSheet({ m, own, t, language: "de", opts: { map: true, mac: true }, now: new Date(2026, 10, 2, 14, 35) });
+  const html = exporter.printSheet({ m, own, t, language: "de", opts: { map: true, mac: true, poolNames: true }, now: new Date(2026, 10, 2, 14, 35) });
   assert.match(html, /@page \{ size: A4 portrait/);
   assert.match(html, /<h1>Adressraum<\/h1>/);
   assert.match(html, /Stand 2\. November 2026/);
   assert.equal((html.match(/class="cell /g) ?? []).length >= 256, true);
   assert.match(html, /Kameras/);
-  assert.match(html, /Adressen in Benutzung \(7\)/);
+  assert.match(html, /Alle Adressen/);
+  assert.equal((html.match(/<td class="mono">192\.168\.79\.\d+<\/td>/g) ?? []).length, 256);
+  assert.doesNotMatch(html, />online<|>offline<|Zuletzt online/);
   assert.doesNotMatch(html, /<script>x/);
   const lean = exporter.printSheet({ m, own, t, language: "de", opts: { map: false, mac: false }, now: new Date() });
   assert.doesNotMatch(lean, /Karte der Adressen/);

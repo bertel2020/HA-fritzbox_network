@@ -273,12 +273,12 @@ export function fixedKnownOf(fixed) {
 function exportCard(m, ctx) {
   const { t, addr } = ctx;
   const e = t.addr.export;
-  const opts = addr.exportOpts ?? { free: false, mac: true, map: true };
+  const opts = addr.exportOpts ?? { free: false, mac: true, map: true, poolNames: true };
   const check = (key, label) =>
     `<label class="acheck"><input type="checkbox" data-aopt="${key}" ${opts[key] ? "checked" : ""}><span>${escapeHtml(label)}</span></label>`;
   const incomplete = addr.progress ? `<p class="hint">${escapeHtml(fill(e.incomplete, addr.progress))}</p>` : "";
   return `<section class="card sec" id="a-export"><span class="label">${escapeHtml(e.title)}</span><p class="hint">${escapeHtml(e.lead)}</p>
-    <div class="aopts">${check("free", e.optFree)}${check("mac", e.optMac)}${check("map", e.optMap)}</div>${incomplete}
+    <div class="aopts">${check("free", e.optFree)}${check("mac", e.optMac)}${check("map", e.optMap)}${check("poolNames", e.optPoolNames)}</div>${incomplete}
     <div class="btn-row"><button class="btn" data-aexport="csv" data-k="x-csv">${escapeHtml(e.csv)}</button>
       <button class="btn" data-aexport="json" data-k="x-json">${escapeHtml(e.json)}</button>
       <button class="btn p" data-aexport="print" data-k="x-print">${escapeHtml(e.print)}</button></div>

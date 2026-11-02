@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Adressraum – Dokumentationsblatt (Mockup)</title>
+<style>
+  @page { size: A4 portrait; margin: 0 }
+  * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact }
+  html { background: #e8ebf0 }
+  body { margin: 0; color: #1b1f24; font: 9pt/1.4 "Helvetica Neue", Arial, sans-serif }
+  .note { width: 210mm; margin: 18px auto 0; padding: 14px 18px; background: #fff8e1; border-left: 4px solid #b36a00; font-size: 13px; line-height: 1.5 }
+  .note b { display: block; margin-bottom: 4px }
+  .note ul { margin: 4px 0 0; padding-left: 18px }
+  .page { position: relative; width: 210mm; height: 297mm; margin: 18px auto; padding: 14mm 13mm 16mm; background: #fff; box-shadow: 0 4px 24px rgb(0 0 0/25%); overflow: hidden }
+  @media print { html { background: #fff } .note { display: none } .page { margin: 0; box-shadow: none; break-after: page } }
+  .foot { position: absolute; left: 13mm; right: 13mm; bottom: 7mm; display: flex; justify-content: space-between; font-size: 7.5pt; color: #6b7280 }
+  h1 { font-size: 22pt; font-weight: 600; letter-spacing: -.01em; margin: 0; line-height: 1.1 }
+  h2 { font-size: 10.5pt; font-weight: 600; margin: 0 0 2.5mm; padding-bottom: 1.2mm; border-bottom: .4mm solid #0a6aa8; color: #0a4f7e }
+  section { margin-top: 5mm }
+  .top { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 4mm; border-bottom: .9mm solid #0a6aa8 }
+  .top p { margin: 1.5mm 0 0; color: #4b5563; font-size: 10pt }
+  .when { text-align: right; color: #4b5563; font-size: 8.5pt }
+  .when b { display: block; font-size: 9.5pt; color: #1b1f24 }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin-top: 5mm }
+  .stat { border: .3mm solid #d7dce3; border-radius: 2mm; padding: 2.2mm 3mm; background: #f7f9fb }
+  .stat .k { font-size: 7pt; letter-spacing: .08em; text-transform: uppercase; color: #6b7280 }
+  .stat b { display: block; font-size: 12pt; font-weight: 600 }
+  .stat small { color: #6b7280; font-size: 7.3pt }
+  .bar { display: flex; height: 7mm; border: .3mm solid #c9d0d9; border-radius: 1.5mm; overflow: hidden }
+  .bar div { display: grid; place-items: center; font-size: 7.3pt; white-space: nowrap; overflow: hidden }
+  .grid { display: grid; grid-template-columns: 7mm repeat(16, 1fr); gap: .9mm }
+  .lab { font: 6.3pt "SF Mono", Menlo, monospace; color: #6b7280; display: grid; place-items: center }
+  .cell { aspect-ratio: 1.9; border-radius: .8mm; display: grid; place-items: center; font: 6.3pt "SF Mono", Menlo, monospace; background: #fff; border: .25mm solid #d7dce3; color: #6b7280 }
+  .cell.pool { background: #dfeaf5; border-color: #dfeaf5; color: #0a4f7e }
+  .cell.fix { background: #7a4bc2; border-color: #7a4bc2; color: #fff }
+  .cell.box { background: #1e6b34; border-color: #1e6b34; color: #fff }
+  .cell.res { background: #fff1de; border: .4mm dotted #b36a00; color: #8a4b00 }
+  .cell.plan { border: .4mm dashed #1e6b34; color: #1e6b34 }
+  .cell.na { background: repeating-linear-gradient(45deg, #e5e9ee 0 .6mm, #fff .6mm 1.2mm); border-color: #e5e9ee }
+  .cell.blk { border-bottom: 1.1mm solid var(--bc) }
+  .legend { display: flex; flex-wrap: wrap; gap: 1.5mm 5mm; margin-top: 3mm; font-size: 7.3pt; color: #4b5563 }
+  .legend span { display: inline-flex; align-items: center; gap: 1.6mm }
+  .legend .cell { width: 5mm; flex: none }
+  table { width: 100%; border-collapse: collapse; font-size: 8.2pt }
+  th { text-align: left; font-size: 6.8pt; letter-spacing: .07em; text-transform: uppercase; color: #6b7280; font-weight: 600; padding: 1.2mm 1.6mm; border-bottom: .3mm solid #9aa4b1 }
+  td { padding: 0 1.6mm; height: 4.1mm; border-bottom: .2mm solid #e3e7ec; white-space: nowrap; overflow: hidden }
+  tr:nth-child(even) td { background: #f8fafb }
+  tr.band td { height: 5mm; background: #eaf3fa; color: #0a4f7e; font-weight: 600; font-size: 7.5pt; letter-spacing: .03em }
+  tr.free td { color: #9aa4b1 }
+  tr.na td { color: #9aa4b1; font-style: italic }
+  .mono { font: 7.8pt "SF Mono", Menlo, Consolas, monospace }
+  .tag { display: inline-block; border-radius: 1mm; padding: 0 1.5mm; font-size: 7pt; font-weight: 600 }
+  .tag.dyn { background: #e1eef8; color: #0a4f7e } .tag.fix, .tag.box { background: #ece4f8; color: #5b34a0 }
+  .tag.res { background: #fff1de; color: #8a4b00 } .tag.plan { background: #e6f4ea; color: #1e6b34 }
+  .sw { display: inline-block; width: 2.6mm; height: 2.6mm; border-radius: .6mm; vertical-align: middle; margin-right: 1.5mm }
+  .cols { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm }
+  .blank { height: 14mm; border: .3mm dashed #c9d0d9; border-radius: 2mm; color: #9aa4b1; font-size: 8pt; padding: 2mm 3mm }
+</style></head><body>
+
+<div class="note">
+  <b>Vorschlag: „Dokumentationsblatt“ statt Status-Druck</b>
+  Das Blatt beschreibt, <i>wie der Adressraum geplant und belegt ist</i> – nicht, <i>wer gerade da ist</i>. Es gilt auch in einem Jahr noch.
+  <ul>
+    <li><b style="display:inline">Seite 1 – Überblick:</b> Netz, Gateway, DHCP, Bereiche und die Karte. Die Karte zeigt Rollen (Box, fest, DHCP-Pool, reserviert, geplant, eigene Blöcke), <u>kein</u> verbunden/getrennt.</li>
+    <li><b style="display:inline">Seite 2–6 – komplette Liste .0 bis .255:</b> jede Adresse genau eine Zeile, auch freie. .0 (Netz) und .255 (Broadcast) sind grau mit Hinweis.</li>
+    <li><b style="display:inline">Weg:</b> Status (online/offline, „zuletzt online“, Verbindung/WLAN-Band) entfällt. Bleiben: Name, Rolle, Hersteller, MAC, Block, Notiz. Geräte im DHCP-Pool stehen als „DHCP“ mit dem zuletzt bekannten Namen in Grau – oder per Schalter ganz ohne.</li>
+    <li><b style="display:inline">Karte</b> bleibt ein Schalter (an), MAC ebenfalls. Die Schalter „Freie Adressen“ entfällt – es sind immer alle drin. Ein Zusatz-Schalter „Geräte im DHCP-Pool namentlich“ (aus = nur „DHCP-Pool“).</li>
+  </ul>
+</div>
+
+<!-- Seite 1 -->
+<div class="page">
+  <header class="top"><div><h1>Adressraum</h1><p>192.168.79.0/24 · FRITZ!Box 7590 AX</p></div>
+    <div class="when"><b>Dokumentation, Stand 2. November 2026</b>Erstellt aus FRITZ!Box Network</div></header>
+  <div class="stats">
+    <div class="stat"><div class="k">Netz</div><b>192.168.79.0/24</b><small>255.255.255.0</small></div>
+    <div class="stat"><div class="k">Gateway</div><b>192.168.79.1</b><small>FRITZ!Box 7590 AX</small></div>
+    <div class="stat"><div class="k">DHCP</div><b>an</b><small>.20 – .200 (181 Adressen)</small></div>
+    <div class="stat"><div class="k">Nutzbar</div><b>254</b><small>.1 – .254</small></div>
+  </div>
+
+  <section><h2>Aufteilung</h2>
+    <div class="bar"><div style="flex:19;background:#ece4f8;color:#5b34a0">fest .1–.19</div><div style="flex:181;background:#dfeaf5;color:#0a4f7e">DHCP-Pool .20–.200</div><div style="flex:54;background:#ece4f8;color:#5b34a0">fest .201–.254</div></div>
+  </section>
+
+  <section><h2>Karte</h2><div class="grid" id="map"></div>
+    <div class="legend">
+      <span><i class="cell box"></i>FRITZ!Box</span><span><i class="cell fix"></i>Feste Adresse</span><span><i class="cell pool"></i>DHCP-Pool</span>
+      <span><i class="cell"></i>Frei (außerhalb Pool)</span><span><i class="cell plan"></i>Geplant</span><span><i class="cell res"></i>Reserviert</span><span><i class="cell na"></i>Nicht nutzbar</span><span>▁ Unterstreichung = eigener Block</span></div>
+  </section>
+
+  <div class="cols">
+    <section><h2>Eigene Blöcke</h2>
+      <table><thead><tr><th>Block</th><th>Adressen</th><th>Belegt</th></tr></thead><tbody>
+        <tr><td><i class="sw" style="background:#0f8b8d"></i>Infrastruktur</td><td class="mono">.1 – .9</td><td>5 / 9</td></tr>
+        <tr><td><i class="sw" style="background:#d9730d"></i>Kameras</td><td class="mono">.10 – .19</td><td>6 / 10</td></tr>
+        <tr><td><i class="sw" style="background:#c2417c"></i>Smart Home</td><td class="mono">.201 – .230</td><td>12 / 30</td></tr>
+        <tr><td><i class="sw" style="background:#4f8a10"></i>Server</td><td class="mono">.240 – .249</td><td>3 / 10</td></tr>
+      </tbody></table></section>
+    <section><h2>Belegung nach Rolle</h2>
+      <table><tbody>
+        <tr><td>FRITZ!Box</td><td class="mono">1</td></tr><tr><td>Feste Adressen</td><td class="mono">26</td></tr>
+        <tr><td>DHCP-Pool (Geräte bekannt)</td><td class="mono">58 von 181</td></tr><tr><td>Reserviert / geplant</td><td class="mono">4 / 6</td></tr>
+        <tr><td>Frei außerhalb Pool</td><td class="mono">29</td></tr>
+      </tbody></table></section>
+  </div>
+
+  <section><h2>Notizen zum Netz</h2><div class="blank">Platz für handschriftliche Anmerkungen (Switch-Ports, Patchfeld, VLANs …)</div></section>
+  <div class="foot"><span>FRITZ!Box · Adressraum 192.168.79.0/24</span><span>1 / 5</span></div>
+</div>
+
+<!-- Listenseiten -->
+<div id="lists"></div>
+
+<script>
+// ---- Beispieldaten ----
+const POOL = [20, 200], BOX = 1;
+const fixed = {
+  2: ["Switch Keller", "Netgear", "a4:2b:8c:11:02:3e"], 3: ["Switch Büro", "TP-Link", "50:c7:bf:88:41:0a"], 4: ["Access Point OG", "AVM", "3c:a6:2f:5d:19:70"],
+  5: ["Repeater Garage", "AVM", "3c:a6:2f:73:ab:12"], 6: ["Home Assistant", "Nabu Casa", "b8:27:eb:09:7c:d4"], 10: ["Kamera Eingang", "Reolink", "ec:71:db:30:5a:9f"],
+  11: ["Kamera Garten", "Reolink", "ec:71:db:30:5b:01"], 12: ["Kamera Garage", "Reolink", "ec:71:db:30:5b:44"], 13: ["Kamera Carport", "Hikvision", "bc:ad:28:0e:6a:21"],
+  14: ["NVR", "Hikvision", "bc:ad:28:0e:70:88"], 15: ["Kamera Terrasse", "Reolink", "ec:71:db:30:5c:13"], 201: ["Hue Bridge", "Signify", "00:17:88:2a:90:cd"],
+  202: ["Shelly Pro 4PM", "Shelly", "34:94:54:6e:1d:f0"], 203: ["Zigbee Gateway", "Sonoff", "e8:db:84:99:3c:25"], 204: ["Wärmepumpe", "Stiebel", "00:1d:c1:44:ae:90"],
+  205: ["Wallbox", "Keba", "a0:b7:65:12:8f:3a"], 206: ["Zähler Gateway", "Landis+Gyr", "f4:7b:09:55:20:e1"], 240: ["NAS", "Synology", "00:11:32:7a:c4:19"],
+  241: ["Proxmox", "Intel", "3c:ec:ef:4b:09:62"], 242: ["Pi-hole", "Raspberry Pi", "dc:a6:32:81:fe:07"]
+};
+const dhcpNames = ["iPhone Roberto","MacBook Pro","iPad","Fire TV","Drucker HP","Sonos Küche","Sonos Wohnzimmer","Apple TV","PlayStation","Thermostat Bad","Waschmaschine","Echo Dot","Tablet Küche"];
+const dynamic = {}; dhcpNames.forEach((n, i) => dynamic[21 + i * 7] = [n, ["Apple","Apple","Apple","Amazon","HP","Sonos","Sonos","Apple","Sony","Tado","Miele","Amazon","Samsung"][i], "d" + (i + 1).toString(16) + ":3e:aa:" + (10 + i) + ":c2:" + (40 + i)]);
+const blocks = [[1,9,"#0f8b8d","Infrastruktur"],[10,19,"#d9730d","Kameras"],[201,230,"#c2417c","Smart Home"],[240,249,"#4f8a10","Server"]];
+const reserved = [7, 8, 250, 251], planned = [16, 17, 207, 208, 209, 210];
+const blockOf = n => blocks.find(b => n >= b[0] && n <= b[1]);
+const notes = {1: "Standardgateway, DNS-Relay", 6: "Läuft auf Mini-PC, Zigbee-Stick USB", 14: "Aufzeichnung 14 Tage", 204: "Modbus aktiv", 242: "Primärer DNS", 7: "für Switch Dachboden", 8: "für Switch Dachboden"};
+
+function info(n) {
+  if (n === 0 || n === 255) return { cls: "na", role: "—", name: n ? "Broadcast" : "Netzadresse" };
+  if (n === BOX) return { cls: "box", role: "FRITZ!Box", name: "FRITZ!Box 7590 AX", vendor: "AVM", mac: "3c:a6:2f:00:aa:01" };
+  const inPool = n >= POOL[0] && n <= POOL[1];
+  if (fixed[n]) return { cls: "fix", role: "fest", name: fixed[n][0], vendor: fixed[n][1], mac: fixed[n][2] };
+  if (dynamic[n]) return { cls: "pool", role: "DHCP", name: dynamic[n][0], vendor: dynamic[n][1], mac: dynamic[n][2], grey: true };
+  if (reserved.includes(n)) return { cls: "res", role: "reserviert", name: "" };
+  if (planned.includes(n)) return { cls: "plan", role: "geplant", name: "" };
+  return { cls: inPool ? "pool" : "free", role: inPool ? "DHCP-Pool" : "frei", name: "", free: true };
+}
+
+// ---- Karte ----
+let h = '<span></span>' + [...Array(16).keys()].map(c => `<span class="lab">${c.toString(16).toUpperCase()}</span>`).join('');
+for (let r = 0; r < 16; r++) {
+  h += `<span class="lab">.${r * 16}</span>`;
+  for (let c = 0; c < 16; c++) {
+    const n = r * 16 + c, i = info(n), b = blockOf(n);
+    const cls = i.cls === "free" ? "" : i.cls;
+    h += `<span class="cell ${cls} ${b ? "blk" : ""}" ${b ? `style="--bc:${b[2]}"` : ""}>${n}</span>`;
+  }
+}
+document.getElementById("map").innerHTML = h;
+
+// ---- Liste, 4 Seiten à ~64 Zeilen ----
+const bands = [[0,0,""],[1,19,"Feste Adressen · Infrastruktur und Kameras (.1 – .19)"],[20,200,"DHCP-Pool (.20 – .200)"],[201,254,"Feste Adressen · Smart Home und Server (.201 – .254)"],[255,255,""]];
+const bandAt = n => bands.find(b => b[0] === n && b[2]);
+const PER = 56;
+let rows = [];
+for (let n = 0; n <= 255; n++) {
+  const b = bandAt(n); if (b) rows.push(`<tr class="band"><td colspan="7">${b[2]}</td></tr>`);
+  const i = info(n), blk = blockOf(n), ip = "192.168.79." + n;
+  const tag = i.cls === "free" || i.cls === "na" ? "" : `<span class="tag ${i.cls === "pool" ? "dyn" : i.cls}">${i.role}</span>`;
+  const rowCls = i.free ? "free" : i.cls === "na" ? "na" : "";
+  rows.push(`<tr class="${rowCls}"><td class="mono">${ip}</td><td style="${i.grey ? "color:#6b7280" : ""}">${i.cls === "na" ? `<i>${i.name}</i>` : i.name}</td><td>${tag || (i.free ? i.role : "")}</td><td>${i.vendor || ""}</td><td class="mono">${i.mac || ""}</td><td>${blk ? `<i class="sw" style="background:${blk[2]}"></i>${blk[3]}` : ""}</td><td>${notes[n] || ""}</td></tr>`);
+}
+let out = "", pages = Math.ceil(rows.length / PER);
+for (let p = 0; p < pages; p++) {
+  out += `<div class="page"><h2>Alle Adressen (${p + 1}/${pages}) <span style="font-weight:400;color:#6b7280;font-size:8pt">· Stand 2. November 2026 · Geräte im DHCP-Pool sind der zuletzt bekannte Stand</span></h2>
+  <table><thead><tr><th style="width:23mm">Adresse</th><th>Name</th><th style="width:19mm">Rolle</th><th style="width:21mm">Hersteller</th><th style="width:33mm">MAC</th><th style="width:26mm">Block</th><th>Notiz</th></tr></thead>
+  <tbody>${rows.slice(p * PER, (p + 1) * PER).join("")}</tbody></table>
+  <div class="foot"><span>FRITZ!Box · Adressraum 192.168.79.0/24</span><span>${p + 2} / ${pages + 1}</span></div></div>`;
+}
+document.getElementById("lists").innerHTML = out;
+document.querySelectorAll(".foot span:last-child").forEach((s, i, all) => { if (i === 0) s.textContent = "1 / " + all.length; else s.textContent = (i + 1) + " / " + all.length; });
+</script>
+</body></html>

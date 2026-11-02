@@ -27,7 +27,7 @@ import {
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
-import { BLOCK_COLORS, addressModel, checkBlock, emptyOwn, fixedKnownOf, poolChange, renderAddresses } from "./panel-addresses.js";
+import { BLOCK_COLORS, addressModel, checkBlock, emptyOwn, poolChange, renderAddresses } from "./panel-addresses.js";
 import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
@@ -149,7 +149,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       pageSize: rememberedPageSize(),
       history: null,
       ip: null,
-      addr: { status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", progress: null, exportOpts: { free: false, mac: true, map: true } },
+      addr: { status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", progress: null, exportOpts: { free: false, mac: true, map: true, poolNames: true } },
       traffic: null,
       trafficRange: 7,
       trend: null,
@@ -832,7 +832,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const opts = addr.exportOpts;
     const now = new Date();
     if (kind === "print") {
-      this._openSheet(printSheet({ m, own, t, language: this._hass?.language, opts, now, fixedKnown: fixedKnownOf(addr.fixed) }));
+      this._openSheet(printSheet({ m, own, t, language: this._hass?.language, opts, now }));
       return;
     }
     const rows = addressRows(m, own, t, { free: opts.free });
