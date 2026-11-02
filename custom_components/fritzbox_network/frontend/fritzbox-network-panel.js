@@ -514,10 +514,11 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div class="header-end">
             <select id="box" aria-label="${t.box}" hidden></select>
             <span class="fresh" id="live-chip" hidden><span class="dot on"></span><span class="t" id="live"></span></span>
-            <div class="lookwrap" id="lookhost"></div>
+            <span id="lookhost"></span>
             <a class="intlink" href="/config/integrations/integration/${DOMAIN}" data-act="integration" title="${escapeHtml(t.integrationTitle)}">${ic("external")}<span>${t.integration}</span></a>
           </div>
         </header>
+        <div id="lookmenuhost"></div>
         <main>
           <div id="note"></div>
           <div id="net-view" hidden>
@@ -620,7 +621,8 @@ class FritzboxNetworkPanel extends HTMLElement {
     const note = this._error ? `<div class="card note-card"><div class="empty"><b>${t[this._error]}</b></div></div>` : "";
     const ready = Boolean(state.data) && !this._error;
     this._set("note", note || (state.data ? "" : `<div class="card"><div class="empty"><span>${t.loading}</span></div></div>`));
-    this._set("lookhost", lookButton(t, state.look) + renderLookMenu(this._look, t, state.look));
+    this._set("lookhost", lookButton(t, state.look));
+    this._set("lookmenuhost", renderLookMenu(this._look, t, state.look));
     const netView = root.querySelector("#net-view");
     if (!netView) return;
     const tab = state.tab;
