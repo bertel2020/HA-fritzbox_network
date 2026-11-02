@@ -23,6 +23,12 @@ export const PANEL_CSS = `
     --bad: light-dark(#a1261b, #f2a29a);
     --bad-soft: light-dark(#fdecea, #3d1c19);
     --neutral-soft: light-dark(#eef1f4, #2a3038);
+    --neutral-text: light-dark(#3a414c, #c5ccd5);
+    --warn-line: light-dark(#f3d19e, #6b4a1c);
+    --bad-line: light-dark(#f2b8b5, #6e2f2a);
+    --code-bg: light-dark(#14181d, #0b0e11);
+    --code-text: #d7dee6;
+    --scale: 1;
     --radius: 18px;
     --shadow-c: light-dark(rgb(16 24 40 / 14%), rgb(0 0 0 / 40%));
     --shadow: 0 1px 2px var(--shadow-c), 0 6px 18px -10px var(--shadow-c);
@@ -76,7 +82,7 @@ export const PANEL_CSS = `
   @container app (max-width: 600px) { main { padding: 16px 16px 56px; } }
 
   /* shared bits */
-  .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 11px; border-radius: 13px; background: var(--neutral-soft); color: var(--muted); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 11px; border-radius: 13px; background: var(--neutral-soft); color: var(--neutral-text); font-size: 12px; font-weight: 500; white-space: nowrap; }
   .chip.ok { background: var(--ok-soft); color: var(--ok); }
   .chip.warn { background: var(--warn-soft); color: var(--warn); }
   .chip.bad { background: var(--bad-soft); color: var(--bad); }
@@ -142,6 +148,18 @@ export const PANEL_CSS = `
   }
   .fmenu { position: absolute; z-index: 12; top: calc(100% + 6px); left: 0; width: 300px; max-width: 100%; max-height: 420px; overflow: auto; padding: 8px;
     background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 30px var(--shadow-c); }
+  .iconbtn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--input-line); background: var(--surface); color: var(--accent-hover); }
+  .iconbtn:hover, .iconbtn[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); }
+  .lookwrap { position: relative; }
+  .fmenu.lookmenu { left: auto; right: 0; width: 320px; padding: 8px 12px 12px; }
+  .lookrow { display: flex; flex-wrap: wrap; gap: 6px; padding: 2px 0 4px; }
+  .lookrow button { display: inline-flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--input-line); background: var(--surface); color: var(--text); }
+  .lookrow button:hover { background: var(--soft); }
+  .lookrow button[aria-checked="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-hover); font-weight: 500; }
+  .swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--line); }
+  .swatch.ocean { background: #0a6aa8; }
+  .swatch.forest { background: #0f7a6b; }
+  .swatch.graphite { background: #2f3a48; }
   .fmenu .label { display: block; padding: 8px 10px 4px; }
   .fmenu [role="menuitemradio"] { display: flex; width: 100%; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border-radius: 8px; text-align: left; }
   .fmenu [role="menuitemradio"]:hover, .fmenu [role="menuitemradio"]:focus-visible { background: var(--soft); }

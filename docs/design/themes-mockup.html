@@ -1,0 +1,177 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Farbthemen und Schriftgrößen</title>
+<style>
+  /* status, code and focus colors are the same in every theme so that their meaning does not change */
+  .t { --ok:#1e6b34; --ok-soft:#e6f4ea; --warn:#8a4b00; --warn-soft:#fff1de; --warn-line:#f3d19e; --bad:#a1261b; --bad-soft:#fdecea; --bad-line:#f2b8b5;
+    --code-bg:#14181d; --code-text:#d7dee6; --focus:#7db8e0; --radius:18px; --b2:#d9730d; --b3:#c2417c; --b4:#4f8a10; --b5:#6b5b95; --up:#7a4bc2; --b1:#0f8b8d; }
+  .t.dark { --ok:#7fd49a; --ok-soft:#173a24; --warn:#f2c27a; --warn-soft:#3a2a12; --warn-line:#6b4a1c; --bad:#f2a29a; --bad-soft:#3d1c19; --bad-line:#6e2f2a;
+    --code-bg:#0b0e11; --b2:#f5a560; --b3:#f08cbb; --b4:#a5d96a; --b5:#b3a6d9; --up:#b79af0; --b1:#5fd0d2; }
+
+  .t.ocean { --bg:#f4f6f9; --surface:#ffffff; --soft:#f5f7f9; --line:#e1e5ea; --line-2:#eef0f3; --input-line:#c3cbd5; --text:#1b1f24; --muted:#5b6270;
+    --accent:#0a6aa8; --accent-hover:#07507f; --accent-soft:#eaf3fa; --on-accent:#ffffff; --neutral:#eef1f4; --neutral-text:#3a414c; }
+  .t.ocean.dark { --bg:#0f1216; --surface:#1b1f24; --soft:#22272e; --line:#2d333b; --line-2:#262c33; --input-line:#3a424c; --text:#e6e9ed; --muted:#9aa4b1;
+    --accent:#5bb2ea; --accent-hover:#8ccaf2; --accent-soft:#16324a; --on-accent:#0b1a26; --neutral:#2a3038; --neutral-text:#c5ccd5; }
+
+  .t.forest { --bg:#f3f7f5; --surface:#ffffff; --soft:#f4f8f6; --line:#dce5e1; --line-2:#eaf0ed; --input-line:#bccac4; --text:#1a201e; --muted:#566360;
+    --accent:#0f7a6b; --accent-hover:#0a5a4f; --accent-soft:#e4f3f0; --on-accent:#ffffff; --neutral:#ecf1ef; --neutral-text:#36423e; --b1:#2c78c4; }
+  .t.forest.dark { --bg:#0e1513; --surface:#1a2220; --soft:#202a27; --line:#2b3733; --line-2:#24302c; --input-line:#394845; --text:#e4ebe8; --muted:#98a8a2;
+    --accent:#5fd0be; --accent-hover:#8fe0d2; --accent-soft:#123430; --on-accent:#08201c; --neutral:#26312e; --neutral-text:#c3d0cb; --b1:#6fb0ee; }
+
+  .t.graphite { --bg:#f5f4f2; --surface:#ffffff; --soft:#f6f5f3; --line:#e4e2de; --line-2:#eeedea; --input-line:#cbc8c2; --text:#1c1b19; --muted:#5c5853;
+    --accent:#2f3a48; --accent-hover:#1b232d; --accent-soft:#eceff3; --on-accent:#ffffff; --neutral:#efeeeb; --neutral-text:#3d3a36; }
+  .t.graphite.dark { --bg:#141414; --surface:#1f1f1e; --soft:#262625; --line:#33322f; --line-2:#2a2a28; --input-line:#45433f; --text:#ebeae7; --muted:#a9a59f;
+    --accent:#d4dae2; --accent-hover:#f0f3f6; --accent-soft:#2c3139; --on-accent:#141820; --neutral:#2c2c2a; --neutral-text:#cfccc6; }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 14px/1.45 Roboto, "Noto Sans", system-ui, sans-serif; background: #e9ebee; color: #1b1f24; }
+  .bar { position: sticky; top: 0; z-index: 9; display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; padding: 12px 24px; background: #fff; border-bottom: 1px solid #d5d9de; }
+  .bar h1 { font-size: 16px; font-weight: 500; margin: 0 auto 0 0; }
+  .seg { display: inline-flex; border: 1px solid #c3cbd5; border-radius: 20px; overflow: hidden; }
+  .seg button { font: inherit; border: 0; background: #fff; padding: 6px 14px; cursor: pointer; color: #1b1f24; }
+  .seg button[aria-pressed="true"] { background: #1b1f24; color: #fff; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(460px, 1fr)); gap: 20px; padding: 20px 24px 48px; max-width: 1500px; margin: 0 auto; }
+  .grid.one { grid-template-columns: 1fr; max-width: 900px; }
+  .wrap { border-radius: 14px; overflow: hidden; border: 1px solid #c9ced4; }
+  .cap { font-size: 12px; padding: 6px 14px; background: #1b1f24; color: #fff; display: flex; justify-content: space-between; }
+
+  /* the preview itself, scaled by the font size step */
+  .t { background: var(--bg); color: var(--text); padding-bottom: 16px; zoom: var(--zoom, 1); }
+  .head { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--surface); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .logo { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); color: var(--on-accent); display: grid; place-items: center; font-weight: 700; }
+  .brand { flex: 1 1 auto; min-width: 120px; line-height: 1.2; }
+  .brand b { font-size: 16px; font-weight: 500; display: block; }
+  .brand small { font-size: 12px; color: var(--muted); }
+  .pills { display: flex; gap: 4px; }
+  .pills span { padding: 7px 14px; border-radius: 20px; font-weight: 500; color: var(--muted); }
+  .pills span.on { background: var(--accent-soft); color: var(--accent-hover); }
+  .pills em { font-style: normal; font-size: 11px; font-weight: 600; margin-left: 6px; padding: 1px 6px; border-radius: 10px; background: var(--warn-soft); color: var(--warn); }
+  main { padding: 16px; display: grid; gap: 14px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; box-shadow: 0 1px 2px rgb(0 0 0 / 8%); }
+  h2 { font-size: 15px; font-weight: 500; margin: 0 0 10px; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .tile { background: var(--soft); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+  .tile b { display: block; font-size: 22px; font-weight: 500; margin-top: 2px; }
+  .tile .up { color: var(--up); }
+  .chip { display: inline-flex; align-items: center; height: 24px; padding: 0 10px; border-radius: 12px; font-size: 12px; font-weight: 500; background: var(--neutral); color: var(--neutral-text); }
+  .chip.ok { background: var(--ok-soft); color: var(--ok); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); }
+  .chip.info { background: var(--accent-soft); color: var(--accent-hover); }
+  .row { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); font-weight: 500; padding: 4px 6px 6px 0; }
+  td { padding: 7px 6px 7px 0; border-top: 1px solid var(--line-2); }
+  td a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  .bars { display: flex; height: 14px; border-radius: 7px; overflow: hidden; gap: 2px; }
+  .bars i { display: block; }
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn { padding: 8px 16px; border-radius: 20px; font-weight: 500; border: 1px solid var(--input-line); background: var(--surface); color: var(--accent-hover); }
+  .btn.p { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .field { padding: 8px 12px; border: 1px solid var(--input-line); border-radius: 10px; background: var(--surface); color: var(--muted); min-width: 140px; }
+  .sw { display: flex; gap: 4px; margin-top: 10px; }
+  .alert { display: flex; gap: 8px; padding: 8px 12px; border-radius: 10px; margin-bottom: 8px; border: 1px solid; }
+  .alert.warn { background: var(--warn-soft); color: var(--warn); border-color: var(--warn-line); }
+  .alert.bad { background: var(--bad-soft); color: var(--bad); border-color: var(--bad-line); }
+  pre { margin: 0; padding: 10px 12px; border-radius: 10px; background: var(--code-bg); color: var(--code-text); font: 12px/1.5 ui-monospace, Menlo, monospace; }
+  .focus { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .sw i { flex: 1; height: 18px; border-radius: 5px; border: 1px solid var(--line); }
+</style>
+</head>
+<body>
+<div class="bar">
+  <h1>Farbthemen und Schriftgrößen</h1>
+  <div class="seg" id="size" aria-label="Schriftgröße">
+    <button data-v="0.9">Klein 12,6 px</button><button data-v="1" aria-pressed="true">Normal 14 px</button><button data-v="1.143">Groß 16 px</button>
+  </div>
+  <div class="seg" id="mode" aria-label="Modus">
+    <button data-v="both" aria-pressed="true">Hell + Dunkel</button><button data-v="light">Hell</button><button data-v="dark">Dunkel</button>
+  </div>
+  <div class="seg" id="theme" aria-label="Thema">
+    <button data-v="all" aria-pressed="true">Alle</button><button data-v="ocean">Ozean</button><button data-v="forest">Wald</button><button data-v="graphite">Graphit</button>
+  </div>
+</div>
+<div class="grid" id="grid"></div>
+
+<template id="tpl">
+  <div class="wrap">
+    <div class="cap"><span class="name"></span><span class="acc"></span></div>
+    <div class="t">
+      <div class="head">
+        <div class="logo">F</div>
+        <div class="brand"><b>FRITZ!Box Network</b><small>fritz.box · 42 Geräte</small></div>
+        <div class="pills"><span class="on">Netzwerk</span><span>Adressen</span><span>Internet<em>2</em></span></div>
+      </div>
+      <main>
+        <div class="card">
+          <h2>Übersicht</h2>
+          <div class="row">
+            <span class="chip ok">Online</span><span class="chip warn">Neu</span><span class="chip bad">Gesperrt</span><span class="chip info">WLAN 5 GHz</span><span class="chip">Offline</span>
+          </div>
+          <div class="tiles">
+            <div class="tile"><span class="label">Geräte</span><b>42</b></div>
+            <div class="tile"><span class="label">Download</span><b>187 Mbit/s</b></div>
+            <div class="tile"><span class="label">Upload</span><b class="up">24 Mbit/s</b></div>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Geräte</h2>
+          <table>
+            <tr><th>Name</th><th>Adresse</th><th>Status</th></tr>
+            <tr><td><a href="#">Wohnzimmer-TV</a></td><td>192.168.178.21</td><td><span class="chip ok">Online</span></td></tr>
+            <tr><td><a href="#">Drucker</a></td><td>192.168.178.34</td><td><span class="chip">Offline</span></td></tr>
+            <tr><td><a href="#">Unbekannt</a></td><td>192.168.178.77</td><td><span class="chip warn">Neu</span></td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h2>Adressraum</h2>
+          <div class="bars"><i style="flex:5;background:var(--b1)"></i><i style="flex:3;background:var(--b2)"></i><i style="flex:2;background:var(--b3)"></i><i style="flex:3;background:var(--b4)"></i><i style="flex:2;background:var(--b5)"></i><i style="flex:6;background:var(--neutral)"></i></div>
+          <div class="sw"><i style="background:var(--accent)"></i><i style="background:var(--up)"></i><i style="background:var(--b1)"></i><i style="background:var(--b2)"></i><i style="background:var(--b3)"></i><i style="background:var(--b4)"></i><i style="background:var(--b5)"></i></div>
+        </div>
+        <div class="card">
+          <h2>Hinweise und Code</h2>
+          <div class="alert warn">Neues Gerät im Netz: 192.168.178.77</div>
+          <div class="alert bad">Verbindung zur FRITZ!Box fehlgeschlagen</div>
+          <pre>fritz.box:49000/igddesc.xml</pre>
+        </div>
+        <div class="btns"><span class="btn p">Speichern</span><span class="btn focus">Abbrechen</span><span class="field">Suchen …</span></div>
+      </main>
+    </div>
+  </div>
+</template>
+
+<script>
+  const THEMES = { ocean: ["Ozean (heute)", "#0a6aa8 / #5bb2ea"], forest: ["Wald", "#0f7a6b / #5fd0be"], graphite: ["Graphit", "#2f3a48 / #d4dae2"] };
+  const state = { size: "1", mode: "both", theme: "all" };
+  function render() {
+    const grid = document.getElementById("grid");
+    grid.textContent = "";
+    const themes = state.theme === "all" ? Object.keys(THEMES) : [state.theme];
+    const modes = state.mode === "both" ? ["light", "dark"] : [state.mode];
+    grid.classList.toggle("one", themes.length * modes.length === 1);
+    for (const th of themes) for (const m of modes) {
+      const n = document.getElementById("tpl").content.cloneNode(true);
+      const t = n.querySelector(".t");
+      t.classList.add(th, ...(m === "dark" ? ["dark"] : []));
+      t.style.setProperty("--zoom", state.size);
+      n.querySelector(".name").textContent = `${THEMES[th][0]} · ${m === "dark" ? "Dunkel" : "Hell"}`;
+      n.querySelector(".acc").textContent = `Akzent ${THEMES[th][1]}`;
+      grid.append(n);
+    }
+  }
+  for (const id of ["size", "mode", "theme"]) {
+    document.getElementById(id).addEventListener("click", (e) => {
+      const b = e.target.closest("button"); if (!b) return;
+      state[id] = b.dataset.v;
+      for (const x of b.parentElement.children) x.setAttribute("aria-pressed", String(x === b));
+      render();
+    });
+  }
+  render();
+</script>
+</body>
+</html>

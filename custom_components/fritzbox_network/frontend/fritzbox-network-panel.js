@@ -15,6 +15,7 @@ import {
 import { fill, panelTexts } from "./texts.js";
 import { PANEL_CSS } from "./panel-styles.js";
 import { ic } from "./icons.js";
+import { applyLook, lookButton, rememberLook, rememberedLook, renderLookMenu, scaleFonts } from "./theme.js";
 import {
   groupPlan,
   listOrder,
@@ -158,6 +159,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       threshold: WEAK_LINK_RATIO,
       view: rememberedView(),
       menu: false,
+      look: false,
       names: true,
       // the device "In the network map" points at
       hl: null,
@@ -168,6 +170,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._openedHere = false;
     this._listScroll = 0;
     this._html = {};
+    this._look = rememberedLook();
     this._entries = [];
     this._entryId = null;
     this._error = null;
@@ -207,7 +210,8 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
-    this.style.colorScheme = hass.themes?.darkMode ? "dark" : "light";
+    this._haDark = hass.themes?.darkMode;
+    this._applyLook();
     const menu = this.shadowRoot.querySelector("ha-menu-button");
     if (menu) menu.hass = hass;
     if (hass.language !== this._language) {
@@ -216,6 +220,12 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     if (!this._started) this._start();
     else this._onHass();
+  }
+
+  /** The colours and the size of the type chosen, with light or dark as Home Assistant has it when that is chosen. */
+  _applyLook() {
+    const system = globalThis.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+    applyLook(this, this._look, this._haDark, system);
   }
 
   set narrow(narrow) {
@@ -504,6 +514,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div class="header-end">
             <select id="box" aria-label="${t.box}" hidden></select>
             <span class="fresh" id="live-chip" hidden><span class="dot on"></span><span class="t" id="live"></span></span>
+            <div class="lookwrap" id="lookhost"></div>
             <a class="intlink" href="/config/integrations/integration/${DOMAIN}" data-act="integration" title="${escapeHtml(t.integrationTitle)}">${ic("external")}<span>${t.integration}</span></a>
           </div>
         </header>
@@ -559,6 +570,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       menu.hass = this._hass;
       menu.narrow = this._narrow;
     }
+    const style = this.shadowRoot.querySelector("style");
+    style.textContent = scaleFonts(style.textContent);
     this._html = {};
     this._resize?.observe(this.shadowRoot.querySelector("#body"));
     this._renderBox();
@@ -607,6 +620,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const note = this._error ? `<div class="card note-card"><div class="empty"><b>${t[this._error]}</b></div></div>` : "";
     const ready = Boolean(state.data) && !this._error;
     this._set("note", note || (state.data ? "" : `<div class="card"><div class="empty"><span>${t.loading}</span></div></div>`));
+    this._set("lookhost", lookButton(t, state.look) + renderLookMenu(this._look, t, state.look));
     const netView = root.querySelector("#net-view");
     if (!netView) return;
     const tab = state.tab;
@@ -1108,6 +1122,13 @@ class FritzboxNetworkPanel extends HTMLElement {
       }
     }
     if (event.key === "Escape") {
+      if (state.look) {
+        event.preventDefault();
+        state.look = false;
+        this._update();
+        root.querySelector("#lookbtn")?.focus();
+        return;
+      }
       if (state.menu) {
         event.preventDefault();
         this._setMenu(false);
@@ -1245,6 +1266,18 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._setMenu(!state.menu);
     } else if (ds.act === "menu-close") {
       return this._setMenu(false);
+    } else if (ds.act === "look" || ds.act === "look-close") {
+      state.look = ds.act === "look" && !state.look;
+      this._update();
+      this.shadowRoot.querySelector(state.look ? "#lookmenu [aria-checked=true]" : "#lookbtn")?.focus();
+      return;
+    } else if (ds.look) {
+      this._look = { ...this._look, [ds.look]: ds.value };
+      rememberLook(this._look);
+      this._applyLook();
+      this._update();
+      this.shadowRoot.querySelector(`#lookmenu [data-look="${ds.look}"][data-value="${ds.value}"]`)?.focus();
+      return;
     } else if (ds.view) {
       state.view = ds.view;
       state.hl = null;
