@@ -2,6 +2,7 @@
 
 Credentials come from the environment, never from arguments:
     FRITZ_HOST (default 192.168.178.1), FRITZ_USER, FRITZ_PASSWORD, FRITZ_TLS=1 for https
+    FRITZ_LIST_ONLY=1 only lists the interfaces with the names the box gives them (no captures)
 
 What it does (nothing on the box is changed):
 - reads the event log, with and without a group, and says how many messages came
@@ -93,7 +94,7 @@ def main() -> None:
             # every row with a start button: its value and the text of the row, tags removed
             for row in re.findall(
                 r"(?is)<tr[^>]*>(?:(?!</tr>).)*?name=.start.(?:(?!</tr>).)*?</tr>", text
-            )[:30]:
+            )[:200]:
                 value = re.search(r'(?i)name=.start.[^>]*value=.([^">]+)', row)
                 label = re.sub(r"\s+", " ", re.sub(r"(?s)<[^>]+>", " ", row)).strip()
                 lines.append(f"    row: {value.group(1) if value else '?'} -> {mask(label[:100])}")
@@ -105,6 +106,17 @@ def main() -> None:
             found += ids
     except Exception as err:  # noqa: BLE001
         lines.append(f"FAILED {type(err).__name__}: {mask(err)}")
+
+    lines += ["", "== all interfaces with the name the box gives them =="]
+    try:
+        for item in client.get_capture_interfaces():
+            lines.append(f"{item['id']} -> {mask(item['label'])}")
+    except Exception as err:  # noqa: BLE001
+        lines.append(f"FAILED {type(err).__name__}: {mask(err)}")
+    if os.environ.get("FRITZ_LIST_ONLY") == "1":
+        OUT.write_text("\n".join(lines) + "\n")
+        print("\n".join(lines))
+        return
 
     lines += ["", "== interfaces the panel offers =="]
     try:
