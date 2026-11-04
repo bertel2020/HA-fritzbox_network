@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from collections import Counter
+from dataclasses import dataclass, field, replace
 import ipaddress
 import json
 import re
@@ -210,6 +211,9 @@ class VpnConnection:
     # the public address of the other side, known for a connected link between two sites
     remote_endpoint: str | None
     editable: bool
+    # what the entities are known by: the name, with the identifier added where two share a name.
+    # The identifier alone is the place in the list of the box and moves when one is deleted.
+    key: str = ""
 
 
 VPN_KINDS = {"wireguard_simple": "device", "wireguard_lan_lan": "site"}
@@ -254,6 +258,8 @@ def parse_vpn(page: dict[str, Any] | None) -> list[VpnConnection] | None:
                 editable=bool(entry.get("editable")),
             )
         )
+    names = Counter(c.name for c in found)
+    found = [replace(c, key=c.name if names[c.name] == 1 else f"{c.name}#{c.uid}") for c in found]
     found.sort(key=lambda c: (c.kind != "site", c.name.lower()))
     return found
 

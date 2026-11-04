@@ -900,18 +900,18 @@ class FritzboxNetworkPanel extends HTMLElement {
   }
 
   /** Switches a WireGuard connection; the button waits until the box shows the new state. */
-  async _switchVpn(uid, enabled) {
+  async _switchVpn(key, enabled) {
     const state = this._state;
-    state.vpnBusy = new Set([...(state.vpnBusy ?? []), uid]);
+    state.vpnBusy = new Set([...(state.vpnBusy ?? []), key]);
     this._renderVpn();
-    const name = state.data?.vpn?.find((c) => c.uid === uid)?.name ?? "";
+    const name = state.data?.vpn?.find((c) => c.key === key)?.name ?? "";
     try {
-      await this._ws("vpn/switch", { uid, enabled, name });
+      await this._ws("vpn/switch", { key, enabled });
       showToast(this.shadowRoot, fill(enabled ? this._t.vpnPage.toastOn : this._t.vpnPage.toastOff, { name }));
     } catch (err) {
       showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
     } finally {
-      state.vpnBusy = new Set([...state.vpnBusy].filter((id) => id !== uid));
+      state.vpnBusy = new Set([...state.vpnBusy].filter((id) => id !== key));
       this._renderVpn();
     }
   }
@@ -1703,7 +1703,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._loadLog();
       return;
     } else if (ds.act === "vpn-switch") {
-      return this._switchVpn(ds.uid, ds.on === "1");
+      return this._switchVpn(ds.key, ds.on === "1");
     } else if (ds.act === "latency-switch") {
       return this._switchLatency(ds.on === "1");
     } else if (ds.act === "check-run") {

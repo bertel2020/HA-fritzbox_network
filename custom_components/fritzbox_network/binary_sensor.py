@@ -62,10 +62,10 @@ def _async_setup_vpn(
 
     @callback
     def _add() -> None:
-        new = [c for c in coordinator.data.vpn or () if c.uid not in known]
+        new = [c for c in coordinator.data.vpn or () if c.key not in known]
         if not new:
             return
-        known.update(c.uid for c in new)
+        known.update(c.key for c in new)
         async_add_entities([FritzNetworkVpn(coordinator, c) for c in new])
 
     _add()
@@ -125,14 +125,14 @@ class FritzNetworkVpn(CoordinatorEntity[FritzNetworkCoordinator], BinarySensorEn
 
     def __init__(self, coordinator: FritzNetworkCoordinator, connection: VpnConnection) -> None:
         super().__init__(coordinator)
-        self._uid = connection.uid
-        self._attr_unique_id = f"{coordinator.serial}_{KEY_VPN}_{connection.uid}"
+        self._key = connection.key
+        self._attr_unique_id = f"{coordinator.serial}_{KEY_VPN}_{connection.key}"
         self._attr_translation_placeholders = {"name": connection.name}
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
 
     @property
     def connection(self) -> VpnConnection | None:
-        return next((c for c in self.coordinator.data.vpn or () if c.uid == self._uid), None)
+        return self.coordinator.vpn_by_key(self._key)
 
     @property
     def available(self) -> bool:

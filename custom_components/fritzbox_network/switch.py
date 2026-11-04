@@ -89,10 +89,10 @@ def _async_setup_vpn(
 
     @callback
     def _add() -> None:
-        new = [c for c in coordinator.data.vpn or () if c.editable and c.uid not in known]
+        new = [c for c in coordinator.data.vpn or () if c.editable and c.key not in known]
         if not new:
             return
-        known.update(c.uid for c in new)
+        known.update(c.key for c in new)
         async_add_entities([FritzNetworkVpnSwitch(coordinator, c) for c in new])
 
     _add()
@@ -107,15 +107,14 @@ class FritzNetworkVpnSwitch(CoordinatorEntity[FritzNetworkCoordinator], SwitchEn
 
     def __init__(self, coordinator: FritzNetworkCoordinator, connection: VpnConnection) -> None:
         super().__init__(coordinator)
-        self._uid = connection.uid
-        self._name = connection.name
-        self._attr_unique_id = f"{coordinator.serial}_{KEY_VPN_SWITCH}_{connection.uid}"
+        self._key = connection.key
+        self._attr_unique_id = f"{coordinator.serial}_{KEY_VPN_SWITCH}_{connection.key}"
         self._attr_translation_placeholders = {"name": connection.name}
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
 
     @property
     def connection(self) -> VpnConnection | None:
-        return next((c for c in self.coordinator.data.vpn or () if c.uid == self._uid), None)
+        return self.coordinator.vpn_by_key(self._key)
 
     @property
     def available(self) -> bool:
@@ -127,10 +126,10 @@ class FritzNetworkVpnSwitch(CoordinatorEntity[FritzNetworkCoordinator], SwitchEn
         return connection.active if connection else None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self.coordinator.async_set_vpn(self._uid, True, self._name)
+        await self.coordinator.async_set_vpn(self._key, True)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self.coordinator.async_set_vpn(self._uid, False, self._name)
+        await self.coordinator.async_set_vpn(self._key, False)
 
 
 class FritzNetworkGuestWifi(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity):

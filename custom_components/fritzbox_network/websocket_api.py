@@ -194,6 +194,7 @@ def _vpn(coordinator: FritzNetworkCoordinator) -> list[dict[str, Any]] | None:
         return None
     return [
         {
+            "key": c.key,
             "uid": c.uid,
             "name": c.name,
             "kind": c.kind,
@@ -776,9 +777,8 @@ async def ws_reconnect(
     {
         vol.Required("type"): VPN_SWITCH_COMMAND,
         vol.Required("entry_id"): str,
-        vol.Required("uid"): str,
+        vol.Required("key"): str,
         vol.Required("enabled"): bool,
-        vol.Optional("name"): str,
     }
 )
 @websocket_api.require_admin
@@ -796,7 +796,7 @@ async def ws_vpn_switch(
         )
         return
     try:
-        await coordinator.async_set_vpn(msg["uid"], msg["enabled"], msg.get("name"))
+        await coordinator.async_set_vpn(msg["key"], msg["enabled"])
     except HomeAssistantError as err:
         connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
         return

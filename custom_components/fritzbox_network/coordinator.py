@@ -660,19 +660,23 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.async_set_updated_data(replace(self.data, guest_wifi=enabled))
         await self.async_request_refresh()
 
-    async def async_set_vpn(self, uid: str, enabled: bool, name: str | None = None) -> None:
+    def vpn_by_key(self, key: str) -> VpnConnection | None:
+        """A WireGuard connection by what the entities know it by (see ``VpnConnection.key``)."""
+        return next((c for c in self.data.vpn or () if c.key == key), None)
+
+    async def async_set_vpn(self, key: str, enabled: bool) -> None:
         """Switch a WireGuard connection and show what the box then reports.
 
-        The box takes the change without an answer that says so, so the connection is read back:
-        if it is not in the state asked for, the action failed.
+        The connection is found by its name, not by the identifier it had when the entity was
+        made: the box numbers its connections by place, so deleting one moves the others up.
+        The box takes the change without an answer that says so, so the connection is read
+        back: if it is not in the state asked for, the action failed.
         """
-        known = next((c for c in self.data.vpn or () if c.uid == uid), None)
-        # the box numbers its connections: after one was deleted or added, an identifier can
-        # belong to another connection than before. Never switch one the caller did not mean.
-        if known is None or not known.editable or (name is not None and known.name != name):
+        known = self.vpn_by_key(key)
+        if known is None or not known.editable:
             raise HomeAssistantError(translation_domain=DOMAIN, translation_key="vpn_unknown")
         try:
-            await self.hass.async_add_executor_job(self.client.set_vpn, uid, enabled)
+            await self.hass.async_add_executor_job(self.client.set_vpn, known.uid, enabled)
             await asyncio.sleep(VPN_VERIFY_SECONDS)
             found = parse_vpn(await self.hass.async_add_executor_job(self.client.get_vpn))
         except (*_FETCH_ERRORS, requests.RequestException, PermissionError) as err:
@@ -681,7 +685,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 translation_key="action_failed",
                 translation_placeholders={"error": str(err)},
             ) from err
-        now = next((c for c in found or () if c.uid == uid), None)
+        now = next((c for c in found or () if c.key == key), None)
         if found is not None:
             self.async_set_updated_data(replace(self.data, vpn=found))
         if now is None or now.active != enabled:

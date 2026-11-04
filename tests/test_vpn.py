@@ -92,6 +92,7 @@ async def test_the_panel_gets_the_connections_without_any_key(
     vpn = event["event"]["vpn"]
     assert [c["name"] for c in vpn] == ["Holiday house", "Anna iPhone", "Bob laptop", "Old tablet"]
     assert vpn[0] == {
+        "key": "Holiday house",
         "uid": "vpnconnection9003",
         "name": "Holiday house",
         "kind": "site",
@@ -217,13 +218,13 @@ async def test_the_panel_command_switches_and_needs_the_right_and_a_known_connec
     client = await hass_ws_client(hass)
 
     await client.send_json_auto_id(
-        {"type": SWITCH, "entry_id": entry.entry_id, "uid": "vpnconnection9001", "enabled": False}
+        {"type": SWITCH, "entry_id": entry.entry_id, "key": "Anna iPhone", "enabled": False}
     )
     assert (await client.receive_json())["success"] is True
     assert ("vpn", "vpnconnection9001", False) in fake_client.calls
 
     await client.send_json_auto_id(
-        {"type": SWITCH, "entry_id": entry.entry_id, "uid": "nope", "enabled": True}
+        {"type": SWITCH, "entry_id": entry.entry_id, "key": "nope", "enabled": True}
     )
     assert (await client.receive_json())["success"] is False
 
@@ -301,15 +302,48 @@ async def test_a_list_that_comes_back_resets_the_count(hass, fake_client, entry)
 # --- the box renumbers ---
 
 
-async def test_a_connection_that_is_now_another_one_is_not_switched(hass, fake_client, entry):
+async def test_after_a_deletion_the_entities_follow_the_name_not_the_place(
+    hass, fake_client, entry
+):
     _box(fake_client)
-    await _setup(hass, entry)
-    entity = _switch_id(hass, "Anna iPhone")
-    # a connection was deleted on the box: the identifier now belongs to another one
-    fake_client.vpn["data"]["init"]["boxConnections"]["connection1"]["name"] = "Someone else"
-    coordinator = hass.config_entries.async_entries("fritzbox_network")[0].runtime_data
-    await coordinator.async_refresh()
+    coordinator = await _setup(hass, entry)
+    sensor = next(
+        s.entity_id
+        for s in hass.states.async_all("binary_sensor")
+        if s.attributes.get("friendly_name", "").endswith("VPN Bob laptop")
+    )
+    assert hass.states.get(sensor).state == "off"
 
-    with pytest.raises(HomeAssistantError):
-        await hass.services.async_call("switch", "turn_off", {"entity_id": entity}, blocking=True)
-    assert ("vpn", "vpnconnection9001", False) not in fake_client.calls
+    # "Anna iPhone" is deleted on the box: the others move up and take over its identifier
+    boxed = fake_client.vpn["data"]["init"]["boxConnections"]
+    boxed["connection2"]["uid"], boxed["connection4"]["uid"] = (
+        "vpnconnection9001",
+        "vpnconnection9002",
+    )
+    del boxed["connection1"]
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    # the entity is still "Bob laptop", and switching it writes to the place it has now
+    assert hass.states.get(sensor).state == "off"
+    await hass.services.async_call(
+        "switch", "turn_on", {"entity_id": _switch_id(hass, "Bob laptop")}, blocking=True
+    )
+    assert fake_client.calls[-1] == ("vpn", "vpnconnection9002", True)
+    # the deleted one is unavailable, nothing new was made for the moved ones
+    assert hass.states.get(_switch_id(hass, "Anna iPhone")).state == "unavailable"
+    assert (
+        len([s for s in hass.states.async_all("switch") if s.entity_id.endswith("_enabled")]) == 4
+    )
+
+
+def test_two_connections_with_one_name_are_told_apart_by_the_identifier():
+    page = json.loads(json.dumps(PAGE))
+    boxed = page["data"]["init"]["boxConnections"]
+    boxed["connection2"]["name"] = "Anna iPhone"
+
+    keys = {c.uid: c.key for c in parse_vpn(page)}
+
+    assert keys["vpnconnection9001"] == "Anna iPhone#vpnconnection9001"
+    assert keys["vpnconnection9002"] == "Anna iPhone#vpnconnection9002"
+    assert keys["vpnconnection9003"] == "Holiday house"
