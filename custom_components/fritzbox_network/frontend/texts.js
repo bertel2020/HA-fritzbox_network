@@ -385,7 +385,7 @@ const en = {
     capture: {
       title: "Packet capture",
       interface: "Record on",
-      bandLabel: "Wi-Fi {band}: {name}",
+      names: { lan: "Whole home network", eth: "LAN port eth{n}", ap: "Wi-Fi access point {n}", apBand: "Wi-Fi {band}", guest: "Guest network", guestBand: "Guest network {band}", wg: "WireGuard connection {n}", routingAll: "Routing, all traffic", routing: "Routing: {name}" },
       detect: "Detect Wi-Fi bands",
       detecting: "Detecting …",
       detectHint: "Records about ten seconds on each Wi-Fi access point and names it after the band of the devices that packets are sent to. Needs devices with traffic on both bands.",
@@ -1137,7 +1137,7 @@ const de = {
     capture: {
       title: "Paketmitschnitt",
       interface: "Aufzeichnen auf",
-      bandLabel: "WLAN {band}: {name}",
+      names: { lan: "Gesamtes Heimnetz", eth: "LAN-Anschluss eth{n}", ap: "WLAN-Zugangspunkt {n}", apBand: "WLAN {band}", guest: "Gastnetz", guestBand: "Gastnetz {band}", wg: "WireGuard-Verbindung {n}", routingAll: "Routing, gesamter Verkehr", routing: "Routing: {name}" },
       detect: "WLAN-Bänder erkennen",
       detecting: "Erkenne …",
       detectHint: "Schneidet je WLAN-Zugangspunkt etwa zehn Sekunden mit und benennt ihn nach dem Band der Geräte, an die Pakete gehen. Braucht Geräte mit Verkehr auf beiden Bändern.",

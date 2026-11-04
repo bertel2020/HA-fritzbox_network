@@ -13,11 +13,22 @@ export function defaultInterface(interfaces) {
   return (interfaces.find((i) => i.id === "1-lan") ?? interfaces[0])?.id ?? "";
 }
 
-/** The name of an interface: the one the box gives with its id, and the band where it is known. */
+/** The name of an interface: a plain one made from its id, the box's own name where the id says nothing. */
 export function interfaceLabel(i, t) {
   const c = t.inet.capture;
-  const name = `${i.label} (${i.id})`;
-  return i.band ? fill(c.bandLabel, { band: t.bandGroups[i.band] ?? i.band, name }) : name;
+  const n = c.names;
+  const band = i.band ? (t.bandGroups[i.band] ?? i.band) : "";
+  let match;
+  let name = i.label;
+  if (i.id === "1-lan") name = n.lan;
+  else if ((match = /^1-eth(\d+)$/.exec(i.id))) name = fill(n.eth, { n: match[1] });
+  else if ((match = /^1-vap(\d+)$/.exec(i.id))) name = band ? fill(n.apBand, { band }) : fill(n.ap, { n: Number(match[1]) + 1 });
+  else if ((match = /^1-guest(\d?)$/.exec(i.id)))
+    name = match[1] === "4" ? fill(n.guestBand, { band: t.bandGroups["2_4ghz"] }) : match[1] === "5" ? fill(n.guestBand, { band: t.bandGroups["5ghz"] }) : n.guest;
+  else if ((match = /^1-wg(\d+)$/.exec(i.id))) name = fill(n.wg, { n: match[1] });
+  else if (i.id === "3-0") name = n.routingAll;
+  else if (/^3-\d+$/.test(i.id)) name = fill(n.routing, { name: i.label });
+  return `${name} (${i.id})`;
 }
 
 /** The select of the interfaces, in groups; the name is the one the box gives, with its id. */

@@ -1104,9 +1104,17 @@ test("the capture card offers the interfaces, locks the form while recording and
   };
   const ctx = { t, language: "de", canWrite: true, form: capture.captureDefaults(status.limits) };
   const idle = capture.renderCapture(status, ctx);
-  assert.match(idle, /<optgroup label="WLAN">.*vap1 \(1-vap1\)/s);
+  assert.match(idle, /<optgroup label="WLAN">.*WLAN-Zugangspunkt 2 \(1-vap1\)/s);
   assert.match(idle, /<option value="2-1">1\. Internetverbindung \(2-1\)/);
   assert.equal(capture.defaultInterface(status.interfaces), "1-lan");
+  const name = (id, label, band) => capture.interfaceLabel({ id, label, band }, t);
+  assert.equal(name("1-eth2", "eth2"), "LAN-Anschluss eth2 (1-eth2)");
+  assert.equal(name("1-guest5", "guest5"), "Gastnetz 5 GHz (1-guest5)");
+  assert.equal(name("1-guest4", "guest4"), "Gastnetz 2,4 GHz (1-guest4)");
+  assert.equal(name("1-guest", "guest"), "Gastnetz (1-guest)");
+  assert.equal(name("1-vap0", "vap0"), "WLAN-Zugangspunkt 1 (1-vap0)");
+  assert.equal(name("1-wg0", "wg0"), "WireGuard-Verbindung 0 (1-wg0)");
+  assert.equal(name("3-0", "Routing-Schnittstelle"), "Routing, gesamter Verkehr (3-0)");
   assert.match(idle, /data-act="cap-dl" data-name="1lan_20261104-101500.pcap"/);
   assert.match(idle, /Vorhandene Mitschnitte \(1\)/);
   assert.match(capture.renderCapture({ ...status, files: [] }, ctx), /Vorhandene Mitschnitte \(0\)[\s\S]*Noch keine Aufzeichnungen/);
@@ -1312,9 +1320,9 @@ test("the capture list names the Wi-Fi access points after their band and offers
   };
   const ctx = { t, language: "de", canWrite: true, clients: [], form: capture.captureDefaults(status.limits) };
   const html = capture.renderCapture(status, ctx);
-  assert.match(html, /<option value="1-vap0">WLAN 2,4 GHz: vap0 \(1-vap0\)/);
-  assert.match(html, /<option value="1-lan">lan \(1-lan\)/); // no band known: the name of the box
-  assert.match(html, /WLAN 5 GHz: vap1 \(1-vap1\)<small>/); // also in the list of the files
+  assert.match(html, /<option value="1-vap0">WLAN 2,4 GHz \(1-vap0\)/);
+  assert.match(html, /<option value="1-lan">Gesamtes Heimnetz \(1-lan\)/); // no band known: the name of the box
+  assert.match(html, /WLAN 5 GHz \(1-vap1\)<small>/); // also in the list of the files
   assert.match(html, /data-act="cap-detect">WLAN-Bänder erkennen/);
 
   assert.match(capture.renderCapture(status, { ...ctx, detecting: true }), /data-act="cap-detect" disabled>Erkenne/);
