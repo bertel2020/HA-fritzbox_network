@@ -438,6 +438,7 @@ def test_the_web_login_asks_for_the_challenge_with_a_get():
 
 
 BOX_CLOSED = threading.Event()
+STOPPED: list[str] = []
 
 
 @contextlib.contextmanager
@@ -450,6 +451,12 @@ def _box(script):
         protocol_version = "HTTP/1.0"
 
         def do_GET(self):  # noqa: N802
+            if "iface=stopall" in self.path:
+                STOPPED.append(self.path)
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b"ok")
+                return
             script(self)
 
         def log_message(self, *args):
@@ -459,6 +466,7 @@ def _box(script):
         daemon_threads = False  # server_close() waits for the handlers
 
     BOX_CLOSED.clear()
+    STOPPED.clear()
     server = Server(("127.0.0.1", 0), Handler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
     try:
@@ -523,6 +531,7 @@ def test_a_capture_that_never_ends_stops_when_the_time_is_up(tmp_path):
 
     assert reason == "time"
     assert time.monotonic() - started < 5
+    assert len(STOPPED) == 1  # the box was told to end the capture
     assert path.read_bytes().startswith(PCAP_HEAD)
 
 

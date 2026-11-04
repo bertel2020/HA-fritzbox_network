@@ -60,6 +60,7 @@ def main() -> None:
         "",
     ]
 
+    client.stop_captures()  # a capture left over from an earlier run loads the box
     lines.append("== event log ==")
     for group in (None, "net", "wlan", "sys"):
         try:

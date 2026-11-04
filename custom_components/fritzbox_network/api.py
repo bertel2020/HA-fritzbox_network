@@ -240,6 +240,41 @@ class FritzNetworkClient:
                     raise
         return None  # pragma: no cover
 
+    def _new_connection(self) -> http.client.HTTPConnection:
+        """A connection to the web interface for a stream: the box serves it over plain HTTP/1.0."""
+        if self._use_tls:
+            return http.client.HTTPSConnection(
+                self._host,
+                timeout=REQUEST_TIMEOUT,
+                context=ssl._create_unverified_context(),  # noqa: S323, SLF001
+            )
+        return http.client.HTTPConnection(self._host, timeout=REQUEST_TIMEOUT)
+
+    def stop_captures(self, sid: str | None = None) -> None:
+        """Ask the box to end every capture that still runs (the page of the box does the same).
+
+        Best effort: a capture the connection of which was cut may run on in the box and load it.
+        """
+        try:
+            if sid is None:
+                with self._lock:
+                    sid = self._web_sid or self._web_login()
+            query = urlencode({"iface": "stopall", "capture": "Stop", "sid": sid})
+            connection = self._new_connection()
+            try:
+                connection.request("GET", f"/cgi-bin/capture_notimeout?{query}")
+                connection.getresponse().read()
+            finally:
+                connection.close()
+        except (
+            OSError,
+            http.client.HTTPException,
+            ValueError,
+            PermissionError,
+            ET.ParseError,
+        ) as err:
+            _LOGGER.debug("The captures could not be stopped: %s", err)
+
     def capture(
         self,
         interface: str,
@@ -259,14 +294,7 @@ class FritzNetworkClient:
         query = urlencode(
             {"ifaceorminor": interface, "snaplen": "1600", "capture": "Start", "sid": sid}
         )
-        if self._use_tls:
-            connection: http.client.HTTPConnection = http.client.HTTPSConnection(
-                self._host,
-                timeout=REQUEST_TIMEOUT,
-                context=ssl._create_unverified_context(),  # noqa: S323, SLF001
-            )
-        else:
-            connection = http.client.HTTPConnection(self._host, timeout=REQUEST_TIMEOUT)
+        connection = self._new_connection()
         deadline = time.monotonic() + seconds
         written = 0
         reason = "time"
@@ -334,6 +362,8 @@ class FritzNetworkClient:
         finally:
             finished.set()
             connection.close()
+            # the box ends a capture when the connection closes; make sure it did
+            self.stop_captures(sid)
         if cut and reason == "time":
             reason = cut[0]
         if written == 0:
