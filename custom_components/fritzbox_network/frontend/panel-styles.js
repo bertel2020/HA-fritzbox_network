@@ -620,7 +620,8 @@ export const PANEL_CSS = `
 
   /* address page */
   #addresses-view > * + *, #addresses-view .alayout + * { margin-top: 16px; }
-  #internet-view .phead, #addresses-view .phead { margin-bottom: 16px; }
+  #internet-view .phead, #addresses-view .phead, #diagnose-view .phead { margin-bottom: 16px; }
+  #diagnose-view > .card + .card, #diagnose-view > .card + .col { margin-top: 16px; }
   #addresses-view .atiles { margin-top: 0; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
   #addresses-view .tile b, #addresses-view .tile small { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
   #addresses-view .tile { box-shadow: var(--shadow); border: 1px solid var(--line); background: var(--surface); }
