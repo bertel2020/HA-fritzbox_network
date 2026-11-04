@@ -1,6 +1,6 @@
 /* The internet page of the panel: the connection of the box, its load and, on a DSL line, its quality. */
 
-import { dailyTotals, escapeHtml, formatBytes, formatDuration, formatRate, sparkPaths, trafficByDevice, usedPercent } from "./shared.js";
+import { dailyTotals, escapeHtml, formatBytes, formatDuration, formatRate, sparkPaths, trafficByDevice, trafficMonth, trafficSummary, usedPercent } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { whenText } from "./panel-network.js";
@@ -206,16 +206,51 @@ function dayBars(rows, language, t) {
       <span class="grow">${escapeHtml(`${first} – ${last}`)} · max ${escapeHtml(formatBytes(top, language))}</span></div>`;
 }
 
+/** The small bars of a tile: one per day, the days before the history as one dashed box. */
+function miniBars(rows, since, language) {
+  const top = Math.max(1, ...rows.map((r) => r.down + r.up));
+  const gap = rows.filter((r) => r.ts < since).length;
+  const empty = gap ? `<rect class="gap" x="0.5" y="2" width="${gap * 10 - 1}" height="31" rx="2"/>` : "";
+  const bars = rows
+    .map((r, k) => {
+      if (r.ts < since) return "";
+      const down = (r.down / top) * 30;
+      const up = (r.up / top) * 30;
+      return `<rect class="bd" x="${k * 10 + 1}" y="${(33 - down).toFixed(1)}" width="8" height="${down.toFixed(1)}"/><rect class="bu" x="${k * 10 + 1}" y="${(33 - down - up).toFixed(1)}" width="8" height="${up.toFixed(1)}"/>`;
+    })
+    .join("");
+  return `<svg class="spark mini" viewBox="0 0 ${rows.length * 10} 34" preserveAspectRatio="none" aria-hidden="true">${empty}${bars}</svg>`;
+}
+
 /** The data volume of the line: today, 7 and 30 days, the bars per day and who used the most. */
 function volumeCard(ctx) {
   const { t, language, traffic, clients, range } = ctx;
   const i = t.inet;
   const known = Object.keys(traffic ?? {}).length > 0;
+  const short = (ts) => new Date(ts * 1000).toLocaleDateString(language, { day: "numeric", month: "numeric" });
   const tile = (n) => {
-    const rows = dailyTotals(traffic, n);
-    const down = rows.reduce((a, r) => a + r.down, 0);
-    const up = rows.reduce((a, r) => a + r.up, 0);
-    return `<div class="tile"><span class="label">${escapeHtml(t.trafficRanges[n])}</span><b>${escapeHtml(formatBytes(down + up, language))}</b><small>↓ ${escapeHtml(formatBytes(down, language))} · ↑ ${escapeHtml(formatBytes(up, language))}</small></div>`;
+    const s = trafficSummary(traffic, n);
+    const note = n === 1 ? "" : s.available < n ? fill(i.trafficSinceDays, { date: short(s.since), n: s.available }) : "";
+    let compare = "";
+    if (s.change) {
+      const pct = Math.round(Math.abs(s.change.ratio) * 100);
+      const cls = pct >= 25 ? (s.change.ratio > 0 ? " hi" : " lo") : "";
+      const against = n === 1 ? fill(i.trafficVsAverage, { size: formatBytes(s.change.base, language) }) : fill(i.trafficVsDays, { n });
+      compare = `<span class="chip${cls}">${s.change.ratio >= 0 ? "↑" : "↓"} ${pct} %</span> ${escapeHtml(s.change.ratio >= 0 ? i.trafficMore : i.trafficLess)} ${escapeHtml(against)}`;
+    } else if (n > 1 && s.available) {
+      compare = `<span class="chip">${escapeHtml(fill(i.trafficAverage, { size: formatBytes(s.average, language) }))}</span>`;
+    }
+    const spark = n > 1 && s.available ? miniBars(s.rows, s.since, language) : "";
+    const peak = n > 1 && s.peak ? `<div class="peak">${escapeHtml(fill(i.trafficPeak, { size: formatBytes(s.peak.down + s.peak.up, language), date: short(s.peak.ts) }))}</div>` : "";
+    return `<div class="tile"><span class="label">${escapeHtml(t.trafficRanges[n])}${note ? ` <span class="since">${escapeHtml(note)}</span>` : ""}</span><b>${escapeHtml(formatBytes(s.down + s.up, language))}</b><small>↓ ${escapeHtml(formatBytes(s.down, language))} · ↑ ${escapeHtml(formatBytes(s.up, language))}</small>${compare ? `<div class="cmp">${compare}</div>` : ""}${spark}${peak}</div>`;
+  };
+  const monthBlock = () => {
+    const m = trafficMonth(traffic);
+    const total = m.down + m.up;
+    const name = new Date().toLocaleDateString(language, { month: "long" });
+    return `<div class="month"><div class="row"><span>${escapeHtml(fill(i.trafficMonth, { month: name }))}</span><b>${escapeHtml(formatBytes(total, language))}</b></div>
+      <div class="meter" role="img" aria-label="↓ ${escapeHtml(formatBytes(m.down, language))} · ↑ ${escapeHtml(formatBytes(m.up, language))}"><i class="d" style="width:${total ? ((m.down / total) * 100).toFixed(1) : 0}%"></i><i class="u" style="width:${total ? ((m.up / total) * 100).toFixed(1) : 0}%"></i></div>
+      <div class="legend2"><span><i></i>↓ ${escapeHtml(formatBytes(m.down, language))}</span><span><i class="upl"></i>↑ ${escapeHtml(formatBytes(m.up, language))}</span></div></div>`;
   };
   const days = range === 30 ? 30 : 14;
   const names = new Map((clients ?? []).map((c) => [c.mac, c]));
@@ -238,7 +273,7 @@ function volumeCard(ctx) {
   const rest = rows.slice(TOP_DEVICES);
   const more = rest.length ? `<p class="hint">${escapeHtml(fill(i.topMore, { n: rest.length, size: formatBytes(rest.reduce((a, r) => a + r.total, 0), language) }))}</p>` : "";
   return `<section class="card sec"><div class="trendhead"><span class="label">${escapeHtml(i.volume)}</span><div class="seg" role="group" aria-label="${escapeHtml(i.volume)}">${buttons}</div></div>
-    ${known ? `<div class="tiles">${[1, 7, 30].map(tile).join("")}</div>
+    ${known ? `<div class="tiles">${[1, 7, 30].map(tile).join("")}</div>${monthBlock()}
     <div class="subhead">${escapeHtml(i.perDay)}</div>${dayBars(dailyTotals(traffic, days), language, t)}
     <div class="subhead">${escapeHtml(fill(i.topTitle, { range: t.trafficRanges[range] }))}</div>
     ${rows.length ? `<ol class="topdev">${list}</ol>${more}` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}

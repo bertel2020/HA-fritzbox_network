@@ -813,6 +813,23 @@ test("the days of the line are summed over all devices and the tooltip names tim
   assert.match(shared.plotText([1_800_000_000, -67], { unit: "dBm" }, "en"), /-67 dBm$/);
 });
 
+test("the traffic summary tells how old the history is and compares only with enough of it", () => {
+  const now = new Date(2026, 10, 5);
+  const days = { "2026-11-01": [10, 10], "2026-11-02": [20, 20], "2026-11-03": [30, 30], "2026-11-04": [10, 10], "2026-11-05": [10, 10] };
+  const week = shared.trafficSummary({ a: days }, 7, now);
+  assert.equal(week.available, 5);
+  assert.equal(week.down + week.up, 160);
+  assert.equal(week.average, 32);
+  assert.equal(week.peak.down, 30);
+  assert.equal(week.change, null);
+  const today = shared.trafficSummary({ a: days }, 1, now);
+  assert.equal(today.change.base, 35);
+  assert.ok(Math.abs(today.change.ratio - (20 / 35 - 1)) < 1e-9);
+  const month = shared.trafficMonth({ a: days }, now);
+  assert.deepEqual([month.down, month.up], [80, 80]);
+  assert.equal(shared.trafficSummary({}, 7, now).available, 0);
+});
+
 test("the clean-up search narrows the list and the picker only offers what it shows", () => {
   const found = { ...cleanupState, cleanupQuery: "acme" };
   assert.deepEqual(cleanup.visibleStale(found).map((d) => d.mac), ["a"]);

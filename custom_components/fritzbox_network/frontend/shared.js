@@ -556,6 +556,50 @@ export function dailyTotals(traffic, n, now = new Date()) {
 }
 
 /**
+ * What the line moved over the last n days, told honestly: the history may be younger than n days.
+ * { rows, since (epoch seconds of the first day with data, or null), available (days with a
+ * history, at most n), down, up, average (bytes per day over the available ones), peak (the busiest
+ * row or null), change (relative to the n days before, or the average of the days before for n = 1;
+ * null when there is nothing to compare with) }.
+ */
+export function trafficSummary(traffic, n, now = new Date()) {
+  const first = Object.values(traffic ?? {})
+    .flatMap((days) => Object.keys(days ?? {}))
+    .sort()[0];
+  const rows = dailyTotals(traffic, n, now);
+  const empty = { rows, since: null, available: 0, down: 0, up: 0, average: 0, peak: null, change: null };
+  if (!first) return empty;
+  const [y, m, d] = first.split("-").map(Number);
+  const since = new Date(y, m - 1, d).getTime() / 1000;
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() / 1000;
+  const age = Math.round((today - since) / 86400) + 1;
+  if (age < 1) return empty;
+  const own = rows.filter((r) => r.ts >= since);
+  const sum = (list, key) => list.reduce((a, r) => a + r[key], 0);
+  const down = sum(own, "down");
+  const up = sum(own, "up");
+  const peak = own.reduce((best, r) => (r.down + r.up > (best ? best.down + best.up : 0) ? r : best), null);
+  let change = null;
+  if (n === 1) {
+    const before = dailyTotals(traffic, 8, now).slice(0, 7).filter((r) => r.ts >= since);
+    const average = before.length ? (sum(before, "down") + sum(before, "up")) / before.length : 0;
+    if (average > 0) change = { ratio: (down + up) / average - 1, base: average };
+  } else if (age >= 2 * n) {
+    const before = dailyTotals(traffic, 2 * n, now).slice(0, n);
+    const base = sum(before, "down") + sum(before, "up");
+    if (base > 0) change = { ratio: (down + up) / base - 1, base };
+  }
+  const available = Math.min(n, age);
+  return { rows, since, available, down, up, average: (down + up) / available, peak, change };
+}
+
+/** What the line moved since the first of this month: { down, up, days } (days with a history). */
+export function trafficMonth(traffic, now = new Date()) {
+  const rows = dailyTotals(traffic, now.getDate(), now);
+  return { down: rows.reduce((a, r) => a + r.down, 0), up: rows.reduce((a, r) => a + r.up, 0), days: rows.length };
+}
+
+/**
  * The text of the tooltip of a chart for one point [epoch seconds, value …]: the time and the
  * values as the chart's unit ("bytes", "rate" or a plain unit); two values are down and up.
  */

@@ -419,6 +419,22 @@ export const PANEL_CSS = `
   .live .dn b { color: var(--accent); }
   .live .upl b { color: var(--up); }
   .live .gl { color: var(--muted); font-size: 12px; }
+  .tile .since { color: var(--warn); font-size: 11px; text-transform: none; letter-spacing: 0; }
+  .tile .cmp { display: flex; flex-wrap: wrap; gap: 2px 6px; align-items: center; margin-top: 2px; font-size: 12px; color: var(--muted); }
+  .tile .chip { white-space: nowrap; border-radius: 8px; padding: 0 6px; font-size: 11px; font-weight: 500; background: var(--neutral-soft, var(--soft)); color: var(--text); }
+  .tile .chip.hi { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+  .tile .chip.lo { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
+  .tile .peak { margin-top: 6px; font-size: 12px; color: var(--muted); }
+  #internet-view svg.spark.mini { height: 34px; margin-top: 8px; }
+  .spark.mini rect.bd { fill: var(--accent); }
+  .spark.mini rect.bu { fill: var(--up); }
+  .spark.mini rect.gap { fill: none; stroke: var(--line); stroke-dasharray: 2 3; vector-effect: non-scaling-stroke; }
+  .month { margin-top: 8px; background: var(--soft); border-radius: 12px; padding: 10px 12px; }
+  .month .row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-size: 13px; }
+  .month .meter { display: flex; height: 8px; margin-top: 8px; border-radius: 4px; overflow: hidden; background: var(--line); }
+  .month .meter i { display: block; height: 100%; }
+  .month .meter .d { background: var(--accent); }
+  .month .meter .u { background: var(--up); }
   .subhead { margin: 16px 0 6px; font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
   .plot { position: relative; touch-action: pan-y; }
   .plot .cursor { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--muted); pointer-events: none; }
