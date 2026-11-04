@@ -218,6 +218,7 @@ const en = {
     legendBlocked: "internet blocked",
     legendSquare: "square = cable",
   },
+  diag: { title: "Diagnosis", lead: "Tools to find out what happens in the network." },
   inet: {
     title: "Internet",
     open: "Open the internet connection",
@@ -345,7 +346,7 @@ const en = {
     nodeUp: "connected",
     nodeDown: "disconnected",
   },
-  tabs: { net: "Network", internet: "Internet", addresses: "Address space", cleanup: "Clean up", filter: "Include" },
+  tabs: { net: "Network", internet: "Internet", addresses: "Address space", diagnose: "Diagnosis", cleanup: "Clean up", filter: "Include" },
   navLabel: "Pages",
   cleanup: {
     title: "Clean up",
@@ -882,6 +883,7 @@ const de = {
     legendBlocked: "Internet gesperrt",
     legendSquare: "eckig = Kabel",
   },
+  diag: { title: "Diagnose", lead: "Werkzeuge, um herauszufinden, was im Netz passiert." },
   inet: {
     title: "Internet",
     open: "Internetverbindung öffnen",
@@ -1009,7 +1011,7 @@ const de = {
     nodeUp: "verbunden",
     nodeDown: "getrennt",
   },
-  tabs: { net: "Netzwerk", internet: "Internet", addresses: "Adressraum", cleanup: "Aufräumen", filter: "Einbinden" },
+  tabs: { net: "Netzwerk", internet: "Internet", addresses: "Adressraum", diagnose: "Diagnose", cleanup: "Aufräumen", filter: "Einbinden" },
   navLabel: "Seiten",
   cleanup: {
     title: "Aufräumen",

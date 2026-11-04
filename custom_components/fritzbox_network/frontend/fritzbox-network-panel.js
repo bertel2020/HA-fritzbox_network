@@ -28,7 +28,7 @@ import {
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
-import { captureDefaults } from "./panel-capture.js";
+import { captureDefaults, renderCapture } from "./panel-capture.js";
 import { BLOCK_COLORS, ENTRY_KINDS, addressModel, checkBlock, checkEntry, emptyOwn, entryPreview, groupPreview, normalizeOwn, parseRange, poolChange, renderAddresses } from "./panel-addresses.js";
 import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
@@ -124,6 +124,7 @@ export function renderNav(state, t, stale) {
     tab("net"),
     tab("internet", dot, label),
     tab("addresses"),
+    tab("diagnose"),
     tab("cleanup", stale ? `<em>${stale}</em>` : ""),
     tab("filter"),
   ].join("");
@@ -328,10 +329,8 @@ class FritzboxNetworkPanel extends HTMLElement {
   _enterTab() {
     if (this._state.tab === "cleanup") this._loadCleanup();
     else if (this._state.tab === "filter") this._loadFilter();
-    else if (this._state.tab === "internet") {
-      this._loadPorts();
-      this._loadCapture();
-    }
+    else if (this._state.tab === "internet") this._loadPorts();
+    else if (this._state.tab === "diagnose") this._loadCapture();
     else if (this._state.tab === "addresses") this._loadAddresses();
   }
 
@@ -394,7 +393,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._state.capture = "failed";
     }
     this._update();
-    if (this._state.tab === "internet" && this._state.capture?.job?.state === "running") {
+    if (this._state.tab === "diagnose" && this._state.capture?.job?.state === "running") {
       this._captureTimer = setTimeout(() => this._loadCapture(), 1000);
     }
   }
@@ -600,6 +599,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           </div>
           <div id="device-view" hidden></div>
           <div id="internet-view" hidden></div>
+          <div id="diagnose-view" hidden></div>
           <div id="addresses-view" hidden></div>
           <div class="col" id="cleanup-view" hidden>
             <div class="phead"><h1>${t.cleanup.title}</h1><p class="lead">${t.cleanup.lead}</p></div>
@@ -689,6 +689,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     netView.hidden = !ready || tab !== "net" || onDevice;
     root.querySelector("#device-view").hidden = !ready || !onDevice;
     root.querySelector("#internet-view").hidden = !ready || tab !== "internet";
+    root.querySelector("#diagnose-view").hidden = !ready || tab !== "diagnose";
     root.querySelector("#addresses-view").hidden = !ready || tab !== "addresses";
     root.querySelector("#cleanup-view").hidden = !ready || tab !== "cleanup";
     root.querySelector("#filter-view").hidden = !ready || tab !== "filter";
@@ -701,6 +702,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     root.querySelector("#sub").textContent = master ? [master.name, master.model].filter(Boolean).join(" · ") : "";
     this._tick();
     if (tab === "internet") return this._renderInternet();
+    if (tab === "diagnose") return this._renderDiagnose();
     if (tab === "addresses") return this._renderAddresses();
     if (tab === "cleanup") return this._renderCleanup();
     if (tab === "filter") return this._renderFilter();
@@ -778,12 +780,24 @@ class FritzboxNetworkPanel extends HTMLElement {
         now: Date.now(),
         canWrite: Boolean(this._state.data?.can_write),
         ports: this._state.ports,
-        capture: this._state.capture,
-        captureForm: this._state.captureForm,
         traffic: this._state.traffic,
         trafficRange: this._state.trafficRange,
         clients: this._state.data?.clients ?? [],
       })
+    );
+  }
+
+  _renderDiagnose() {
+    const t = this._t;
+    this._set(
+      "diagnose-view",
+      `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(t.diag.title)}</h1><p class="lead">${escapeHtml(t.diag.lead)}</p></div>` +
+        renderCapture(this._state.capture, {
+          t,
+          language: this._hass?.language,
+          canWrite: Boolean(this._state.data?.can_write),
+          form: this._state.captureForm,
+        })
     );
   }
 

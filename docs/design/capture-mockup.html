@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Paketmitschnitt – Mockup</title>
+<style>
+  :root { --bg: #f4f6f9; --card: #fff; --fg: #1b1f24; --mute: #6b7280; --line: #e3e7ec; --tile: #f4f6f9; --accent: #0a6aa8; --danger: #b3261e; --ok: #1e6b34 }
+  @media (prefers-color-scheme: dark) { :root { --bg: #14171b; --card: #1d2126; --fg: #e8eaed; --mute: #9aa4b1; --line: #2c323a; --tile: #262b31; --accent: #5bb2ea; --danger: #f2827a; --ok: #7ccf92 } }
+  * { box-sizing: border-box }
+  body { margin: 0; padding: 24px 16px; background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif }
+  .wrap { max-width: 760px; margin: 0 auto; display: grid; gap: 16px }
+  .note { background: #fff8e1; color: #3b2f00; border-left: 4px solid #b36a00; padding: 12px 16px; border-radius: 8px; font-size: 13px }
+  .note ul { margin: 6px 0 0; padding-left: 18px }
+  .card { background: var(--card); border-radius: 24px; padding: 24px; box-shadow: 0 1px 6px rgb(0 0 0 / 10%) }
+  .state { font-size: 12px; color: var(--mute); margin: 8px 4px -8px }
+  .label { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--mute) }
+  .hint { color: var(--mute); margin: 8px 0; font-size: 13px }
+  .capform { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; margin: 12px 0 }
+  .field { display: grid; gap: 4px }
+  select, input { width: 100%; height: 42px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--fg); padding: 0 12px; font: inherit }
+  select:disabled, input:disabled { opacity: .55 }
+  .btn { height: 42px; border-radius: 21px; border: 1px solid var(--line); background: var(--card); color: var(--fg); padding: 0 18px; font: inherit; cursor: pointer }
+  .btn.p { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600 }
+  .btn.p:disabled { opacity: .45; cursor: default }
+  .btn.dp { color: var(--danger) }
+  .btn.sm { height: 34px; padding: 0 14px }
+  .caprun { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; margin: 12px 0; padding: 12px 14px; border-radius: 14px; background: var(--tile) }
+  .meter { display: block; height: 8px; border-radius: 4px; background: var(--line); overflow: hidden }
+  .meter i { display: block; height: 100%; background: var(--accent) }
+  .caprun small { color: var(--mute); grid-column: 1 }
+  .caprun .btn { grid-row: 1 / 3; grid-column: 2 }
+  .dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--danger); margin-right: 6px; animation: pulse 1.2s infinite }
+  @keyframes pulse { 50% { opacity: .25 } }
+  ul.files { list-style: none; margin: 8px 0 0; padding: 0 }
+  ul.files li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 0; border-top: 1px solid var(--line) }
+  ul.files li:first-child { border-top: 0 }
+  ul.files b { font-weight: 500 } ul.files small { color: var(--mute); display: block }
+  .btns { display: flex; gap: 6px }
+  .done { color: var(--ok) }
+</style></head><body>
+<div class="wrap">
+  <div class="note"><b>Mockup – Paketmitschnitt.</b> Die Karte steht im neuen Reiter „Diagnose“ (zwischen Adressraum und Aufräumen). Alle Werte sind <u>erfunden</u>.
+    <ul>
+      <li>Drei Zustände: bereit, läuft, fertig.</li>
+      <li>Während der Aufnahme sind die Felder gesperrt, nur „Beenden“ ist aktiv. Es läuft immer nur ein Mitschnitt.</li>
+      <li>Download und Löschen pro Datei; Löschen fragt vorher nach. Es bleiben die letzten 20.</li>
+      <li>Der Hinweis zu privaten Daten steht immer sichtbar unter der Karte.</li>
+    </ul></div>
+
+  <div class="state">1 · Bereit, mit gespeicherten Dateien</div>
+  <section class="card">
+    <span class="label">Paketmitschnitt</span>
+    <div class="capform">
+      <label class="field"><span class="label">Aufzeichnen auf</span><select><option>Internet</option><option>LAN</option><option>WLAN 2,4 GHz</option><option>WLAN 5 GHz</option></select></label>
+      <label class="field"><span class="label">Sekunden</span><input type="number" value="60"></label>
+      <label class="field"><span class="label">Höchstgröße (MB)</span><input type="number" value="50"></label>
+      <button class="btn p">Aufzeichnung starten</button>
+    </div>
+    <ul class="files">
+      <li><span><b>Internet</b><small>04.11.26, 10:15:02 · 12,4 MB</small></span><span class="btns"><button class="btn sm">Herunterladen</button><button class="btn sm dp">Löschen</button></span></li>
+      <li><span><b>LAN</b><small>03.11.26, 21:40:18 · 3,1 MB</small></span><span class="btns"><button class="btn sm">Herunterladen</button><button class="btn sm dp">Löschen</button></span></li>
+    </ul>
+    <p class="hint">Die Datei ist ein pcap und öffnet sich in Wireshark. Ein Mitschnitt zeigt, was durch die Box läuft, und kann Passwörter und andere private Daten enthalten: Bewahre ihn sicher auf. Es läuft immer nur einer; die letzten 20 bleiben erhalten.</p>
+  </section>
+
+  <div class="state">2 · Die Aufzeichnung läuft</div>
+  <section class="card">
+    <span class="label">Paketmitschnitt</span>
+    <div class="capform">
+      <label class="field"><span class="label">Aufzeichnen auf</span><select disabled><option>WLAN 5 GHz</option></select></label>
+      <label class="field"><span class="label">Sekunden</span><input type="number" value="60" disabled></label>
+      <label class="field"><span class="label">Höchstgröße (MB)</span><input type="number" value="50" disabled></label>
+      <button class="btn p" disabled>Aufzeichnung starten</button>
+    </div>
+    <div class="caprun">
+      <span class="meter" role="progressbar" aria-valuenow="40"><i style="width:40%"></i></span>
+      <small><span class="dot"></span>24 von 60 s · 7,8 MB</small>
+      <button class="btn">Beenden</button>
+    </div>
+  </section>
+
+  <div class="state">3 · Fertig</div>
+  <section class="card">
+    <span class="label">Paketmitschnitt</span>
+    <div class="capform">
+      <label class="field"><span class="label">Aufzeichnen auf</span><select><option>WLAN 5 GHz</option></select></label>
+      <label class="field"><span class="label">Sekunden</span><input type="number" value="60"></label>
+      <label class="field"><span class="label">Höchstgröße (MB)</span><input type="number" value="50"></label>
+      <button class="btn p">Aufzeichnung starten</button>
+    </div>
+    <p class="hint done">Aufzeichnung beendet: 15,2 MB (Zeit abgelaufen)</p>
+    <ul class="files">
+      <li><span><b>WLAN 5 GHz</b><small>04.11.26, 11:02:44 · 15,2 MB</small></span><span class="btns"><button class="btn sm">Herunterladen</button><button class="btn sm dp">Löschen</button></span></li>
+    </ul>
+  </section>
+</div>
+</body></html>

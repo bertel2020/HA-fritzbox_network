@@ -479,6 +479,7 @@ test("the load is the share of the line rate, at most 100", () => {
 
 test("the internet page is a route of its own", () => {
   assert.deepEqual(sharedHelpers.routeFromHash("#/internet"), { tab: "internet", device: null });
+  assert.deepEqual(sharedHelpers.routeFromHash("#/diagnose"), { tab: "diagnose", device: null });
 });
 
 const internet = {
@@ -1021,7 +1022,7 @@ test("the pool card is only offered to someone who may write, and warns before i
 test("all pages are tabs, the internet tab carries the state of the line and clean-up its count", () => {
   const html = panel.renderNav({ tab: "internet", data: { internet: { connected: false } } }, t, 3);
   const labels = [...html.matchAll(/<button[^>]*>([^<]+)/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ["Netzwerk", "Internet", "Adressraum", "Aufräumen", "Einbinden"]);
+  assert.deepEqual(labels, ["Netzwerk", "Internet", "Adressraum", "Diagnose", "Aufräumen", "Einbinden"]);
   assert.match(html, /data-tab="internet" aria-selected="true" aria-label="Internet, Getrennt"/);
   assert.match(html, /<i class="dot " aria-hidden="true"><\/i>/);
   assert.match(html, /Aufräumen<em>3<\/em>/);

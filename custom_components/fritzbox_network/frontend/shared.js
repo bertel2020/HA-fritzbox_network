@@ -331,12 +331,13 @@ export function deviceFromHash(hash) {
   return match ? match[1] : null;
 }
 
-/** Which page a #/… route shows: the network (also for a device), the internet, the clean-up or the filter. */
+/** Which page a #/… route shows: the network (also for a device), the internet, the diagnosis, the clean-up or the filter. */
 export function routeFromHash(hash) {
   const device = deviceFromHash(hash);
   if (device) return { tab: "net", device };
   if (hash === "#/internet") return { tab: "internet", device: null };
   if (hash === "#/addresses") return { tab: "addresses", device: null };
+  if (hash === "#/diagnose") return { tab: "diagnose", device: null };
   if (hash === "#/cleanup") return { tab: "cleanup", device: null };
   if (hash === "#/filter") return { tab: "filter", device: null };
   return { tab: "net", device: null };
