@@ -12,7 +12,7 @@ import voluptuous as vol
 from .capture import (
     DEFAULT_BYTES,
     DEFAULT_SECONDS,
-    INTERFACES,
+    INTERFACE_RE,
     KEY_CAPTURES,
     MAX_BYTES,
     MAX_SECONDS,
@@ -37,7 +37,7 @@ SET_NAME_SCHEMA = vol.Schema(
 WAKE_ON_LAN_SCHEMA = vol.Schema({**cv.TARGET_FIELDS})
 CAPTURE_SCHEMA = vol.Schema(
     {
-        vol.Optional("interface", default="lan"): vol.In(list(INTERFACES)),
+        vol.Optional("interface", default="1-lan"): vol.Match(INTERFACE_RE),
         vol.Optional("duration", default=DEFAULT_SECONDS): vol.All(
             int, vol.Range(min=MIN_SECONDS, max=MAX_SECONDS)
         ),

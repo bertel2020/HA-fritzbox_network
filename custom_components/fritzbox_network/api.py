@@ -41,6 +41,7 @@ from .const import HOST_FILTER_SERVICE_PREFIX, HOSTS_SERVICE
 from .models import (
     Host,
     MeshTopology,
+    parse_capture_interfaces,
     parse_device_log,
     parse_filter_profiles,
     parse_hosts,
@@ -242,6 +243,20 @@ class FritzNetworkClient:
                 context=ssl._create_unverified_context(),  # noqa: S323, SLF001
             )
         return http.client.HTTPConnection(self._host, timeout=REQUEST_TIMEOUT)
+
+    def get_capture_interfaces(self) -> list[dict[str, str]]:
+        """The interfaces the capture page of the box lists for a packet capture."""
+        with self._lock:
+            sid = self._web_sid or self._web_login()
+        connection = self._new_connection()
+        try:
+            connection.request("GET", f"/capture.lua?{urlencode({'sid': sid})}")
+            response = connection.getresponse()
+            if response.status != 200:
+                raise ValueError(f"the box answered {response.status} {response.reason}")
+            return parse_capture_interfaces(response.read().decode("utf-8", "replace"))
+        finally:
+            connection.close()
 
     def stop_captures(self, sid: str | None = None) -> None:
         """Ask the box to end every capture that still runs (the page of the box does the same).

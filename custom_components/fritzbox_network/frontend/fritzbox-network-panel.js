@@ -28,7 +28,7 @@ import {
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
-import { captureDefaults, renderCapture } from "./panel-capture.js";
+import { captureDefaults, defaultInterface, renderCapture } from "./panel-capture.js";
 import { renderCheck } from "./panel-check.js";
 import { renderLog } from "./panel-log.js";
 import { BLOCK_COLORS, ENTRY_KINDS, addressModel, checkBlock, checkEntry, emptyOwn, entryPreview, groupPreview, normalizeOwn, parseRange, poolChange, renderAddresses } from "./panel-addresses.js";
@@ -398,6 +398,10 @@ class FritzboxNetworkPanel extends HTMLElement {
       const first = !state.capture || state.capture === "failed";
       state.capture = await this._ws("capture/status");
       if (first) state.captureForm = captureDefaults(state.capture.limits);
+      // the box may offer other interfaces than last time: keep the choice only if it is still there
+      if (!state.capture.interfaces.some((i) => i.id === state.captureForm.interface)) {
+        state.captureForm.interface = defaultInterface(state.capture.interfaces);
+      }
     } catch {
       this._state.capture = "failed";
     }
@@ -442,7 +446,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         this._update();
         this._captureTimer = setTimeout(() => this._loadCapture(), 1000);
       } else if (ds.act === "cap-device") {
-        state.captureForm = { ...state.captureForm, interface: state.captureForm.interface === "internet" ? "lan" : state.captureForm.interface, mac: this._selected()?.mac ?? "" };
+        state.captureForm = { ...state.captureForm, interface: state.captureForm.interface.startsWith("2-") ? defaultInterface(state.capture.interfaces) : state.captureForm.interface, mac: this._selected()?.mac ?? "" };
         globalThis.location.hash = "#/diagnose";
         return;
       } else if (ds.act === "cap-sum") {

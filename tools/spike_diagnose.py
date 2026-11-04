@@ -28,7 +28,7 @@ from fritzconnection.core.exceptions import FritzAuthorizationError  # noqa: E40
 
 from custom_components.fritzbox_network import pcap  # noqa: E402
 from custom_components.fritzbox_network.api import FritzNetworkClient  # noqa: E402
-from custom_components.fritzbox_network.capture import INTERFACES  # noqa: E402
+from custom_components.fritzbox_network.capture import curate_interfaces  # noqa: E402
 
 OUT = Path(__file__).resolve().parent.parent / "spike_out" / "diagnose.txt"
 IPV4_RE = re.compile(r"\b(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}\b")
@@ -106,10 +106,19 @@ def main() -> None:
     except Exception as err:  # noqa: BLE001
         lines.append(f"FAILED {type(err).__name__}: {mask(err)}")
 
-    lines += ["", f"== {SECONDS} s captures =="]
-    wanted = {**{f"panel:{k}": v for k, v in INTERFACES.items()}, **{f"page:{i}": i for i in found}}
+    lines += ["", "== interfaces the panel offers =="]
+    try:
+        offered = curate_interfaces(client.get_capture_interfaces())
+    except Exception as err:  # noqa: BLE001
+        offered = []
+        lines.append(f"FAILED {type(err).__name__}: {mask(err)}")
+    for item in offered:
+        lines.append(f"{item['group']}: {item['id']} -> {item['label']}")
+
+    lines += ["", f"== {SECONDS} s captures on those =="]
     with tempfile.TemporaryDirectory() as tmp:
-        for label, iface in wanted.items():
+        for item in offered:
+            iface = item["id"]
             path = Path(tmp) / f"{iface}.pcap"
             try:
                 reason = client.capture(
@@ -117,11 +126,12 @@ def main() -> None:
                 )
                 summary = pcap.summarize(path)
                 lines.append(
-                    f"{label} ({iface}): ok, {path.stat().st_size} bytes, "
-                    f"{summary.packets} packets, {dict(summary.protocols)}, ended: {reason}"
+                    f"{iface} ({item['label']}): ok, {path.stat().st_size} bytes, "
+                    f"{summary.packets} packets, {dict(summary.protocols)}, "
+                    f"{len(summary.dns)} DNS names, ended: {reason}"
                 )
             except Exception as err:  # noqa: BLE001
-                lines.append(f"{label} ({iface}): FAILED {type(err).__name__}: {mask(err)}")
+                lines.append(f"{iface} ({item['label']}): FAILED {type(err).__name__}: {mask(err)}")
 
     OUT.write_text("\n".join(lines) + "\n")
     print("\n".join(lines))

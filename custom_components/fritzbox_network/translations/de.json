@@ -79,14 +79,6 @@
         "include": "Nur die ausgewählten Geräte",
         "exclude": "Alle außer den ausgewählten Geräten"
       }
-    },
-    "capture_interface": {
-      "options": {
-        "internet": "Internet",
-        "lan": "LAN",
-        "wlan24": "WLAN 2,4 GHz",
-        "wlan5": "WLAN 5 GHz"
-      }
     }
   },
   "entity": {
@@ -320,7 +312,7 @@
       "fields": {
         "interface": {
           "name": "Schnittstelle",
-          "description": "Wo aufgezeichnet wird. Für ein Gerät LAN oder WLAN wählen."
+          "description": "Name der Schnittstelle in der Box, wie im Paketmitschnitt der Box: 1-lan (LAN), 2-1 (1. Internetverbindung), 1-vap0 und 1-vap1 (WLAN). Die Liste zeigt das Panel unter Diagnose. Für ein Gerät LAN oder WLAN wählen."
         },
         "duration": {
           "name": "Dauer",

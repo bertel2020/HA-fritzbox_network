@@ -675,3 +675,19 @@ def parse_device_log(xml_text: str, limit: int = 300) -> list[dict[str, Any]]:
         if len(events) >= limit:
             break
     return events
+
+
+def parse_capture_interfaces(html: str) -> list[dict[str, str]]:
+    """The interfaces the capture page of the box offers: [{"id": "1-lan", "label": "lan"}, ...].
+
+    Every row with a start button is one; its text (without the buttons) is the name the box gives.
+    """
+    found: dict[str, str] = {}
+    for row in re.findall(r"(?is)<tr[^>]*>(?:(?!</tr>).)*?name=.start.(?:(?!</tr>).)*?</tr>", html):
+        match = re.search(r"(?i)<button[^>]*name=.start.[^>]*value=.(\d-[0-9A-Za-z_]+)", row)
+        if match is None:
+            continue
+        text = re.sub(r"(?is)<button.*?</button>", " ", row)
+        label = re.sub(r"\s+", " ", re.sub(r"(?s)<[^>]+>", " ", text)).strip()
+        found.setdefault(match.group(1), label or match.group(1))
+    return [{"id": key, "label": label} for key, label in found.items()]

@@ -23,12 +23,13 @@ import voluptuous as vol
 from .capture import (
     DEFAULT_BYTES,
     DEFAULT_SECONDS,
-    INTERFACES,
+    INTERFACE_RE,
     KEY_CAPTURES,
     MAX_BYTES,
     MAX_SECONDS,
     MIN_SECONDS,
     VIEW_URL,
+    interface_slug,
 )
 from .connection_check import run_checks
 from .const import (
@@ -799,7 +800,7 @@ def _capture_state(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
     return {
         "job": manager.job.as_dict() if manager.job else None,
         "files": manager.files(),
-        "interfaces": list(INTERFACES),
+        "interfaces": [{**i, "slug": interface_slug(i["id"])} for i in manager.interfaces()],
         "url": VIEW_URL.replace("{entry_id}", entry_id).replace("{name}", ""),
         "limits": {
             "min_seconds": MIN_SECONDS,
@@ -830,7 +831,7 @@ async def ws_capture_status(
     {
         vol.Required("type"): CAPTURE_START_COMMAND,
         vol.Required("entry_id"): str,
-        vol.Required("interface"): vol.In(list(INTERFACES)),
+        vol.Required("interface"): vol.Match(INTERFACE_RE),
         vol.Required("seconds"): vol.All(int, vol.Range(min=MIN_SECONDS, max=MAX_SECONDS)),
         vol.Required("mb"): vol.All(int, vol.Range(min=1, max=MAX_BYTES // 1048576)),
         vol.Optional("mac"): vol.All(str, vol.Length(max=40)),

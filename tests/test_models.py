@@ -259,3 +259,51 @@ def test_the_event_log_is_read_with_its_groups_and_limited():
     assert [e["group"] for e in events] == ["net", "wlan"]
     assert events[0]["msg"] == "Internet connection established"
     assert len(parse_device_log(xml, limit=1)) == 1
+
+
+def test_the_capture_interfaces_are_read_from_the_page_without_the_buttons():
+    from custom_components.fritzbox_network.models import parse_capture_interfaces
+
+    html = (
+        "<table><tr><td>1. Internetverbindung</td><td>"
+        '<button type="submit" name="start" id="uiStart_2-1" value="2-1">Start</button>'
+        '<button type="submit" name="stop" value="2;1;x">Stopp</button></td></tr>'
+        "<tr><td> lan </td><td>"
+        '<button type="submit" name="start" value="1-lan">Start</button></td></tr>'
+        "<tr><td>no start button here</td></tr></table>"
+    )
+
+    assert parse_capture_interfaces(html) == [
+        {"id": "2-1", "label": "1. Internetverbindung"},
+        {"id": "1-lan", "label": "lan"},
+    ]
+
+
+def test_only_the_interfaces_worth_offering_are_kept_and_grouped():
+    from custom_components.fritzbox_network.capture import curate_interfaces
+
+    found = [
+        {"id": i, "label": i}
+        for i in (
+            "1-traceDH0",
+            "3-0",
+            "1-vap0",
+            "1-lan",
+            "1-eth2",
+            "2-1",
+            "4-128",
+            "1-vap0_r3",
+            "1-guest",
+        )
+    ]
+
+    offered = curate_interfaces(found)
+
+    assert [(i["id"], i["group"]) for i in offered] == [
+        ("2-1", "internet"),
+        ("1-lan", "lan"),
+        ("1-eth2", "lan"),
+        ("1-vap0", "wlan"),
+        ("1-guest", "wlan"),
+        ("3-0", "routing"),
+    ]

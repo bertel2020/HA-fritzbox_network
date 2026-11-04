@@ -1093,15 +1093,21 @@ const capture = await import(`${base}panel-capture.js`);
 test("the capture card offers the interfaces, locks the form while recording and lists the files", () => {
   const status = {
     job: null,
-    files: [{ name: "lan_20261104-101500.pcap", bytes: 2500000, time: "2026-11-04T10:15:00Z", interface: "lan" }],
-    interfaces: ["internet", "lan", "wlan24", "wlan5"],
+    files: [{ name: "1lan_20261104-101500.pcap", bytes: 2500000, time: "2026-11-04T10:15:00Z", interface: "1lan" }],
+    interfaces: [
+      { id: "2-1", label: "1. Internetverbindung", group: "internet", slug: "21" },
+      { id: "1-lan", label: "lan", group: "lan", slug: "1lan" },
+      { id: "1-vap1", label: "vap1", group: "wlan", slug: "1vap1" },
+    ],
     url: "/api/fritzbox_network/capture/x/",
     limits: { min_seconds: 5, max_seconds: 600, seconds: 60, max_mb: 200, mb: 50 },
   };
   const ctx = { t, language: "de", canWrite: true, form: capture.captureDefaults(status.limits) };
   const idle = capture.renderCapture(status, ctx);
-  assert.match(idle, /WLAN 5 GHz/);
-  assert.match(idle, /data-act="cap-dl" data-name="lan_20261104-101500.pcap"/);
+  assert.match(idle, /<optgroup label="WLAN">.*vap1 \(1-vap1\)/s);
+  assert.match(idle, /<option value="2-1">1\. Internetverbindung \(2-1\)/);
+  assert.equal(capture.defaultInterface(status.interfaces), "1-lan");
+  assert.match(idle, /data-act="cap-dl" data-name="1lan_20261104-101500.pcap"/);
   assert.doesNotMatch(idle, /disabled/);
 
   const busy = capture.renderCapture({ ...status, job: { state: "running", seconds: 60, elapsed: 12, bytes: 1000000 } }, ctx);
@@ -1114,8 +1120,8 @@ test("the capture card offers the interfaces, locks the form while recording and
 test("the capture card narrows to a device and shows the summary of a file", () => {
   const status = {
     job: null,
-    files: [{ name: "lan_20261104-101500-aabbccddee01.pcap", bytes: 5000, time: "2026-11-04T10:15:00Z", interface: "lan", device: "aabbccddee01" }],
-    interfaces: ["internet", "lan"],
+    files: [{ name: "1lan_20261104-101500-aabbccddee01.pcap", bytes: 5000, time: "2026-11-04T10:15:00Z", interface: "1lan", device: "aabbccddee01" }],
+    interfaces: [{ id: "1-lan", label: "lan", group: "lan", slug: "1lan" }],
     url: "/x/",
     limits: { min_seconds: 5, max_seconds: 600, seconds: 60, max_mb: 200, mb: 50 },
   };

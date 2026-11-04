@@ -20,15 +20,10 @@ capture:
       integration: fritzbox_network
   fields:
     interface:
-      default: lan
+      default: 1-lan
+      example: 1-lan
       selector:
-        select:
-          translation_key: capture_interface
-          options:
-            - internet
-            - lan
-            - wlan24
-            - wlan5
+        text:
     duration:
       default: 60
       selector:

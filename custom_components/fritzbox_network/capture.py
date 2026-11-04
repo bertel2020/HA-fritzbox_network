@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime
+import http.client
 import logging
 from pathlib import Path
 import re
@@ -26,13 +27,15 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# what the box offers to listen on: key in the panel -> value of ifaceorminor
-INTERFACES = {
-    "internet": "2-1",
-    "lan": "1-lan",
-    "wlan24": "3-17",
-    "wlan5": "3-18",
-}
+# the name of an interface as the box has it: type, a dash, a name ("1-lan", "2-1", "3-17")
+INTERFACE_RE = re.compile(r"^\d-[0-9A-Za-z_]+$")
+# the interfaces offered when the box does not list its own
+DEFAULT_INTERFACES = [
+    {"id": "2-1", "label": "1. Internet connection", "group": "internet"},
+    {"id": "1-lan", "label": "lan", "group": "lan"},
+]
+GROUP_ORDER = ["internet", "lan", "wlan", "routing"]
+INTERFACES_MAX_AGE = 600
 MIN_SECONDS = 5
 MAX_SECONDS = 600
 DEFAULT_SECONDS = 60
@@ -43,6 +46,35 @@ DIR_NAME = "fritzbox_captures"
 KEY_CAPTURES = f"{DOMAIN}_captures"
 FILE_RE = re.compile(r"^[a-z0-9]+_\d{8}-\d{6}(-[0-9a-f]{12})?\.pcap$")
 VIEW_URL = f"/api/{DOMAIN}/capture/{{entry_id}}/{{name}}"
+
+
+def interface_slug(interface: str) -> str:
+    """The part of a file name that stands for an interface: letters and digits only."""
+    return re.sub(r"[^a-z0-9]", "", interface.lower())
+
+
+def curate_interfaces(found: list[dict[str, str]]) -> list[dict[str, str]]:
+    """The interfaces of the box worth offering, in groups; the technical ones stay out.
+
+    The box lists about seventy: internal trace and tunnel interfaces among them. Offered are the
+    internet connections, the LAN ports, the Wi-Fi access points and the routing interfaces.
+    """
+    offered = []
+    for item in found:
+        interface = item["id"]
+        if interface.startswith("2-"):
+            group = "internet"
+        elif interface == "1-lan" or re.fullmatch(r"1-eth\d", interface):
+            group = "lan"
+        elif re.fullmatch(r"1-(vap\d|wlan\d+|guest\d?)", interface):
+            group = "wlan"
+        elif interface.startswith("3-"):
+            group = "routing"
+        else:
+            continue
+        offered.append({**item, "group": group})
+    offered.sort(key=lambda i: GROUP_ORDER.index(i["group"]))
+    return offered
 
 
 @dataclass
@@ -85,6 +117,8 @@ class CaptureManager:
         self._entry_id = entry_id
         self._client = client
         self.job: Job | None = None
+        self._interfaces: list[dict[str, str]] | None = None
+        self._interfaces_at = 0.0
         self._task: asyncio.Task[None] | None = None
 
     @property
@@ -95,6 +129,22 @@ class CaptureManager:
     def running(self) -> bool:
         return self.job is not None and self.job.state == "running"
 
+    def interfaces(self) -> list[dict[str, str]]:
+        """What the box lets a capture listen on; blocking, so call it from an executor thread.
+
+        Asked of the box at most every few minutes; a box that does not tell gets a short list.
+        """
+        now = time.monotonic()
+        if self._interfaces is None or now - self._interfaces_at > INTERFACES_MAX_AGE:
+            try:
+                listed = curate_interfaces(self._client.get_capture_interfaces())
+            except (OSError, ValueError, PermissionError, http.client.HTTPException) as err:
+                _LOGGER.debug("The box did not list its capture interfaces: %s", err)
+                listed = []
+            self._interfaces = listed or [dict(i) for i in DEFAULT_INTERFACES]
+            self._interfaces_at = now if listed else now - INTERFACES_MAX_AGE + 30
+        return self._interfaces
+
     def start(
         self,
         interface: str,
@@ -104,7 +154,7 @@ class CaptureManager:
         ips: tuple[str, ...] = (),
     ) -> Job:
         """Begin a capture; raises ValueError for a bad request or when one is running."""
-        if interface not in INTERFACES:
+        if not INTERFACE_RE.match(interface):
             raise ValueError("unknown interface")
         if self.running:
             raise ValueError("busy")
@@ -114,7 +164,7 @@ class CaptureManager:
         suffix = f"-{device.replace(':', '')}" if device else ""
         job = Job(
             interface=interface,
-            name=f"{interface}_{stamp}{suffix}.pcap",
+            name=f"{interface_slug(interface)}_{stamp}{suffix}.pcap",
             started=time.monotonic(),
             seconds=seconds,
             max_bytes=max_bytes,
@@ -141,7 +191,7 @@ class CaptureManager:
                 job.bytes = written
 
             reason = self._client.capture(
-                INTERFACES[job.interface], path, job.seconds, job.max_bytes, job.stop, progress
+                job.interface, path, job.seconds, job.max_bytes, job.stop, progress
             )
             if job.device:
                 narrowed = path.with_suffix(".tmp")

@@ -28,10 +28,15 @@ async def test_a_capture_is_recorded_and_kept(hass, hass_ws_client, fake_client,
     status = (await _call(client, STATUS, entry_id=entry.entry_id))["result"]
     assert status["job"] is None
     assert status["files"] == []
-    assert status["interfaces"] == ["internet", "lan", "wlan24", "wlan5"]
+    assert [(i["id"], i["group"], i["slug"]) for i in status["interfaces"]] == [
+        ("2-1", "internet", "21"),
+        ("1-lan", "lan", "1lan"),
+        ("1-vap0", "wlan", "1vap0"),
+        ("3-17", "routing", "317"),
+    ]
 
     started = await _call(
-        client, START, entry_id=entry.entry_id, interface="lan", seconds=30, mb=10
+        client, START, entry_id=entry.entry_id, interface="1-lan", seconds=30, mb=10
     )
     assert started["success"]
     await hass.async_block_till_done()
@@ -39,7 +44,7 @@ async def test_a_capture_is_recorded_and_kept(hass, hass_ws_client, fake_client,
     status = (await _call(client, STATUS, entry_id=entry.entry_id))["result"]
     assert status["job"]["state"] == "done"
     assert status["job"]["reason"] == "time"
-    assert [f["interface"] for f in status["files"]] == ["lan"]
+    assert [f["interface"] for f in status["files"]] == ["1lan"]
     assert ("capture", "1-lan", 30) in fake_client.calls
 
 
@@ -48,7 +53,7 @@ async def test_a_failed_capture_leaves_no_file(hass, hass_ws_client, fake_client
     client = await hass_ws_client(hass)
     fake_client.fail_actions = True
 
-    await _call(client, START, entry_id=entry.entry_id, interface="internet", seconds=30, mb=10)
+    await _call(client, START, entry_id=entry.entry_id, interface="2-1", seconds=30, mb=10)
     await hass.async_block_till_done()
 
     status = (await _call(client, STATUS, entry_id=entry.entry_id))["result"]
@@ -61,7 +66,7 @@ async def test_a_capture_can_be_deleted_and_names_are_checked(
 ):
     await _setup(hass, entry)
     client = await hass_ws_client(hass)
-    await _call(client, START, entry_id=entry.entry_id, interface="wlan5", seconds=30, mb=10)
+    await _call(client, START, entry_id=entry.entry_id, interface="1-vap1", seconds=30, mb=10)
     await hass.async_block_till_done()
     name = (await _call(client, STATUS, entry_id=entry.entry_id))["result"]["files"][0]["name"]
 
@@ -77,7 +82,9 @@ async def test_a_bad_request_is_refused(hass, hass_ws_client, fake_client, entry
 
     bad = await _call(client, START, entry_id=entry.entry_id, interface="usb", seconds=30, mb=10)
     assert not bad["success"]
-    long = await _call(client, START, entry_id=entry.entry_id, interface="lan", seconds=9999, mb=10)
+    long = await _call(
+        client, START, entry_id=entry.entry_id, interface="1-lan", seconds=9999, mb=10
+    )
     assert not long["success"]
 
 
@@ -87,7 +94,9 @@ async def test_a_capture_of_one_device_that_sent_nothing_fails(
     await _setup(hass, entry)
     client = await hass_ws_client(hass)
 
-    await _call(client, START, entry_id=entry.entry_id, interface="lan", seconds=30, mb=10, mac=LAN)
+    await _call(
+        client, START, entry_id=entry.entry_id, interface="1-lan", seconds=30, mb=10, mac=LAN
+    )
     await hass.async_block_till_done()
 
     status = (await _call(client, STATUS, entry_id=entry.entry_id))["result"]
@@ -99,7 +108,7 @@ async def test_a_capture_of_one_device_that_sent_nothing_fails(
 async def test_a_kept_capture_can_be_summarized(hass, hass_ws_client, fake_client, entry):
     await _setup(hass, entry)
     client = await hass_ws_client(hass)
-    await _call(client, START, entry_id=entry.entry_id, interface="lan", seconds=30, mb=10)
+    await _call(client, START, entry_id=entry.entry_id, interface="1-lan", seconds=30, mb=10)
     await hass.async_block_till_done()
     name = (await _call(client, STATUS, entry_id=entry.entry_id))["result"]["files"][0]["name"]
 
@@ -113,11 +122,11 @@ async def test_the_service_starts_a_capture(hass, fake_client, entry):
     await _setup(hass, entry)
 
     await hass.services.async_call(
-        DOMAIN, "capture", {"interface": "wlan24", "duration": 20, "size": 5}, blocking=True
+        DOMAIN, "capture", {"interface": "1-vap0", "duration": 20, "size": 5}, blocking=True
     )
     await hass.async_block_till_done()
 
-    assert ("capture", "3-17", 20) in fake_client.calls
+    assert ("capture", "1-vap0", 20) in fake_client.calls
 
 
 async def test_the_connection_check_names_the_first_step_that_fails(

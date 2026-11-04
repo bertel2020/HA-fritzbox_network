@@ -79,14 +79,6 @@
         "include": "Only the selected devices",
         "exclude": "All except the selected devices"
       }
-    },
-    "capture_interface": {
-      "options": {
-        "internet": "Internet",
-        "lan": "LAN",
-        "wlan24": "Wi-Fi 2.4 GHz",
-        "wlan5": "Wi-Fi 5 GHz"
-      }
     }
   },
   "entity": {
@@ -320,7 +312,7 @@
       "fields": {
         "interface": {
           "name": "Interface",
-          "description": "Where to record. For a device choose LAN or Wi-Fi."
+          "description": "Name of the interface in the box, as on its packet capture page: 1-lan (LAN), 2-1 (1st internet connection), 1-vap0 and 1-vap1 (Wi-Fi). The panel lists them under Diagnosis. For a device choose LAN or Wi-Fi."
         },
         "duration": {
           "name": "Duration",

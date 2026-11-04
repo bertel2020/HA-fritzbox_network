@@ -152,6 +152,16 @@ class FakeClient:
         ]
         return [e for e in events if group in (None, e["group"])]
 
+    def get_capture_interfaces(self) -> list[dict]:
+        return [
+            {"id": "2-1", "label": "1. Internetverbindung"},
+            {"id": "1-lan", "label": "lan"},
+            {"id": "1-traceDH0", "label": "traceDH0"},
+            {"id": "1-vap0", "label": "vap0"},
+            {"id": "3-17", "label": "Schnittstelle 0 ('internet')"},
+            {"id": "4-128", "label": "unbekannt"},
+        ]
+
     def get_port_mappings(self) -> list[dict]:
         return [dict(p) for p in self.ports]
 
