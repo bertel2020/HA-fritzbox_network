@@ -476,6 +476,8 @@ export const PANEL_CSS = `
   .caprun { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; margin: 8px 0; }
   .caprun small { color: var(--muted); }
   ul.checksteps li.bad .pdesc { color: var(--danger, #b3261e); }
+  ul.logrows { margin-top: 10px; max-height: 420px; overflow: auto; }
+  ul.logrows .pmap { white-space: nowrap; }
   .capbtns { display: flex; gap: 6px; flex-wrap: wrap; }
   .capsum { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
   .capsum ul.ports { margin-bottom: 10px; }

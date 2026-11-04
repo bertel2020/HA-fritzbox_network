@@ -30,6 +30,7 @@ import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
 import { captureDefaults, renderCapture } from "./panel-capture.js";
 import { renderCheck } from "./panel-check.js";
+import { renderLog } from "./panel-log.js";
 import { BLOCK_COLORS, ENTRY_KINDS, addressModel, checkBlock, checkEntry, emptyOwn, entryPreview, groupPreview, normalizeOwn, parseRange, poolChange, renderAddresses } from "./panel-addresses.js";
 import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
@@ -147,6 +148,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       captureForm: captureDefaults(null),
       captureSummary: null,
       check: null,
+      log: null,
+      logGroup: "",
       data: null,
       filter: "all",
       query: "",
@@ -333,7 +336,10 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (this._state.tab === "cleanup") this._loadCleanup();
     else if (this._state.tab === "filter") this._loadFilter();
     else if (this._state.tab === "internet") this._loadPorts();
-    else if (this._state.tab === "diagnose") this._loadCapture();
+    else if (this._state.tab === "diagnose") {
+      this._loadCapture();
+      this._loadLog();
+    }
     else if (this._state.tab === "addresses") this._loadAddresses();
   }
 
@@ -399,6 +405,18 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (this._state.tab === "diagnose" && this._state.capture?.job?.state === "running") {
       this._captureTimer = setTimeout(() => this._loadCapture(), 1000);
     }
+  }
+
+  async _loadLog() {
+    const state = this._state;
+    const group = state.logGroup;
+    try {
+      const log = await this._ws("diagnose/log", group ? { group } : {});
+      if (state.logGroup === group) state.log = log;
+    } catch {
+      state.log = "failed";
+    }
+    this._update();
   }
 
   async _runCheck() {
@@ -815,6 +833,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       "diagnose-view",
       `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(t.diag.title)}</h1><p class="lead">${escapeHtml(t.diag.lead)}</p></div>` +
         renderCheck(this._state.check, { t }) +
+        renderLog(this._state.log, { t, group: this._state.logGroup }) +
         renderCapture(this._state.capture, {
           t,
           language: this._hass?.language,
@@ -1581,6 +1600,12 @@ class FritzboxNetworkPanel extends HTMLElement {
       event.preventDefault();
       globalThis.history.pushState(null, "", target.getAttribute("href"));
       globalThis.dispatchEvent(new CustomEvent("location-changed", { composed: true }));
+      return;
+    } else if (ds.logGroup !== undefined) {
+      state.logGroup = ds.logGroup;
+      state.log = null;
+      this._update();
+      this._loadLog();
       return;
     } else if (ds.act === "check-run") {
       return this._runCheck();

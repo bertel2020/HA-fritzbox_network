@@ -35,6 +35,7 @@ from .const import HOST_FILTER_SERVICE_PREFIX, HOSTS_SERVICE
 from .models import (
     Host,
     MeshTopology,
+    parse_device_log,
     parse_filter_profiles,
     parse_hosts,
     parse_ip_form,
@@ -269,6 +270,18 @@ class FritzNetworkClient:
         if written == 0:
             raise ValueError("the box sent no data")
         return reason
+
+    def get_device_log(self, group: str | None = None) -> list[dict[str, Any]]:
+        """The event log of the box (DSL, network, Wi-Fi, phone, system), newest first.
+
+        ``group`` is one of the groups the box knows: sys, net, fon, wlan, usb.
+        """
+        with self._lock:
+            result = self._connection.call_action("DeviceInfo1", "X_AVM-DE_GetDeviceLogPath")
+            path = result["NewDeviceLogPath"]
+            if group:
+                path = f"{path}&filter={group}"
+            return parse_device_log(self._download(path))
 
     def get_network(self) -> dict[str, Any] | None:
         """Mask, gateway, DHCP range and reserved addresses of the home network, or None."""

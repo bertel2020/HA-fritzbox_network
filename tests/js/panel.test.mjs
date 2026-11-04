@@ -1153,3 +1153,16 @@ test("the connection check shows the steps and names what to look at", () => {
   assert.match(html, /Namensserver/);
   assert.match(html, /nicht verfügbar/);
 });
+
+const logPage = await import(`${base}panel-log.js`);
+
+test("the event log shows the messages newest first and marks the chosen group", () => {
+  const log = { events: [{ id: "1", group: "wlan", date: "04.11.26", time: "09:00:00", msg: "Gerät angemeldet" }] };
+  const html = logPage.renderLog(log, { t, group: "wlan" });
+  assert.match(html, /Gerät angemeldet/);
+  assert.match(html, /04\.11\.26 09:00:00 · WLAN/);
+  assert.match(html, /data-log-group="wlan"[^>]*>WLAN|aria-checked="true" aria-pressed="true" data-log-group="wlan"/);
+  assert.match(logPage.renderLog({ events: [] }, { t, group: "" }), /Keine Meldungen/);
+  assert.match(logPage.renderLog("failed", { t, group: "" }), /nicht geliefert/);
+  assert.match(logPage.renderLog(null, { t, group: "" }), new RegExp(t.loading));
+});

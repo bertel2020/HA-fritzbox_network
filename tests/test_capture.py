@@ -138,3 +138,20 @@ async def test_the_connection_check_names_the_first_step_that_fails(
 
     assert result["verdict"] == "internet"
     assert {s["key"]: s["ok"] for s in result["steps"]}["box"] is True
+
+
+async def test_the_event_log_of_the_box_can_be_read_by_group(
+    hass, hass_ws_client, fake_client, entry
+):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    everything = (await _call(client, f"{DOMAIN}/diagnose/log", entry_id=entry.entry_id))["result"]
+    wifi = (await _call(client, f"{DOMAIN}/diagnose/log", entry_id=entry.entry_id, group="wlan"))[
+        "result"
+    ]
+    bad = await _call(client, f"{DOMAIN}/diagnose/log", entry_id=entry.entry_id, group="x")
+
+    assert len(everything["events"]) == 2
+    assert [e["group"] for e in wifi["events"]] == ["wlan"]
+    assert not bad["success"]

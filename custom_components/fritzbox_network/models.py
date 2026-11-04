@@ -656,3 +656,22 @@ def parse_internet(
         bytes_received=_counter(fast, "Received"),
         dsl=dsl,
     )
+
+
+def parse_device_log(xml_text: str, limit: int = 300) -> list[dict[str, Any]]:
+    """The event log of the box as {id, group, date, time, msg}, newest first, at most ``limit``."""
+    root = ET.fromstring(xml_text)
+    events = []
+    for node in root.iter("Event"):
+        events.append(
+            {
+                "id": node.findtext("id") or "",
+                "group": node.findtext("group") or "",
+                "date": node.findtext("date") or "",
+                "time": node.findtext("time") or "",
+                "msg": (node.findtext("msg") or "").strip(),
+            }
+        )
+        if len(events) >= limit:
+            break
+    return events

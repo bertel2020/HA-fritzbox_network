@@ -133,6 +133,25 @@ class FakeClient:
         progress(24)
         return "time"
 
+    def get_device_log(self, group=None) -> list[dict]:
+        events = [
+            {
+                "id": "1",
+                "group": "net",
+                "date": "04.11.26",
+                "time": "10:00:01",
+                "msg": "Internet connection established",
+            },
+            {
+                "id": "2",
+                "group": "wlan",
+                "date": "04.11.26",
+                "time": "09:00:00",
+                "msg": "WLAN device logged in",
+            },
+        ]
+        return [e for e in events if group in (None, e["group"])]
+
     def get_port_mappings(self) -> list[dict]:
         return [dict(p) for p in self.ports]
 

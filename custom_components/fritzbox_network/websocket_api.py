@@ -69,6 +69,7 @@ ADDRESS_SAVE_COMMAND = f"{DOMAIN}/address/save"
 ADDRESS_POOL_COMMAND = f"{DOMAIN}/address/pool"
 HISTORY_COMMAND = f"{DOMAIN}/history/summary"
 HISTORY_DEVICE_COMMAND = f"{DOMAIN}/history/device"
+LOG_COMMAND = f"{DOMAIN}/diagnose/log"
 CHECK_COMMAND = f"{DOMAIN}/diagnose/check"
 CAPTURE_STATUS_COMMAND = f"{DOMAIN}/capture/status"
 CAPTURE_START_COMMAND = f"{DOMAIN}/capture/start"
@@ -770,6 +771,29 @@ async def ws_check_connection(
     connection.send_result(msg["id"], await run_checks(entry.data[CONF_HOST], port))
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): LOG_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Optional("group"): vol.In(["sys", "net", "fon", "wlan", "usb"]),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_device_log(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The event log of the box, read on demand."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    try:
+        events = await hass.async_add_executor_job(found[1].client.get_device_log, msg.get("group"))
+    except (FritzConnectionException, OSError, ValueError, KeyError) as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    connection.send_result(msg["id"], {"events": events})
+
+
 def _capture_state(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
     manager = hass.data[KEY_CAPTURES][entry_id]
     return {
@@ -1020,6 +1044,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_history_device)
     websocket_api.async_register_command(hass, ws_reconnect)
     websocket_api.async_register_command(hass, ws_reboot)
+    websocket_api.async_register_command(hass, ws_device_log)
     websocket_api.async_register_command(hass, ws_check_connection)
     websocket_api.async_register_command(hass, ws_capture_status)
     websocket_api.async_register_command(hass, ws_capture_start)

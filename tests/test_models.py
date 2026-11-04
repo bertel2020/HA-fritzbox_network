@@ -242,3 +242,20 @@ def test_the_login_of_the_web_interface_answers_both_kinds_of_challenge():
     assert web_login_response("1234567z", "äbc") == "1234567z-9e224a41eeefa284df7bb0f26c2913e2"
     answer = web_login_response("2$10000$aabbccdd$2000$11223344", "geheim")
     assert answer.startswith("11223344$") and len(answer) == 9 + 64
+
+
+def test_the_event_log_is_read_with_its_groups_and_limited():
+    from custom_components.fritzbox_network.models import parse_device_log
+
+    xml = (
+        "<Root>"
+        "<Event><id>1</id><group>net</group><date>04.11.26</date><time>10:00:01</time>"
+        "<msg>Internet connection established </msg></Event>"
+        "<Event><id>2</id><group>wlan</group><date>04.11.26</date><time>09:00:00</time>"
+        "<msg>Wi-Fi</msg></Event></Root>"
+    )
+
+    events = parse_device_log(xml)
+    assert [e["group"] for e in events] == ["net", "wlan"]
+    assert events[0]["msg"] == "Internet connection established"
+    assert len(parse_device_log(xml, limit=1)) == 1

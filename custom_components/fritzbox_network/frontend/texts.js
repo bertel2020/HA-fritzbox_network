@@ -239,6 +239,14 @@ const en = {
       },
       hint: "The check is made from Home Assistant, so it shows what Home Assistant sees, not every device. It tries the steps one after another and names the first one that fails.",
     },
+    log: {
+      title: "Event log of the box",
+      groups: { all: "All", net: "Network", wlan: "Wi-Fi", sys: "System", fon: "Phone", usb: "USB" },
+      none: "No messages in this group.",
+      failed: "The box did not give its event log.",
+      more: "The newest {n} are shown.",
+      hint: "What the box itself noted: DSL and internet connections, Wi-Fi logins, updates and errors. Read when the page opens or the group changes.",
+    },
   },
   inet: {
     title: "Internet",
@@ -930,6 +938,14 @@ const de = {
         web: "Der Name wird aufgelöst, die Webseite aber nicht erreicht. Versuche es gleich noch einmal; bleibt es so, schau auf Filter und Firewall.",
       },
       hint: "Der Check läuft von Home Assistant aus und zeigt, was Home Assistant sieht, nicht jedes Gerät. Er probiert die Schritte nacheinander und nennt den ersten, der scheitert.",
+    },
+    log: {
+      title: "Ereignisprotokoll der Box",
+      groups: { all: "Alle", net: "Netzwerk", wlan: "WLAN", sys: "System", fon: "Telefon", usb: "USB" },
+      none: "Keine Meldungen in dieser Gruppe.",
+      failed: "Die Box hat ihr Ereignisprotokoll nicht geliefert.",
+      more: "Gezeigt werden die neuesten {n}.",
+      hint: "Was die Box selbst vermerkt hat: DSL- und Internetverbindungen, WLAN-Anmeldungen, Updates und Fehler. Gelesen beim Öffnen der Seite und beim Wechsel der Gruppe.",
     },
   },
   inet: {
