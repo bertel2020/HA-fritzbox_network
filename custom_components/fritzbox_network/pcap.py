@@ -236,13 +236,22 @@ def summarize(path: Path) -> Summary:
     return summary
 
 
-def macs(path: Path) -> Counter[str]:
-    """How often each unicast MAC address appears in a capture, as sender or as receiver."""
+def macs(path: Path, *, senders: bool = True, receivers: bool = True) -> Counter[str]:
+    """How often each unicast MAC address appears in a capture, as sender and/or as receiver.
+
+    A sender can only appear on the interface it is connected to; a receiver can also be seen on
+    others when the switch does not know it yet and floods the packet.
+    """
     reader = Reader(path)
     seen: Counter[str] = Counter()
     for packet in reader.packets():
         frame = parse_frame(reader.linktype, packet.data)
-        for mac in (frame.src_mac, frame.dst_mac):
+        wanted = []
+        if senders:
+            wanted.append(frame.src_mac)
+        if receivers:
+            wanted.append(frame.dst_mac)
+        for mac in wanted:
             # the lowest bit of the first octet marks broadcast and multicast
             if mac is not None and not int(mac[:2], 16) & 1:
                 seen[mac] += 1

@@ -87,9 +87,14 @@ def main() -> None:
             for iface in ("1-vap0", "1-vap1"):
                 path = Path(tmp) / f"{iface}.pcap"
                 try:
-                    client.capture(iface, path, 8, 5_000_000, threading.Event(), lambda n: None)
-                    votes = count_bands(pcap.macs(path), bands)
-                    lines.append(f"{iface}: devices seen by band {votes} -> {decide_band(votes)}")
+                    client.capture(iface, path, 12, 5_000_000, threading.Event(), lambda n: None)
+                    sent = count_bands(pcap.macs(path, receivers=False), bands)
+                    got = count_bands(pcap.macs(path, senders=False), bands)
+                    both = count_bands(pcap.macs(path), bands)
+                    lines += [
+                        f"{iface}: as sender {sent} -> {decide_band(sent)}",
+                        f"{iface}: as receiver {got}, both {both}",
+                    ]
                 except Exception as err:  # noqa: BLE001
                     lines.append(f"{iface}: FAILED {type(err).__name__}: {mask(err)}")
         OUT.write_text("\n".join(lines) + "\n")

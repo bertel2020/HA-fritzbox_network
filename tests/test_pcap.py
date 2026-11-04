@@ -161,3 +161,18 @@ def test_the_unicast_mac_addresses_of_a_capture_are_counted_as_sender_and_receiv
     seen = pcap.macs(source)
 
     assert seen == {"aa:bb:cc:dd:ee:01": 2, "aa:bb:cc:dd:ee:02": 2, "aa:bb:cc:dd:ee:03": 1}
+
+
+def test_senders_and_receivers_can_be_counted_apart(tmp_path):
+    one, three = (192, 168, 1, 10), (8, 8, 8, 8)
+    source = tmp_path / "x.pcap"
+    _file(
+        source,
+        [
+            _frame(A, B, one, three, 17, _udp(5000, 53, _dns("a.org"))),
+            _frame(B, C, three, one, 17, _udp(53, 5000, _dns("a.org"))),
+        ],
+    )
+
+    assert pcap.macs(source, receivers=False) == {"aa:bb:cc:dd:ee:01": 1, "aa:bb:cc:dd:ee:02": 1}
+    assert pcap.macs(source, senders=False) == {"aa:bb:cc:dd:ee:02": 1, "aa:bb:cc:dd:ee:03": 1}
