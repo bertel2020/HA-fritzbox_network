@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections import deque
 from dataclasses import replace
 from datetime import datetime, timedelta
@@ -53,6 +54,7 @@ from .const import (
     INTERNET_NOISE_WARN_DB,
     MAX_BACKOFF_SECONDS,
     ROAM_CONFIRM_POLLS,
+    VPN_VERIFY_SECONDS,
     WAN_OVERRIDE_SECONDS,
 )
 from .filters import select_hosts
@@ -639,6 +641,31 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._guest_override = (enabled, time.monotonic() + WAN_OVERRIDE_SECONDS)
         self.async_set_updated_data(replace(self.data, guest_wifi=enabled))
         await self.async_request_refresh()
+
+    async def async_set_vpn(self, uid: str, enabled: bool) -> None:
+        """Switch a WireGuard connection and show what the box then reports.
+
+        The box takes the change without an answer that says so, so the connection is read back:
+        if it is not in the state asked for, the action failed.
+        """
+        known = next((c for c in self.data.vpn or () if c.uid == uid), None)
+        if known is None or not known.editable:
+            raise HomeAssistantError(translation_domain=DOMAIN, translation_key="vpn_unknown")
+        try:
+            await self.hass.async_add_executor_job(self.client.set_vpn, uid, enabled)
+            await asyncio.sleep(VPN_VERIFY_SECONDS)
+            found = parse_vpn(await self.hass.async_add_executor_job(self.client.get_vpn))
+        except (*_FETCH_ERRORS, requests.RequestException, PermissionError) as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+        now = next((c for c in found or () if c.uid == uid), None)
+        if found is not None:
+            self.async_set_updated_data(replace(self.data, vpn=found))
+        if now is None or now.active != enabled:
+            raise HomeAssistantError(translation_domain=DOMAIN, translation_key="vpn_not_changed")
 
     async def async_wake_on_lan(self, host: Host) -> None:
         await self.hass.async_add_executor_job(self.client.wake_on_lan, host.mac)

@@ -121,6 +121,12 @@
         "state": {
           "off": "mdi:wifi-off"
         }
+      },
+      "vpn_switch": {
+        "default": "mdi:shield-lock-outline",
+        "state": {
+          "off": "mdi:shield-off-outline"
+        }
       }
     },
     "button": {

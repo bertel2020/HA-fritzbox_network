@@ -95,6 +95,9 @@ KEY_FIRMWARE = "firmware"
 KEY_GUEST_WIFI = "guest_wifi"
 KEY_INTERNET_CONNECTED = "internet_connected"
 KEY_VPN = "vpn"
+KEY_VPN_SWITCH = "vpn_switch"
+# seconds the box needs before a switched VPN connection shows its new state
+VPN_VERIFY_SECONDS = 1.5
 KEY_INTERNET_DOWNLOAD = "internet_download"
 KEY_INTERNET_UPLOAD = "internet_upload"
 KEY_INTERNET_UPTIME = "internet_uptime"

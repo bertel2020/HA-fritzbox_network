@@ -85,6 +85,9 @@ REQUEST_TIMEOUT = 10
 CAPTURE_READ_TIMEOUT = 20
 
 
+VPN_UID_RE = re.compile(r"[A-Za-z0-9_]{1,64}")
+
+
 def web_login_response(challenge: str, password: str) -> str:
     """The answer to the challenge of the login of the web interface (PBKDF2 or the old MD5)."""
     if challenge.startswith("2$"):
@@ -505,6 +508,37 @@ class FritzNetworkClient:
         except (KeyError, TypeError):
             return None
         return {"data": {"init": {"boxConnections": connections}}}
+
+    def set_vpn(self, uid: str, enabled: bool) -> None:
+        """Switch a WireGuard connection on or off, as the web interface of the box does.
+
+        The interface sends a PUT with the session id as AVM-SID to the REST path of the
+        connection. A session the box has dropped is renewed once.
+        """
+        if not VPN_UID_RE.fullmatch(uid):
+            raise ValueError("not the identifier of a VPN connection")
+        with self._lock:
+            for attempt in (0, 1):
+                sid = self._web_sid or self._web_login()
+                base = self._web_base()
+                response = self._connection.session.put(
+                    f"{base}/api/v0/generic/vpn/connection/{uid}",
+                    json={"activated": 1 if enabled else 0},
+                    headers={
+                        "Authorization": f"AVM-SID {sid}",
+                        "Accept": "*/*",
+                        "Client-Name": "WebGUI",
+                        "Origin": base,
+                        "Referer": f"{base}/",
+                    },
+                    timeout=REQUEST_TIMEOUT,
+                    verify=False,  # noqa: S501
+                )
+                if response.status_code in (401, 403) and not attempt:
+                    self._web_sid = None
+                    continue
+                response.raise_for_status()
+                return
 
     def get_port_mappings(self) -> list[dict[str, Any]]:
         """The port forwardings of the box, those set by hand and those a device opened by UPnP."""

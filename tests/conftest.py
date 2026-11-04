@@ -85,6 +85,7 @@ class FakeClient:
         self.ports: list[dict] = []
         self.firmware: dict = {"NewUpgradeAvailable": False}
         self.vpn: dict | None = None
+        self.vpn_ignores = False
         self.network: dict | None = {
             "mask": "255.255.255.0",
             "gateway": "192.168.178.1",
@@ -114,6 +115,16 @@ class FakeClient:
 
     def get_vpn(self) -> dict | None:
         return self.vpn
+
+    def set_vpn(self, uid: str, enabled: bool) -> None:
+        self.calls.append(("vpn", uid, enabled))
+        if self.fail_actions:
+            raise FritzActionError("refused")
+        if self.vpn_ignores:
+            return
+        for entry in self.vpn["data"]["init"]["boxConnections"].values():
+            if entry["uid"] == uid:
+                entry["active"] = enabled
 
     def get_network(self) -> dict | None:
         return self.network

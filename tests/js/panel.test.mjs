@@ -1377,3 +1377,16 @@ test("the VPN page says so where the box tells nothing or has no connection", ()
   assert.match(vpnPage.renderVpn({ vpn: null }, { t, now: 0 }), /nennt ihre VPN-Verbindungen nicht/);
   assert.match(vpnPage.renderVpn({ vpn: [] }, { t, now: 0 }), /Keine WireGuard-Verbindung/);
 });
+
+test("the VPN page offers the switch only with the right to write and for connections the box lets us change", () => {
+  const data = { ...vpnData, vpn: vpnData.vpn.map((c, i) => ({ ...c, editable: i !== 2 })) };
+  const rw = vpnPage.renderVpn(data, { t, now: 0, canWrite: true });
+  assert.match(rw, /data-act="vpn-switch" data-uid="a" data-on="0">Ausschalten/);
+  assert.match(rw, /data-act="vpn-switch" data-uid="b"/);
+  assert.doesNotMatch(rw, /data-act="vpn-switch" data-uid="c"/);
+  assert.equal((rw.match(/data-act="vpn-switch"/g) ?? []).length, 2);
+  assert.doesNotMatch(vpnPage.renderVpn(data, { t, now: 0, canWrite: false }), /vpn-switch/);
+  const off = vpnPage.renderVpn({ ...data, vpn: [{ ...data.vpn[0], enabled: false, connected: false, editable: true }] }, { t, now: 0, canWrite: true });
+  assert.match(off, /data-on="1">Einschalten/);
+  assert.match(vpnPage.renderVpn(data, { t, now: 0, canWrite: true, busy: new Set(["a"]) }), /data-uid="a" data-on="0" disabled/);
+});

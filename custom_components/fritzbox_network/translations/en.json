@@ -210,6 +210,9 @@
       },
       "guest_wifi": {
         "name": "Guest Wi-Fi"
+      },
+      "vpn_switch": {
+        "name": "VPN {name} enabled"
       }
     },
     "button": {
@@ -261,6 +264,12 @@
     },
     "capture_busy": {
       "message": "A capture is already running."
+    },
+    "vpn_unknown": {
+      "message": "The box does not know this VPN connection, or it cannot be changed."
+    },
+    "vpn_not_changed": {
+      "message": "The box did not switch the VPN connection."
     }
   },
   "issues": {

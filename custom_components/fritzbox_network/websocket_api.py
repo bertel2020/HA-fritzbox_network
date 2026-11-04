@@ -11,6 +11,7 @@ from fritzconnection.core.exceptions import FritzConnectionException
 from homeassistant.components import websocket_api
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import (
     device_registry as dr,
     entity_registry as er,
@@ -63,6 +64,7 @@ HIDE_COMMAND = f"{DOMAIN}/devices/hide"
 UNHIDE_COMMAND = f"{DOMAIN}/devices/unhide"
 RECONNECT_COMMAND = f"{DOMAIN}/internet/reconnect"
 REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
+VPN_SWITCH_COMMAND = f"{DOMAIN}/vpn/switch"
 PORTS_COMMAND = f"{DOMAIN}/ports/list"
 IP_COMMAND = f"{DOMAIN}/device/ip"
 ADDRESS_OVERVIEW_COMMAND = f"{DOMAIN}/address/overview"
@@ -200,6 +202,7 @@ def _vpn(coordinator: FritzNetworkCoordinator) -> list[dict[str, Any]] | None:
             "since": c.since,
             "remote_net": c.remote_net,
             "remote_endpoint": c.remote_endpoint,
+            "editable": c.editable,
         }
         for c in connections
     ]
@@ -770,6 +773,36 @@ async def ws_reconnect(
 
 
 @websocket_api.websocket_command(
+    {
+        vol.Required("type"): VPN_SWITCH_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("uid"): str,
+        vol.Required("enabled"): bool,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_vpn_switch(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Switch a WireGuard connection of the box."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    coordinator = found[1]
+    if not coordinator.can_write:
+        connection.send_error(
+            msg["id"], websocket_api.ERR_UNAUTHORIZED, "No right to change settings"
+        )
+        return
+    try:
+        await coordinator.async_set_vpn(msg["uid"], msg["enabled"])
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    connection.send_result(msg["id"], {})
+
+
+@websocket_api.websocket_command(
     {vol.Required("type"): REBOOT_COMMAND, vol.Required("entry_id"): str}
 )
 @websocket_api.require_admin
@@ -1149,6 +1182,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_history_summary)
     websocket_api.async_register_command(hass, ws_history_device)
     websocket_api.async_register_command(hass, ws_reconnect)
+    websocket_api.async_register_command(hass, ws_vpn_switch)
     websocket_api.async_register_command(hass, ws_reboot)
     websocket_api.async_register_command(hass, ws_latency)
     websocket_api.async_register_command(hass, ws_latency_switch)

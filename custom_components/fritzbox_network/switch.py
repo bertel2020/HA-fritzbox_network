@@ -14,10 +14,17 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, KEY_AUTO_WOL, KEY_GUEST_WIFI, KEY_INTERNET_ACCESS, KEY_PRIORITY
+from .const import (
+    DOMAIN,
+    KEY_AUTO_WOL,
+    KEY_GUEST_WIFI,
+    KEY_INTERNET_ACCESS,
+    KEY_PRIORITY,
+    KEY_VPN_SWITCH,
+)
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import FritzNetworkClientEntity, async_setup_client_entities
-from .models import Host
+from .models import Host, VpnConnection
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -49,6 +56,7 @@ async def async_setup_entry(
         ],
     )
     _async_setup_guest_wifi(entry, async_add_entities)
+    _async_setup_vpn(entry, async_add_entities)
 
 
 @callback
@@ -69,6 +77,59 @@ def _async_setup_guest_wifi(
 
     _add()
     entry.async_on_unload(coordinator.async_add_listener(_add))
+
+
+@callback
+def _async_setup_vpn(
+    entry: FritzNetworkConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
+) -> None:
+    """A switch for each WireGuard connection the box lets us change."""
+    coordinator = entry.runtime_data
+    known: set[str] = set()
+
+    @callback
+    def _add() -> None:
+        new = [c for c in coordinator.data.vpn or () if c.editable and c.uid not in known]
+        if not new:
+            return
+        known.update(c.uid for c in new)
+        async_add_entities([FritzNetworkVpnSwitch(coordinator, c) for c in new])
+
+    _add()
+    entry.async_on_unload(coordinator.async_add_listener(_add))
+
+
+class FritzNetworkVpnSwitch(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity):
+    """A WireGuard connection of the box, switched on or off (not connected or not)."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = KEY_VPN_SWITCH
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, connection: VpnConnection) -> None:
+        super().__init__(coordinator)
+        self._uid = connection.uid
+        self._attr_unique_id = f"{coordinator.serial}_{KEY_VPN_SWITCH}_{connection.uid}"
+        self._attr_translation_placeholders = {"name": connection.name}
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+
+    @property
+    def connection(self) -> VpnConnection | None:
+        return next((c for c in self.coordinator.data.vpn or () if c.uid == self._uid), None)
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.connection is not None
+
+    @property
+    def is_on(self) -> bool | None:
+        connection = self.connection
+        return connection.active if connection else None
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self.coordinator.async_set_vpn(self._uid, True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self.coordinator.async_set_vpn(self._uid, False)
 
 
 class FritzNetworkGuestWifi(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity):

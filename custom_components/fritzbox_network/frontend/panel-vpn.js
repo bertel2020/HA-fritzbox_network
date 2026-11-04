@@ -36,10 +36,15 @@ function card(connection, ctx) {
   if (connection.remote_endpoint) facts.push(fill(v.endpoint, { address: connection.remote_endpoint }));
   if (connection.remote_net) facts.push(fill(v.network, { net: connection.remote_net }));
   const tone = { up: "ok", idle: "info", off: "" }[connection.state];
+  const busy = ctx.busy?.has(connection.uid);
+  const control =
+    ctx.canWrite && connection.editable
+      ? `<button class="btn vpnswitch" data-act="vpn-switch" data-uid="${escapeHtml(connection.uid)}" data-on="${connection.enabled ? "0" : "1"}"${busy ? " disabled" : ""}>${escapeHtml(connection.enabled ? v.turnOff : v.turnOn)}</button>`
+      : "";
   return `<li class="vpnrow ${connection.state}">
     <span aria-hidden="true">${ic(connection.kind === "site" ? "network" : "shield")}</span>
     <div class="vpnname"><b>${escapeHtml(connection.name)}</b><small>${escapeHtml(facts.join(" · "))}</small></div>
-    <span class="chip ${tone}">${escapeHtml(v.state[connection.state])}</span></li>`;
+    <span class="chip ${tone}">${escapeHtml(v.state[connection.state])}</span>${control}</li>`;
 }
 
 function group(title, list, ctx) {

@@ -487,6 +487,7 @@ export const PANEL_CSS = `
   .vpnrow:first-child { border-top: 0; }
   .vpnrow .i { width: 20px; height: 20px; color: var(--muted); }
   .vpnrow.up .i { color: var(--ok); }
+  .vpnswitch { flex: none; }
   .vpnname { flex: 1; min-width: 0; }
   .vpnname b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .vpnname small { color: var(--muted); }

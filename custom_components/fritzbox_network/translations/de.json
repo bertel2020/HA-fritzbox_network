@@ -210,6 +210,9 @@
       },
       "guest_wifi": {
         "name": "Gast-WLAN"
+      },
+      "vpn_switch": {
+        "name": "VPN {name} aktiviert"
       }
     },
     "button": {
@@ -261,6 +264,12 @@
     },
     "capture_busy": {
       "message": "Es läuft schon eine Aufzeichnung."
+    },
+    "vpn_unknown": {
+      "message": "Die Box kennt diese VPN-Verbindung nicht oder sie lässt sich nicht ändern."
+    },
+    "vpn_not_changed": {
+      "message": "Die Box hat die VPN-Verbindung nicht umgeschaltet."
     }
   },
   "issues": {
