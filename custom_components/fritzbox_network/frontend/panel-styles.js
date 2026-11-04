@@ -670,6 +670,14 @@ export const PANEL_CSS = `
   .atable td { padding: 9px 10px; border-top: 1px solid var(--line-2); vertical-align: middle; }
   .atable td small { display: block; color: var(--muted); font-size: 12px; }
   .arow { cursor: pointer; }
+  .arow td:first-child { box-shadow: inset 3px 0 0 var(--bc, transparent); white-space: nowrap; }
+  .arow .badge.pool { margin-left: 8px; font-size: 10px; padding: 0 6px; background: var(--accent-soft); color: var(--accent-hover); }
+  .gchip { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; font-size: 13px; }
+  .gchip i { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+  .lhint { display: block; font-size: 12px; margin-top: 2px; }
+  .lhint.bad { color: var(--bad); }
+  .lhint.warn { color: var(--warn); }
+  .lhint.info { color: var(--muted); }
   .arow:hover td { background: var(--soft); }
   .arow[aria-current="true"] td { background: var(--accent-soft); }
   .azone { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto auto; gap: 4px 16px; align-items: center; }
@@ -679,7 +687,7 @@ export const PANEL_CSS = `
   .azone .ameter { margin: 0; height: 12px; }
   .azone .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
   @container app (max-width: 700px) { .azone { grid-template-columns: 1fr auto; } .azone .ameter { grid-column: 1 / -1; order: 3; } }
-  .btn .count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 9px; background: var(--accent-soft); color: var(--accent-hover); font-size: 11px; font-weight: 500; }
+  .btn .count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin: 0; border-radius: 9px; background: var(--accent-soft); color: var(--accent-hover); font-size: 11px; font-weight: 500; }
   .dialog.groups { width: min(540px, 100%); }
   .groups .ghead { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
   .groups .ghead .hint { margin: 4px 0 0; }

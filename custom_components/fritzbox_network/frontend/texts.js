@@ -443,6 +443,7 @@ const en = {
       note: "Note",
       block: "Address group",
     },
+    poolTitle: "In the DHCP pool of the box",
     inBlock: "group {name}",
     inYourBlock: "Belongs to your group {name} (.{from}–.{to})",
     pick: "Choose an address",
@@ -481,7 +482,7 @@ const en = {
     offlineFixedAdvice: "Offline, last seen {when}. The address stays reserved for this device.",
     nobody: "— nobody —",
     nothingFound: "Nothing found.",
-    columns: ["Address", "Device", "Type", "State", "Vendor", "Last seen"],
+    columns: ["Address", "Device", "Group", "Type", "State", "Vendor", "Last seen"],
     bands: { "2_4ghz": "2.4 GHz", "5ghz": "5 GHz", "6ghz": "6 GHz" },
     entries: {
       open: "Entry",
@@ -1073,6 +1074,7 @@ const de = {
       note: "Notiz",
       block: "Adressgruppe",
     },
+    poolTitle: "Im DHCP-Bereich der Box",
     inBlock: "Gruppe {name}",
     inYourBlock: "Gehört zu deiner Gruppe {name} (.{from}–.{to})",
     pick: "Adresse wählen",
@@ -1111,7 +1113,7 @@ const de = {
     offlineFixedAdvice: "Offline, zuletzt gesehen {when}. Die Adresse bleibt für dieses Gerät reserviert.",
     nobody: "— niemand —",
     nothingFound: "Nichts gefunden.",
-    columns: ["Adresse", "Gerät", "Art", "Status", "Hersteller", "Zuletzt gesehen"],
+    columns: ["Adresse", "Gerät", "Gruppe", "Art", "Status", "Hersteller", "Zuletzt gesehen"],
     bands: { "2_4ghz": "2,4 GHz", "5ghz": "5 GHz", "6ghz": "6 GHz" },
     entries: {
       open: "Eintrag",

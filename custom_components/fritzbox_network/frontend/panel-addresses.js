@@ -494,26 +494,36 @@ function listView(m, ctx) {
     .filter((c) => (c.device || c.state === "res" || c.entry) && matches(m, c, ctx))
     .map((c) => {
       const ip = `${m.baseText}${c.n}`;
+      const blk = blockOf(own, c.n);
       const note = own.notes[ip] ? `📝 ${escapeHtml(own.notes[ip])}` : "";
       const d = c.device;
+      const group = blk ? `<span class="gchip"><i style="background:var(${blk.color})"></i>${escapeHtml(blk.name)}</span>` : "";
+      const pool = c.pool ? `<span class="badge pool" title="${escapeHtml(a.poolTitle)}">DHCP</span>` : "";
+      const hints = ctx.hints
+        .filter((h) => h.n === c.n && !own.muted.includes(h.id))
+        .map((h) => {
+          const values = Object.fromEntries(Object.entries(h.values).map(([k, v]) => [k, escapeHtml(String(v))]));
+          return `<span class="lhint ${h.level}"><span aria-hidden="true">${{ bad: "⛔", warn: "⚠", info: "ℹ" }[h.level]}</span> ${fill(a.hints[h.key], values)}</span>`;
+        })
+        .join("");
+      const open = (inner) => `<tr class="arow" data-aip="${c.n}" data-k="a${c.n}"${blk ? ` style="--bc:var(${blk.color})"` : ""}><td class="mono">${ip}${pool}</td>${inner}</tr>`;
       if (!d && c.entry) {
         const e = c.entry;
         const cls = { plan: "ok", hold: "warn", ext: "" }[e.kind];
-        return `<tr class="arow" data-aip="${c.n}" data-k="a${c.n}"><td class="mono">${ip}</td><td>${escapeHtml(e.name || a.nobody)}<small>${escapeHtml(e.note || note.replace("📝 ", ""))}</small></td><td><span class="badge ${cls}">${escapeHtml(a.states[e.kind])}</span></td><td>–</td><td>–</td><td>–</td></tr>`;
+        return open(`<td>${escapeHtml(e.name || a.nobody)}<small>${escapeHtml(e.note || note.replace("📝 ", ""))}</small>${hints}</td><td>${group}</td><td><span class="badge ${cls}">${escapeHtml(a.states[e.kind])}</span></td><td>–</td><td>–</td><td>–</td>`);
       }
       if (!d) {
-        return `<tr class="arow" data-aip="${c.n}" data-k="a${c.n}"><td class="mono">${ip}</td><td class="muted">${escapeHtml(a.nobody)}<small>${note}</small></td><td><span class="badge warn">${escapeHtml(a.states.res)}</span></td><td>–</td><td>–</td><td>–</td></tr>`;
+        return open(`<td class="muted">${escapeHtml(a.nobody)}<small>${note}</small>${hints}</td><td>${group}</td><td><span class="badge warn">${escapeHtml(a.states.res)}</span></td><td>–</td><td>–</td><td>–</td>`);
       }
       const fixed = d.kind !== "dyn";
       const seen = d.online ? t.nowText : whenText(d.lastOnline, now, t);
-      return `<tr class="arow" data-aip="${c.n}" data-k="a${c.n}"><td class="mono">${ip}</td>
-        <td><span class="dot ${d.online ? "on" : ""}"></span>${escapeHtml(displayName(d, own))}<small>${note || escapeHtml(linkText(d, t))}</small></td>
-        <td><span class="badge ${fixed ? "fix" : "dyn"}">${escapeHtml(fixed ? a.kindFixedShort : a.kindDynamicShort)}</span></td>
-        <td>${escapeHtml(d.online ? a.online : a.offline)}</td><td>${escapeHtml(d.vendor ?? "–")}</td><td>${escapeHtml(seen)}</td></tr>`;
+      return open(`<td><span class="dot ${d.online ? "on" : ""}"></span>${escapeHtml(displayName(d, own))}<small>${note || escapeHtml(linkText(d, t))}</small>${hints}</td>
+        <td>${group}</td><td><span class="badge ${fixed ? "fix" : "dyn"}">${escapeHtml(fixed ? a.kindFixedShort : a.kindDynamicShort)}</span></td>
+        <td>${escapeHtml(d.online ? a.online : a.offline)}</td><td>${escapeHtml(d.vendor ?? "–")}</td><td>${escapeHtml(seen)}</td>`);
     })
     .join("");
   return `<div class="tablewrap"><table class="atable"><thead><tr>${a.columns.map((c) => `<th scope="col">${escapeHtml(c)}</th>`).join("")}</tr></thead>
-    <tbody>${rows || `<tr><td colspan="6" class="muted">${escapeHtml(a.nothingFound)}</td></tr>`}</tbody></table></div>`;
+    <tbody>${rows || `<tr><td colspan="${a.columns.length}" class="muted">${escapeHtml(a.nothingFound)}</td></tr>`}</tbody></table></div>`;
 }
 
 export function linkText(d, t) {
