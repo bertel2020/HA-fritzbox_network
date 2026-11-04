@@ -31,6 +31,7 @@ import { renderInternet } from "./panel-internet.js";
 import { captureDefaults, defaultInterface, renderCapture } from "./panel-capture.js";
 import { renderCheck } from "./panel-check.js";
 import { renderLog } from "./panel-log.js";
+import { renderRadio } from "./panel-radio.js";
 import { BLOCK_COLORS, ENTRY_KINDS, addressModel, checkBlock, checkEntry, emptyOwn, entryPreview, groupPreview, normalizeOwn, parseRange, poolChange, renderAddresses } from "./panel-addresses.js";
 import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
@@ -850,6 +851,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       "diagnose-view",
       `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(t.diag.title)}</h1><p class="lead">${escapeHtml(t.diag.lead)}</p></div>` +
         renderCheck(this._state.check, { t }) +
+        renderRadio(this._state.data, { t, language: this._hass?.language }) +
         renderLog(this._state.log, { t, group: this._state.logGroup }) +
         renderCapture(this._state.capture, {
           t,

@@ -5,7 +5,7 @@ import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 
 // a repeater linked by Wi-Fi at or below this signal (dBm) is a weak link for all devices behind it
-const UPLINK_WEAK_DBM = -75;
+export const UPLINK_WEAK_DBM = -75;
 
 /**
  * What stands out in the network, most serious first: [{ level, key, values }] with the key of

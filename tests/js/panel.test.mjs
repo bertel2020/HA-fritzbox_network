@@ -1189,3 +1189,35 @@ test("the devices tab is selected on both of its pages, and each page has the sw
   assert.match(switchBar, /data-tab="cleanup" aria-selected="true" aria-pressed="true">Aufräumen/);
   assert.deepEqual(panel.DEVICE_PAGES, ["filter", "cleanup"]);
 });
+
+const radioPage = await import(`${base}panel-radio.js`);
+
+test("the radio check lists the radios with their load and counts the weak devices and links", () => {
+  const radioData = {
+    nodes: [
+      { mac: "aa", name: "Box", role: "master", radios: { "5ghz": { channel: 100, utilization: 88, noise_dbm: -95 }, "2_4ghz": { channel: 6, utilization: 20, noise_dbm: -90 } }, uplink: null },
+      { mac: "bb", name: "Flur", role: "slave", radios: { "5ghz": { channel: 100, utilization: 10, noise_dbm: -96 } }, uplink: { type: "wlan", band: "5ghz", signal_dbm: -80 } },
+    ],
+    clients: [
+      { mac: "01", online: true, ap_mac: "aa", link_type: "wlan", band: "5ghz", rate_download: 100, rate_upload: 100, max_rate_download: 1000, max_rate_upload: 1000 },
+      { mac: "02", online: true, ap_mac: "aa", link_type: "lan" },
+      { mac: "03", online: false, ap_mac: "aa", link_type: "wlan", band: "5ghz" },
+    ],
+  };
+  const check = radioPage.radioCheck(radioData);
+  const box = check.nodes[0];
+  assert.deepEqual(box.radios.map((r) => [r.band, r.level, r.devices]), [["5ghz", "bad", 1], ["2_4ghz", "ok", 0]]);
+  assert.equal(box.wired, 1);
+  assert.equal(check.nodes[1].uplinkWeak, true);
+  assert.ok(check.issues >= 2);
+  assert.equal(radioPage.utilizationLevel(70), "warn");
+  assert.equal(radioPage.utilizationLevel(null), "ok");
+
+  const html = radioPage.renderRadio(radioData, { t, language: "de" });
+  assert.match(html, /Funk-Check/);
+  assert.match(html, /Flur<\/b>\s*<small class="weak">per WLAN angebunden, 5 GHz, -80 dBm/);
+  assert.match(html, /Kanal 100 · Rauschen -95 dBm · 1 Geräte/);
+  assert.match(html, /88 %/);
+  assert.equal(radioPage.renderRadio({ nodes: [], clients: [] }, { t, language: "de" }), "");
+  assert.match(radioPage.renderRadio({ nodes: [{ mac: "aa", name: "Box", role: "master", radios: { "5ghz": { channel: 36, utilization: 5, noise_dbm: -95 } } }], clients: [] }, { t, language: "de" }), /fällt nichts auf/);
+});
