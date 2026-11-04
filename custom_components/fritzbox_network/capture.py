@@ -92,7 +92,12 @@ BAND_MIN_DEVICES = 2
 
 def wifi_bands(links: dict[str, Any]) -> dict[str, str]:
     """The band of every device the mesh knows on Wi-Fi: {mac: "2_4ghz" | "5ghz" | ...}."""
-    return {mac: link.band for mac, link in links.items() if link.link_type == "wlan" and link.band}
+    # the mesh writes the type in capitals ("WLAN", "LAN")
+    return {
+        mac: link.band
+        for mac, link in links.items()
+        if link.link_type.lower() == "wlan" and link.band
+    }
 
 
 def decide_band(votes: dict[str, int]) -> str | None:

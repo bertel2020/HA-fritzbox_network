@@ -319,20 +319,27 @@ def test_only_the_interfaces_worth_offering_are_kept_and_grouped():
     ]
 
 
+def test_the_wifi_devices_of_the_mesh_are_listed_with_their_band():
+    from pathlib import Path
+
+    from custom_components.fritzbox_network.capture import wifi_bands
+    from custom_components.fritzbox_network.models import parse_mesh
+
+    mesh = parse_mesh((Path(__file__).parent / "fixtures" / "mesh.json").read_text())
+    wifi = {mac for mac, link in mesh.links.items() if link.link_type == "WLAN"}
+    assert wifi  # the mesh of the fixture has devices on Wi-Fi, the type written in capitals
+
+    bands = wifi_bands(mesh.links)
+
+    assert set(bands) <= wifi
+    assert bands
+    assert set(bands.values()) <= {"2_4ghz", "5ghz", "6ghz"}
+
+
 def test_the_band_of_a_wifi_interface_is_decided_by_the_devices_seen_on_it():
-    from types import SimpleNamespace
+    from custom_components.fritzbox_network.capture import count_bands, decide_band
 
-    from custom_components.fritzbox_network.capture import count_bands, decide_band, wifi_bands
-
-    links = {
-        "m1": SimpleNamespace(link_type="wlan", band="5ghz"),
-        "m2": SimpleNamespace(link_type="wlan", band="5ghz"),
-        "m3": SimpleNamespace(link_type="wlan", band="2_4ghz"),
-        "m4": SimpleNamespace(link_type="lan", band=None),
-        "m5": SimpleNamespace(link_type="wlan", band=None),
-    }
-    bands = wifi_bands(links)
-    assert bands == {"m1": "5ghz", "m2": "5ghz", "m3": "2_4ghz"}
+    bands = {"m1": "5ghz", "m2": "5ghz", "m3": "2_4ghz"}
 
     # the wired device and the unknown one do not vote
     assert count_bands({"m1": 9, "m2": 3, "m4": 40, "x": 1}, bands) == {"5ghz": 2}
