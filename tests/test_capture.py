@@ -107,3 +107,14 @@ async def test_a_kept_capture_can_be_summarized(hass, hass_ws_client, fake_clien
     assert result["packets"] == 0
     assert result["flows"] == []
     assert not (await _call(client, SUMMARY, entry_id=entry.entry_id, name="nope.pcap"))["success"]
+
+
+async def test_the_service_starts_a_capture(hass, fake_client, entry):
+    await _setup(hass, entry)
+
+    await hass.services.async_call(
+        DOMAIN, "capture", {"interface": "wlan24", "duration": 20, "size": 5}, blocking=True
+    )
+    await hass.async_block_till_done()
+
+    assert ("capture", "3-17", 20) in fake_client.calls

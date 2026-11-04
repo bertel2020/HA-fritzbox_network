@@ -13,3 +13,33 @@ wake_on_lan:
   target:
     entity:
       integration: fritzbox_network
+
+capture:
+  target:
+    entity:
+      integration: fritzbox_network
+  fields:
+    interface:
+      default: lan
+      selector:
+        select:
+          translation_key: capture_interface
+          options:
+            - internet
+            - lan
+            - wlan24
+            - wlan5
+    duration:
+      default: 60
+      selector:
+        number:
+          min: 5
+          max: 600
+          unit_of_measurement: s
+    size:
+      default: 50
+      selector:
+        number:
+          min: 1
+          max: 200
+          unit_of_measurement: MB

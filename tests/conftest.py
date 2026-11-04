@@ -127,7 +127,9 @@ class FakeClient:
         self.calls.append(("capture", interface, seconds))
         if self.fail_actions:
             raise ValueError("the box sent no data")
-        path.write_bytes(b"\xd4\xc3\xb2\xa1\x02\x00\x04\x00" + b"\0" * 8 + b"\xff\xff\0\0\x01\0\0\0")
+        path.write_bytes(
+            b"\xd4\xc3\xb2\xa1\x02\x00\x04\x00" + b"\0" * 8 + b"\xff\xff\0\0\x01\0\0\0"
+        )
         progress(24)
         return "time"
 

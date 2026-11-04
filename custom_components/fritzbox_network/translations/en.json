@@ -79,6 +79,14 @@
         "include": "Only the selected devices",
         "exclude": "All except the selected devices"
       }
+    },
+    "capture_interface": {
+      "options": {
+        "internet": "Internet",
+        "lan": "LAN",
+        "wlan24": "Wi-Fi 2.4 GHz",
+        "wlan5": "Wi-Fi 5 GHz"
+      }
     }
   },
   "entity": {
@@ -255,6 +263,9 @@
     },
     "name_not_writeable": {
       "message": "The name of {name} cannot be changed in the FRITZ!Box."
+    },
+    "capture_busy": {
+      "message": "A capture is already running."
     }
   },
   "issues": {
@@ -302,6 +313,24 @@
     "wake_on_lan": {
       "name": "Wake on LAN",
       "description": "Sends the Wake on LAN signal of the box to the device."
+    },
+    "capture": {
+      "name": "Start packet capture",
+      "description": "Records the traffic of the box as a pcap. With a device as target only its traffic is kept. The file is in /config/fritzbox_captures and can be downloaded in the panel under Diagnosis.",
+      "fields": {
+        "interface": {
+          "name": "Interface",
+          "description": "Where to record. For a device choose LAN or Wi-Fi."
+        },
+        "duration": {
+          "name": "Duration",
+          "description": "Seconds, 600 at the most."
+        },
+        "size": {
+          "name": "Maximum size",
+          "description": "Megabytes; the recording ends when they are reached."
+        }
+      }
     }
   }
 }
