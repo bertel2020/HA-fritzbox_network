@@ -1,0 +1,200 @@
+"""Packet captures of the box: started from the panel, kept as pcap files, downloaded from there.
+
+The box streams a capture over HTTP for as long as the connection stays open. One capture runs at
+a time per box; it ends after the chosen time, at the size limit, or when the user stops it.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from dataclasses import dataclass, field
+from datetime import datetime
+import logging
+from pathlib import Path
+import re
+import threading
+import time
+from typing import Any
+
+from aiohttp import web
+from homeassistant.components.http import HomeAssistantView
+from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
+
+from .const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
+
+# what the box offers to listen on: key in the panel -> value of ifaceorminor
+INTERFACES = {
+    "internet": "2-1",
+    "lan": "1-lan",
+    "wlan24": "3-17",
+    "wlan5": "3-18",
+}
+MIN_SECONDS = 5
+MAX_SECONDS = 600
+DEFAULT_SECONDS = 60
+MAX_BYTES = 200 * 1024 * 1024
+DEFAULT_BYTES = 50 * 1024 * 1024
+KEEP_FILES = 20
+DIR_NAME = "fritzbox_captures"
+KEY_CAPTURES = f"{DOMAIN}_captures"
+FILE_RE = re.compile(r"^[a-z0-9]+_\d{8}-\d{6}\.pcap$")
+VIEW_URL = f"/api/{DOMAIN}/capture/{{entry_id}}/{{name}}"
+
+
+@dataclass
+class Job:
+    """The capture that runs now or ran last."""
+
+    interface: str
+    name: str
+    started: float
+    seconds: int
+    max_bytes: int
+    bytes: int = 0
+    state: str = "running"  # running, done, failed
+    reason: str | None = None  # why it ended: time, size, stopped; the error when it failed
+    stop: Any = field(default=None, repr=False)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "interface": self.interface,
+            "name": self.name,
+            "state": self.state,
+            "reason": self.reason,
+            "seconds": self.seconds,
+            "elapsed": round(min(time.monotonic() - self.started, self.seconds), 1)
+            if self.state == "running"
+            else None,
+            "bytes": self.bytes,
+            "max_bytes": self.max_bytes,
+        }
+
+
+class CaptureManager:
+    """Starts, stops and lists the captures of one box."""
+
+    def __init__(self, hass: HomeAssistant, entry_id: str, client: Any) -> None:
+        self._hass = hass
+        self._entry_id = entry_id
+        self._client = client
+        self.job: Job | None = None
+        self._task: asyncio.Task[None] | None = None
+
+    @property
+    def directory(self) -> Path:
+        return Path(self._hass.config.path(DIR_NAME)) / self._entry_id
+
+    @property
+    def running(self) -> bool:
+        return self.job is not None and self.job.state == "running"
+
+    def start(self, interface: str, seconds: int, max_bytes: int) -> Job:
+        """Begin a capture; raises ValueError for a bad request or when one is running."""
+        if interface not in INTERFACES:
+            raise ValueError("unknown interface")
+        if self.running:
+            raise ValueError("busy")
+        seconds = max(MIN_SECONDS, min(MAX_SECONDS, seconds))
+        max_bytes = max(1024 * 1024, min(MAX_BYTES, max_bytes))
+        stamp = dt_util.now().strftime("%Y%m%d-%H%M%S")
+        job = Job(
+            interface=interface,
+            name=f"{interface}_{stamp}.pcap",
+            started=time.monotonic(),
+            seconds=seconds,
+            max_bytes=max_bytes,
+        )
+        job.stop = threading.Event()
+        self.job = job
+        self._task = self._hass.async_create_task(self._run(job))
+        return job
+
+    def stop(self) -> None:
+        if self.running and self.job is not None:
+            self.job.stop.set()
+
+    async def _run(self, job: Job) -> None:
+        directory = self.directory
+        path = directory / job.name
+
+        def work() -> str:
+            directory.mkdir(parents=True, exist_ok=True)
+
+            def progress(written: int) -> None:
+                job.bytes = written
+
+            return self._client.capture(
+                INTERFACES[job.interface], path, job.seconds, job.max_bytes, job.stop, progress
+            )
+
+        try:
+            job.reason = await self._hass.async_add_executor_job(work)
+            job.state = "done"
+        except Exception as err:  # noqa: BLE001 - whatever the box or the disk did, the panel shows it
+            _LOGGER.warning("The capture on %s failed: %s", job.interface, err)
+            job.state = "failed"
+            job.reason = str(err)
+            await self._hass.async_add_executor_job(lambda: path.unlink(missing_ok=True))
+        await self._hass.async_add_executor_job(self._prune)
+
+    def _prune(self) -> None:
+        files = self.files()
+        for item in files[KEEP_FILES:]:
+            (self.directory / item["name"]).unlink(missing_ok=True)
+
+    def files(self) -> list[dict[str, Any]]:
+        """The kept captures, newest first."""
+        if not self.directory.is_dir():
+            return []
+        found = []
+        for path in self.directory.iterdir():
+            if FILE_RE.match(path.name) and path.is_file():
+                stat = path.stat()
+                found.append({"name": path.name, "bytes": stat.st_size, "time": stat.st_mtime})
+        found.sort(key=lambda f: f["time"], reverse=True)
+        return [
+            {
+                **f,
+                "time": datetime.fromtimestamp(f["time"], dt_util.UTC).isoformat(),
+                "interface": f["name"].split("_", 1)[0],
+            }
+            for f in found
+        ]
+
+    def delete(self, name: str) -> bool:
+        if not FILE_RE.match(name):
+            return False
+        path = self.directory / name
+        if not path.is_file() or (self.running and self.job and self.job.name == name):
+            return False
+        path.unlink()
+        return True
+
+
+class CaptureDownloadView(HomeAssistantView):
+    """Serves a kept capture to an administrator."""
+
+    url = VIEW_URL
+    name = f"api:{DOMAIN}:capture"
+    requires_auth = True
+
+    async def get(self, request: web.Request, entry_id: str, name: str) -> web.StreamResponse:
+        hass: HomeAssistant = request.app["hass"]
+        if not request["hass_user"].is_admin:
+            return web.Response(status=403)
+        manager = hass.data.get(KEY_CAPTURES, {}).get(entry_id)
+        if manager is None or not FILE_RE.match(name):
+            return web.Response(status=404)
+        path = manager.directory / name
+        if not path.is_file():
+            return web.Response(status=404)
+        return web.FileResponse(
+            path,
+            headers={
+                "Content-Type": "application/vnd.tcpdump.pcap",
+                "Content-Disposition": f'attachment; filename="{name}"',
+            },
+        )

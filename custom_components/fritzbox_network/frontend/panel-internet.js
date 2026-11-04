@@ -4,6 +4,7 @@ import { dailyTotals, escapeHtml, formatBytes, formatDuration, formatRate, spark
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { whenText } from "./panel-network.js";
+import { renderCapture } from "./panel-capture.js";
 
 const CHART = { width: 300, height: 72 };
 
@@ -467,5 +468,6 @@ export function renderInternet(internet, ctx) {
     ${addressHistory(internet.addresses, language, t)}
     ${events(internet, t, now)}
     ${ports(portState, t)}
+    ${renderCapture(ctx.capture, { t, language, canWrite, form: ctx.captureForm })}
     ${actions(canWrite, t)}`;
 }

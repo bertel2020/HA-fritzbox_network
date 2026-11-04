@@ -123,6 +123,14 @@ class FakeClient:
     def get_ip_reservations(self, macs: list[str], max_age: float = 600) -> dict:
         return {mac: {"fixed": mac == BOX, "editable": True} for mac in macs}
 
+    def capture(self, interface, path, seconds, max_bytes, stop, progress) -> str:
+        self.calls.append(("capture", interface, seconds))
+        if self.fail_actions:
+            raise ValueError("the box sent no data")
+        path.write_bytes(b"\xd4\xc3\xb2\xa1" + b"\0" * 20)
+        progress(24)
+        return "time"
+
     def get_port_mappings(self) -> list[dict]:
         return [dict(p) for p in self.ports]
 

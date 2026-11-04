@@ -471,6 +471,12 @@ export const PANEL_CSS = `
   ul.ports { list-style: none; margin: 0; padding: 0; font-size: 13px; }
   ul.ports li { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; padding: 8px 0; border-top: 1px solid var(--line); }
   ul.ports li:first-child { border-top: 0; }
+  .capform { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; align-items: end; margin: 8px 0; }
+  .capform input[type="number"] { width: 100%; height: 42px; border-radius: 10px; border: 1px solid var(--input-line); background: var(--surface); padding: 0 12px; min-width: 0; }
+  .caprun { display: grid; grid-template-columns: 1fr auto; gap: 6px 12px; align-items: center; margin: 8px 0; }
+  .caprun small { color: var(--muted); }
+  .capbtns { display: flex; gap: 6px; }
+  ul.capfiles small { color: var(--muted); font-weight: 400; }
   ul.ports li.off { opacity: .6; }
   ul.ports .pdesc { font-weight: 500; }
   ul.ports .pmap { color: var(--muted); text-align: right; }

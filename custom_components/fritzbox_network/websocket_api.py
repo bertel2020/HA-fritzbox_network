@@ -19,6 +19,16 @@ from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format
 from homeassistant.util import dt as dt_util
 import voluptuous as vol
 
+from .capture import (
+    DEFAULT_BYTES,
+    DEFAULT_SECONDS,
+    INTERFACES,
+    KEY_CAPTURES,
+    MAX_BYTES,
+    MAX_SECONDS,
+    MIN_SECONDS,
+    VIEW_URL,
+)
 from .const import (
     CONF_FILTER_DEVICES,
     CONF_FILTER_MODE,
@@ -56,10 +66,16 @@ ADDRESS_SAVE_COMMAND = f"{DOMAIN}/address/save"
 ADDRESS_POOL_COMMAND = f"{DOMAIN}/address/pool"
 HISTORY_COMMAND = f"{DOMAIN}/history/summary"
 HISTORY_DEVICE_COMMAND = f"{DOMAIN}/history/device"
+CAPTURE_STATUS_COMMAND = f"{DOMAIN}/capture/status"
+CAPTURE_START_COMMAND = f"{DOMAIN}/capture/start"
+CAPTURE_STOP_COMMAND = f"{DOMAIN}/capture/stop"
+CAPTURE_DELETE_COMMAND = f"{DOMAIN}/capture/delete"
 FILTER_PREVIEW_COMMAND = f"{DOMAIN}/filter/preview"
 FILTER_APPLY_COMMAND = f"{DOMAIN}/filter/apply"
 ERR_CHANGED = "changed"
 ERR_INVALID_RANGE = "invalid_range"
+ERR_BUSY = "busy"
+ERR_INVALID = "invalid"
 
 FILTER_OPTIONS_SCHEMA = vol.Schema(
     {
@@ -733,6 +749,103 @@ async def ws_reboot(
     await _box_action(hass, connection, msg, "reboot")
 
 
+def _capture_state(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
+    manager = hass.data[KEY_CAPTURES][entry_id]
+    return {
+        "job": manager.job.as_dict() if manager.job else None,
+        "files": manager.files(),
+        "interfaces": list(INTERFACES),
+        "url": VIEW_URL.replace("{entry_id}", entry_id).replace("{name}", ""),
+        "limits": {
+            "min_seconds": MIN_SECONDS,
+            "max_seconds": MAX_SECONDS,
+            "seconds": DEFAULT_SECONDS,
+            "max_mb": MAX_BYTES // 1048576,
+            "mb": DEFAULT_BYTES // 1048576,
+        },
+    }
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): CAPTURE_STATUS_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_capture_status(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The running capture and the kept files; the panel asks again while one runs."""
+    if _loaded_coordinator(hass, connection, msg) is None:
+        return
+    state = await hass.async_add_executor_job(_capture_state, hass, msg["entry_id"])
+    connection.send_result(msg["id"], state)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): CAPTURE_START_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("interface"): vol.In(list(INTERFACES)),
+        vol.Required("seconds"): vol.All(int, vol.Range(min=MIN_SECONDS, max=MAX_SECONDS)),
+        vol.Required("mb"): vol.All(int, vol.Range(min=1, max=MAX_BYTES // 1048576)),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_capture_start(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Start recording on an interface of the box."""
+    if _loaded_coordinator(hass, connection, msg) is None:
+        return
+    manager = hass.data[KEY_CAPTURES][msg["entry_id"]]
+    try:
+        manager.start(msg["interface"], msg["seconds"], msg["mb"] * 1048576)
+    except ValueError as err:
+        connection.send_error(msg["id"], ERR_BUSY if str(err) == "busy" else ERR_INVALID, str(err))
+        return
+    connection.send_result(
+        msg["id"], await hass.async_add_executor_job(_capture_state, hass, msg["entry_id"])
+    )
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): CAPTURE_STOP_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_capture_stop(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """End the running capture; what was recorded so far is kept."""
+    if _loaded_coordinator(hass, connection, msg) is None:
+        return
+    hass.data[KEY_CAPTURES][msg["entry_id"]].stop()
+    connection.send_result(msg["id"], {})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): CAPTURE_DELETE_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("name"): str,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_capture_delete(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Delete a kept capture."""
+    if _loaded_coordinator(hass, connection, msg) is None:
+        return
+    manager = hass.data[KEY_CAPTURES][msg["entry_id"]]
+    if not await hass.async_add_executor_job(manager.delete, msg["name"]):
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "No such capture")
+        return
+    connection.send_result(msg["id"], {})
+
+
 def _filter_preview(
     entry: FritzNetworkConfigEntry,
     coordinator: FritzNetworkCoordinator,
@@ -833,5 +946,9 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_history_device)
     websocket_api.async_register_command(hass, ws_reconnect)
     websocket_api.async_register_command(hass, ws_reboot)
+    websocket_api.async_register_command(hass, ws_capture_status)
+    websocket_api.async_register_command(hass, ws_capture_start)
+    websocket_api.async_register_command(hass, ws_capture_stop)
+    websocket_api.async_register_command(hass, ws_capture_delete)
     websocket_api.async_register_command(hass, ws_filter_preview)
     websocket_api.async_register_command(hass, ws_filter_apply)

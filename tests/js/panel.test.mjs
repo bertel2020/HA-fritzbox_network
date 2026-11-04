@@ -1086,3 +1086,26 @@ test("the print sheet is an A4 document with the numbers, the map, the list and 
   assert.doesNotMatch(lean, /Karte der Adressen/);
   assert.doesNotMatch(lean, /<th>MAC<\/th>/);
 });
+
+const capture = await import(`${base}panel-capture.js`);
+
+test("the capture card offers the interfaces, locks the form while recording and lists the files", () => {
+  const status = {
+    job: null,
+    files: [{ name: "lan_20261104-101500.pcap", bytes: 2500000, time: "2026-11-04T10:15:00Z", interface: "lan" }],
+    interfaces: ["internet", "lan", "wlan24", "wlan5"],
+    url: "/api/fritzbox_network/capture/x/",
+    limits: { min_seconds: 5, max_seconds: 600, seconds: 60, max_mb: 200, mb: 50 },
+  };
+  const ctx = { t, language: "de", canWrite: true, form: capture.captureDefaults(status.limits) };
+  const idle = capture.renderCapture(status, ctx);
+  assert.match(idle, /WLAN 5 GHz/);
+  assert.match(idle, /data-act="cap-dl" data-name="lan_20261104-101500.pcap"/);
+  assert.doesNotMatch(idle, /disabled/);
+
+  const busy = capture.renderCapture({ ...status, job: { state: "running", seconds: 60, elapsed: 12, bytes: 1000000 } }, ctx);
+  assert.match(busy, /data-act="cap-stop"/);
+  assert.match(busy, /<select id="cap-if" disabled>/);
+
+  assert.match(capture.renderCapture("failed", ctx), /nichts gesagt/);
+});

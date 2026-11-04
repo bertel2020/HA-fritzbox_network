@@ -73,6 +73,8 @@ MAX_PORT_MAPPINGS = 128
 
 # seconds for connecting and for each read, also of the direct list downloads
 REQUEST_TIMEOUT = 10
+# seconds without a byte from a capture before it counts as ended: a quiet line sends nothing
+CAPTURE_READ_TIMEOUT = 20
 
 
 def web_login_response(challenge: str, password: str) -> str:
@@ -211,6 +213,62 @@ class FritzNetworkClient:
                 if attempt:
                     raise
         return None  # pragma: no cover
+
+    def capture(
+        self,
+        interface: str,
+        path: Any,
+        seconds: int,
+        max_bytes: int,
+        stop: threading.Event,
+        progress: Any,
+    ) -> str:
+        """Record the traffic on an interface of the box into a pcap file; returns why it ended.
+
+        The box streams the capture while the connection is open. Only the login holds the lock:
+        a capture runs for minutes and must not keep the polling waiting.
+        """
+        with self._lock:
+            sid = self._web_sid or self._web_login()
+        url = f"{self._web_base()}/cgi-bin/capture_notimeout"
+        params = {"ifaceorminor": interface, "snaplen": "1600", "capture": "Start", "sid": sid}
+        deadline = time.monotonic() + seconds
+        written = 0
+        reason = "time"
+        with (
+            requests.get(
+                url,
+                params=params,
+                stream=True,
+                timeout=(REQUEST_TIMEOUT, CAPTURE_READ_TIMEOUT),
+                verify=False,  # noqa: S501
+            ) as response,
+            open(path, "wb") as target,
+        ):
+            response.raise_for_status()
+            if "text/html" in response.headers.get("Content-Type", ""):
+                self._web_sid = None
+                raise PermissionError("the box refused the capture")
+            try:
+                for chunk in response.iter_content(chunk_size=16384):
+                    if chunk:
+                        target.write(chunk)
+                        written += len(chunk)
+                        progress(written)
+                    if stop.is_set():
+                        reason = "stopped"
+                        break
+                    if written >= max_bytes:
+                        reason = "size"
+                        break
+                    if time.monotonic() >= deadline:
+                        break
+            except requests.exceptions.ReadTimeout:
+                # a quiet interface sends nothing for a while: what came so far is the capture
+                reason = "stopped" if stop.is_set() else "quiet"
+        if written == 0:
+            raise ValueError("the box sent no data")
+        return reason
 
     def get_network(self) -> dict[str, Any] | None:
         """Mask, gateway, DHCP range and reserved addresses of the home network, or None."""

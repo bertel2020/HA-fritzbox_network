@@ -28,6 +28,7 @@ import {
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
+import { captureDefaults } from "./panel-capture.js";
 import { BLOCK_COLORS, ENTRY_KINDS, addressModel, checkBlock, checkEntry, emptyOwn, entryPreview, groupPreview, normalizeOwn, parseRange, poolChange, renderAddresses } from "./panel-addresses.js";
 import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
@@ -140,6 +141,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       picked: new Set(),
       filterPage: null,
       ports: null,
+      capture: null,
+      captureForm: captureDefaults(null),
       data: null,
       filter: "all",
       query: "",
@@ -251,6 +254,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     globalThis.removeEventListener("hashchange", this._onHash);
     clearInterval(this._clock);
     clearTimeout(this._enableTimer);
+    clearTimeout(this._captureTimer);
     this._resize?.disconnect();
     this._stop();
   }
@@ -324,7 +328,10 @@ class FritzboxNetworkPanel extends HTMLElement {
   _enterTab() {
     if (this._state.tab === "cleanup") this._loadCleanup();
     else if (this._state.tab === "filter") this._loadFilter();
-    else if (this._state.tab === "internet") this._loadPorts();
+    else if (this._state.tab === "internet") {
+      this._loadPorts();
+      this._loadCapture();
+    }
     else if (this._state.tab === "addresses") this._loadAddresses();
   }
 
@@ -373,6 +380,57 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._state.ports = "failed";
     }
     this._update();
+  }
+
+  /** The recordings are read when the internet page opens and while one runs. */
+  async _loadCapture() {
+    clearTimeout(this._captureTimer);
+    try {
+      const state = this._state;
+      const first = !state.capture || state.capture === "failed";
+      state.capture = await this._ws("capture/status");
+      if (first) state.captureForm = captureDefaults(state.capture.limits);
+    } catch {
+      this._state.capture = "failed";
+    }
+    this._update();
+    if (this._state.tab === "internet" && this._state.capture?.job?.state === "running") {
+      this._captureTimer = setTimeout(() => this._loadCapture(), 1000);
+    }
+  }
+
+  async _onCapture(ds) {
+    const t = this._t;
+    const c = t.inet.capture;
+    const state = this._state;
+    try {
+      if (ds.act === "cap-start") {
+        const form = state.captureForm;
+        state.capture = await this._ws("capture/start", { interface: form.interface, seconds: form.seconds, mb: form.mb });
+        showToast(this.shadowRoot, c.toastStarted);
+        this._update();
+        this._captureTimer = setTimeout(() => this._loadCapture(), 1000);
+      } else if (ds.act === "cap-stop") {
+        await this._ws("capture/stop");
+        await this._loadCapture();
+      } else if (ds.act === "cap-del") {
+        const ok = await openDialog(this.shadowRoot, t, { title: c.deleteTitle, body: c.deleteBody, list: [ds.name], ok: c.delete, danger: true });
+        if (!ok) return;
+        await this._ws("capture/delete", { name: ds.name });
+        await this._loadCapture();
+      } else if (ds.act === "cap-dl") {
+        const response = await this._hass.fetchWithAuth(`${state.capture.url}${encodeURIComponent(ds.name)}`);
+        if (!response.ok) throw new Error(String(response.status));
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(await response.blob());
+        link.download = ds.name;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+      }
+    } catch (err) {
+      const busy = err?.code === "busy";
+      showToast(this.shadowRoot, busy ? c.toastBusy : fill(t.toastFailed, { error: err?.message ?? err }));
+    }
   }
 
   async _loadFilter() {
@@ -720,6 +778,8 @@ class FritzboxNetworkPanel extends HTMLElement {
         now: Date.now(),
         canWrite: Boolean(this._state.data?.can_write),
         ports: this._state.ports,
+        capture: this._state.capture,
+        captureForm: this._state.captureForm,
         traffic: this._state.traffic,
         trafficRange: this._state.trafficRange,
         clients: this._state.data?.clients ?? [],
@@ -1332,6 +1392,12 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._state.addr.exportOpts = { ...this._state.addr.exportOpts, [el.dataset.aopt]: el.checked };
       return this._update();
     }
+    if (el.id === "cap-if" || el.id === "cap-sec" || el.id === "cap-mb") {
+      const form = this._state.captureForm;
+      if (el.id === "cap-if") form.interface = el.value;
+      else form[el.id === "cap-sec" ? "seconds" : "mb"] = Number(el.value);
+      return;
+    }
     if (el.id === "sort") {
       this._state.sort = el.value;
       this._state.sortDesc = false;
@@ -1473,6 +1539,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       globalThis.history.pushState(null, "", target.getAttribute("href"));
       globalThis.dispatchEvent(new CustomEvent("location-changed", { composed: true }));
       return;
+    } else if (ds.act?.startsWith("cap-")) {
+      return this._onCapture(ds);
     } else if (ds.act === "reconnect" || ds.act === "reboot") {
       return this._interrupt(ds.act);
     } else if (ds.act === "back") {
