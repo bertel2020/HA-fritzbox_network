@@ -82,13 +82,6 @@ MAX_PORT_MAPPINGS = 128
 REQUEST_TIMEOUT = 10
 # seconds without a byte from a capture before it counts as ended: a quiet line sends nothing
 CAPTURE_READ_TIMEOUT = 20
-# the first four bytes of a pcap file, in either byte order and with nanosecond stamps
-PCAP_MAGICS = (
-    b"\xd4\xc3\xb2\xa1",
-    b"\xa1\xb2\xc3\xd4",
-    b"\x4d\x3c\xb2\xa1",
-    b"\xa1\xb2\x3c\x4d",
-)
 
 
 def web_login_response(challenge: str, password: str) -> str:
@@ -340,19 +333,13 @@ class FritzNetworkClient:
                         raise
                     if not chunk:
                         break
-                    if written == 0:
-                        if chunk[:4] in PCAP_MAGICS:
-                            pass
-                        elif (order := pcap.record_order(chunk)) is not None:
-                            # the box sends the packets without the header of a pcap file
-                            target.write(pcap.file_header(order))
-                        else:
-                            # a refusal comes as text; anything else is shown as bytes
-                            self._web_sid = None
-                            raise ValueError(
-                                f"the box did not send a capture: {chunk[:32].hex(' ')} "
-                                f"({chunk[:60].decode('utf-8', 'replace').strip()})"
-                            )
+                    if written == 0 and chunk[:4] not in pcap.MAGICS:
+                        # a refusal comes as text; anything else is shown as bytes
+                        self._web_sid = None
+                        raise ValueError(
+                            f"the box did not send a capture: {chunk[:32].hex(' ')} "
+                            f"({chunk[:60].decode('utf-8', 'replace').strip()})"
+                        )
                     target.write(chunk)
                     written += len(chunk)
                     progress(written)

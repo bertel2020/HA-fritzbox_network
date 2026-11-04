@@ -98,21 +98,30 @@ def test_a_cut_off_capture_keeps_what_is_complete(capture, tmp_path):
     assert pcap.summarize(cut).packets == 3
 
 
-def test_the_box_stream_without_a_file_header_is_recognised():
-    record = struct.pack("<IIII", 1_793_000_000, 5, 60, 60) + b"\0" * 60
-    assert pcap.record_order(record) == "<"
-    assert pcap.record_order(struct.pack(">IIII", 1_793_000_000, 5, 60, 60)) == ">"
-    assert pcap.record_order(b"Permission denied for this user, sorry about it") is None
-    assert pcap.record_order(b"short") is None
+def _modified(path, frames):
+    """The format of the box: big endian, magic a1b2cd34, 24 byte record headers."""
+    out = struct.pack(">IHHiIII", 0xA1B2CD34, 2, 4, 0, 0, 2048, 1)
+    for n, frame in enumerate(frames):
+        out += struct.pack(">IIII", 1_793_000_000 + n, 5, len(frame), len(frame))
+        out += struct.pack(">IHBB", 0, 0x0800, 0, 0) + frame
+    path.write_bytes(out)
 
 
-def test_a_file_header_makes_the_stream_a_readable_capture(tmp_path):
-    frame = _frame(A, B, (192, 168, 1, 10), (8, 8, 8, 8), 17, _udp(5000, 53, _dns("example.org")))
-    record = struct.pack("<IIII", 1_793_000_000, 5, len(frame), len(frame)) + frame
-    path = tmp_path / "x.pcap"
-    path.write_bytes(pcap.file_header("<") + record)
+def test_the_modified_tcpdump_format_of_the_box_is_read_and_filtered(tmp_path):
+    one, three = (192, 168, 1, 10), (8, 8, 8, 8)
+    source = tmp_path / "box.pcap"
+    _modified(
+        source,
+        [
+            _frame(A, B, one, three, 17, _udp(5000, 53, _dns("example.org"))),
+            _frame(C, B, (192, 168, 1, 20), three, 17, _udp(5001, 53, _dns("other.net"))),
+        ],
+    )
 
-    summary = pcap.summarize(path)
+    summary = pcap.summarize(source)
+    assert summary.packets == 2
+    assert summary.dns == {"example.org": 1, "other.net": 1}
 
-    assert summary.packets == 1
-    assert summary.dns == {"example.org": 1}
+    target = tmp_path / "only.pcap"
+    assert pcap.filter_device(source, target, "aa:bb:cc:dd:ee:03", set()) == 1
+    assert pcap.summarize(target).dns == {"other.net": 1}

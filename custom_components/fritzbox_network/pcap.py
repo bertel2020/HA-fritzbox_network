@@ -15,12 +15,15 @@ import struct
 
 LINKTYPE_ETHERNET = 1
 LINKTYPE_RAW = 101
-# magic number -> (byte order, nanosecond timestamps)
+# magic number -> (byte order, nanosecond timestamps, records with 8 more bytes)
+# The last two are the "modified tcpdump" format the FRITZ!Box streams; Wireshark reads it too.
 MAGICS = {
-    b"\xd4\xc3\xb2\xa1": ("<", False),
-    b"\xa1\xb2\xc3\xd4": (">", False),
-    b"\x4d\x3c\xb2\xa1": ("<", True),
-    b"\xa1\xb2\x3c\x4d": (">", True),
+    b"\xd4\xc3\xb2\xa1": ("<", False, False),
+    b"\xa1\xb2\xc3\xd4": (">", False, False),
+    b"\x4d\x3c\xb2\xa1": ("<", True, False),
+    b"\xa1\xb2\x3c\x4d": (">", True, False),
+    b"\x34\xcd\xb2\xa1": ("<", False, True),
+    b"\xa1\xb2\xcd\x34": (">", False, True),
 }
 ETH_IPV4 = 0x0800
 ETH_ARP = 0x0806
@@ -82,18 +85,19 @@ class Reader:
             head = handle.read(24)
         if len(head) < 24 or head[:4] not in MAGICS:
             raise PcapError("not a pcap file")
-        self.order, self.nano = MAGICS[head[:4]]
+        self.order, self.nano, self.extended = MAGICS[head[:4]]
         self.header = head
         self.linktype = struct.unpack(f"{self.order}I", head[20:24])[0]
 
     def packets(self) -> Iterator[Packet]:
         record = struct.Struct(f"{self.order}IIII")
+        size = 24 if self.extended else 16  # ifindex, protocol, packet type and padding follow
         with self.path.open("rb") as handle:
             handle.seek(24)
-            while head := handle.read(16):
-                if len(head) < 16:
+            while head := handle.read(size):
+                if len(head) < size:
                     return
-                seconds, fraction, captured, length = record.unpack(head)
+                seconds, fraction, captured, length = record.unpack(head[:16])
                 data = handle.read(captured)
                 if len(data) < captured:
                     return  # a capture that was cut off in the middle of a packet
@@ -213,32 +217,3 @@ def summarize(path: Path) -> Summary:
     if first is not None and last is not None:
         summary.seconds = round(last - first, 2)
     return summary
-
-
-# a record header: seconds, microseconds, captured length, original length
-_PLAUSIBLE_YEARS = (1_500_000_000, 2_500_000_000)
-MAX_PACKET = 262_144
-
-
-def record_order(data: bytes) -> str | None:
-    """The byte order if the data starts with a pcap record header, None if it does not.
-
-    The box streams a capture without the file header of pcap (an assumption read from the first
-    bytes it sends: a time stamp in the right years, then sensible lengths).
-    """
-    if len(data) < 16:
-        return None
-    for order in ("<", ">"):
-        seconds, micros, captured, length = struct.unpack(f"{order}IIII", data[:16])
-        if (
-            _PLAUSIBLE_YEARS[0] <= seconds <= _PLAUSIBLE_YEARS[1]
-            and micros < 1_000_000
-            and 0 < captured <= length <= MAX_PACKET
-        ):
-            return order
-    return None
-
-
-def file_header(order: str = "<", linktype: int = LINKTYPE_ETHERNET, snaplen: int = 65535) -> bytes:
-    """The header of a pcap file for Ethernet frames."""
-    return struct.pack(f"{order}IHHiIII", 0xA1B2C3D4, 2, 4, 0, 0, snaplen, linktype)

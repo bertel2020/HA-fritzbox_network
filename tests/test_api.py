@@ -559,20 +559,18 @@ def test_a_capture_stops_at_the_size_limit(tmp_path):
 
 
 @pytest.mark.enable_socket
-def test_a_capture_without_a_file_header_gets_one(tmp_path):
+def test_the_modified_tcpdump_header_of_the_box_is_accepted(tmp_path):
     import struct
 
-    record = struct.pack("<IIII", 1_793_000_000, 5, 14, 14) + b"\xff" * 14
+    head = struct.pack(">IHHiIII", 0xA1B2CD34, 2, 4, 0, 0, 2048, 1)
 
-    def headerless(handler):
+    def modified(handler):
         handler.send_response(200)
         handler.end_headers()
-        handler.wfile.write(record)
+        handler.wfile.write(head)
 
-    with _box(headerless) as host:
+    with _box(modified) as host:
         reason, path = _capture(host, tmp_path, 5)
 
     assert reason in ("time", "stopped")
-    data = path.read_bytes()
-    assert data[:4] == b"\xd4\xc3\xb2\xa1"
-    assert data.endswith(record)
+    assert path.read_bytes() == head
