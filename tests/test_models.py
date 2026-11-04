@@ -335,6 +335,14 @@ def test_the_wifi_devices_of_the_mesh_are_listed_with_their_band():
     assert bands
     assert set(bands.values()) <= {"2_4ghz", "5ghz", "6ghz"}
 
+    # only the devices at one access point: the others are behind a repeater
+    master = mesh.master.mac
+    direct = wifi_bands(mesh.links, master)
+    assert set(direct) <= set(bands)
+    assert all(mesh.links[mac].ap_mac == master for mac in direct)
+    behind = {mac for mac in bands if mesh.links[mac].ap_mac != master}
+    assert not behind & set(direct)
+
 
 def test_the_band_of_a_wifi_interface_is_decided_by_the_devices_seen_on_it():
     from custom_components.fritzbox_network.capture import count_bands, decide_band

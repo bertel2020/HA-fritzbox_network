@@ -90,13 +90,20 @@ BAND_SHARE = 0.8
 BAND_MIN_DEVICES = 2
 
 
-def wifi_bands(links: dict[str, Any]) -> dict[str, str]:
-    """The band of every device the mesh knows on Wi-Fi: {mac: "2_4ghz" | "5ghz" | ...}."""
+def wifi_bands(links: dict[str, Any], ap_mac: str | None = None) -> dict[str, str]:
+    """The band of every device the mesh knows on Wi-Fi: {mac: "2_4ghz" | "5ghz" | ...}.
+
+    With ``ap_mac`` only the devices that hang on that access point itself: a device behind a
+    repeater has the band it has there, but its traffic reaches the box over the link of the
+    repeater, so it would be counted on the wrong band.
+    """
     # the mesh writes the type in capitals ("WLAN", "LAN")
     return {
         mac: link.band
         for mac, link in links.items()
-        if link.link_type.lower() == "wlan" and link.band
+        if link.link_type.lower() == "wlan"
+        and link.band
+        and (ap_mac is None or link.ap_mac == ap_mac)
     }
 
 

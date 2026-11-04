@@ -71,9 +71,18 @@ def main() -> None:
     client.stop_captures()  # a capture left over from an earlier run loads the box
     if os.environ.get("FRITZ_BANDS") == "1":
         mesh = client.get_mesh()
-        bands = wifi_bands(mesh.links) if mesh else {}
-        known = {b: sum(1 for x in bands.values() if x == b) for b in set(bands.values())}
-        lines += ["== Wi-Fi bands ==", f"devices on Wi-Fi by the mesh: {known}"]
+        master = mesh.master.mac if mesh and mesh.master else None
+        everyone = wifi_bands(mesh.links) if mesh else {}
+        bands = wifi_bands(mesh.links, master) if mesh else {}
+
+        def tally(found):
+            return {b: sum(1 for x in found.values() if x == b) for b in set(found.values())}
+
+        lines += [
+            "== Wi-Fi bands ==",
+            f"devices on Wi-Fi by the mesh, all: {tally(everyone)}",
+            f"devices on Wi-Fi at the box itself (not behind a repeater): {tally(bands)}",
+        ]
         with tempfile.TemporaryDirectory() as tmp:
             for iface in ("1-vap0", "1-vap1"):
                 path = Path(tmp) / f"{iface}.pcap"
