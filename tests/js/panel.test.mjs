@@ -524,7 +524,6 @@ test("the internet page shows the connection, the load, the line and the events"
   assert.match(html, /203\.0\.113\.7/);
   assert.match(html, /2001:db8:1::\/56/);
   assert.match(html, /198\.51\.100\.1/);
-  assert.match(html, /\+2 more/);
   assert.match(html, /38\.2 Mbit\/s/);
   assert.match(html, /of 56\.3 Mbit\/s line rate/);
   assert.match(html, /18 h 10 min/);
@@ -536,9 +535,27 @@ test("the internet page shows the connection, the load, the line and the events"
   // every DNS server is listed, and the addresses that were in use before
   assert.match(html, /<code>198\.51\.100\.2<\/code>/);
   assert.match(html, /<code>2001:db8::53<\/code>/);
-  assert.match(html, /Earlier addresses/);
+  assert.match(html, /Address history/);
   assert.match(html, /<code>203\.0\.113\.7<\/code>/);
-  assert.match(html, /in use/);
+  assert.match(html, /<span class="badge">current<\/span>/);
+});
+
+test("the address history is one row per dial-in, the kinds that changed together side by side", () => {
+  const rows = internetPage.addressRows({
+    ipv4: [
+      { value: "2.2.2.2", since: "2026-11-04T01:00:05Z", until: null },
+      { value: "1.1.1.1", since: "2026-11-03T01:00:02Z", until: "2026-11-04T01:00:05Z" },
+    ],
+    ipv6: [
+      { value: "b::1", since: "2026-11-04T01:00:09Z", until: null },
+      { value: "a::1", since: "2026-11-03T01:00:00Z", until: "2026-11-04T01:00:09Z" },
+    ],
+  });
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].ipv4.value, "2.2.2.2");
+  assert.equal(rows[0].ipv6.value, "b::1");
+  assert.equal(rows[1].ipv4.value, "1.1.1.1");
+  assert.equal(rows[1].ipv6.value, "a::1");
 });
 
 test("without a line, a rate or a history the page still draws and says what is missing", () => {
@@ -550,7 +567,7 @@ test("without a line, a rate or a history the page still draws and says what is 
   assert.match(html, /nach der nächsten/);
   assert.match(html, /Der Verlauf erscheint/);
   assert.match(html, /Noch nichts vermerkt/);
-  assert.match(html, /Noch keine frühere Adresse/);
+  assert.match(html, /Noch kein Wechsel/);
   assert.match(internetPage.renderInternet(null, { t, language: "de", now: 0 }), /meldet ihre Internetverbindung nicht/);
 });
 

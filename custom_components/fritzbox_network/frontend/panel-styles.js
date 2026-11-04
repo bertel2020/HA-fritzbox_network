@@ -491,6 +491,23 @@ export const PANEL_CSS = `
   .addrs li:first-child { border-top: 0; }
   .addrs code { overflow-wrap: anywhere; }
   .addrs small { color: var(--muted); text-align: right; flex: none; }
+  .dnstile { margin-top: 8px; }
+  .dnstile .tlabel { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .dnslist { list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); grid-template-rows: repeat(2, auto); gap: 2px 24px; font-size: 13px; }
+  .dnslist code { overflow-wrap: anywhere; }
+  .addrtable { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 13px; margin-top: 8px; }
+  .addrtable th { text-align: left; font-weight: 400; font-size: 12px; color: var(--muted); padding: 0 8px 8px 0; }
+  .addrtable td { padding: 10px 8px 10px 0; border-top: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+  .addrtable .when small { display: block; color: var(--muted); }
+  .addrtable .badge { margin-left: 6px; font-size: 11px; padding: 1px 6px; border-radius: 4px; background: var(--accent-soft, var(--soft)); color: var(--accent, inherit); }
+  .addrtable tr.now td { background: var(--soft); }
+  @media (max-width: 640px) {
+    .addrtable thead { display: none; }
+    .addrtable, .addrtable tbody, .addrtable tr, .addrtable td { display: block; }
+    .addrtable tr { border-top: 1px solid var(--line); padding: 8px 0; }
+    .addrtable td { border: 0; padding: 2px 8px; background: none !important; }
+    .addrtable td[data-label]::before { content: attr(data-label); display: block; font-size: 11px; color: var(--muted); }
+  }
   .events { list-style: none; margin: 0; padding: 0; font-size: 13px; }
   .events li { display: flex; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); }
   .events li:first-child { border-top: 0; }

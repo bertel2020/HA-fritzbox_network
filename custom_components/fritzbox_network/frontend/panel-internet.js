@@ -245,40 +245,49 @@ function volumeCard(ctx) {
     <p class="hint">${escapeHtml(i.topHint)}</p></section>`;
 }
 
-/** The DNS servers of the box, the IPv4 ones first, then the IPv6 ones, as the box lists them. */
-function dnsList(servers, t) {
+/** The DNS servers of the box as a tile under the connection: the IPv4 ones left, the IPv6 ones right. */
+function dnsTile(servers, t) {
   if (!servers?.length) return "";
   const items = servers.map((server) => `<li><code>${escapeHtml(server)}</code></li>`).join("");
-  return `<div class="subhead">${escapeHtml(t.inet.dnsList)}</div><ul class="addrs">${items}</ul>`;
+  return `<div class="tile dnstile"><span class="tlabel">${escapeHtml(t.inet.dns)}</span><ul class="dnslist">${items}</ul><small>${escapeHtml(t.inet.dnsNote)}</small></div>`;
 }
 
-/** The addresses that were in use, per kind, the newest first; the one in use now is marked. */
+const SAME_DIAL_MS = 10 * 60 * 1000;
+const KINDS = ["ipv4", "ipv6", "prefix"];
+
+/** The periods of all kinds as one row per dial-in: they change together, so their starts lie close. */
+export function addressRows(addresses) {
+  const periods = KINDS.flatMap((kind) => (addresses?.[kind] ?? []).map((p) => ({ ...p, kind, at: Date.parse(p.since) })))
+    .filter((p) => !Number.isNaN(p.at))
+    .sort((a, b) => a.at - b.at);
+  const rows = [];
+  for (const p of periods) {
+    const row = rows[rows.length - 1];
+    if (row && p.at - row.at < SAME_DIAL_MS && !row[p.kind]) row[p.kind] = p;
+    else rows.push({ at: p.at, [p.kind]: p });
+  }
+  return rows.reverse();
+}
+
+/** One table of the addresses that were in use, the newest dial-in first; the one in use now is marked. */
 function addressHistory(addresses, language, t) {
   const i = t.inet;
-  const day = (iso) => new Date(iso).toLocaleDateString(language, { day: "numeric", month: "short", year: "numeric" });
-  const groups = ["ipv4", "ipv6", "prefix"]
-    .filter((kind) => addresses?.[kind]?.length)
-    .map((kind) => {
-      const rows = addresses[kind]
-        .map(
-          (a) =>
-            `<li><code>${escapeHtml(a.value)}</code><small>${escapeHtml(a.until ? fill(i.addressRange, { from: day(a.since), to: day(a.until) }) : `${day(a.since)} · ${i.addressNow}`)}</small></li>`
-        )
-        .join("");
-      return `<div class="subhead">${escapeHtml(i.addressKinds[kind])}</div><ul class="addrs">${rows}</ul>`;
+  const day = (ms) => new Date(ms).toLocaleDateString(language, { day: "numeric", month: "short" });
+  const rows = addressRows(addresses);
+  const head = `<div class="trendhead"><span class="label">${escapeHtml(i.addressHistory)}</span></div>`;
+  if (rows.length < 2) return `<section class="card sec">${head}<p class="hint">${escapeHtml(i.addressNone)}</p><p class="hint">${escapeHtml(i.addressHint)}</p></section>`;
+  const body = rows
+    .map((row, n) => {
+      const current = KINDS.some((kind) => row[kind] && !row[kind].until);
+      const until = KINDS.map((kind) => row[kind]?.until).find(Boolean);
+      const when = `${escapeHtml(day(row.at))}${current ? `<span class="badge">${escapeHtml(i.addressNow)}</span>` : until ? `<small>${escapeHtml(fill(i.addressUntil, { to: day(Date.parse(until)) }))}</small>` : ""}`;
+      const cells = KINDS.map((kind) => `<td data-label="${escapeHtml(i.addressKinds[kind])}"><code>${escapeHtml(row[kind]?.value ?? "–")}</code></td>`).join("");
+      return `<tr class="${current ? "now" : ""}"><td class="when">${when}</td>${cells}</tr>`;
     })
     .join("");
-  // one address per kind is the one in use: only a second one is history
-  const earlier = Object.values(addresses ?? {}).some((list) => list.length > 1);
-  return `<div class="trendhead"><span class="label">${escapeHtml(i.addressHistory)}</span></div>
-    ${groups && earlier ? groups : `<p class="hint">${escapeHtml(i.addressNone)}</p>`}`;
-}
-
-function addressesCard(internet, language, t) {
-  return `<section class="card sec"><span class="label">${escapeHtml(t.inet.addressesTitle)}</span>
-    ${dnsList(internet.dns, t)}
-    ${addressHistory(internet.addresses, language, t)}
-    <p class="hint">${escapeHtml(t.inet.addressHint)}</p></section>`;
+  return `<section class="card sec">${head}
+    <table class="addrtable"><thead><tr><th>${escapeHtml(i.addressSince)}</th>${KINDS.map((kind) => `<th>${escapeHtml(i.addressKinds[kind])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>
+    <p class="hint">${escapeHtml(i.addressHint)}</p></section>`;
 }
 
 function events(internet, t, now) {
@@ -395,9 +404,6 @@ export function renderInternet(internet, ctx) {
   ]
     .filter(Boolean)
     .join(" · ");
-  const dns = internet.dns?.length
-    ? [internet.dns[0], internet.dns.length > 1 ? fill(i.more, { n: internet.dns.length - 1 }) : ""].filter(Boolean)
-    : null;
   const prefix = internet.ipv6_prefix ? `${internet.ipv6_prefix}/${internet.ipv6_prefix_length ?? ""}`.replace(/\/$/, "") : "–";
   const rate = internet.throughput;
   return `${back}
@@ -409,9 +415,9 @@ export function renderInternet(internet, ctx) {
       <div class="tiles">
         ${tile(i.ipv4, internet.external_ipv4 ?? "–")}
         ${tile(i.ipv6, prefix)}
-        ${tile(i.dns, dns?.[0] ?? "–", dns?.[1] ?? "")}
         ${tile(i.lastError, internet.last_error && internet.last_error !== "ERROR_NONE" ? internet.last_error : i.noError)}
-      </div></section>
+      </div>
+      ${dnsTile(internet.dns, t)}</section>
     <div class="two">
     <section class="card sec"><span class="label">${escapeHtml(i.load)}</span>
       <div class="live"><div class="dn"><span class="gl">↓ ${escapeHtml(i.down)}</span><b>${escapeHtml(formatRate(rate?.down ?? null, language))}</b></div>
@@ -423,7 +429,7 @@ export function renderInternet(internet, ctx) {
     ${volumeCard({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}
     </div>
     ${internet.dsl ? lineQuality(internet.dsl, language, t) : ""}
-    ${addressesCard(internet, language, t)}
+    ${addressHistory(internet.addresses, language, t)}
     ${events(internet, t, now)}
     ${ports(portState, t)}
     ${actions(canWrite, t)}`;
