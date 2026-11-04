@@ -94,9 +94,10 @@ export function renderCapture(capture, ctx) {
       <label class="field"><span class="label">${escapeHtml(c.seconds)}</span><input type="number" id="cap-sec" min="${lim.min_seconds}" max="${lim.max_seconds}" value="${escapeHtml(form.seconds)}"${off} /></label>
       <label class="field"><span class="label">${escapeHtml(c.size)}</span><input type="number" id="cap-mb" min="1" max="${lim.max_mb}" value="${escapeHtml(form.mb)}"${off} /></label>
       <button class="btn p" data-act="cap-start"${busy ? " disabled" : ""}>${escapeHtml(c.start)}</button></div>`;
-  const files = capture.files.length
+  const list = capture.files.length
     ? `<ul class="ports capfiles">${capture.files.map((f) => fileLine(f, t, language, clients, capture.interfaces)).join("")}</ul>`
     : `<p class="hint">${escapeHtml(c.none)}</p>`;
+  const files = `<div class="capexisting"><span class="label">${escapeHtml(fill(c.existing, { n: capture.files.length }))}</span>${list}</div>`;
   return `<section class="card sec"><span class="label">${escapeHtml(c.title)}</span>
     ${controls}
     ${busy ? running(job, t, language) : result(job, t, language)}

@@ -1108,6 +1108,8 @@ test("the capture card offers the interfaces, locks the form while recording and
   assert.match(idle, /<option value="2-1">1\. Internetverbindung \(2-1\)/);
   assert.equal(capture.defaultInterface(status.interfaces), "1-lan");
   assert.match(idle, /data-act="cap-dl" data-name="1lan_20261104-101500.pcap"/);
+  assert.match(idle, /Vorhandene Mitschnitte \(1\)/);
+  assert.match(capture.renderCapture({ ...status, files: [] }, ctx), /Vorhandene Mitschnitte \(0\)[\s\S]*Noch keine Aufzeichnungen/);
   assert.doesNotMatch(idle, /disabled/);
 
   const busy = capture.renderCapture({ ...status, job: { state: "running", seconds: 60, elapsed: 12, bytes: 1000000 } }, ctx);
