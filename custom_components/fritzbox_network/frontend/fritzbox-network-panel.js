@@ -28,7 +28,7 @@ import {
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
-import { BLOCK_COLORS, addressModel, checkBlock, emptyOwn, groupPreview, parseRange, poolChange, renderAddresses } from "./panel-addresses.js";
+import { BLOCK_COLORS, ENTRY_KINDS, addressModel, checkBlock, checkEntry, emptyOwn, entryPreview, groupPreview, normalizeOwn, parseRange, poolChange, renderAddresses } from "./panel-addresses.js";
 import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
@@ -150,7 +150,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       pageSize: rememberedPageSize(),
       history: null,
       ip: null,
-      addr: { status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", groupsOpen: false, groupDraft: null, progress: null, exportOpts: { free: false, mac: true, map: true, poolNames: true } },
+      addr: { status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", groupsOpen: false, groupDraft: null, entryOpen: false, entryDraft: null, entryMessage: "", progress: null, exportOpts: { free: false, mac: true, map: true, poolNames: true } },
       traffic: null,
       trafficRange: 7,
       trend: null,
@@ -196,9 +196,10 @@ class FritzboxNetworkPanel extends HTMLElement {
     this.shadowRoot.addEventListener("change", (event) => this._onChange(event));
     this.shadowRoot.addEventListener("keydown", (event) => this._onKey(event));
     this.shadowRoot.addEventListener("submit", (event) => {
-      if (event.target.id !== "a-blockform" && event.target.id !== "a-poolform") return;
+      if (!["a-blockform", "a-poolform", "a-entryform"].includes(event.target.id)) return;
       event.preventDefault();
       if (event.target.id === "a-poolform") this._applyPool();
+      else if (event.target.id === "a-entryform") this._onEntryForm(event.target);
       else this._onAddressForm(event.target);
     });
     this.shadowRoot.addEventListener("pointermove", (event) => this._onPlot(event));
@@ -730,7 +731,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const root = this.shadowRoot;
     const active = root.activeElement;
     // typing a note or a name: the page is drawn again when the field is left, not under the fingers
-    if (active && root.querySelector("#addresses-view")?.contains(active) && active.matches("textarea, [data-aown], #a-bn, #a-br, #a-pf, #a-pt")) return;
+    if (active && root.querySelector("#addresses-view")?.contains(active) && active.matches("textarea, [data-aown], #a-bn, #a-br, #a-en, #a-er, #a-eno, #a-pf, #a-pt")) return;
     this._set(
       "addresses-view",
       renderAddresses({
@@ -758,7 +759,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     try {
       const result = await this._ws("address/overview");
       addr.network = result.network;
-      addr.own = { ...emptyOwn(), ...(result.own ?? {}) };
+      addr.own = normalizeOwn(result.own);
       addr.status = "ready";
     } catch {
       addr.status = "failed";
@@ -811,12 +812,70 @@ class FritzboxNetworkPanel extends HTMLElement {
     this.shadowRoot.querySelector('[data-agroups="open"]')?.focus();
   }
 
+  /** Closes the dialog of the manual entry and gives the focus back to the button that opened it. */
+  _closeEntry() {
+    const addr = this._state.addr;
+    addr.entryOpen = false;
+    addr.entryMessage = "";
+    addr.entryDraft = null;
+    this._leaveField();
+    this._renderAddresses();
+    this.shadowRoot.querySelector('[data-aentry="new"]')?.focus();
+  }
+
+  /** The entry form as typed so far, kept so that a redraw does not lose it; the line under the fields follows. */
+  _onEntryInput(el) {
+    const addr = this._state.addr;
+    const data = new FormData(el.closest("form"));
+    addr.entryDraft = {
+      id: data.get("id") ? Number(data.get("id")) : null,
+      kind: data.get("kind") ?? "hold",
+      name: String(data.get("name") ?? ""),
+      range: String(data.get("range") ?? ""),
+      note: String(data.get("note") ?? ""),
+    };
+    const m = this._addressModel();
+    const line = this.shadowRoot.querySelector("#a-eprev");
+    if (!m || !line) return;
+    const preview = entryPreview(m, addr.own ?? emptyOwn(), addr.entryDraft, this._t.addr);
+    line.textContent = preview.text || this._t.addr.entries.rangeHint;
+    line.classList.toggle("ok", preview.ok);
+  }
+
+  /** The entry form was sent: a new entry or the changes of one. */
+  _onEntryForm(form) {
+    const addr = this._state.addr;
+    const own = addr.own ?? emptyOwn();
+    const data = new FormData(form);
+    const id = data.get("id") ? Number(data.get("id")) : null;
+    const range = parseRange(String(data.get("range") ?? ""));
+    const entry = { id, kind: data.get("kind"), ...(range ?? { from: NaN, to: NaN }) };
+    const problem = checkEntry(own, entry);
+    addr.entryDraft = { id, kind: entry.kind, name: String(data.get("name") ?? ""), range: String(data.get("range") ?? ""), note: String(data.get("note") ?? "") };
+    if (problem) {
+      addr.entryMessage = fill(this._t.addr.entries[problem.key], problem.values ?? {});
+      this._leaveField();
+      this._renderAddresses();
+      return;
+    }
+    const saved = { id: id ?? Date.now(), name: String(data.get("name") ?? "").trim(), from: entry.from, to: entry.to, kind: ENTRY_KINDS.includes(entry.kind) ? entry.kind : "hold", note: String(data.get("note") ?? "").trim() };
+    own.entries = id ? own.entries.map((x) => (x.id === id ? saved : x)) : [...own.entries, saved];
+    addr.own = own;
+    this._saveOwn();
+    addr.entryOpen = false;
+    addr.entryDraft = null;
+    addr.entryMessage = "";
+    this._leaveField();
+    this._update();
+    this.shadowRoot.querySelector('[data-aentry="new"]')?.focus();
+  }
+
   /** What is typed in the form of a group, kept so that a redraw does not lose it; the line under the fields follows. */
   _onGroupInput(el) {
     const addr = this._state.addr;
     const form = el.closest("form");
     const data = new FormData(form);
-    addr.groupDraft = { name: String(data.get("name") ?? ""), range: String(data.get("range") ?? ""), color: data.get("color") ?? BLOCK_COLORS[0] };
+    addr.groupDraft = { id: data.get("id") ? Number(data.get("id")) : null, name: String(data.get("name") ?? ""), range: String(data.get("range") ?? ""), color: data.get("color") ?? BLOCK_COLORS[0] };
     const m = this._addressModel();
     const line = this.shadowRoot.querySelector("#a-bprev");
     if (!m || !line) return;
@@ -860,12 +919,41 @@ class FritzboxNetworkPanel extends HTMLElement {
     } else if (ds.agroups === "close") {
       this._closeGroups();
       return true;
+    } else if (ds.agroups === "cancel") {
+      addr.groupDraft = null;
+      addr.blockMessage = "";
+      this._renderAddresses();
+      return true;
+    } else if (ds.agedit) {
+      const b = own.blocks.find((x) => String(x.id) === ds.agedit);
+      if (b) {
+        addr.groupDraft = { id: b.id, name: b.name, range: b.from === b.to ? `.${b.from}` : `.${b.from}-.${b.to}`, color: b.color };
+        addr.blockMessage = "";
+        this._leaveField();
+        this._renderAddresses();
+        this.shadowRoot.querySelector("#a-bn")?.focus();
+      }
+      return true;
+    } else if (ds.aentry === "new" || ds.aentry === "edit") {
+      const e = ds.aentry === "edit" ? own.entries.find((x) => String(x.id) === ds.aid) : null;
+      const at = ds.an !== undefined ? `.${ds.an}` : "";
+      addr.entryDraft = e
+        ? { id: e.id, kind: e.kind, name: e.name, range: e.from === e.to ? `.${e.from}` : `.${e.from}-.${e.to}`, note: e.note ?? "" }
+        : { id: null, kind: "hold", name: "", range: at, note: "" };
+      addr.entryOpen = true;
+      addr.entryMessage = "";
+      addr.own = own;
+      this._renderAddresses();
+      this.shadowRoot.querySelector("#a-en")?.focus();
+      return true;
+    } else if (ds.aentry === "close") {
+      this._closeEntry();
+      return true;
+    } else if (ds.aentry === "del") {
+      own.entries = own.entries.filter((x) => String(x.id) !== ds.aid);
+      this._saveOwn();
     } else if (ds.adel) {
       own.blocks = own.blocks.filter((b) => String(b.id) !== ds.adel);
-      this._saveOwn();
-    } else if (ds.amark) {
-      const ip = `${this._addressBase()}${ds.amark}`;
-      own.marks = own.marks.includes(ip) ? own.marks.filter((m) => m !== ip) : [...own.marks, ip];
       this._saveOwn();
     } else return false;
     addr.own = own;
@@ -998,14 +1086,16 @@ class FritzboxNetworkPanel extends HTMLElement {
     const data = new FormData(form);
     const name = String(data.get("name") ?? "").trim();
     const range = parseRange(String(data.get("range") ?? ""));
+    const id = data.get("id") ? Number(data.get("id")) : null;
     const block = { name, ...(range ?? { from: NaN, to: NaN }) };
-    const problem = checkBlock(own, block);
+    const problem = checkBlock(own, { ...block, id });
     if (problem) {
       addr.blockMessage = fill(this._t.addr.groups[problem.key], problem.values ?? {});
-      addr.groupDraft = { name: String(data.get("name") ?? ""), range: String(data.get("range") ?? ""), color: data.get("color") ?? BLOCK_COLORS[0] };
+      addr.groupDraft = { id, name: String(data.get("name") ?? ""), range: String(data.get("range") ?? ""), color: data.get("color") ?? BLOCK_COLORS[0] };
     } else {
       const color = BLOCK_COLORS.includes(data.get("color")) ? data.get("color") : BLOCK_COLORS[0];
-      own.blocks.push({ id: Date.now(), ...block, color });
+      if (id) own.blocks = own.blocks.map((b) => (b.id === id ? { id, ...block, color } : b));
+      else own.blocks.push({ id: Date.now(), ...block, color });
       addr.own = own;
       addr.blockMessage = "";
       addr.groupDraft = null;
@@ -1146,6 +1236,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const root = this.shadowRoot;
     const state = this._state;
     if (root.querySelector("#backdrop")?.classList.contains("open")) return;
+    if (event.key === "Escape" && state.addr?.entryOpen) return this._closeEntry();
     if (event.key === "Escape" && state.addr?.groupsOpen) return this._closeGroups();
     const target = event.target;
     const menu = root.querySelector("#fmenu");
@@ -1236,6 +1327,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const el = event.target;
     if (el.dataset?.aown) return this._onAddressOwn(el);
     if (el.name === "color" && el.closest("#a-blockform")) return this._onGroupInput(el);
+    if (el.name === "kind" && el.closest("#a-entryform")) return this._onEntryInput(el);
     if (el.dataset?.aopt) {
       this._state.addr.exportOpts = { ...this._state.addr.exportOpts, [el.dataset.aopt]: el.checked };
       return this._update();
@@ -1279,6 +1371,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       box?.setSelectionRange?.(el.value.length, el.value.length);
     } else if (el.id === "a-bn" || el.id === "a-br") {
       this._onGroupInput(el);
+    } else if (el.id === "a-en" || el.id === "a-er" || el.id === "a-eno") {
+      this._onEntryInput(el);
     } else if (el.id === "c-search") {
       this._state.cleanupQuery = el.value;
       this._renderCleanup();
@@ -1291,6 +1385,7 @@ class FritzboxNetworkPanel extends HTMLElement {
   _onClick(event) {
     const t = this._t;
     if (event.target.id === "a-groups") return this._closeGroups();
+    if (event.target.id === "a-entries") return this._closeEntry();
     const target = event.target.closest("button, a[data-act], [data-filter], [data-ap], [data-dev], [data-act], [data-aip]");
     if (!target || target.disabled) return;
     const ds = target.dataset;

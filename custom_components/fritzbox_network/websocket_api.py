@@ -71,6 +71,7 @@ FILTER_OPTIONS_SCHEMA = vol.Schema(
 )
 
 BLOCK_COLORS = ["--b1", "--b2", "--b3", "--b4", "--b5"]
+ENTRY_KINDS = ["plan", "hold", "ext"]
 
 
 def _ipv4(value: Any) -> str:
@@ -90,7 +91,7 @@ OWN_ADDRESSES_SCHEMA = vol.Schema(
         vol.Required("names"): vol.All(
             {_mac: vol.All(str, vol.Length(max=60))}, vol.Length(max=500)
         ),
-        vol.Required("marks"): vol.All([_ipv4], vol.Length(max=500)),
+        vol.Optional("marks", default=[]): vol.All([_ipv4], vol.Length(max=500)),
         vol.Required("muted"): vol.All([vol.All(str, vol.Length(max=60))], vol.Length(max=100)),
         vol.Required("blocks"): vol.All(
             [
@@ -103,6 +104,19 @@ OWN_ADDRESSES_SCHEMA = vol.Schema(
                 }
             ],
             vol.Length(max=50),
+        ),
+        vol.Optional("entries", default=[]): vol.All(
+            [
+                {
+                    vol.Required("id"): int,
+                    vol.Required("name"): vol.All(str, vol.Length(max=40)),
+                    vol.Required("from"): _OCTET,
+                    vol.Required("to"): _OCTET,
+                    vol.Required("kind"): vol.In(ENTRY_KINDS),
+                    vol.Optional("note", default=""): vol.All(str, vol.Length(max=300)),
+                }
+            ],
+            vol.Length(max=200),
         ),
     }
 )
@@ -576,7 +590,7 @@ async def ws_address_fixed(
 def ws_address_save(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """Keep the notes, names, plans and blocks of the user; nothing is written to the box."""
+    """Keep the notes, names, entries and groups of the user; nothing is written to the box."""
     if (found := _loaded_coordinator(hass, connection, msg)) is None:
         return
     if found[1].addresses is None:

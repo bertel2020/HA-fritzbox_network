@@ -632,6 +632,8 @@ export const PANEL_CSS = `
   .cell[data-s="box"] { background: var(--ok); color: #fff; }
   .cell[data-s="res"] { background: var(--warn-soft); color: var(--warn); box-shadow: inset 0 0 0 1px var(--warn); }
   .cell[data-s="na"] { background: repeating-linear-gradient(45deg, var(--free), var(--free) 3px, transparent 3px, transparent 6px); opacity: .6; cursor: default; }
+  .cell[data-s="hold"] { background: repeating-linear-gradient(45deg, var(--warn-soft) 0 3px, transparent 3px 6px); color: var(--warn); box-shadow: inset 0 0 0 1px var(--warn); }
+  .cell[data-s="ext"] { background: transparent; color: var(--muted); box-shadow: inset 0 0 0 2px var(--muted); }
   .cell[data-s="plan"] { background: transparent; color: var(--ok); border: 2px dashed var(--ok); }
   .cell.pool[data-s="free"] { background: var(--accent-soft); }
   .cell.warn::after { content: "!"; position: absolute; top: -5px; right: -3px; width: 14px; height: 14px; border-radius: 50%; background: var(--bad); color: #fff; font-size: 10px; font-weight: 700; display: grid; place-items: center; font-family: system-ui; }
@@ -692,6 +694,20 @@ export const PANEL_CSS = `
   .agroup .gname b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .agroup .gname small { display: block; color: var(--muted); font-size: 12px; }
   .agroup .mono { white-space: nowrap; font-size: 13px; }
+  .kinds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 6px 0 14px; }
+  .kind { position: relative; display: flex; gap: 10px; align-items: flex-start; padding: 10px; border: 1px solid var(--input-line); border-radius: 10px; cursor: pointer; background: var(--surface); }
+  .kind input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+  .kind:has(input:checked) { border: 2px solid var(--accent); padding: 9px; background: var(--accent-soft); }
+  .kind:has(input:focus-visible) { outline: 3px solid var(--focus); outline-offset: 2px; }
+  .kind b { display: block; font-weight: 500; font-size: 13px; }
+  .kind small { display: block; color: var(--muted); font-size: 12px; }
+  .ks { width: 16px; height: 16px; border-radius: 4px; flex: none; margin-top: 2px; }
+  .ks.plan { border: 2px dashed var(--ok); }
+  .ks.hold { background: repeating-linear-gradient(45deg, var(--warn) 0 3px, transparent 3px 6px); border: 1px solid var(--warn); }
+  .ks.ext { border: 2px solid var(--muted); background: radial-gradient(circle, var(--muted) 2px, transparent 2.5px); }
+  .entryform { border-top: 0; margin-top: 12px; padding-top: 0; }
+  .entryinfo { margin: 12px 0; padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); display: grid; gap: 6px; }
+  @media (max-width: 520px) { .kinds { grid-template-columns: 1fr; } }
   .gnone { margin: 14px 0 4px; }
   .groupform { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 14px; }
   .groupform h3 { font-size: 15px; font-weight: 500; margin: 0 0 10px; }

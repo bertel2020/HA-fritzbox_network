@@ -97,11 +97,20 @@ async def test_what_the_user_notes_is_kept_and_checked(hass, hass_ws_client, fak
     again = (await _call(client, OVERVIEW, entry_id=entry.entry_id))["result"]
     assert again["own"]["blocks"][0]["name"] == "Kameras"
 
+    entry_row = {"id": 2, "name": "Besucher", "from": 200, "to": 210, "kind": "hold", "note": "Gäste"}
+    saved = await _call(client, SAVE, entry_id=entry.entry_id, own={**own, "entries": [entry_row]})
+    assert saved["success"] is True
+    assert coordinator.addresses.data["entries"] == [entry_row]
+    # older data without entries and without marks is still taken
+    assert (await _call(client, SAVE, entry_id=entry.entry_id, own={k: v for k, v in own.items() if k != "marks"}))["success"] is True
+
     for bad in (
         {**own, "notes": {"not an ip": "x"}},
         {**own, "blocks": [{"id": 1, "name": "x", "from": 0, "to": 5, "color": "--b1"}]},
         {**own, "blocks": [{"id": 1, "name": "x", "from": 1, "to": 5, "color": "red"}]},
         {**own, "notes": {"192.168.178.5": "x" * 301}},
+        {**own, "entries": [{**entry_row, "kind": "other"}]},
+        {**own, "entries": [{**entry_row, "from": 0}]},
     ):
         refused = await _call(client, SAVE, entry_id=entry.entry_id, own=bad)
         assert refused["success"] is False

@@ -839,7 +839,7 @@ const lan = {
     { id: "d5", mac: "M5", ip: "192.168.79.1", name: "box", online: true },
   ],
   fixed: { M1: { fixed: true }, M2: { fixed: true }, M3: { fixed: false }, M4: { fixed: true }, M5: null },
-  own: { notes: {}, names: {}, marks: ["192.168.79.45"], muted: [], blocks: [] },
+  own: { notes: {}, names: {}, marks: [], muted: [], blocks: [], entries: [{ id: 1, name: "Neu", from: 45, to: 45, kind: "plan", note: "" }] },
 };
 
 test("masks and addresses are read as numbers", () => {
@@ -886,6 +886,43 @@ test("the hints name what stands out, the worst first", () => {
   assert.ok(ids.includes("pool-usage"));
   assert.ok(!ids.includes("fixed-unknown"));
   assert.ok(addresses.addressHints(m, { fixedKnown: false }).some((h) => h.id === "fixed-unknown"));
+});
+
+test("manual entries show as their own states, a reserved one under a device is a conflict", () => {
+  const own = {
+    ...lan.own,
+    entries: [
+      { id: 1, name: "Besucher", from: 200, to: 202, kind: "hold", note: "" },
+      { id: 2, name: "Switch", from: 55, to: 55, kind: "ext", note: "Keller" },
+      { id: 3, name: "Drucker", from: 150, to: 150, kind: "hold", note: "" },
+    ],
+  };
+  const m = addresses.addressModel({ ...lan, own });
+  assert.equal(m.cells[201].state, "hold");
+  assert.equal(m.cells[55].state, "ext");
+  assert.equal(m.cells[55].entry.note, "Keller");
+  // the device wins on the map, the entry stays on the cell and is a hint
+  assert.equal(m.cells[150].device.name, "Wallbox");
+  assert.equal(m.cells[150].entry.name, "Drucker");
+  const hint = addresses.addressHints(m, { fixedKnown: true }).find((h) => h.id === "entry:150");
+  assert.equal(hint.key, "entryConflict");
+  assert.equal(m.free, m.usable - m.used - m.reservedFree);
+  assert.ok(m.reservedFree >= 4);
+});
+
+test("older marks become planned entries and entries may not overlap", () => {
+  const own = addresses.normalizeOwn({ notes: {}, names: {}, marks: ["192.168.79.45", "192.168.79.46"], muted: [], blocks: [], entries: [{ id: 5, name: "x", from: 46, to: 46, kind: "hold", note: "" }] });
+  assert.deepEqual(own.marks, []);
+  assert.equal(own.entries.length, 2);
+  assert.equal(own.entries.find((e) => e.from === 45).kind, "plan");
+  assert.equal(addresses.checkEntry(own, { from: 100, to: 110, kind: "hold" }), null);
+  assert.equal(addresses.checkEntry(own, { from: 46, to: 50, kind: "hold" }).key, "errOverlap");
+  assert.equal(addresses.checkEntry(own, { from: 46, to: 46, kind: "hold", id: 5 }), null);
+  assert.equal(addresses.checkEntry(own, { from: 1, to: 2, kind: "nope" }).key, "errRange");
+  const a = texts.panelTexts("de").addr;
+  const m = addresses.addressModel({ ...lan, own });
+  assert.match(addresses.entryPreview(m, own, { kind: "hold", range: ".200-.210" }, a).text, /11 Adressen, .*Alle frei/);
+  assert.match(addresses.entryPreview(m, own, { kind: "hold", range: ".148-.152" }, a).text, /davon sind von Geräten belegt/);
 });
 
 test("an address group is typed as one address or a range, with or without the network", () => {
@@ -1006,7 +1043,7 @@ test("the JSON keeps the network, the numbers and what the user noted", () => {
   assert.equal(json.summary.used, 5);
   assert.equal(json.addresses[1].address, "192.168.79.10");
   assert.equal("mac" in json.addresses[1], false);
-  assert.deepEqual(json.own.planned, ["192.168.79.45"]);
+  assert.deepEqual(json.own.entries, [{ id: 1, name: "Neu", from: 45, to: 45, kind: "plan", note: "" }]);
   assert.equal(json.generated, "2026-11-02T10:00:00.000Z");
 });
 

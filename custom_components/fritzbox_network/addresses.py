@@ -1,4 +1,4 @@
-"""What the user notes about the address space: notes, own names, plans and blocks."""
+"""What the user notes about the address space: notes, own names, entries and groups."""
 
 from __future__ import annotations
 
@@ -14,14 +14,16 @@ STORAGE_VERSION = 1
 
 def empty_notes() -> dict[str, Any]:
     """Nothing noted yet."""
-    return {"notes": {}, "names": {}, "marks": [], "muted": [], "blocks": []}
+    return {"notes": {}, "names": {}, "marks": [], "muted": [], "blocks": [], "entries": []}
 
 
 class AddressNotes:
     """The own data of the address page, kept over restarts; it never touches the box.
 
-    notes: {ip: text}, names: {mac: display name}, marks: [ips planned], muted: [ids of the
-    hints the user switched off], blocks: [{id, name, from, to, color}] as last octets.
+    notes: {ip: text}, names: {mac: display name}, marks: [ips planned; older data, the panel turns
+    them into entries], muted: [ids of the hints the user switched off], blocks: [{id, name, from,
+    to, color}] the address groups, entries: [{id, name, from, to, kind, note}] the manual entries,
+    all as last octets.
     """
 
     def __init__(self, store: Store, data: dict[str, Any]) -> None:

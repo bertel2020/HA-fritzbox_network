@@ -40,13 +40,13 @@ export function addressRows(m, own, t, { free = false } = {}) {
     const d = cell.device;
     if (!d && cell.state === "free" && !free) continue;
     const ip = `${m.baseText}${cell.n}`;
-    const kind = d ? (d.kind === "box" ? "box" : d.kind === "dyn" ? "dynamic" : "fixed") : { res: "reserved", plan: "planned", free: "free" }[cell.state];
+    const kind = d ? (d.kind === "box" ? "box" : d.kind === "dyn" ? "dynamic" : "fixed") : { res: "reserved", plan: "planned", hold: "held", ext: "external", free: "free" }[cell.state];
     rows.push({
       n: cell.n,
       ip,
       kind,
       kindText: a.export.kinds[kind],
-      name: d ? displayName(d, own) : "",
+      name: d ? displayName(d, own) : (cell.entry?.name ?? ""),
       boxName: d && own.names[d.mac] ? d.name : "",
       online: d ? d.online : null,
       vendor: d?.vendor ?? "",
@@ -55,7 +55,7 @@ export function addressRows(m, own, t, { free = false } = {}) {
       lastOnline: d && !d.online ? isoLocal(d.lastOnline) : "",
       block: blockOf(own, cell.n)?.name ?? "",
       area: areaOf(m, cell.n, a),
-      note: own.notes[ip] ?? "",
+      note: [own.notes[ip], cell.entry?.note].filter(Boolean).join(" · "),
     });
   }
   return rows;
@@ -120,7 +120,7 @@ export function toJson(m, own, rows, { mac = true, now = new Date() } = {}) {
       },
       summary: { usable: m.usable, used: m.used, online: m.online, fixed: m.fixed, free: m.free },
       addresses,
-      own: { notes: own.notes, names: mac ? own.names : {}, planned: own.marks, hidden_hints: own.muted, blocks: own.blocks },
+      own: { notes: own.notes, names: mac ? own.names : {}, entries: own.entries, hidden_hints: own.muted, blocks: own.blocks },
     },
     null,
     2
@@ -169,6 +169,8 @@ const PRINT_CSS = `
   .tag.fixed, .tag.box { background: #ece4f8; color: #5b34a0; }
   .tag.reserved { background: #fff1de; color: #8a4b00; }
   .tag.planned { background: #e6f4ea; color: #1e6b34; }
+  .tag.hold { background: #fff1de; color: #8a4b00; }
+  .tag.ext { background: #eef1f4; color: #4b5563; }
   .bar { display: flex; height: 7mm; border: .3mm solid #c9d0d9; border-radius: 1.5mm; overflow: hidden; margin-bottom: 3mm; }
   .bar div { display: grid; place-items: center; font-size: 7.3pt; color: #4b5563; white-space: nowrap; overflow: hidden; }
   .bar .low, .bar .high { background: #ece4f8; color: #5b34a0; }
@@ -185,6 +187,8 @@ const PRINT_CSS = `
   .cell.box { background: #1e6b34; color: #fff; }
   .cell.res { background: #fff1de; border: .4mm dotted #b36a00; color: #8a4b00; }
   .cell.plan { background: #fff; border: .4mm dashed #1e6b34; color: #1e6b34; }
+  .cell.hold { background: repeating-linear-gradient(45deg, #fff1de 0 .7mm, #fff .7mm 1.4mm); border: .4mm solid #b36a00; color: #8a4b00; }
+  .cell.ext { background: #fff; border: .5mm solid #6b7280; color: #4b5563; }
   .cell.na { background: repeating-linear-gradient(45deg, #e5e9ee 0 .6mm, #fff .6mm 1.2mm); }
   .cell.blk { border-bottom: 1.1mm solid var(--bc); }
   .legend { display: flex; flex-wrap: wrap; gap: 1.5mm 5mm; margin-top: 3mm; font-size: 7.3pt; color: #4b5563; }
@@ -212,11 +216,11 @@ function roleOf(cell) {
   const d = cell.device;
   if (cell.state === "na") return "na";
   if (d) return d.kind === "box" ? "box" : d.kind === "fix" ? "fix" : "dyn";
-  if (cell.state === "res" || cell.state === "plan") return cell.state;
+  if (["res", "plan", "hold", "ext"].includes(cell.state)) return cell.state;
   return cell.pool ? "poolfree" : "free";
 }
 
-const MAP_CLASS = { na: "na", box: "box", fix: "fix", dyn: "pool", res: "res", plan: "plan", poolfree: "pool", free: "free" };
+const MAP_CLASS = { na: "na", box: "box", fix: "fix", dyn: "pool", res: "res", plan: "plan", hold: "hold", ext: "ext", poolfree: "pool", free: "free" };
 
 function mapHtml(m, own, t) {
   const a = t.addr;
@@ -233,7 +237,7 @@ function mapHtml(m, own, t) {
   const lg = a.legend;
   const item = (cls, text) => `<span><i class="cell ${cls}"></i>${escapeHtml(text)}</span>`;
   return `<section class="map"><h2>${escapeHtml(a.print.map)}</h2><div class="grid">${cells}</div>
-    <div class="legend">${item("box", lg.box)}${item("fix", a.print.legendFixed)}${item("pool", a.print.legendPool)}${item("free", lg.free)}${item("plan", lg.plan)}${item("res", lg.res)}${item("na", a.states.na)}<span>${escapeHtml(a.print.legendBlock)}</span></div></section>`;
+    <div class="legend">${item("box", lg.box)}${item("fix", a.print.legendFixed)}${item("pool", a.print.legendPool)}${item("free", lg.free)}${item("plan", lg.plan)}${item("res", lg.res)}${item("hold", lg.hold)}${item("ext", lg.ext)}${item("na", a.states.na)}<span>${escapeHtml(a.print.legendBlock)}</span></div></section>`;
 }
 
 function zonesHtml(m, t) {
@@ -277,12 +281,12 @@ function listHtml(m, own, t, { mac, poolNames }) {
     const d = cell.device;
     const blk = blockOf(own, cell.n);
     const shown = d && (d.kind !== "dyn" || poolNames);
-    const name = role === "na" ? `<i>${escapeHtml(cell.n === 0 ? p.netAddress : cell.n === 255 ? p.broadcast : p.unusable)}</i>` : shown ? escapeHtml(displayName(d, own)) : "";
-    const tagText = { box: a.export.kinds.box, fix: a.export.kinds.fixed, dyn: p.roleDhcp, res: a.export.kinds.reserved, plan: a.export.kinds.planned, poolfree: p.roleDhcpFree, free: a.export.kinds.free }[role];
+    const name = role === "na" ? `<i>${escapeHtml(cell.n === 0 ? p.netAddress : cell.n === 255 ? p.broadcast : p.unusable)}</i>` : shown ? escapeHtml(displayName(d, own)) : cell.entry ? escapeHtml(cell.entry.name) : "";
+    const tagText = { box: a.export.kinds.box, fix: a.export.kinds.fixed, dyn: p.roleDhcp, res: a.export.kinds.reserved, plan: a.export.kinds.planned, hold: a.export.kinds.held, ext: a.export.kinds.external, poolfree: p.roleDhcpFree, free: a.export.kinds.free }[role];
     const tag = role === "na" ? "" : role === "free" || role === "poolfree" ? escapeHtml(tagText) : `<span class="tag ${role === "dyn" ? "pool" : role}">${escapeHtml(tagText)}</span>`;
     body += `<tr class="${role === "free" || role === "poolfree" ? "free" : role === "na" ? "na" : role === "dyn" ? "grey" : ""}"><td class="mono">${escapeHtml(ip)}</td><td class="nm">${name}</td><td>${tag}</td>
       <td>${shown ? escapeHtml(d.vendor ?? "") : ""}</td>${mac ? `<td class="mono">${shown ? escapeHtml(d.mac ?? "") : ""}</td>` : ""}
-      <td>${blk ? `<i class="sw" style="background:${BLOCK_HEX[blk.color] ?? "#6b7280"}"></i>${escapeHtml(blk.name)}` : ""}</td><td class="wrap">${escapeHtml(own.notes[ip] ?? "")}</td></tr>`;
+      <td>${blk ? `<i class="sw" style="background:${BLOCK_HEX[blk.color] ?? "#6b7280"}"></i>${escapeHtml(blk.name)}` : ""}</td><td class="wrap">${escapeHtml([own.notes[ip], cell.entry?.note].filter(Boolean).join(" · "))}</td></tr>`;
   }
   const c = a.export.columns;
   return `<section class="list"><h2>${escapeHtml(p.listAll)}${poolNames ? ` <small style="font-weight:400;color:#6b7280">· ${escapeHtml(p.poolNote)}</small>` : ""}</h2>
