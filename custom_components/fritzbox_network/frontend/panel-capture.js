@@ -14,7 +14,7 @@ export function defaultInterface(interfaces) {
 }
 
 /** The name of an interface: a plain one made from its id, the box's own name where the id says nothing. */
-export function interfaceLabel(i, t) {
+export function interfaceName(i, t) {
   const c = t.inet.capture;
   const n = c.names;
   const band = i.band ? (t.bandGroups[i.band] ?? i.band) : "";
@@ -28,7 +28,12 @@ export function interfaceLabel(i, t) {
   else if ((match = /^1-wg(\d+)$/.exec(i.id))) name = fill(n.wg, { n: match[1] });
   else if (i.id === "3-0") name = n.routingAll;
   else if (/^3-\d+$/.test(i.id)) name = fill(n.routing, { name: i.label });
-  return `${name} (${i.id})`;
+  return name;
+}
+
+/** The name with the id of the box behind it, for the choice. */
+export function interfaceLabel(i, t) {
+  return `${interfaceName(i, t)} (${i.id})`;
 }
 
 /** The select of the interfaces, in groups; the name is the one the box gives, with its id. */
@@ -88,11 +93,15 @@ function summaryBlock(summary, t, language) {
 function fileLine(file, t, language, clients, interfaces) {
   const c = t.inet.capture;
   const device = file.device ? clients.find((d) => d.id === file.device) : null;
-  const detail = file.device ? ` · ${device?.name ?? file.device}` : "";
-  const when = new Date(file.time).toLocaleString(language || "en", { dateStyle: "short", timeStyle: "medium" });
-  return `<li><span class="pdesc">${escapeHtml(((i) => (i ? interfaceLabel(i, t) : file.interface))(interfaces.find((i) => i.slug === file.interface)))}<small> ${escapeHtml(when)} · ${escapeHtml(formatBytes(file.bytes, language))}${escapeHtml(detail)}</small></span>
-    <span class="capbtns"><button class="btn sm" data-act="cap-sum" data-name="${escapeHtml(file.name)}">${escapeHtml(c.analyse)}</button><button class="btn sm" data-act="cap-dl" data-name="${escapeHtml(file.name)}">${escapeHtml(c.download)}</button>
-    <button class="btn sm dp" data-act="cap-del" data-name="${escapeHtml(file.name)}" aria-label="${escapeHtml(fill(c.deleteLabel, { name: file.name }))}">${escapeHtml(c.delete)}</button></span></li>`;
+  const known = interfaces.find((i) => i.slug === file.interface);
+  const when = new Date(file.time).toLocaleString(language || "en", { dateStyle: "medium", timeStyle: "short" });
+  const name = escapeHtml(file.name);
+  const meta = [when, formatBytes(file.bytes, language)].map((x) => `<span>${escapeHtml(x)}</span>`).join("");
+  const only = file.device ? `<span class="chip">${escapeHtml(device?.name ?? file.device)}</span>` : "";
+  return `<li class="capfile"><div class="capmain"><b>${escapeHtml(known ? interfaceName(known, t) : file.interface)}</b>${known ? `<code>${escapeHtml(known.id)}</code>` : ""}${only}
+      <div class="capmeta">${meta}</div></div>
+    <span class="capbtns"><button class="btn sm" data-act="cap-sum" data-name="${name}">${escapeHtml(c.analyse)}</button><button class="btn sm" data-act="cap-dl" data-name="${name}">${escapeHtml(c.download)}</button>
+    <button class="btn sm d" data-act="cap-del" data-name="${name}" aria-label="${escapeHtml(fill(c.deleteLabel, { name: file.name }))}">${escapeHtml(c.delete)}</button></span></li>`;
 }
 
 /** The card: the form, or the running capture, and the kept files. `capture` is null while loading. */
@@ -108,15 +117,15 @@ export function renderCapture(capture, ctx) {
   const hasAccessPoints = capture.interfaces.some((i) => /^1-vap\d+$/.test(i.id));
   const lim = capture.limits;
   const off = busy ? " disabled" : "";
-  const controls = `<div class="capform">
+  const controls = `<div class="capstart"><div class="capform">
       <label class="field"><span class="label">${escapeHtml(c.interface)}</span><select id="cap-if"${off}>${interfaceOptions(capture.interfaces, form.interface, c, t)}</select></label>
       <label class="field"><span class="label">${escapeHtml(c.device)}</span><select id="cap-dev"${off}>${option("", c.allDevices, form.mac)}${clients.map((d) => option(d.mac, d.name, form.mac)).join("")}</select></label>
       <label class="field"><span class="label">${escapeHtml(c.seconds)}</span><input type="number" id="cap-sec" min="${lim.min_seconds}" max="${lim.max_seconds}" value="${escapeHtml(form.seconds)}"${off} /></label>
       <label class="field"><span class="label">${escapeHtml(c.size)}</span><input type="number" id="cap-mb" min="1" max="${lim.max_mb}" value="${escapeHtml(form.mb)}"${off} /></label>
-      <button class="btn p" data-act="cap-start"${busy || detecting ? " disabled" : ""}>${escapeHtml(c.start)}</button></div>
+      <button class="btn p" data-act="cap-start"${busy || detecting ? " disabled" : ""}>${escapeHtml(c.start)}</button></div></div>
     ${hasAccessPoints ? `<div class="detectrow"><button class="btn sm" data-act="cap-detect"${busy || detecting ? " disabled" : ""}>${escapeHtml(detecting ? c.detecting : c.detect)}</button><small>${escapeHtml(c.detectHint)}</small></div>` : ""}`;
   const list = capture.files.length
-    ? `<ul class="ports capfiles">${capture.files.map((f) => fileLine(f, t, language, clients, capture.interfaces)).join("")}</ul>`
+    ? `<ul class="capfiles">${capture.files.map((f) => fileLine(f, t, language, clients, capture.interfaces)).join("")}</ul>`
     : `<p class="hint">${escapeHtml(c.none)}</p>`;
   const files = `<div class="capexisting"><span class="label">${escapeHtml(fill(c.existing, { n: capture.files.length }))}</span>${list}</div>`;
   return `<section class="card sec"><span class="label">${escapeHtml(c.title)}</span>

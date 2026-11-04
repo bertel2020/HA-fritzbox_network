@@ -534,7 +534,16 @@ export const PANEL_CSS = `
   .capexisting { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
   .capsum { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
   .capsum ul.ports { margin-bottom: 10px; }
-  ul.capfiles small { color: var(--muted); font-weight: 400; }
+  .capstart { background: var(--soft); border-radius: 14px; padding: 14px 16px; margin: 10px 0 6px; }
+  .capstart .capform { margin: 0; }
+  .detectrow { padding: 0 4px; }
+  ul.capfiles { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+  li.capfile { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+  li.capfile:hover { background: var(--soft); }
+  .capmain { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; min-width: 0; }
+  .capmain b { font-size: 14px; font-weight: 500; }
+  .capmain code { font-size: 12px; color: var(--muted); }
+  .capmeta { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 2px 14px; color: var(--muted); font-size: 12px; }
   ul.ports li.off { opacity: .6; }
   ul.ports .pdesc { font-weight: 500; }
   ul.ports .pmap { color: var(--muted); text-align: right; }

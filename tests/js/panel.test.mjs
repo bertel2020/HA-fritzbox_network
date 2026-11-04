@@ -1142,7 +1142,7 @@ test("the capture card narrows to a device and shows the summary of a file", () 
   };
   const html = capture.renderCapture(status, { t, language: "de", canWrite: true, clients, summary, form: { ...capture.captureDefaults(status.limits), mac: "aa:bb:cc:dd:ee:01" } });
   assert.match(html, /<option value="aa:bb:cc:dd:ee:01" selected>Fernseher/);
-  assert.match(html, /· Fernseher<\/small>/);
+  assert.match(html, /<span class="chip">Fernseher<\/span>/);
   assert.match(html, /Fernseher \(192\.168\.1\.10\) ↔ 8\.8\.8\.8/);
   assert.match(html, /example\.org/);
   assert.match(html, /Auf der Internetseite/);
@@ -1324,7 +1324,7 @@ test("the capture list names the Wi-Fi access points after their band and offers
   const html = capture.renderCapture(status, ctx);
   assert.match(html, /<option value="1-vap0">WLAN 2,4 GHz \(1-vap0\)/);
   assert.match(html, /<option value="1-lan">Gesamtes Heimnetz \(1-lan\)/); // no band known: the name of the box
-  assert.match(html, /WLAN 5 GHz \(1-vap1\)<small>/); // also in the list of the files
+  assert.match(html, /<b>WLAN 5 GHz<\/b><code>1-vap1<\/code>/); // also in the list of the files
   assert.match(html, /data-act="cap-detect">WLAN-Bänder erkennen/);
 
   assert.match(capture.renderCapture(status, { ...ctx, detecting: true }), /data-act="cap-detect" disabled>Erkenne/);
