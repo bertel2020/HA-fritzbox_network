@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
+## 1.2.0 – 2026-11-04
+
+### Neu
+
+- WireGuard (VPN): Jede Verbindung der Box ist ein Binärsensor „VPN <Name>“ (an, solange der Tunnel steht; Attribute: Art, aktiviert, verbunden seit, Gegennetz), und das Seitenpanel hat den neuen Reiter **VPN** (`#/vpn`) mit den Geräten und den Kopplungen zwischen Standorten, ihrem Zustand und den Geräten, die per VPN kommen. Aus der Oberfläche der Box gelesen; die Schlüssel der Box auf dieser Seite werden nie gelesen. Eine Verbindung zu schalten geht noch nicht.
+
 ## 1.1.0 – 2026-11-04
 
 ### Neu

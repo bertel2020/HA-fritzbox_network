@@ -194,6 +194,70 @@ def parse_firmware(result: dict[str, Any]) -> FirmwareInfo | None:
     )
 
 
+@dataclass(frozen=True)
+class VpnConnection:
+    """One WireGuard connection of the box: a device that dials in or a link to another site."""
+
+    uid: str
+    name: str
+    # "device" for a single device, "site" for a link between two networks
+    kind: str
+    active: bool
+    connected: bool
+    # when the tunnel came up (unix seconds); None while it is down
+    since: int | None
+    remote_net: str | None
+    # the public address of the other side, known for a connected link between two sites
+    remote_endpoint: str | None
+    editable: bool
+
+
+VPN_KINDS = {"wireguard_simple": "device", "wireguard_lan_lan": "site"}
+
+
+def parse_vpn(page: dict[str, Any] | None) -> list[VpnConnection] | None:
+    """The WireGuard connections from the VPN page of the web interface.
+
+    Only the connection list is read. The same answer carries the private key and the pre-shared
+    keys of the box in ``wg_device_config``; they are never taken from it. None where the box has
+    no such page (an older firmware), an empty list where it has no connection.
+    """
+    try:
+        connections = page["data"]["init"]["boxConnections"]
+    except (KeyError, TypeError):
+        return None
+    if not isinstance(connections, dict):
+        return None
+    found: list[VpnConnection] = []
+    for entry in connections.values():
+        if not isinstance(entry, dict):
+            continue
+        kind = VPN_KINDS.get(str(entry.get("type")))
+        uid = str(entry.get("uid") or "")
+        if kind is None or not uid:
+            continue
+        connected = bool(entry.get("connected"))
+        try:
+            since = int(entry.get("connectedSince") or 0) or None
+        except (TypeError, ValueError):
+            since = None
+        found.append(
+            VpnConnection(
+                uid=uid,
+                name=str(entry.get("name") or uid),
+                kind=kind,
+                active=bool(entry.get("active")),
+                connected=connected,
+                since=since if connected else None,
+                remote_net=_address(entry.get("remoteNet")),
+                remote_endpoint=_address(entry.get("remoteIp")) if connected else None,
+                editable=bool(entry.get("editable")),
+            )
+        )
+    found.sort(key=lambda c: (c.kind != "site", c.name.lower()))
+    return found
+
+
 @dataclass
 class NetworkData:
     """Result of one poll."""
@@ -204,6 +268,8 @@ class NetworkData:
     # whether the guest Wi-Fi is on; None where the box has none
     guest_wifi: bool | None = None
     firmware: FirmwareInfo | None = None
+    # the WireGuard connections; None where the box does not tell them
+    vpn: list[VpnConnection] | None = None
 
 
 def _text(item: ET.Element, tag: str) -> str | None:

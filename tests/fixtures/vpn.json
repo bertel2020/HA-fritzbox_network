@@ -1,0 +1,61 @@
+{
+ "pid": "shareWireguard",
+ "data": {
+  "init": {
+   "wg_public_key": "SECRETPUB",
+   "wg_device_config": "[Interface]\nPrivateKey = SECRETKEY\n",
+   "boxConnections": {
+    "connection1": {
+     "type": "wireguard_simple",
+     "active": true,
+     "connected": true,
+     "connectedSince": "1793823044",
+     "uid": "vpnconnection9001",
+     "name": "Anna iPhone",
+     "remoteIp": "203.0.113.5:4000",
+     "remoteNet": "192.0.2.201/32,fd00::1/128",
+     "editable": true
+    },
+    "connection2": {
+     "type": "wireguard_simple",
+     "active": false,
+     "connected": false,
+     "connectedSince": "0",
+     "uid": "vpnconnection9002",
+     "name": "Old tablet",
+     "remoteIp": "",
+     "remoteNet": "192.0.2.202/32",
+     "editable": true
+    },
+    "connection3": {
+     "type": "wireguard_lan_lan",
+     "active": true,
+     "connected": true,
+     "connectedSince": "1793823044",
+     "uid": "vpnconnection9003",
+     "name": "Holiday house",
+     "remoteIp": "198.51.100.9:13729",
+     "remoteNet": "192.0.2.0/24",
+     "editable": true
+    },
+    "connection4": {
+     "type": "wireguard_simple",
+     "active": true,
+     "connected": false,
+     "connectedSince": "0",
+     "uid": "vpnconnection9004",
+     "name": "Bob laptop",
+     "remoteIp": "",
+     "remoteNet": "192.0.2.203/32",
+     "editable": true
+    },
+    "connection5": {
+     "type": "ipsec_xauth",
+     "active": true,
+     "uid": "x",
+     "name": "unknown kind"
+    }
+   }
+  }
+ }
+}

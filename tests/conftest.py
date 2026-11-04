@@ -84,6 +84,7 @@ class FakeClient:
         self.guest_wifi: bool | None = False
         self.ports: list[dict] = []
         self.firmware: dict = {"NewUpgradeAvailable": False}
+        self.vpn: dict | None = None
         self.network: dict | None = {
             "mask": "255.255.255.0",
             "gateway": "192.168.178.1",
@@ -110,6 +111,9 @@ class FakeClient:
     def get_internet(self, details: bool):
         self.internet_reads.append(details)
         return self.internet_fast, self.internet_slow if details else {}
+
+    def get_vpn(self) -> dict | None:
+        return self.vpn
 
     def get_network(self) -> dict | None:
         return self.network

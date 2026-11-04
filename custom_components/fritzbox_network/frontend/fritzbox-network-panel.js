@@ -28,6 +28,7 @@ import {
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
+import { renderVpn } from "./panel-vpn.js";
 import { captureDefaults, defaultInterface, renderCapture } from "./panel-capture.js";
 import { renderConnection } from "./panel-check.js";
 import { renderLog } from "./panel-log.js";
@@ -137,6 +138,7 @@ export function renderNav(state, t, stale) {
   return [
     tab("net"),
     tab("internet", dot, label),
+    ...(Array.isArray(state.data?.vpn) ? [tab("vpn")] : []),
     tab("addresses"),
     tab("diagnose"),
     tab("devices", stale ? `<em>${stale}</em>` : ""),
@@ -698,6 +700,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           </div>
           <div id="device-view" hidden></div>
           <div id="internet-view" hidden></div>
+          <div id="vpn-view" hidden></div>
           <div id="diagnose-view" hidden></div>
           <div id="addresses-view" hidden></div>
           <div class="col" id="cleanup-view" hidden>
@@ -791,6 +794,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     netView.hidden = !ready || tab !== "net" || onDevice;
     root.querySelector("#device-view").hidden = !ready || !onDevice;
     root.querySelector("#internet-view").hidden = !ready || tab !== "internet";
+    root.querySelector("#vpn-view").hidden = !ready || tab !== "vpn";
     root.querySelector("#diagnose-view").hidden = !ready || tab !== "diagnose";
     root.querySelector("#addresses-view").hidden = !ready || tab !== "addresses";
     root.querySelector("#cleanup-view").hidden = !ready || tab !== "cleanup";
@@ -804,6 +808,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     root.querySelector("#sub").textContent = master ? [master.name, master.model].filter(Boolean).join(" · ") : "";
     this._tick();
     if (tab === "internet") return this._renderInternet();
+    if (tab === "vpn") return this._renderVpn();
     if (tab === "diagnose") return this._renderDiagnose();
     if (tab === "addresses") return this._renderAddresses();
     if (tab === "cleanup") return this._renderCleanup();
@@ -887,6 +892,10 @@ class FritzboxNetworkPanel extends HTMLElement {
         clients: this._state.data?.clients ?? [],
       })
     );
+  }
+
+  _renderVpn() {
+    this._set("vpn-view", renderVpn(this._state.data, { t: this._t, now: Date.now() / 1000 }));
   }
 
   _renderDiagnose() {

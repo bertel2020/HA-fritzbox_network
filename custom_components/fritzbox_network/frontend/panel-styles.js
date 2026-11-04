@@ -481,6 +481,16 @@ export const PANEL_CSS = `
   .aphead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 12px; }
   .aphead small { color: var(--muted); }
   ul.radios { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 12px; }
+  .vpntiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
+  .vpnlist { list-style: none; margin: 8px 0 0; padding: 0; }
+  .vpnrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .vpnrow:first-child { border-top: 0; }
+  .vpnrow .i { width: 20px; height: 20px; color: var(--muted); }
+  .vpnrow.up .i { color: var(--ok); }
+  .vpnname { flex: 1; min-width: 0; }
+  .vpnname b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .vpnname small { color: var(--muted); }
+  #vpn-view .card, #vpn-view .hint { margin-top: 16px; }
   .radiorow .rtop { display: flex; justify-content: space-between; align-items: baseline; }
   .radiorow .rpct { font-variant-numeric: tabular-nums; font-weight: 500; }
   .radiorow.warn .rpct { color: var(--warn); }

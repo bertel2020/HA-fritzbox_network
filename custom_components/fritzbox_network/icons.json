@@ -140,6 +140,12 @@
         "state": {
           "off": "mdi:web-off"
         }
+      },
+      "vpn": {
+        "default": "mdi:shield-lock-outline",
+        "state": {
+          "off": "mdi:shield-off-outline"
+        }
       }
     },
     "select": {

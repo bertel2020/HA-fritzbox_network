@@ -2,6 +2,12 @@
 
 All notable changes to this integration are recorded here.
 
+## 1.2.0 – 2026-11-04
+
+### New
+
+- WireGuard (VPN): every connection of the box is a binary sensor "VPN <name>" (on while the tunnel stands; attributes: kind, enabled, connected since, remote network), and the side panel has a new **VPN** tab (`#/vpn`) with the devices and the links between sites, their state and the devices that come in by VPN. Read from the web interface of the box; the keys of the box on that page are never read. Switching a connection is not possible yet.
+
 ## 1.1.0 – 2026-11-04
 
 ### New

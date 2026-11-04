@@ -1333,3 +1333,47 @@ test("the capture list names the Wi-Fi access points after their band and offers
   const noPoints = { ...status, interfaces: status.interfaces.filter((i) => i.id === "1-lan") };
   assert.doesNotMatch(capture.renderCapture(noPoints, ctx), /cap-detect/); // nothing to detect on a box without them
 });
+
+const vpnPage = await import(`${base}panel-vpn.js`);
+
+const vpnData = {
+  vpn: [
+    { uid: "a", name: "Haus <b>", kind: "site", enabled: true, connected: true, since: 1000, remote_net: "192.0.2.0/24", remote_endpoint: "198.51.100.9:13729" },
+    { uid: "b", name: "Handy", kind: "device", enabled: true, connected: false, since: null, remote_net: "192.0.2.201/32", remote_endpoint: null },
+    { uid: "c", name: "Tablet", kind: "device", enabled: false, connected: false, since: null, remote_net: null, remote_endpoint: null },
+  ],
+  clients: [
+    { name: "Handy", ip: "192.0.2.201", online: true, vpn: true },
+    { name: "TV", ip: "192.0.2.5", online: true, vpn: false },
+  ],
+};
+
+test("the VPN tab appears only where the box tells its connections", () => {
+  assert.match(panel.renderNav({ tab: "net", data: vpnData }, t, 0), /data-tab="vpn"[^>]*>VPN/);
+  assert.doesNotMatch(panel.renderNav({ tab: "net", data: { vpn: null } }, t, 0), /data-tab="vpn"/);
+  assert.deepEqual(shared.routeFromHash("#/vpn"), { tab: "vpn", device: null });
+});
+
+test("a connection is up, on but not connected, or off", () => {
+  const m = vpnPage.vpnModel(vpnData);
+  assert.deepEqual(m.connections.map((c) => c.state), ["up", "idle", "off"]);
+  assert.equal(m.up, 1);
+  assert.equal(m.enabled, 2);
+  assert.equal(m.remote.length, 1);
+});
+
+test("the VPN page lists devices and sites with their state and escapes names", () => {
+  const html = vpnPage.renderVpn(vpnData, { t, now: 8200 });
+  assert.match(html, /1 von 3/);
+  assert.match(html, /Haus &lt;b&gt;/);
+  assert.doesNotMatch(html, /Haus <b>/);
+  assert.match(html, /verbunden seit 2 Std\./);
+  assert.match(html, /von 198\.51\.100\.9:13729/);
+  assert.match(html, /Ein, nicht verbunden/);
+  assert.match(html, /Geräte im Heimnetz per VPN/);
+});
+
+test("the VPN page says so where the box tells nothing or has no connection", () => {
+  assert.match(vpnPage.renderVpn({ vpn: null }, { t, now: 0 }), /nennt ihre VPN-Verbindungen nicht/);
+  assert.match(vpnPage.renderVpn({ vpn: [] }, { t, now: 0 }), /Keine WireGuard-Verbindung/);
+});

@@ -490,6 +490,22 @@ class FritzNetworkClient:
             except (FritzActionError, FritzServiceError, FritzAuthorizationError, KeyError):
                 return {}
 
+    def get_vpn(self) -> dict[str, Any] | None:
+        """The WireGuard connections as the VPN page of the web interface lists them.
+
+        The page also carries the private key and the pre-shared keys of the box; only the list of
+        connections leaves this method. None where the box has no such page.
+        """
+        with self._lock:
+            page = self._web_data(page="shareWireguard")
+        if not isinstance(page, dict) or page.get("pid") != "shareWireguard":
+            return None
+        try:
+            connections = page["data"]["init"]["boxConnections"]
+        except (KeyError, TypeError):
+            return None
+        return {"data": {"init": {"boxConnections": connections}}}
+
     def get_port_mappings(self) -> list[dict[str, Any]]:
         """The port forwardings of the box, those set by hand and those a device opened by UPnP."""
         entries: list[dict[str, Any]] = []

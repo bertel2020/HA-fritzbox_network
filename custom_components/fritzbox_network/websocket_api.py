@@ -185,6 +185,26 @@ def _firmware(coordinator: FritzNetworkCoordinator) -> dict[str, Any] | None:
     }
 
 
+def _vpn(coordinator: FritzNetworkCoordinator) -> list[dict[str, Any]] | None:
+    """The WireGuard connections as the panel draws them; None where the box tells nothing."""
+    connections = coordinator.data.vpn
+    if connections is None:
+        return None
+    return [
+        {
+            "uid": c.uid,
+            "name": c.name,
+            "kind": c.kind,
+            "enabled": c.active,
+            "connected": c.connected,
+            "since": c.since,
+            "remote_net": c.remote_net,
+            "remote_endpoint": c.remote_endpoint,
+        }
+        for c in connections
+    ]
+
+
 def _internet(coordinator: FritzNetworkCoordinator) -> dict[str, Any] | None:
     """The internet connection as the panel draws it; None where the box tells nothing about it."""
     info = coordinator.data.internet
@@ -304,6 +324,7 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
         ],
         "internet": _internet(coordinator),
         "firmware": _firmware(coordinator),
+        "vpn": _vpn(coordinator),
         "nodes": nodes,
         "clients": clients,
     }

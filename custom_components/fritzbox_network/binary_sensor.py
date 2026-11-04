@@ -1,4 +1,4 @@
-"""Guest network flag per client device."""
+"""Guest network flag per client device, the internet connection and the WireGuard connections."""
 
 from __future__ import annotations
 
@@ -8,11 +8,12 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, KEY_GUEST, KEY_INTERNET_CONNECTED
+from .const import DOMAIN, KEY_GUEST, KEY_INTERNET_CONNECTED, KEY_VPN
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import FritzNetworkClientEntity, async_setup_client_entities
-from .models import Host
+from .models import Host, VpnConnection
 
 PARALLEL_UPDATES = 0
 
@@ -28,6 +29,7 @@ async def async_setup_entry(
         lambda coordinator, host: [FritzNetworkGuest(coordinator, host)],
     )
     _async_setup_internet(entry, async_add_entities)
+    _async_setup_vpn(entry, async_add_entities)
 
 
 @callback
@@ -45,6 +47,26 @@ def _async_setup_internet(
             return
         added = True
         async_add_entities([FritzNetworkInternetConnected(coordinator)])
+
+    _add()
+    entry.async_on_unload(coordinator.async_add_listener(_add))
+
+
+@callback
+def _async_setup_vpn(
+    entry: FritzNetworkConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
+) -> None:
+    """One sensor for each WireGuard connection, also for those set up later on the box."""
+    coordinator = entry.runtime_data
+    known: set[str] = set()
+
+    @callback
+    def _add() -> None:
+        new = [c for c in coordinator.data.vpn or () if c.uid not in known]
+        if not new:
+            return
+        known.update(c.uid for c in new)
+        async_add_entities([FritzNetworkVpn(coordinator, c) for c in new])
 
     _add()
     entry.async_on_unload(coordinator.async_add_listener(_add))
@@ -92,3 +114,46 @@ class FritzNetworkInternetConnected(CoordinatorEntity[FritzNetworkCoordinator], 
     def is_on(self) -> bool | None:
         internet = self.coordinator.data.internet
         return internet.connected if internet else None
+
+
+class FritzNetworkVpn(CoordinatorEntity[FritzNetworkCoordinator], BinarySensorEntity):
+    """On = the WireGuard connection is up: a device is dialled in or the other site is linked."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = KEY_VPN
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, connection: VpnConnection) -> None:
+        super().__init__(coordinator)
+        self._uid = connection.uid
+        self._attr_unique_id = f"{coordinator.serial}_{KEY_VPN}_{connection.uid}"
+        self._attr_translation_placeholders = {"name": connection.name}
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+
+    @property
+    def connection(self) -> VpnConnection | None:
+        return next((c for c in self.coordinator.data.vpn or () if c.uid == self._uid), None)
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.connection is not None
+
+    @property
+    def is_on(self) -> bool | None:
+        connection = self.connection
+        return connection.connected if connection else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, str | bool | None]:
+        connection = self.connection
+        if connection is None:
+            return {}
+        since = (
+            dt_util.utc_from_timestamp(connection.since).isoformat() if connection.since else None
+        )
+        return {
+            "kind": connection.kind,
+            "enabled": connection.active,
+            "connected_since": since,
+            "remote_network": connection.remote_net,
+        }

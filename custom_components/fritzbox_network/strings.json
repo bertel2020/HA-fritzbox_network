@@ -226,6 +226,9 @@
       },
       "internet_connected": {
         "name": "Internet connection"
+      },
+      "vpn": {
+        "name": "VPN {name}"
       }
     },
     "update": {

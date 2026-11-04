@@ -22,6 +22,7 @@ from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
+import requests
 
 from .addresses import AddressNotes
 from .api import FritzNetworkClient
@@ -64,8 +65,10 @@ from .models import (
     MeshNode,
     MeshTopology,
     NetworkData,
+    VpnConnection,
     parse_firmware,
     parse_internet,
+    parse_vpn,
 )
 from .vendor import vendor_of
 
@@ -183,6 +186,15 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         if offer is not None:
             self._firmware = offer
 
+    def _fetch_vpn(self) -> list[VpnConnection] | None:
+        """The WireGuard connections; what was known stays if the box does not answer."""
+        previous = self.data.vpn if self.data else None
+        try:
+            return parse_vpn(self.client.get_vpn())
+        except (*_FETCH_ERRORS, requests.RequestException, PermissionError, TypeError) as err:
+            _LOGGER.debug("WireGuard connections unavailable: %s", err)
+            return previous
+
     def _fetch_guest_wifi(self) -> bool | None:
         try:
             return self.client.get_guest_wifi()
@@ -192,7 +204,13 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
 
     def _fetch(
         self,
-    ) -> tuple[list[Host], MeshTopology | None, tuple[dict, dict] | None, bool | None]:
+    ) -> tuple[
+        list[Host],
+        MeshTopology | None,
+        tuple[dict, dict] | None,
+        bool | None,
+        list[VpnConnection] | None,
+    ]:
         hosts = self.client.get_hosts()
         try:
             mesh = self.client.get_mesh()
@@ -210,14 +228,15 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 _LOGGER.debug("Access profiles unavailable: %s", err)
         internet = self._fetch_internet()
         guest = self._fetch_guest_wifi()
+        vpn = self._fetch_vpn()
         self._fetch_firmware()
         self._polls += 1
-        return hosts, mesh, internet, guest
+        return hosts, mesh, internet, guest, vpn
 
     async def _async_update_data(self) -> NetworkData:
         started = time.monotonic()
         try:
-            hosts, mesh, wan, guest = await self.hass.async_add_executor_job(self._fetch)
+            hosts, mesh, wan, guest, vpn = await self.hass.async_add_executor_job(self._fetch)
         except (FritzAuthorizationError, FritzSecurityError) as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except _FETCH_ERRORS as err:
@@ -249,6 +268,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             internet=self._update_internet(wan),
             guest_wifi=self._apply_guest_override(guest),
             firmware=self._firmware,
+            vpn=vpn,
         )
 
     def _record_history(self, selected: dict[str, Host], mesh: MeshTopology | None) -> None:
