@@ -1,5 +1,6 @@
 """The client against a mocked fritzconnection."""
 
+import contextlib
 import threading
 import time
 from unittest.mock import MagicMock, patch
@@ -436,48 +437,113 @@ def test_the_web_login_asks_for_the_challenge_with_a_get():
     assert calls[1][2]["response"] == web_login_response(challenge, "secret")
 
 
-def _capture_client(monkeypatch, chunks):
-    from custom_components.fritzbox_network import api
+BOX_CLOSED = threading.Event()
 
-    class Response:
-        headers = {"Content-Type": "application/octet-stream"}
 
-        def raise_for_status(self):
+@contextlib.contextmanager
+def _box(script):
+    """A local web server that plays the capture of a box: ``script(handler)`` writes the answer."""
+    import http.server
+    import threading
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        protocol_version = "HTTP/1.0"
+
+        def do_GET(self):  # noqa: N802
+            script(self)
+
+        def log_message(self, *args):
             return None
 
-        def iter_content(self, chunk_size=None):
-            yield from chunks
+    class Server(http.server.ThreadingHTTPServer):
+        daemon_threads = False  # server_close() waits for the handlers
 
-        def __enter__(self):
-            return self
+    BOX_CLOSED.clear()
+    server = Server(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    try:
+        yield f"127.0.0.1:{server.server_port}"
+    finally:
+        BOX_CLOSED.set()
+        server.shutdown()
+        server.server_close()
 
-        def __exit__(self, *args):
-            return False
 
-    monkeypatch.setattr(api.requests, "get", lambda *a, **k: Response())
-    client = api.FritzNetworkClient("192.0.2.1", None, "user", "secret")
-    client._web_sid = "0123456789abcdef"  # noqa: SLF001
-    return client
-
-
-def test_a_capture_answered_with_text_names_what_the_box_said(monkeypatch, tmp_path):
+def _capture(host, tmp_path, seconds, max_bytes=10_000_000, stop=None):
     import threading
 
+    from custom_components.fritzbox_network.api import FritzNetworkClient
+
+    client = FritzNetworkClient(host, None, "user", "secret")
+    client._web_sid = "0123456789abcdef"  # noqa: SLF001
+    path = tmp_path / "x.pcap"
+    reason = client.capture(
+        "1-lan", path, seconds, max_bytes, stop or threading.Event(), lambda n: None
+    )
+    return reason, path
+
+
+PCAP_HEAD = b"\xd4\xc3\xb2\xa1" + b"\0" * 20
+
+
+def _stream(handler, quiet=False):
+    handler.send_response(200)
+    handler.end_headers()
+    handler.wfile.write(PCAP_HEAD)
+    handler.wfile.flush()
+    try:
+        for _ in range(100):
+            if BOX_CLOSED.wait(0.2):
+                return
+            if not quiet:
+                handler.wfile.write(b"x" * 50)
+                handler.wfile.flush()
+    except OSError:
+        return
+
+
+@pytest.mark.enable_socket
+def test_a_capture_answered_with_text_names_what_the_box_said(tmp_path):
     import pytest
 
-    client = _capture_client(monkeypatch, [b"Permission denied for this user\n"])
-    with pytest.raises(ValueError, match="Permission denied"):
-        client.capture("1-lan", tmp_path / "x.pcap", 5, 10_000, threading.Event(), lambda n: None)
+    def refuse(handler):
+        handler.send_response(200)
+        handler.end_headers()
+        handler.wfile.write(b"Permission denied for this user\n")
+
+    with _box(refuse) as host, pytest.raises(ValueError, match="Permission denied"):
+        _capture(host, tmp_path, 5)
 
 
-def test_a_capture_stops_at_the_size_limit(monkeypatch, tmp_path):
+@pytest.mark.enable_socket
+def test_a_capture_that_never_ends_stops_when_the_time_is_up(tmp_path):
+    started = time.monotonic()
+    with _box(_stream) as host:
+        reason, path = _capture(host, tmp_path, 1)
+
+    assert reason == "time"
+    assert time.monotonic() - started < 5
+    assert path.read_bytes().startswith(PCAP_HEAD)
+
+
+@pytest.mark.enable_socket
+def test_a_quiet_capture_stops_when_the_user_stops_it(tmp_path):
     import threading
 
-    head = b"\xd4\xc3\xb2\xa1" + b"\0" * 20
-    client = _capture_client(monkeypatch, [head, b"x" * 100, b"y" * 100])
-    path = tmp_path / "x.pcap"
+    stop = threading.Event()
+    threading.Timer(0.5, stop.set).start()
+    started = time.monotonic()
+    with _box(lambda h: _stream(h, quiet=True)) as host:
+        reason, _ = _capture(host, tmp_path, 60, stop=stop)
 
-    reason = client.capture("1-lan", path, 5, 100, threading.Event(), lambda n: None)
+    assert reason == "stopped"
+    assert time.monotonic() - started < 5
+
+
+@pytest.mark.enable_socket
+def test_a_capture_stops_at_the_size_limit(tmp_path):
+    with _box(_stream) as host:
+        reason, path = _capture(host, tmp_path, 30, max_bytes=100)
 
     assert reason == "size"
-    assert path.read_bytes().startswith(head)
+    assert path.stat().st_size >= 100

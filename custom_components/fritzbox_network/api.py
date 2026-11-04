@@ -11,13 +11,18 @@ Per poll the client reads two documents, never one request per host:
 
 from __future__ import annotations
 
+import contextlib
 import hashlib
+import http.client
 import json
 import logging
 import re
+import socket
+import ssl
 import threading
 import time
 from typing import Any
+from urllib.parse import urlencode
 import xml.etree.ElementTree as ET
 
 from fritzconnection import FritzConnection
@@ -250,28 +255,62 @@ class FritzNetworkClient:
         """
         with self._lock:
             sid = self._web_sid or self._web_login()
-        url = f"{self._web_base()}/cgi-bin/capture_notimeout"
-        params = {"ifaceorminor": interface, "snaplen": "1600", "capture": "Start", "sid": sid}
+        query = urlencode(
+            {"ifaceorminor": interface, "snaplen": "1600", "capture": "Start", "sid": sid}
+        )
+        if self._use_tls:
+            connection: http.client.HTTPConnection = http.client.HTTPSConnection(
+                self._host,
+                timeout=REQUEST_TIMEOUT,
+                context=ssl._create_unverified_context(),  # noqa: S323, SLF001
+            )
+        else:
+            connection = http.client.HTTPConnection(self._host, timeout=REQUEST_TIMEOUT)
         deadline = time.monotonic() + seconds
         written = 0
         reason = "time"
+        finished = threading.Event()
+        cut: list[str] = []
+        sock: socket.socket | None = None
+
+        def watch() -> None:
+            """End the stream at the time limit or on stop; a blocked read cannot be asked to."""
+            while not finished.is_set():
+                if stop.is_set() or time.monotonic() >= deadline:
+                    cut.append("stopped" if stop.is_set() else "time")
+                    with contextlib.suppress(OSError, AttributeError):
+                        sock.shutdown(socket.SHUT_RDWR)
+                    return
+                finished.wait(0.2)
+
         try:
-            with (
-                requests.get(
-                    url,
-                    params=params,
-                    stream=True,
-                    timeout=(REQUEST_TIMEOUT, CAPTURE_READ_TIMEOUT),
-                    verify=False,  # noqa: S501
-                ) as response,
-                open(path, "wb") as target,
-            ):
-                response.raise_for_status()
-                # chunk_size None: data is handed on as it arrives, so the time and the stop
-                # button are looked at often and not only after a full buffer
-                for chunk in response.iter_content(chunk_size=None):
+            connection.request("GET", f"/cgi-bin/capture_notimeout?{query}")
+            # the connection forgets its socket for an answer that ends by closing; keep it
+            sock = connection.sock
+            response = connection.getresponse()
+            if response.status != 200:
+                raise ValueError(f"the box answered {response.status} {response.reason}")
+            sock.settimeout(CAPTURE_READ_TIMEOUT)
+            threading.Thread(target=watch, daemon=True).start()
+            with open(path, "wb") as target:
+                while True:
+                    try:
+                        # read1 returns as soon as something has arrived
+                        chunk = response.read1(65536)
+                    except (OSError, http.client.HTTPException) as err:
+                        if cut:
+                            break  # the watcher closed the connection
+                        if isinstance(err, TimeoutError) and written:
+                            reason = "quiet"
+                            break
+                        if isinstance(err, TimeoutError):
+                            raise ValueError(
+                                f"the box sent nothing for {CAPTURE_READ_TIMEOUT} s "
+                                "(a quiet interface?)"
+                            ) from None
+                        raise
                     if not chunk:
-                        continue
+                        break
                     if written == 0 and chunk[:4] not in PCAP_MAGICS:
                         # the box answers a refusal as text, not as a capture
                         self._web_sid = None
@@ -280,21 +319,14 @@ class FritzNetworkClient:
                     target.write(chunk)
                     written += len(chunk)
                     progress(written)
-                    if stop.is_set():
-                        reason = "stopped"
-                        break
                     if written >= max_bytes:
                         reason = "size"
                         break
-                    if time.monotonic() >= deadline:
-                        break
-        except requests.exceptions.ReadTimeout:
-            # a quiet interface sends nothing for a while: what came so far is the capture
-            if written == 0:
-                raise ValueError(
-                    f"the box sent nothing for {CAPTURE_READ_TIMEOUT} s (a quiet interface?)"
-                ) from None
-            reason = "stopped" if stop.is_set() else "quiet"
+        finally:
+            finished.set()
+            connection.close()
+        if cut and reason == "time":
+            reason = cut[0]
         if written == 0:
             raise ValueError("the box sent no data")
         return reason
