@@ -69,6 +69,24 @@ def main() -> None:
     ]
 
     client.stop_captures()  # a capture left over from an earlier run loads the box
+    if os.environ.get("FRITZ_BANDS") == "1":
+        mesh = client.get_mesh()
+        bands = wifi_bands(mesh.links) if mesh else {}
+        known = {b: sum(1 for x in bands.values() if x == b) for b in set(bands.values())}
+        lines += ["== Wi-Fi bands ==", f"devices on Wi-Fi by the mesh: {known}"]
+        with tempfile.TemporaryDirectory() as tmp:
+            for iface in ("1-vap0", "1-vap1"):
+                path = Path(tmp) / f"{iface}.pcap"
+                try:
+                    client.capture(iface, path, 8, 5_000_000, threading.Event(), lambda n: None)
+                    votes = count_bands(pcap.macs(path), bands)
+                    lines.append(f"{iface}: devices seen by band {votes} -> {decide_band(votes)}")
+                except Exception as err:  # noqa: BLE001
+                    lines.append(f"{iface}: FAILED {type(err).__name__}: {mask(err)}")
+        OUT.write_text("\n".join(lines) + "\n")
+        print("\n".join(lines))
+        return
+
     lines.append("== event log ==")
     for group in (None, "net", "wlan", "sys"):
         try:
@@ -120,24 +138,6 @@ def main() -> None:
             lines.append(f"{item['id']} -> {mask(item['label'])}")
     except Exception as err:  # noqa: BLE001
         lines.append(f"FAILED {type(err).__name__}: {mask(err)}")
-    if os.environ.get("FRITZ_BANDS") == "1":
-        mesh = client.get_mesh()
-        bands = wifi_bands(mesh.links) if mesh else {}
-        known = {b: sum(1 for x in bands.values() if x == b) for b in set(bands.values())}
-        lines += ["", f"== Wi-Fi bands (devices on Wi-Fi by the mesh: {known}) =="]
-        with tempfile.TemporaryDirectory() as tmp:
-            for iface in ("1-vap0", "1-vap1"):
-                path = Path(tmp) / f"{iface}.pcap"
-                try:
-                    client.capture(iface, path, 8, 5_000_000, threading.Event(), lambda n: None)
-                    votes = count_bands(pcap.macs(path), bands)
-                    lines.append(f"{iface}: devices seen by band {votes} -> {decide_band(votes)}")
-                except Exception as err:  # noqa: BLE001
-                    lines.append(f"{iface}: FAILED {type(err).__name__}: {mask(err)}")
-        OUT.write_text("\n".join(lines) + "\n")
-        print("\n".join(lines))
-        return
-
     if os.environ.get("FRITZ_LIST_ONLY") == "1":
         OUT.write_text("\n".join(lines) + "\n")
         print("\n".join(lines))
