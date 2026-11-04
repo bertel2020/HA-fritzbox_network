@@ -34,7 +34,7 @@ DEFAULT_INTERFACES = [
     {"id": "2-1", "label": "1. Internet connection", "group": "internet"},
     {"id": "1-lan", "label": "lan", "group": "lan"},
 ]
-GROUP_ORDER = ["internet", "lan", "wlan", "routing"]
+GROUP_ORDER = ["internet", "lan", "wlan", "vpn", "routing"]
 INTERFACES_MAX_AGE = 600
 MIN_SECONDS = 5
 MAX_SECONDS = 600
@@ -62,8 +62,8 @@ def curate_interfaces(found: list[dict[str, str]]) -> list[dict[str, str]]:
     """The interfaces of the box worth offering, in groups; the technical ones stay out.
 
     The box lists about seventy: internal trace and tunnel interfaces among them. Offered are the
-    internet connections, the LAN ports, the Wi-Fi access points (the radios give nothing) and the
-    routing interfaces.
+    internet connections, the LAN ports, the Wi-Fi access points (the radios give nothing), the
+    WireGuard connections and the routing interfaces.
     """
     offered = []
     for item in found:
@@ -74,6 +74,8 @@ def curate_interfaces(found: list[dict[str, str]]) -> list[dict[str, str]]:
             group = "lan"
         elif re.fullmatch(r"1-(vap\d|guest\d?)", interface):
             group = "wlan"
+        elif re.fullmatch(r"1-wg\d+", interface):
+            group = "vpn"  # the WireGuard connections of the box
         elif interface.startswith("3-"):
             group = "routing"
         else:

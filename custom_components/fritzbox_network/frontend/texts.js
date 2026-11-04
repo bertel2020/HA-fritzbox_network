@@ -410,7 +410,7 @@ const en = {
       toastBusy: "A recording is already running.",
       deleteTitle: "Delete the recording?",
       deleteBody: "The file is removed from Home Assistant.",
-      groups: { internet: "Internet connections", lan: "LAN", wlan: "Wi-Fi", routing: "Routing interfaces (all traffic)" },
+      groups: { internet: "Internet connections", lan: "LAN", wlan: "Wi-Fi", vpn: "VPN (WireGuard)", routing: "Routing interfaces (all traffic)" },
       hint: "The file is a pcap and opens in Wireshark. A recording shows what passes through the box and may contain passwords and other private data: keep it safe. Only one runs at a time; the last 20 are kept.",
     },
     ports: {
@@ -1155,7 +1155,7 @@ const de = {
       toastBusy: "Es läuft schon eine Aufzeichnung.",
       deleteTitle: "Aufzeichnung löschen?",
       deleteBody: "Die Datei wird aus Home Assistant entfernt.",
-      groups: { internet: "Internetverbindungen", lan: "LAN", wlan: "WLAN", routing: "Routing-Schnittstellen (gesamter Verkehr)" },
+      groups: { internet: "Internetverbindungen", lan: "LAN", wlan: "WLAN", vpn: "VPN (WireGuard)", routing: "Routing-Schnittstellen (gesamter Verkehr)" },
       hint: "Die Datei ist ein pcap und öffnet sich in Wireshark. Ein Mitschnitt zeigt, was durch die Box läuft, und kann Passwörter und andere private Daten enthalten: Bewahre ihn sicher auf. Es läuft immer nur einer; die letzten 20 bleiben erhalten.",
     },
     ports: {

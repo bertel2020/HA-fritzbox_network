@@ -297,6 +297,9 @@ def test_only_the_interfaces_worth_offering_are_kept_and_grouped():
             "1-vap0_r3",
             "1-guest",
             "1-wlan0",
+            "1-wg0",
+            "1-wg1",
+            "1-xfrm",
         )
     ]
 
@@ -310,6 +313,8 @@ def test_only_the_interfaces_worth_offering_are_kept_and_grouped():
         ("1-lan", "lan"),
         ("1-guest", "wlan"),
         ("1-vap0", "wlan"),
+        ("1-wg0", "vpn"),
+        ("1-wg1", "vpn"),
         ("3-0", "routing"),
     ]
 
