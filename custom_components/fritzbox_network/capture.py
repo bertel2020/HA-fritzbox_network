@@ -83,6 +83,38 @@ def curate_interfaces(found: list[dict[str, str]]) -> list[dict[str, str]]:
     return offered
 
 
+# a Wi-Fi interface is named after a band when this share of the devices seen on it are on it
+BAND_SHARE = 0.8
+BAND_MIN_DEVICES = 2
+
+
+def wifi_bands(links: dict[str, Any]) -> dict[str, str]:
+    """The band of every device the mesh knows on Wi-Fi: {mac: "2_4ghz" | "5ghz" | ...}."""
+    return {mac: link.band for mac, link in links.items() if link.link_type == "wlan" and link.band}
+
+
+def decide_band(votes: dict[str, int]) -> str | None:
+    """The band an interface carries, from how many devices of each band were seen on it.
+
+    None when too few devices were seen or they are on several bands: that is no answer, and the
+    panel then leaves the interface unnamed.
+    """
+    total = sum(votes.values())
+    if total < BAND_MIN_DEVICES:
+        return None
+    band, count = max(votes.items(), key=lambda item: item[1])
+    return band if count / total >= BAND_SHARE else None
+
+
+def count_bands(seen: dict[str, int], bands: dict[str, str]) -> dict[str, int]:
+    """How many different devices of each band appear among the MAC addresses of a capture."""
+    votes: dict[str, int] = {}
+    for mac in seen:
+        if band := bands.get(mac):
+            votes[band] = votes.get(band, 0) + 1
+    return votes
+
+
 @dataclass
 class Job:
     """The capture that runs now or ran last."""

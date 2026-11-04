@@ -143,3 +143,21 @@ def test_raw_ip_and_pppoe_packets_are_understood():
     assert other.protocol == "other"
     assert other.unknown == "ethertype 0x88cc"
     assert pcap.parse_frame(99, b"\0" * 20).unknown == "linktype 99"
+
+
+def test_the_unicast_mac_addresses_of_a_capture_are_counted_as_sender_and_receiver(tmp_path):
+    one, three = (192, 168, 1, 10), (8, 8, 8, 8)
+    broadcast = bytes.fromhex("ffffffffffff")
+    source = tmp_path / "x.pcap"
+    _file(
+        source,
+        [
+            _frame(A, B, one, three, 17, _udp(5000, 53, _dns("a.org"))),
+            _frame(B, A, three, one, 17, _udp(53, 5000, _dns("a.org"))),
+            _frame(C, broadcast, one, three, 17, _udp(1, 2, b"")),
+        ],
+    )
+
+    seen = pcap.macs(source)
+
+    assert seen == {"aa:bb:cc:dd:ee:01": 2, "aa:bb:cc:dd:ee:02": 2, "aa:bb:cc:dd:ee:03": 1}

@@ -234,3 +234,16 @@ def summarize(path: Path) -> Summary:
     if first is not None and last is not None:
         summary.seconds = round(last - first, 2)
     return summary
+
+
+def macs(path: Path) -> Counter[str]:
+    """How often each unicast MAC address appears in a capture, as sender or as receiver."""
+    reader = Reader(path)
+    seen: Counter[str] = Counter()
+    for packet in reader.packets():
+        frame = parse_frame(reader.linktype, packet.data)
+        for mac in (frame.src_mac, frame.dst_mac):
+            # the lowest bit of the first octet marks broadcast and multicast
+            if mac is not None and not int(mac[:2], 16) & 1:
+                seen[mac] += 1
+    return seen

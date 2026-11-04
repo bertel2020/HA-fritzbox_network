@@ -312,3 +312,27 @@ def test_only_the_interfaces_worth_offering_are_kept_and_grouped():
         ("1-vap0", "wlan"),
         ("3-0", "routing"),
     ]
+
+
+def test_the_band_of_a_wifi_interface_is_decided_by_the_devices_seen_on_it():
+    from types import SimpleNamespace
+
+    from custom_components.fritzbox_network.capture import count_bands, decide_band, wifi_bands
+
+    links = {
+        "m1": SimpleNamespace(link_type="wlan", band="5ghz"),
+        "m2": SimpleNamespace(link_type="wlan", band="5ghz"),
+        "m3": SimpleNamespace(link_type="wlan", band="2_4ghz"),
+        "m4": SimpleNamespace(link_type="lan", band=None),
+        "m5": SimpleNamespace(link_type="wlan", band=None),
+    }
+    bands = wifi_bands(links)
+    assert bands == {"m1": "5ghz", "m2": "5ghz", "m3": "2_4ghz"}
+
+    # the wired device and the unknown one do not vote
+    assert count_bands({"m1": 9, "m2": 3, "m4": 40, "x": 1}, bands) == {"5ghz": 2}
+    assert decide_band({"5ghz": 2}) == "5ghz"
+    assert decide_band({"5ghz": 4, "2_4ghz": 1}) == "5ghz"  # 80 %
+    assert decide_band({"5ghz": 3, "2_4ghz": 2}) is None  # mixed: no answer
+    assert decide_band({"5ghz": 1}) is None  # one device is too little
+    assert decide_band({}) is None
