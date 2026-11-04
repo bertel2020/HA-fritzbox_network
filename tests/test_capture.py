@@ -118,3 +118,23 @@ async def test_the_service_starts_a_capture(hass, fake_client, entry):
     await hass.async_block_till_done()
 
     assert ("capture", "3-17", 20) in fake_client.calls
+
+
+async def test_the_connection_check_names_the_first_step_that_fails(
+    hass, hass_ws_client, fake_client, entry, monkeypatch
+):
+    from custom_components.fritzbox_network import connection_check
+
+    async def fake(host, port):
+        if host == "1.1.1.1":
+            raise OSError(113, "No route to host")
+
+    monkeypatch.setattr(connection_check, "_connect", fake)
+    monkeypatch.setattr(connection_check, "_resolve", lambda name: fake("example.org", 0))
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    result = (await _call(client, f"{DOMAIN}/diagnose/check", entry_id=entry.entry_id))["result"]
+
+    assert result["verdict"] == "internet"
+    assert {s["key"]: s["ok"] for s in result["steps"]}["box"] is True

@@ -29,6 +29,7 @@ import {
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
 import { captureDefaults, renderCapture } from "./panel-capture.js";
+import { renderCheck } from "./panel-check.js";
 import { BLOCK_COLORS, ENTRY_KINDS, addressModel, checkBlock, checkEntry, emptyOwn, entryPreview, groupPreview, normalizeOwn, parseRange, poolChange, renderAddresses } from "./panel-addresses.js";
 import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
@@ -145,6 +146,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       capture: null,
       captureForm: captureDefaults(null),
       captureSummary: null,
+      check: null,
       data: null,
       filter: "all",
       query: "",
@@ -397,6 +399,17 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (this._state.tab === "diagnose" && this._state.capture?.job?.state === "running") {
       this._captureTimer = setTimeout(() => this._loadCapture(), 1000);
     }
+  }
+
+  async _runCheck() {
+    this._state.check = "running";
+    this._update();
+    try {
+      this._state.check = await this._ws("diagnose/check");
+    } catch {
+      this._state.check = "failed";
+    }
+    this._update();
   }
 
   async _onCapture(ds) {
@@ -801,6 +814,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._set(
       "diagnose-view",
       `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(t.diag.title)}</h1><p class="lead">${escapeHtml(t.diag.lead)}</p></div>` +
+        renderCheck(this._state.check, { t }) +
         renderCapture(this._state.capture, {
           t,
           language: this._hass?.language,
@@ -1568,6 +1582,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       globalThis.history.pushState(null, "", target.getAttribute("href"));
       globalThis.dispatchEvent(new CustomEvent("location-changed", { composed: true }));
       return;
+    } else if (ds.act === "check-run") {
+      return this._runCheck();
     } else if (ds.act?.startsWith("cap-")) {
       return this._onCapture(ds);
     } else if (ds.act === "reconnect" || ds.act === "reboot") {

@@ -9,6 +9,7 @@ from typing import Any
 
 from fritzconnection.core.exceptions import FritzConnectionException
 from homeassistant.components import websocket_api
+from homeassistant.const import CONF_HOST, CONF_PORT
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import (
     device_registry as dr,
@@ -29,6 +30,7 @@ from .capture import (
     MIN_SECONDS,
     VIEW_URL,
 )
+from .connection_check import run_checks
 from .const import (
     CONF_FILTER_DEVICES,
     CONF_FILTER_MODE,
@@ -36,6 +38,7 @@ from .const import (
     CONF_IGNORE_GUESTS,
     CONF_IGNORE_PRIVATE_MACS,
     CONF_STALE_DAYS,
+    CONF_USE_TLS,
     DEFAULT_STALE_DAYS,
     DOMAIN,
     FILTER_ALL,
@@ -66,6 +69,7 @@ ADDRESS_SAVE_COMMAND = f"{DOMAIN}/address/save"
 ADDRESS_POOL_COMMAND = f"{DOMAIN}/address/pool"
 HISTORY_COMMAND = f"{DOMAIN}/history/summary"
 HISTORY_DEVICE_COMMAND = f"{DOMAIN}/history/device"
+CHECK_COMMAND = f"{DOMAIN}/diagnose/check"
 CAPTURE_STATUS_COMMAND = f"{DOMAIN}/capture/status"
 CAPTURE_START_COMMAND = f"{DOMAIN}/capture/start"
 CAPTURE_SUMMARY_COMMAND = f"{DOMAIN}/capture/summary"
@@ -750,6 +754,22 @@ async def ws_reboot(
     await _box_action(hass, connection, msg, "reboot")
 
 
+@websocket_api.websocket_command(
+    {vol.Required("type"): CHECK_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_check_connection(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Try the box, the internet, the name service and the web from Home Assistant."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    entry = found[0]
+    port = entry.data.get(CONF_PORT) or (49443 if entry.data.get(CONF_USE_TLS) else 49000)
+    connection.send_result(msg["id"], await run_checks(entry.data[CONF_HOST], port))
+
+
 def _capture_state(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
     manager = hass.data[KEY_CAPTURES][entry_id]
     return {
@@ -1000,6 +1020,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_history_device)
     websocket_api.async_register_command(hass, ws_reconnect)
     websocket_api.async_register_command(hass, ws_reboot)
+    websocket_api.async_register_command(hass, ws_check_connection)
     websocket_api.async_register_command(hass, ws_capture_status)
     websocket_api.async_register_command(hass, ws_capture_start)
     websocket_api.async_register_command(hass, ws_capture_summary)

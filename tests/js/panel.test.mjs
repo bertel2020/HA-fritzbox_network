@@ -1131,3 +1131,25 @@ test("the capture card narrows to a device and shows the summary of a file", () 
   assert.match(html, /example\.org/);
   assert.match(html, /Auf der Internetseite/);
 });
+
+const check = await import(`${base}panel-check.js`);
+
+test("the connection check shows the steps and names what to look at", () => {
+  assert.match(check.renderCheck(null, { t }), /Verbindung prüfen/);
+  assert.match(check.renderCheck("running", { t }), /disabled/);
+  const result = {
+    verdict: "dns",
+    steps: [
+      { key: "box", ok: true, ms: 3.2, error: null },
+      { key: "internet", ok: true, ms: 12, error: null },
+      { key: "dns", ok: false, ms: null, error: "timeout" },
+      { key: "web", ok: false, ms: null, error: "timeout" },
+      { key: "ipv6", ok: false, ms: null, error: "timeout" },
+    ],
+  };
+  const html = check.renderCheck(result, { t });
+  assert.match(html, /3.2 ms/);
+  assert.match(html, /fehlgeschlagen \(timeout\)/);
+  assert.match(html, /Namensserver/);
+  assert.match(html, /nicht verfügbar/);
+});
