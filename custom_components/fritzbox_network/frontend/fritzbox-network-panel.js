@@ -116,10 +116,21 @@ function scrollerOf(el) {
 // the logo of the integration, served next to the scripts
 const ICON_URL = new URL("./brand/icon.png", import.meta.url).href;
 
+// the two pages behind the "Devices" tab: which devices the integration takes in, and the clean-up
+export const DEVICE_PAGES = ["filter", "cleanup"];
+
+/** The switch between the pages of the "Devices" tab, drawn at the top of each of them. */
+export function renderSubTabs(active, t) {
+  return `<div class="seg subtabs" role="tablist" aria-label="${escapeHtml(t.tabs.devices)}">${DEVICE_PAGES.map(
+    (id) => `<button role="tab" data-tab="${id}" aria-selected="${id === active}" aria-pressed="${id === active}">${escapeHtml(t.tabs[id])}</button>`
+  ).join("")}</div>`;
+}
+
 export function renderNav(state, t, stale) {
   const line = state.data?.internet;
+  const selected = (id) => state.tab === id || (id === "devices" && DEVICE_PAGES.includes(state.tab));
   const tab = (id, extra = "", label = "") =>
-    `<button role="tab" data-tab="${id}" aria-selected="${state.tab === id}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${escapeHtml(t.tabs[id])}${extra}</button>`;
+    `<button role="tab" data-tab="${id}" aria-selected="${selected(id)}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${escapeHtml(t.tabs[id])}${extra}</button>`;
   const dot = line ? `<i class="dot ${line.connected === false ? "" : "on"}" aria-hidden="true"></i>` : "";
   const label = line ? `${t.tabs.internet}, ${line.connected === false ? t.inet.state.down : t.inet.state.up}` : "";
   return [
@@ -127,8 +138,7 @@ export function renderNav(state, t, stale) {
     tab("internet", dot, label),
     tab("addresses"),
     tab("diagnose"),
-    tab("cleanup", stale ? `<em>${stale}</em>` : ""),
-    tab("filter"),
+    tab("devices", stale ? `<em>${stale}</em>` : ""),
   ].join("");
 }
 
@@ -646,6 +656,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div id="diagnose-view" hidden></div>
           <div id="addresses-view" hidden></div>
           <div class="col" id="cleanup-view" hidden>
+            ${renderSubTabs("cleanup", t)}
             <div class="phead"><h1>${t.cleanup.title}</h1><p class="lead">${t.cleanup.lead}</p></div>
             <section class="card pad">
               <div class="range"><span id="days-head">${t.cleanup.since}</span><div id="days-seg"></div></div>
@@ -655,6 +666,7 @@ class FritzboxNetworkPanel extends HTMLElement {
             <section class="card pad" id="hidden"></section>
           </div>
           <div class="col" id="filter-view" hidden>
+            ${renderSubTabs("filter", t)}
             <div class="phead"><h1>${t.filter.title}</h1><p class="lead">${t.filter.lead}</p></div>
             <div id="f-controls"></div>
             <section class="card pad" id="f-picker-wrap" hidden>
@@ -729,6 +741,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const netView = root.querySelector("#net-view");
     if (!netView) return;
     const tab = state.tab;
+    if (DEVICE_PAGES.includes(tab)) state.devicesPage = tab;
     const onDevice = tab === "net" && Boolean(state.sel);
     netView.hidden = !ready || tab !== "net" || onDevice;
     root.querySelector("#device-view").hidden = !ready || !onDevice;
@@ -1637,7 +1650,9 @@ class FritzboxNetworkPanel extends HTMLElement {
     } else if (ds.act === "logbook" || ds.act === "history") {
       return this._navigate(`/${ds.act}?entity_id=${encodeURIComponent(this._selected()?.entity_id ?? "")}`);
     } else if (ds.tab) {
-      globalThis.location.hash = ds.tab === "net" ? "#/" : `#/${ds.tab}`;
+      // the "Devices" tab opens the page of it that was open last
+      const page = ds.tab === "devices" ? (state.devicesPage ?? "filter") : ds.tab;
+      globalThis.location.hash = page === "net" ? "#/" : `#/${page}`;
       return;
     } else if (ds.act === "pick-all") {
       for (const d of visibleStale(state)) state.picked.add(d.mac);

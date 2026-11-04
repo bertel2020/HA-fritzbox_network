@@ -480,6 +480,7 @@ export const PANEL_CSS = `
   ul.logrows { margin-top: 10px; max-height: 420px; overflow: auto; }
   ul.logrows .pmap { white-space: nowrap; }
   .capbtns { display: flex; gap: 6px; flex-wrap: wrap; }
+  .subtabs { margin-bottom: 14px; }
   .capexisting { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
   .capsum { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
   .capsum ul.ports { margin-bottom: 10px; }

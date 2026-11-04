@@ -1022,10 +1022,10 @@ test("the pool card is only offered to someone who may write, and warns before i
 test("all pages are tabs, the internet tab carries the state of the line and clean-up its count", () => {
   const html = panel.renderNav({ tab: "internet", data: { internet: { connected: false } } }, t, 3);
   const labels = [...html.matchAll(/<button[^>]*>([^<]+)/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ["Netzwerk", "Internet", "Adressraum", "Diagnose", "Aufräumen", "Einbinden"]);
+  assert.deepEqual(labels, ["Netzwerk", "Internet", "Adressraum", "Diagnose", "Geräte"]);
   assert.match(html, /data-tab="internet" aria-selected="true" aria-label="Internet, Getrennt"/);
   assert.match(html, /<i class="dot " aria-hidden="true"><\/i>/);
-  assert.match(html, /Aufräumen<em>3<\/em>/);
+  assert.match(html, /Geräte<em>3<\/em>/);
   assert.match(panel.renderNav({ tab: "net", data: { internet: { connected: true } } }, t, 0), /<i class="dot on"/);
   assert.doesNotMatch(panel.renderNav({ tab: "net", data: null }, t, 0), /<i class="dot|<em>/);
 });
@@ -1173,4 +1173,19 @@ test("the event log shows the messages newest first and marks the chosen group",
   assert.match(logPage.renderLog({ events: [] }, { t, group: "" }), /Keine Meldungen/);
   assert.match(logPage.renderLog("failed", { t, group: "" }), /nicht geliefert/);
   assert.match(logPage.renderLog(null, { t, group: "" }), new RegExp(t.loading));
+});
+
+
+test("the devices tab is selected on both of its pages, and each page has the switch between them", () => {
+  for (const tab of ["cleanup", "filter"]) {
+    const nav = panel.renderNav({ tab, data: null }, t, 0);
+    assert.match(nav, /data-tab="devices" aria-selected="true"/);
+    assert.doesNotMatch(nav, /data-tab="(cleanup|filter)"/);
+  }
+  assert.match(panel.renderNav({ tab: "net", data: null }, t, 0), /data-tab="devices" aria-selected="false"/);
+
+  const switchBar = panel.renderSubTabs("cleanup", t);
+  assert.match(switchBar, /data-tab="filter" aria-selected="false" aria-pressed="false">Einbinden/);
+  assert.match(switchBar, /data-tab="cleanup" aria-selected="true" aria-pressed="true">Aufräumen/);
+  assert.deepEqual(panel.DEVICE_PAGES, ["filter", "cleanup"]);
 });
