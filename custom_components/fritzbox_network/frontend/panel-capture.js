@@ -13,16 +13,22 @@ export function defaultInterface(interfaces) {
   return (interfaces.find((i) => i.id === "1-lan") ?? interfaces[0])?.id ?? "";
 }
 
+// The usual order of the boxes (the 7590 AX measured): the first access point is 2.4 GHz, the second 5 GHz.
+// Used until the detection has measured it.
+const USUAL_BANDS = { "1-vap0": "2_4ghz", "1-vap1": "5ghz" };
+
 /** The name of an interface: a plain one made from its id, the box's own name where the id says nothing. */
 export function interfaceName(i, t) {
   const c = t.inet.capture;
   const n = c.names;
-  const band = i.band ? (t.bandGroups[i.band] ?? i.band) : "";
+  const known = i.band ?? null;
+  const usual = known ? null : (USUAL_BANDS[i.id] ?? null);
+  const band = known || usual ? (t.bandGroups[known ?? usual] ?? known ?? usual) : "";
   let match;
   let name = i.label;
   if (i.id === "1-lan") name = n.lan;
-  else if ((match = /^1-eth(\d+)$/.exec(i.id))) name = fill(n.eth, { n: match[1] });
-  else if ((match = /^1-vap(\d+)$/.exec(i.id))) name = band ? fill(n.apBand, { band }) : fill(n.ap, { n: Number(match[1]) + 1 });
+  else if ((match = /^1-eth(\d+)$/.exec(i.id))) name = fill(n.eth, { n: Number(match[1]) + 1 });
+  else if ((match = /^1-vap(\d+)$/.exec(i.id))) name = band ? fill(usual ? n.apUsual : n.apBand, { band }) : fill(n.ap, { n: Number(match[1]) + 1 });
   else if ((match = /^1-guest(\d?)$/.exec(i.id)))
     name = match[1] === "4" ? fill(n.guestBand, { band: t.bandGroups["2_4ghz"] }) : match[1] === "5" ? fill(n.guestBand, { band: t.bandGroups["5ghz"] }) : n.guest;
   else if ((match = /^1-wg(\d+)$/.exec(i.id))) name = fill(n.wg, { n: match[1] });
