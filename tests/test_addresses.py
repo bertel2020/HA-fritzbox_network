@@ -97,12 +97,20 @@ async def test_what_the_user_notes_is_kept_and_checked(hass, hass_ws_client, fak
     again = (await _call(client, OVERVIEW, entry_id=entry.entry_id))["result"]
     assert again["own"]["blocks"][0]["name"] == "Kameras"
 
-    entry_row = {"id": 2, "name": "Besucher", "from": 200, "to": 210, "kind": "hold", "note": "Gäste"}
+    entry_row = {
+        "id": 2,
+        "name": "Besucher",
+        "from": 200,
+        "to": 210,
+        "kind": "hold",
+        "note": "Gäste",
+    }
     saved = await _call(client, SAVE, entry_id=entry.entry_id, own={**own, "entries": [entry_row]})
     assert saved["success"] is True
     assert coordinator.addresses.data["entries"] == [entry_row]
     # older data without entries and without marks is still taken
-    assert (await _call(client, SAVE, entry_id=entry.entry_id, own={k: v for k, v in own.items() if k != "marks"}))["success"] is True
+    older = {k: v for k, v in own.items() if k != "marks"}
+    assert (await _call(client, SAVE, entry_id=entry.entry_id, own=older))["success"] is True
 
     for bad in (
         {**own, "notes": {"not an ip": "x"}},
