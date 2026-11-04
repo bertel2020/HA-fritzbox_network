@@ -53,16 +53,16 @@ export const PANEL_CSS = `
 
   /* header: logo and title on the left, the pages as pills and the link to the settings on the right */
   .header { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px);
-    border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 20px;
-    padding: 0 max(16px, calc((100% - 1200px) / 2 + 24px)); min-height: 68px; }
-  .brand { display: flex; align-items: center; gap: 12px; padding: 10px 0; min-width: 0; flex: 1 1 auto; }
+    border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px;
+    padding: 0 max(16px, calc((100% - 1200px) / 2 + 24px)); }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 10px 0; min-height: 60px; min-width: 0; flex: 1 1 auto; }
   .brand > div { min-width: 0; }
   .menu { display: none; width: 40px; height: 40px; margin-left: -10px; place-items: center; border-radius: 50%; color: var(--text); }
   .menu:hover { background: var(--neutral-soft); }
-  .logo { width: 40px; height: 40px; border-radius: 10px; object-fit: cover; flex: none; }
+  .logo { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; flex: none; }
   .brand b { display: block; font-size: 18px; font-weight: 500; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .brand small { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 4px 0; }
+  nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 8px 0; }
   nav button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 18px; font-weight: 500; color: var(--muted); white-space: nowrap; border-radius: 22px; transition: color .15s, background .15s; }
   nav button:hover { color: var(--text); background: var(--neutral-soft); }
   nav button[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
@@ -148,8 +148,10 @@ export const PANEL_CSS = `
   }
   .fmenu { position: absolute; z-index: 12; top: calc(100% + 6px); left: 0; width: 300px; max-width: 100%; max-height: 420px; overflow: auto; padding: 8px;
     background: var(--surface); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 10px 30px var(--shadow-c); }
-  .iconbtn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--input-line); background: var(--surface); color: var(--accent-hover); }
-  .iconbtn:hover, .iconbtn[aria-expanded="true"] { background: var(--accent-soft); border-color: var(--accent); }
+  svg.i.fill { fill: currentColor; stroke: none; }
+  .iconbtn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--muted); }
+  .iconbtn svg.i { width: 24px; height: 24px; }
+  .iconbtn:hover, .iconbtn[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent-hover); }
   /* outside the header, which holds fixed boxes inside itself because of its blur */
   .fmenu.lookmenu { position: fixed; top: 76px; left: auto; right: max(16px, calc((100vw - 1200px) / 2 + 24px)); width: 320px; max-width: calc(100vw - 32px); padding: 8px; }
   .lookmenu [role="group"] + .label { margin-top: 4px; border-top: 1px solid var(--line-2); padding-top: 12px; }
