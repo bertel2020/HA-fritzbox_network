@@ -125,3 +125,21 @@ def test_the_modified_tcpdump_format_of_the_box_is_read_and_filtered(tmp_path):
     target = tmp_path / "only.pcap"
     assert pcap.filter_device(source, target, "aa:bb:cc:dd:ee:03", set()) == 1
     assert pcap.summarize(target).dns == {"other.net": 1}
+
+
+def test_raw_ip_and_pppoe_packets_are_understood():
+    udp = _udp(5000, 53, _dns("example.org"))
+    ip = _ipv4((192, 168, 1, 10), (8, 8, 8, 8), 17, udp)
+
+    raw = pcap.parse_frame(14, ip)  # the routing interfaces of the box
+    assert (raw.src_ip, raw.protocol, raw.dst_port) == ("192.168.1.10", "udp", 53)
+
+    pppoe = A + B + b"\x88\x64" + b"\x11\x00\x00\x01" + struct.pack(">H", len(ip) + 2)
+    pppoe += struct.pack(">H", 0x0021) + ip  # an internet connection over a DSL line
+    framed = pcap.parse_frame(1, pppoe)
+    assert (framed.dst_ip, framed.protocol) == ("8.8.8.8", "udp")
+
+    other = pcap.parse_frame(1, A + B + b"\x88\xcc" + b"\0" * 20)
+    assert other.protocol == "other"
+    assert other.unknown == "ethertype 0x88cc"
+    assert pcap.parse_frame(99, b"\0" * 20).unknown == "linktype 99"

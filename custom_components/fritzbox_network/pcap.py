@@ -15,6 +15,8 @@ import struct
 
 LINKTYPE_ETHERNET = 1
 LINKTYPE_RAW = 101
+# 12 and 14 are the numbers older systems gave raw IP; the box uses 14 on its routing interfaces
+RAW_LINKTYPES = (12, 14, LINKTYPE_RAW)
 # magic number -> (byte order, nanosecond timestamps, records with 8 more bytes)
 # The last two are the "modified tcpdump" format the FRITZ!Box streams; Wireshark reads it too.
 MAGICS = {
@@ -29,6 +31,9 @@ ETH_IPV4 = 0x0800
 ETH_ARP = 0x0806
 ETH_VLAN = 0x8100
 ETH_IPV6 = 0x86DD
+ETH_PPPOE = 0x8864
+PPP_IPV4 = 0x0021
+PPP_IPV6 = 0x0057
 PROTO_TCP = 6
 PROTO_UDP = 17
 MAX_FLOWS = 200_000
@@ -59,6 +64,7 @@ class Frame:
     src_port: int | None = None
     dst_port: int | None = None
     payload: bytes = b""
+    unknown: str = ""  # what a packet of the kind "other" is, for the report
 
 
 @dataclass
@@ -70,6 +76,7 @@ class Summary:
     flows: Counter = field(default_factory=Counter)
     flow_packets: Counter = field(default_factory=Counter)
     dns: Counter = field(default_factory=Counter)
+    unknown: Counter = field(default_factory=Counter)
 
 
 def _mac(raw: bytes) -> str:
@@ -119,10 +126,16 @@ def parse_frame(linktype: int, data: bytes) -> Frame:
         while ethertype == ETH_VLAN and len(data) >= offset + 4:
             ethertype = struct.unpack(">H", data[offset + 2 : offset + 4])[0]
             offset += 4
-    elif linktype == LINKTYPE_RAW and data:
+    elif linktype in RAW_LINKTYPES and data:
         ethertype = ETH_IPV4 if data[0] >> 4 == 4 else ETH_IPV6
     else:
+        frame.unknown = f"linktype {linktype}"
         return frame
+    if ethertype == ETH_PPPOE and len(data) >= offset + 8:
+        # a PPPoE session (the internet connection of a DSL line): 6 bytes, then the PPP protocol
+        ppp = struct.unpack(">H", data[offset + 6 : offset + 8])[0]
+        offset += 8
+        ethertype = {PPP_IPV4: ETH_IPV4, PPP_IPV6: ETH_IPV6}.get(ppp, ethertype)
     if ethertype == ETH_ARP:
         frame.protocol = "arp"
         if len(data) >= offset + 28:
@@ -140,6 +153,8 @@ def parse_frame(linktype: int, data: bytes) -> Frame:
         frame.src_ip = str(ipaddress.IPv6Address(data[offset + 8 : offset + 24]))
         frame.dst_ip = str(ipaddress.IPv6Address(data[offset + 24 : offset + 40]))
         _transport(frame, proto, data, offset + 40)
+    else:
+        frame.unknown = f"ethertype 0x{ethertype:04x}"
     return frame
 
 
@@ -206,6 +221,8 @@ def summarize(path: Path) -> Summary:
         last = packet.time
         frame = parse_frame(reader.linktype, packet.data)
         summary.protocols[frame.protocol] += 1
+        if frame.protocol == "other" and frame.unknown:
+            summary.unknown[frame.unknown] += 1
         if frame.src_ip and frame.dst_ip and len(summary.flows) < MAX_FLOWS:
             pair = sorted((frame.src_ip, frame.dst_ip))
             key = (pair[0], pair[1], frame.protocol, _server_port(frame))

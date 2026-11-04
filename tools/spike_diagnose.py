@@ -130,6 +130,8 @@ def main() -> None:
                     f"{summary.packets} packets, {dict(summary.protocols)}, "
                     f"{len(summary.dns)} DNS names, ended: {reason}"
                 )
+                if summary.unknown:
+                    lines.append(f"    not understood: {dict(summary.unknown.most_common(4))}")
             except Exception as err:  # noqa: BLE001
                 lines.append(f"{iface} ({item['label']}): FAILED {type(err).__name__}: {mask(err)}")
 

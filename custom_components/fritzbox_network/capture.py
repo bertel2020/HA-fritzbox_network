@@ -53,27 +53,33 @@ def interface_slug(interface: str) -> str:
     return re.sub(r"[^a-z0-9]", "", interface.lower())
 
 
+def _natural(text: str) -> list[tuple[int, int | str]]:
+    """A sort key that puts eth2 before eth10 and 2-1 before 2-3."""
+    return [(0, int(p)) if p.isdigit() else (1, p) for p in re.split(r"(\d+)", text) if p]
+
+
 def curate_interfaces(found: list[dict[str, str]]) -> list[dict[str, str]]:
     """The interfaces of the box worth offering, in groups; the technical ones stay out.
 
     The box lists about seventy: internal trace and tunnel interfaces among them. Offered are the
-    internet connections, the LAN ports, the Wi-Fi access points and the routing interfaces.
+    internet connections, the LAN ports, the Wi-Fi access points (the radios give nothing) and the
+    routing interfaces.
     """
     offered = []
     for item in found:
         interface = item["id"]
         if interface.startswith("2-"):
             group = "internet"
-        elif interface == "1-lan" or re.fullmatch(r"1-eth\d", interface):
+        elif interface == "1-lan" or re.fullmatch(r"1-eth\d+", interface):
             group = "lan"
-        elif re.fullmatch(r"1-(vap\d|wlan\d+|guest\d?)", interface):
+        elif re.fullmatch(r"1-(vap\d|guest\d?)", interface):
             group = "wlan"
         elif interface.startswith("3-"):
             group = "routing"
         else:
             continue
         offered.append({**item, "group": group})
-    offered.sort(key=lambda i: GROUP_ORDER.index(i["group"]))
+    offered.sort(key=lambda i: (GROUP_ORDER.index(i["group"]), _natural(i["id"])))
     return offered
 
 

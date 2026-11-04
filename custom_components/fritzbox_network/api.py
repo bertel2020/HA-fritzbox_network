@@ -369,7 +369,7 @@ class FritzNetworkClient:
         if cut and reason == "time":
             reason = cut[0]
         if written == 0:
-            raise ValueError("the box sent no data")
+            raise ValueError("the box sent no data (an unused or quiet interface?)")
         return reason
 
     def get_device_log(self, group: str | None = None) -> list[dict[str, Any]]:

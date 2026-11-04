@@ -289,11 +289,14 @@ def test_only_the_interfaces_worth_offering_are_kept_and_grouped():
             "3-0",
             "1-vap0",
             "1-lan",
+            "1-eth10",
             "1-eth2",
+            "2-3",
             "2-1",
             "4-128",
             "1-vap0_r3",
             "1-guest",
+            "1-wlan0",
         )
     ]
 
@@ -301,9 +304,11 @@ def test_only_the_interfaces_worth_offering_are_kept_and_grouped():
 
     assert [(i["id"], i["group"]) for i in offered] == [
         ("2-1", "internet"),
-        ("1-lan", "lan"),
+        ("2-3", "internet"),
         ("1-eth2", "lan"),
-        ("1-vap0", "wlan"),
+        ("1-eth10", "lan"),
+        ("1-lan", "lan"),
         ("1-guest", "wlan"),
+        ("1-vap0", "wlan"),
         ("3-0", "routing"),
     ]
