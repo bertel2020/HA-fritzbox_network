@@ -297,6 +297,31 @@ export function checkBlock(own, { name, from, to }) {
   return clash ? { key: "errOverlap", values: { name: clash.name, from: clash.from, to: clash.to } } : null;
 }
 
+/**
+ * One address or a range as the user types it: ".42", "42", ".60-.69", "60 – 69" or with the network in front
+ * ("192.168.178.60-69"). Gives { from, to } as last octets, null when it is not one.
+ */
+export function parseRange(text) {
+  const m = /^\s*(?:\d{1,3}\.\d{1,3}\.\d{1,3})?\.?(\d{1,3})\s*(?:[-–—]\s*(?:\d{1,3}\.\d{1,3}\.\d{1,3})?\.?(\d{1,3}))?\s*$/.exec(text ?? "");
+  if (!m) return null;
+  const from = Number(m[1]);
+  return { from, to: m[2] === undefined ? from : Number(m[2]) };
+}
+
+/** What the form says about what is typed so far: { ok, text } with text empty while nothing is typed. */
+export function groupPreview(own, base, draft, a) {
+  const text = String(draft?.range ?? "").trim();
+  if (!text) return { ok: false, text: "" };
+  const range = parseRange(text);
+  const problem = range ? checkBlock(own, { name: String(draft?.name ?? "").trim() || "x", ...range }) : { key: "errRange" };
+  if (problem) return { ok: false, text: fill(a.groups[problem.key === "errRange" ? "errRangeOnly" : problem.key], problem.values ?? {}) };
+  const size = range.to - range.from + 1;
+  return {
+    ok: true,
+    text: size === 1 ? fill(a.groups.previewOne, { ip: `${base}${range.from}` }) : fill(a.groups.previewRange, { n: size, from: `${base}${range.from}`, to: `.${range.to}` }),
+  };
+}
+
 function matches(m, cell, ctx) {
   const { filter, query, own } = ctx;
   const d = cell.device;
@@ -486,9 +511,17 @@ function detail(m, ctx) {
     <p class="soon">${escapeHtml(a.ownHint)}</p>`;
 }
 
-function blocksCard(m, ctx) {
-  const { t, own, blockMessage } = ctx;
-  const a = t.addr;
+/** The button in the head of the page: how many groups there are, and the way to the dialog. */
+function groupsButton(own, t) {
+  const n = own.blocks.length;
+  return `<button class="btn" data-agroups="open" data-k="groups-open" aria-haspopup="dialog">${escapeHtml(t.addr.groups.open)}${n ? ` <span class="count">${n}</span>` : ""}</button>`;
+}
+
+/** The dialog of the address groups: the list, and a form with one field for an address or a range. */
+function groupsDialog(m, ctx) {
+  const { t, own, groupDraft } = ctx;
+  const g = t.addr.groups;
+  const draft = groupDraft ?? { name: "", range: "", color: BLOCK_COLORS[0] };
   const list = [...own.blocks].sort((x, y) => x.from - y.from);
   const rows = list.length
     ? list
@@ -497,23 +530,34 @@ function blocksCard(m, ctx) {
           const inside = m.cells.filter((c) => c.n >= b.from && c.n <= b.to);
           const usedN = inside.filter((c) => c.device).length;
           const planned = inside.filter((c) => c.state === "plan").length;
-          return `<div class="ablock"><div class="name"><i style="background:var(${b.color})"></i><span><b>${escapeHtml(b.name)}</b><small>.${b.from} – .${b.to}</small></span></div>
-            <div class="ameter" title="${escapeHtml(fill(a.blocks.used, { n: usedN, size }))}"><i style="width:${(usedN / size) * 100}%;background:var(${b.color})"></i><i style="width:${(planned / size) * 100}%;background:var(--ok);opacity:.5"></i></div>
-            <div class="num"><b>${usedN}</b> / ${size}${planned ? `<span class="muted"> · ${escapeHtml(fill(a.blocks.planned, { n: planned }))}</span>` : ""}</div>
-            <button class="x" data-adel="${b.id}" aria-label="${escapeHtml(fill(a.blocks.deleteLabel, { name: b.name }))}" title="${escapeHtml(a.blocks.delete)}">✕</button></div>`;
+          const stats = [size === 1 ? g.sizeOne : fill(g.size, { n: size }), fill(g.used, { n: usedN }), planned ? fill(g.planned, { n: planned }) : ""].filter(Boolean).join(" · ");
+          const range = size === 1 ? `.${b.from}` : `.${b.from} – .${b.to}`;
+          return `<li class="agroup"><i style="background:var(${b.color})"></i><span class="gname"><b>${escapeHtml(b.name)}</b><small>${escapeHtml(stats)}</small></span>
+            <span class="mono">${escapeHtml(range)}</span>
+            <button class="x" data-adel="${b.id}" aria-label="${escapeHtml(fill(g.deleteLabel, { name: b.name }))}" title="${escapeHtml(g.delete)}">✕</button></li>`;
         })
         .join("")
-    : `<p class="hint">${escapeHtml(a.blocks.none)}</p>`;
-  const colors = BLOCK_COLORS.map((c, i) => `<option value="${c}">${escapeHtml(a.blocks.colors[i])}</option>`).join("");
-  return `<section class="card sec"><span class="label">${escapeHtml(a.blocks.title)}</span><p class="hint">${escapeHtml(a.blocks.lead)}</p>
-    <div class="ablocks">${rows}</div>
-    <form class="blockform" id="a-blockform" autocomplete="off">
-      <div class="afield"><label for="a-bn">${escapeHtml(a.blocks.name)}</label><input id="a-bn" name="name" required maxlength="30"></div>
-      <div class="afield"><label for="a-bf">${escapeHtml(a.blocks.from)}</label><input id="a-bf" name="from" type="number" min="1" max="254" required></div>
-      <div class="afield"><label for="a-bt">${escapeHtml(a.blocks.to)}</label><input id="a-bt" name="to" type="number" min="1" max="254" required></div>
-      <div class="afield"><label for="a-bc">${escapeHtml(a.blocks.color)}</label><select id="a-bc" name="color">${colors}</select></div>
-      <button class="btn p" type="submit">${escapeHtml(a.blocks.create)}</button></form>
-    <div class="formmsg" role="alert">${blockMessage ? escapeHtml(blockMessage) : ""}</div></section>`;
+    : "";
+  const colors = BLOCK_COLORS.map(
+    (c, i) =>
+      `<label class="swatch" title="${escapeHtml(g.colors[i])}"><input type="radio" name="color" value="${c}" ${draft.color === c ? "checked" : ""} aria-label="${escapeHtml(g.colors[i])}"><i style="background:var(${c})"></i></label>`
+  ).join("");
+  const preview = groupPreview(own, m.baseText, draft, t.addr);
+  return `<div class="backdrop open" id="a-groups" data-agroups="backdrop"><div class="dialog groups" role="dialog" aria-modal="true" aria-labelledby="a-gtitle">
+    <div class="ghead"><div><h2 id="a-gtitle">${escapeHtml(g.title)}</h2><p class="hint">${escapeHtml(g.lead)}</p></div>
+      <button class="x" data-agroups="close" aria-label="${escapeHtml(g.close)}">✕</button></div>
+    ${rows ? `<ul class="agroups">${rows}</ul>` : `<p class="hint gnone">${escapeHtml(g.none)}</p>`}
+    <form class="groupform" id="a-blockform" autocomplete="off">
+      <h3>${escapeHtml(g.newTitle)}</h3>
+      <div class="gfields">
+        <div class="afield"><label for="a-bn">${escapeHtml(g.name)}</label><input id="a-bn" name="name" maxlength="30" placeholder="${escapeHtml(g.namePlaceholder)}" value="${escapeHtml(draft.name)}"></div>
+        <div class="afield"><label for="a-br">${escapeHtml(g.range)}</label><input id="a-br" name="range" class="mono" placeholder="${escapeHtml(g.rangePlaceholder)}" value="${escapeHtml(draft.range)}" inputmode="text"></div>
+      </div>
+      <p class="gprev ${preview.ok ? "ok" : ""}" id="a-bprev" aria-live="polite">${escapeHtml(preview.text || g.rangeHint)}</p>
+      <div class="afield"><span class="label">${escapeHtml(g.color)}</span><div class="swatches" role="radiogroup" aria-label="${escapeHtml(g.color)}">${colors}</div></div>
+      <div class="formmsg" role="alert">${ctx.blockMessage ? escapeHtml(ctx.blockMessage) : ""}</div>
+      <div class="btn-row"><button type="button" class="btn" data-agroups="close">${escapeHtml(g.close)}</button><button class="btn p" type="submit">${escapeHtml(g.create)}</button></div>
+    </form></div></div>`;
 }
 
 function zonesCard(m, t, language) {
@@ -539,14 +583,14 @@ export function renderAddresses(ctx) {
   const { t, addr, clients, nodes } = ctx;
   const a = t.addr;
   const back = `<div class="phead"><div class="pheadrow"><h1 id="dtitle" tabindex="-1">${escapeHtml(a.title)}</h1>
-    ${addr.status === "ready" ? `<button class="btn" data-aexport="scroll" data-k="x-scroll">${escapeHtml(a.export.open)}</button>` : ""}</div><p class="lead">${escapeHtml(a.lead)}</p></div>`;
+    ${addr.status === "ready" ? `<div class="btn-row tight">${groupsButton(addr.own ?? emptyOwn(), t)}<button class="btn" data-aexport="scroll" data-k="x-scroll">${escapeHtml(a.export.open)}</button></div>` : ""}</div><p class="lead">${escapeHtml(a.lead)}</p></div>`;
   if (addr.status === "loading") return `${back}<div class="card"><div class="empty"><span>${escapeHtml(t.loading)}</span></div></div>`;
   if (addr.status === "failed") return `${back}<div class="card"><div class="empty"><b>${escapeHtml(a.failed)}</b></div></div>`;
   const own = addr.own ?? emptyOwn();
   const model = addressModel({ network: addr.network, clients, nodes, fixed: addr.fixed, own });
   if (!model) return `${back}<div class="card"><div class="empty"><b>${escapeHtml(a.noNetwork)}</b></div></div>`;
   const hints = addressHints(model, { fixedKnown: fixedKnownOf(addr.fixed) });
-  const c = { ...ctx, own, filter: addr.filter, query: addr.query, sel: addr.sel, hints, blockMessage: addr.blockMessage };
+  const c = { ...ctx, own, filter: addr.filter, query: addr.query, sel: addr.sel, hints, blockMessage: addr.blockMessage, groupDraft: addr.groupDraft };
   const chips = FILTERS.map(
     (f) => `<button class="achip" data-afilter="${f}" data-k="f-${f}" aria-pressed="${addr.filter === f}">${escapeHtml(a.filters[f])}<em>${countFor(model, f, c)}</em></button>`
   ).join("");
@@ -560,5 +604,5 @@ export function renderAddresses(ctx) {
         ${addr.view === "map" ? mapView(model, c) : listView(model, c)}</section>
       <aside class="card sec adetail" aria-live="polite">${detail(model, c)}</aside>
     </div>
-    ${blocksCard(model, c)}${zonesCard(model, t, ctx.language)}${ctx.canWrite && model.dhcp ? poolCard(model, c) : ""}${exportCard(model, c)}`;
+    ${zonesCard(model, t, ctx.language)}${ctx.canWrite && model.dhcp ? poolCard(model, c) : ""}${exportCard(model, c)}${addr.groupsOpen ? groupsDialog(model, c) : ""}`;
 }

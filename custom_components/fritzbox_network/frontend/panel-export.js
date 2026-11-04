@@ -256,10 +256,10 @@ function blocksHtml(m, own, t) {
       const fixed = inside.filter((c) => c.device && c.device.kind !== "dyn").length;
       const planned = inside.filter((c) => c.state === "plan").length;
       return `<tr><td><i class="sw" style="background:${BLOCK_HEX[b.color] ?? "#6b7280"}"></i><b>${escapeHtml(b.name)}</b></td>
-        <td class="mono">.${b.from} – .${b.to}</td><td>${b.to - b.from + 1}</td><td class="r">${fixed}${planned ? ` · ${escapeHtml(fill(a.blocks.planned, { n: planned }))}` : ""}</td></tr>`;
+        <td class="mono">.${b.from} – .${b.to}</td><td>${b.to - b.from + 1}</td><td class="r">${fixed}${planned ? ` · ${escapeHtml(fill(a.groups.planned, { n: planned }))}` : ""}</td></tr>`;
     })
     .join("");
-  return `<section><h2>${escapeHtml(a.blocks.title)}</h2><table><thead><tr><th>${escapeHtml(a.blocks.name)}</th><th>${escapeHtml(a.print.addresses)}</th><th>${escapeHtml(a.print.size)}</th><th class="r">${escapeHtml(a.print.fixedHead)}</th></tr></thead><tbody>${rows}</tbody></table></section>`;
+  return `<section><h2>${escapeHtml(a.groups.title)}</h2><table><thead><tr><th>${escapeHtml(a.groups.name)}</th><th>${escapeHtml(a.print.addresses)}</th><th>${escapeHtml(a.print.size)}</th><th class="r">${escapeHtml(a.print.fixedHead)}</th></tr></thead><tbody>${rows}</tbody></table></section>`;
 }
 
 /** Every address from .0 to .255 in one row, in bands by the areas of the network. */

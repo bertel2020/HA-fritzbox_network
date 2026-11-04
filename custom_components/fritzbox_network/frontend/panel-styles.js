@@ -670,21 +670,42 @@ export const PANEL_CSS = `
   .arow { cursor: pointer; }
   .arow:hover td { background: var(--soft); }
   .arow[aria-current="true"] td { background: var(--accent-soft); }
-  .ablocks { display: grid; gap: 12px; margin: 12px 0 18px; }
-  .ablock, .azone { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto auto; gap: 4px 16px; align-items: center; }
+  .azone { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto auto; gap: 4px 16px; align-items: center; }
   .azone { grid-template-columns: 200px minmax(0, 1fr) auto; }
-  .ablock .name { display: flex; gap: 10px; align-items: center; }
-  .ablock .name i { width: 14px; height: 14px; border-radius: 4px; flex: none; }
-  .ablock .name b, .azone .name b { display: block; font-weight: 500; }
-  .ablock .name small, .azone .name small { display: block; color: var(--muted); font-size: 12px; }
-  .ablock .ameter, .azone .ameter { margin: 0; height: 12px; }
-  .ablock .num, .azone .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .ablock .x { color: var(--muted); padding: 4px 8px; border-radius: 8px; }
-  .ablock .x:hover { background: var(--bad-soft); color: var(--bad); }
-  @container app (max-width: 700px) { .ablock, .azone { grid-template-columns: 1fr auto; } .ablock .ameter, .azone .ameter { grid-column: 1 / -1; order: 3; } .ablock .x { order: 2; } }
-  .blockform { display: grid; grid-template-columns: minmax(140px, 1.4fr) 90px 90px 140px auto; gap: 10px; align-items: end; padding-top: 16px; border-top: 1px solid var(--line); }
-  .blockform .afield { margin-top: 0; }
-  @container app (max-width: 800px) { .blockform { grid-template-columns: 1fr 1fr; } }
+  .azone .name b { display: block; font-weight: 500; }
+  .azone .name small { display: block; color: var(--muted); font-size: 12px; }
+  .azone .ameter { margin: 0; height: 12px; }
+  .azone .num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  @container app (max-width: 700px) { .azone { grid-template-columns: 1fr auto; } .azone .ameter { grid-column: 1 / -1; order: 3; } }
+  .btn .count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; margin-left: 6px; border-radius: 9px; background: var(--accent-soft); color: var(--accent-hover); font-size: 11px; font-weight: 500; }
+  .dialog.groups { width: min(540px, 100%); }
+  .groups .ghead { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+  .groups .ghead .hint { margin: 4px 0 0; }
+  .groups .x { color: var(--muted); padding: 4px 8px; border-radius: 8px; flex: none; }
+  .groups .x:hover { background: var(--bad-soft); color: var(--bad); }
+  .groups .ghead .x:hover { background: var(--neutral-soft); color: var(--text); }
+  .agroups { list-style: none; margin: 14px 0 4px; padding: 0; max-height: 240px; overflow: auto; }
+  .agroup { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .agroup:first-child { border-top: 0; }
+  .agroup > i { width: 10px; height: 28px; border-radius: 5px; flex: none; }
+  .agroup .gname { flex: 1; min-width: 0; }
+  .agroup .gname b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .agroup .gname small { display: block; color: var(--muted); font-size: 12px; }
+  .agroup .mono { white-space: nowrap; font-size: 13px; }
+  .gnone { margin: 14px 0 4px; }
+  .groupform { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 14px; }
+  .groupform h3 { font-size: 15px; font-weight: 500; margin: 0 0 10px; }
+  .gfields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; }
+  .gprev { margin: 6px 0 12px; font-size: 12px; color: var(--muted); min-height: 1.4em; }
+  .gprev.ok { color: var(--ok); }
+  .swatches { display: flex; gap: 10px; margin-top: 4px; }
+  .swatch { position: relative; width: 26px; height: 26px; cursor: pointer; }
+  .swatch input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .swatch i { display: block; width: 100%; height: 100%; border-radius: 50%; }
+  .swatch input:checked + i { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--text); }
+  .swatch input:focus-visible + i { outline: 3px solid var(--focus); outline-offset: 4px; }
+  .groupform .btn-row { justify-content: flex-end; margin-top: 12px; }
+  @media (max-width: 520px) { .gfields { grid-template-columns: 1fr; } }
   .formmsg { font-size: 12px; min-height: 16px; margin-top: 8px; color: var(--bad); }
   .poolform { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px; margin-top: 12px; }
   .poolform .afield { margin-top: 0; width: 90px; }

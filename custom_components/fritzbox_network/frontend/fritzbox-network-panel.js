@@ -28,7 +28,7 @@ import {
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
-import { BLOCK_COLORS, addressModel, checkBlock, emptyOwn, poolChange, renderAddresses } from "./panel-addresses.js";
+import { BLOCK_COLORS, addressModel, checkBlock, emptyOwn, groupPreview, parseRange, poolChange, renderAddresses } from "./panel-addresses.js";
 import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
@@ -150,7 +150,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       pageSize: rememberedPageSize(),
       history: null,
       ip: null,
-      addr: { status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", progress: null, exportOpts: { free: false, mac: true, map: true, poolNames: true } },
+      addr: { status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", groupsOpen: false, groupDraft: null, progress: null, exportOpts: { free: false, mac: true, map: true, poolNames: true } },
       traffic: null,
       trafficRange: 7,
       trend: null,
@@ -730,7 +730,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const root = this.shadowRoot;
     const active = root.activeElement;
     // typing a note or a name: the page is drawn again when the field is left, not under the fingers
-    if (active && root.querySelector("#addresses-view")?.contains(active) && active.matches("textarea, [data-aown], #a-bn, #a-bf, #a-bt, #a-pf, #a-pt")) return;
+    if (active && root.querySelector("#addresses-view")?.contains(active) && active.matches("textarea, [data-aown], #a-bn, #a-br, #a-pf, #a-pt")) return;
     this._set(
       "addresses-view",
       renderAddresses({
@@ -800,6 +800,31 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
   }
 
+  /** Closes the dialog of the address groups and gives the focus back to its button. */
+  _closeGroups() {
+    const addr = this._state.addr;
+    addr.groupsOpen = false;
+    addr.blockMessage = "";
+    addr.groupDraft = null;
+    this._leaveField();
+    this._renderAddresses();
+    this.shadowRoot.querySelector('[data-agroups="open"]')?.focus();
+  }
+
+  /** What is typed in the form of a group, kept so that a redraw does not lose it; the line under the fields follows. */
+  _onGroupInput(el) {
+    const addr = this._state.addr;
+    const form = el.closest("form");
+    const data = new FormData(form);
+    addr.groupDraft = { name: String(data.get("name") ?? ""), range: String(data.get("range") ?? ""), color: data.get("color") ?? BLOCK_COLORS[0] };
+    const m = this._addressModel();
+    const line = this.shadowRoot.querySelector("#a-bprev");
+    if (!m || !line) return;
+    const preview = groupPreview(addr.own ?? emptyOwn(), m.baseText, addr.groupDraft, this._t.addr);
+    line.textContent = preview.text || this._t.addr.groups.rangeHint;
+    line.classList.toggle("ok", preview.ok);
+  }
+
   /** The clicks of the address page; false where the click is none of its own. */
   _onAddressClick(ds) {
     const addr = this._state.addr;
@@ -825,6 +850,16 @@ class FritzboxNetworkPanel extends HTMLElement {
     } else if (ds.aunmute !== undefined) {
       own.muted = [];
       this._saveOwn();
+    } else if (ds.agroups === "open") {
+      addr.groupsOpen = true;
+      addr.blockMessage = "";
+      addr.own = own;
+      this._renderAddresses();
+      this.shadowRoot.querySelector("#a-bn")?.focus();
+      return true;
+    } else if (ds.agroups === "close") {
+      this._closeGroups();
+      return true;
     } else if (ds.adel) {
       own.blocks = own.blocks.filter((b) => String(b.id) !== ds.adel);
       this._saveOwn();
@@ -961,21 +996,25 @@ class FritzboxNetworkPanel extends HTMLElement {
     const addr = this._state.addr;
     const own = addr.own ?? emptyOwn();
     const data = new FormData(form);
-    const block = { name: String(data.get("name") ?? "").trim(), from: Number(data.get("from")), to: Number(data.get("to")) };
+    const name = String(data.get("name") ?? "").trim();
+    const range = parseRange(String(data.get("range") ?? ""));
+    const block = { name, ...(range ?? { from: NaN, to: NaN }) };
     const problem = checkBlock(own, block);
     if (problem) {
-      addr.blockMessage = fill(this._t.addr.blocks[problem.key], problem.values ?? {});
+      addr.blockMessage = fill(this._t.addr.groups[problem.key], problem.values ?? {});
+      addr.groupDraft = { name: String(data.get("name") ?? ""), range: String(data.get("range") ?? ""), color: data.get("color") ?? BLOCK_COLORS[0] };
     } else {
       const color = BLOCK_COLORS.includes(data.get("color")) ? data.get("color") : BLOCK_COLORS[0];
       own.blocks.push({ id: Date.now(), ...block, color });
       addr.own = own;
       addr.blockMessage = "";
+      addr.groupDraft = null;
       this._saveOwn();
     }
-    // the form is drawn anew, empty after a block and with the message after a mistake
-    form.reset();
+    // the form is drawn anew, empty after a group and with the message after a mistake
     this._leaveField();
     this._renderAddresses();
+    this.shadowRoot.querySelector("#a-bn")?.focus();
   }
 
   _renderCleanup() {
@@ -1107,6 +1146,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const root = this.shadowRoot;
     const state = this._state;
     if (root.querySelector("#backdrop")?.classList.contains("open")) return;
+    if (event.key === "Escape" && state.addr?.groupsOpen) return this._closeGroups();
     const target = event.target;
     const menu = root.querySelector("#fmenu");
     if (state.menu && menu?.contains(target)) {
@@ -1195,6 +1235,7 @@ class FritzboxNetworkPanel extends HTMLElement {
   _onChange(event) {
     const el = event.target;
     if (el.dataset?.aown) return this._onAddressOwn(el);
+    if (el.name === "color" && el.closest("#a-blockform")) return this._onGroupInput(el);
     if (el.dataset?.aopt) {
       this._state.addr.exportOpts = { ...this._state.addr.exportOpts, [el.dataset.aopt]: el.checked };
       return this._update();
@@ -1236,6 +1277,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       const box = this.shadowRoot.querySelector(`#${el.id}`);
       box?.focus({ preventScroll: true });
       box?.setSelectionRange?.(el.value.length, el.value.length);
+    } else if (el.id === "a-bn" || el.id === "a-br") {
+      this._onGroupInput(el);
     } else if (el.id === "c-search") {
       this._state.cleanupQuery = el.value;
       this._renderCleanup();
@@ -1247,6 +1290,7 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _onClick(event) {
     const t = this._t;
+    if (event.target.id === "a-groups") return this._closeGroups();
     const target = event.target.closest("button, a[data-act], [data-filter], [data-ap], [data-dev], [data-act], [data-aip]");
     if (!target || target.disabled) return;
     const ds = target.dataset;

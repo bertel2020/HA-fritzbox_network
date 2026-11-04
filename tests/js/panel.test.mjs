@@ -888,6 +888,24 @@ test("the hints name what stands out, the worst first", () => {
   assert.ok(addresses.addressHints(m, { fixedKnown: false }).some((h) => h.id === "fixed-unknown"));
 });
 
+test("an address group is typed as one address or a range, with or without the network", () => {
+  assert.deepEqual(addresses.parseRange(".42"), { from: 42, to: 42 });
+  assert.deepEqual(addresses.parseRange("42"), { from: 42, to: 42 });
+  assert.deepEqual(addresses.parseRange(".60-.69"), { from: 60, to: 69 });
+  assert.deepEqual(addresses.parseRange(" 60 – 69 "), { from: 60, to: 69 });
+  assert.deepEqual(addresses.parseRange("192.168.178.60-192.168.178.69"), { from: 60, to: 69 });
+  assert.deepEqual(addresses.parseRange("192.168.178.7"), { from: 7, to: 7 });
+  assert.equal(addresses.parseRange("abc"), null);
+  assert.equal(addresses.parseRange(""), null);
+  const a = texts.panelTexts("de").addr;
+  const own = { blocks: [{ id: 1, name: "Cams", from: 60, to: 69, color: "--b2" }] };
+  assert.equal(addresses.groupPreview(own, "192.168.178.", { name: "", range: "" }, a).text, "");
+  assert.match(addresses.groupPreview(own, "192.168.178.", { name: "", range: ".70-.79" }, a).text, /10 Adressen, 192\.168\.178\.70 bis \.79/);
+  assert.equal(addresses.groupPreview(own, "192.168.178.", { name: "", range: ".42" }, a).ok, true);
+  assert.match(addresses.groupPreview(own, "192.168.178.", { name: "", range: ".65" }, a).text, /Cams/);
+  assert.equal(addresses.groupPreview(own, "192.168.178.", { name: "", range: "x" }, a).ok, false);
+});
+
 test("a block must be a range of the network and may not overlap another", () => {
   const own = { blocks: [{ id: 1, name: "Cams", from: 60, to: 69, color: "--b2" }] };
   assert.equal(addresses.checkBlock(own, { name: "Servers", from: 1, to: 19 }), null);
@@ -974,7 +992,7 @@ test("the CSV has a byte order mark, semicolons and quotes where a cell needs th
   const own = { ...lan.own, notes: { "192.168.79.150": 'Garage; "Wand"' } };
   const m = addresses.addressModel({ ...lan, own });
   const csv = exporter.toCsv(exporter.addressRows(m, own, t, {}), t, { mac: true });
-  assert.ok(csv.startsWith("﻿Adresse;Gerät;Art;Status;Hersteller;MAC;Anbindung;Zuletzt online;Block;Bereich;Notiz\r\n"));
+  assert.ok(csv.startsWith("﻿Adresse;Gerät;Art;Status;Hersteller;MAC;Anbindung;Zuletzt online;Gruppe;Bereich;Notiz\r\n"));
   assert.match(csv, /192\.168\.79\.150;Wallbox;Fest;online;;M2;;;;DHCP-Bereich;"Garage; ""Wand"""\r\n/);
   assert.ok(csv.endsWith("\r\n"));
   assert.doesNotMatch(exporter.toCsv(exporter.addressRows(m, own, t, {}), t, { mac: false }), /;MAC;|;M2;/);
