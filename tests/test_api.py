@@ -396,3 +396,41 @@ def test_a_box_without_the_add_on_info_is_asked_for_the_counters():
     fast, _ = client.get_internet(details=False)
     assert set(fast) == {"GetStatusInfo", "GetTotalBytesSent", "GetTotalBytesReceived"}
     assert asked.count("GetAddonInfos") == 1
+
+
+def test_the_web_login_asks_for_the_challenge_with_a_get():
+    """A POST without a body is refused by the box with a plain text error."""
+    from types import SimpleNamespace
+
+    from custom_components.fritzbox_network.api import FritzNetworkClient, web_login_response
+
+    challenge = "2$10$aa$10$bb"
+    calls = []
+
+    class Response:
+        def __init__(self, text):
+            self.text = text
+
+        def raise_for_status(self):
+            return None
+
+    class Session:
+        def get(self, url, **kwargs):
+            calls.append(("get", url))
+            sid = "0" * 16
+            return Response(
+                f"<SessionInfo><SID>{sid}</SID><Challenge>{challenge}</Challenge></SessionInfo>"
+            )
+
+        def post(self, url, data=None, **kwargs):
+            calls.append(("post", url, data))
+            if not data:
+                return Response("getcgivars(): Unsupported Content-Type.\n")
+            return Response("<SessionInfo><SID>0123456789abcdef</SID></SessionInfo>")
+
+    client = FritzNetworkClient("192.0.2.1", None, "user", "secret")
+    client._fc = SimpleNamespace(session=Session())  # noqa: SLF001
+
+    assert client._web_login() == "0123456789abcdef"  # noqa: SLF001
+    assert calls[0][0] == "get"
+    assert calls[1][2]["response"] == web_login_response(challenge, "secret")

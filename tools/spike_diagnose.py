@@ -43,7 +43,11 @@ def main() -> None:
     tls = os.environ.get("FRITZ_TLS") == "1"
     client = FritzNetworkClient(host, None, user, password, tls)
     client.connect()
-    lines = [f"box: {client.model_name}, firmware {client.system_version}", ""]
+    lines = [
+        f"box: {client.model_name}, firmware {client.system_version}",
+        f"user may change settings (BoxAdmin readwrite): {client.can_write()}",
+        "",
+    ]
 
     lines.append("== event log ==")
     for group in (None, "net", "wlan", "sys"):

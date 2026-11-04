@@ -181,10 +181,22 @@ class FritzNetworkClient:
         response.raise_for_status()
         return response.text
 
+    def _web_get(self, path: str) -> str:
+        session = self._connection.session
+        response = session.get(
+            f"{self._web_base()}{path}",
+            timeout=REQUEST_TIMEOUT,
+            verify=False,  # noqa: S501
+        )
+        response.raise_for_status()
+        return response.text
+
     def _web_login(self) -> str:
         """Log in to the web interface with the account of the integration."""
         url = "/login_sid.lua?version=2"
-        root = ET.fromstring(self._web_post(url, {}))
+        # the challenge is asked with a GET: a POST without a body is refused by the box
+        # ("getcgivars(): Unsupported Content-Type") and its answer is no XML
+        root = ET.fromstring(self._web_get(url))
         challenge = root.findtext("Challenge") or ""
         answer = ET.fromstring(
             self._web_post(
