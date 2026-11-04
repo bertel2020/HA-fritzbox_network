@@ -74,7 +74,8 @@ export const PANEL_CSS = `
   .fresh { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; white-space: nowrap; }
   .fresh .dot { width: 8px; height: 8px; box-shadow: 0 0 0 3px var(--ok-soft); }
   nav .dot { width: 7px; height: 7px; }
-  @container app (max-width: 1040px) { nav { order: 3; flex: 1 1 100%; padding-bottom: 8px; } }
+  /* six pages need about 1180 px next to the title and the link; below that they get a row of their own */
+  @container app (max-width: 1180px) { nav { order: 3; flex: 1 1 100%; padding-bottom: 8px; } }
   @container app (max-width: 760px) { .menu { display: grid; } }
   @container app (max-width: 520px) { .fresh .t { display: none; } .intlink span { display: none; } .intlink { padding: 0 12px; } .header-end { gap: 10px; } }
 
