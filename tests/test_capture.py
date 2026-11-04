@@ -2,10 +2,13 @@
 
 from custom_components.fritzbox_network.const import DOMAIN
 
+from .conftest import LAN
+
 STATUS = f"{DOMAIN}/capture/status"
 START = f"{DOMAIN}/capture/start"
 STOP = f"{DOMAIN}/capture/stop"
 DELETE = f"{DOMAIN}/capture/delete"
+SUMMARY = f"{DOMAIN}/capture/summary"
 
 
 async def _setup(hass, entry):
@@ -76,3 +79,31 @@ async def test_a_bad_request_is_refused(hass, hass_ws_client, fake_client, entry
     assert not bad["success"]
     long = await _call(client, START, entry_id=entry.entry_id, interface="lan", seconds=9999, mb=10)
     assert not long["success"]
+
+
+async def test_a_capture_of_one_device_that_sent_nothing_fails(
+    hass, hass_ws_client, fake_client, entry
+):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    await _call(client, START, entry_id=entry.entry_id, interface="lan", seconds=30, mb=10, mac=LAN)
+    await hass.async_block_till_done()
+
+    status = (await _call(client, STATUS, entry_id=entry.entry_id))["result"]
+    assert status["job"]["state"] == "failed"
+    assert status["job"]["device"] == LAN.replace(":", "")
+    assert status["files"] == []
+
+
+async def test_a_kept_capture_can_be_summarized(hass, hass_ws_client, fake_client, entry):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    await _call(client, START, entry_id=entry.entry_id, interface="lan", seconds=30, mb=10)
+    await hass.async_block_till_done()
+    name = (await _call(client, STATUS, entry_id=entry.entry_id))["result"]["files"][0]["name"]
+
+    result = (await _call(client, SUMMARY, entry_id=entry.entry_id, name=name))["result"]
+    assert result["packets"] == 0
+    assert result["flows"] == []
+    assert not (await _call(client, SUMMARY, entry_id=entry.entry_id, name="nope.pcap"))["success"]

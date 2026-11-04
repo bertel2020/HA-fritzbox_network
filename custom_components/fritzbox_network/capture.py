@@ -21,6 +21,7 @@ from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
 from homeassistant.util import dt as dt_util
 
+from . import pcap
 from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
@@ -40,7 +41,7 @@ DEFAULT_BYTES = 50 * 1024 * 1024
 KEEP_FILES = 20
 DIR_NAME = "fritzbox_captures"
 KEY_CAPTURES = f"{DOMAIN}_captures"
-FILE_RE = re.compile(r"^[a-z0-9]+_\d{8}-\d{6}\.pcap$")
+FILE_RE = re.compile(r"^[a-z0-9]+_\d{8}-\d{6}(-[0-9a-f]{12})?\.pcap$")
 VIEW_URL = f"/api/{DOMAIN}/capture/{{entry_id}}/{{name}}"
 
 
@@ -53,6 +54,8 @@ class Job:
     started: float
     seconds: int
     max_bytes: int
+    device: str | None = None  # the MAC the capture is narrowed to afterwards
+    ips: tuple[str, ...] = ()
     bytes: int = 0
     state: str = "running"  # running, done, failed
     reason: str | None = None  # why it ended: time, size, stopped; the error when it failed
@@ -70,6 +73,7 @@ class Job:
             else None,
             "bytes": self.bytes,
             "max_bytes": self.max_bytes,
+            "device": self.device.replace(":", "") if self.device else None,
         }
 
 
@@ -91,7 +95,14 @@ class CaptureManager:
     def running(self) -> bool:
         return self.job is not None and self.job.state == "running"
 
-    def start(self, interface: str, seconds: int, max_bytes: int) -> Job:
+    def start(
+        self,
+        interface: str,
+        seconds: int,
+        max_bytes: int,
+        device: str | None = None,
+        ips: tuple[str, ...] = (),
+    ) -> Job:
         """Begin a capture; raises ValueError for a bad request or when one is running."""
         if interface not in INTERFACES:
             raise ValueError("unknown interface")
@@ -100,12 +111,15 @@ class CaptureManager:
         seconds = max(MIN_SECONDS, min(MAX_SECONDS, seconds))
         max_bytes = max(1024 * 1024, min(MAX_BYTES, max_bytes))
         stamp = dt_util.now().strftime("%Y%m%d-%H%M%S")
+        suffix = f"-{device.replace(':', '')}" if device else ""
         job = Job(
             interface=interface,
-            name=f"{interface}_{stamp}.pcap",
+            name=f"{interface}_{stamp}{suffix}.pcap",
             started=time.monotonic(),
             seconds=seconds,
             max_bytes=max_bytes,
+            device=device,
+            ips=ips,
         )
         job.stop = threading.Event()
         self.job = job
@@ -126,9 +140,18 @@ class CaptureManager:
             def progress(written: int) -> None:
                 job.bytes = written
 
-            return self._client.capture(
+            reason = self._client.capture(
                 INTERFACES[job.interface], path, job.seconds, job.max_bytes, job.stop, progress
             )
+            if job.device:
+                narrowed = path.with_suffix(".tmp")
+                kept = pcap.filter_device(path, narrowed, job.device, set(job.ips))
+                narrowed.replace(path)
+                job.bytes = path.stat().st_size
+                if kept == 0:
+                    path.unlink()
+                    raise ValueError("the device sent or received nothing in that time")
+            return reason
 
         try:
             job.reason = await self._hass.async_add_executor_job(work)
@@ -160,9 +183,20 @@ class CaptureManager:
                 **f,
                 "time": datetime.fromtimestamp(f["time"], dt_util.UTC).isoformat(),
                 "interface": f["name"].split("_", 1)[0],
+                "device": f["name"][:-5].split("-")[2] if f["name"].count("-") == 2 else None,
             }
             for f in found
         ]
+
+    def summary(self, name: str) -> pcap.Summary | None:
+        """What a kept capture contains; None where it is gone or cannot be read."""
+        path = self.directory / name
+        if not FILE_RE.match(name) or not path.is_file():
+            return None
+        try:
+            return pcap.summarize(path)
+        except (pcap.PcapError, OSError):
+            return None
 
     def delete(self, name: str) -> bool:
         if not FILE_RE.match(name):

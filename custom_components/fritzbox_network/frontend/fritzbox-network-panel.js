@@ -144,6 +144,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       ports: null,
       capture: null,
       captureForm: captureDefaults(null),
+      captureSummary: null,
       data: null,
       filter: "all",
       query: "",
@@ -405,10 +406,17 @@ class FritzboxNetworkPanel extends HTMLElement {
     try {
       if (ds.act === "cap-start") {
         const form = state.captureForm;
-        state.capture = await this._ws("capture/start", { interface: form.interface, seconds: form.seconds, mb: form.mb });
+        state.capture = await this._ws("capture/start", { interface: form.interface, seconds: form.seconds, mb: form.mb, ...(form.mac ? { mac: form.mac } : {}) });
         showToast(this.shadowRoot, c.toastStarted);
         this._update();
         this._captureTimer = setTimeout(() => this._loadCapture(), 1000);
+      } else if (ds.act === "cap-device") {
+        state.captureForm = { ...state.captureForm, interface: state.captureForm.interface === "internet" ? "lan" : state.captureForm.interface, mac: this._selected()?.mac ?? "" };
+        globalThis.location.hash = "#/diagnose";
+        return;
+      } else if (ds.act === "cap-sum") {
+        state.captureSummary = { name: ds.name, data: await this._ws("capture/summary", { name: ds.name }) };
+        this._update();
       } else if (ds.act === "cap-stop") {
         await this._ws("capture/stop");
         await this._loadCapture();
@@ -416,6 +424,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         const ok = await openDialog(this.shadowRoot, t, { title: c.deleteTitle, body: c.deleteBody, list: [ds.name], ok: c.delete, danger: true });
         if (!ok) return;
         await this._ws("capture/delete", { name: ds.name });
+        if (state.captureSummary?.name === ds.name) state.captureSummary = null;
         await this._loadCapture();
       } else if (ds.act === "cap-dl") {
         const response = await this._hass.fetchWithAuth(`${state.capture.url}${encodeURIComponent(ds.name)}`);
@@ -797,6 +806,8 @@ class FritzboxNetworkPanel extends HTMLElement {
           language: this._hass?.language,
           canWrite: Boolean(this._state.data?.can_write),
           form: this._state.captureForm,
+          clients: this._state.data?.clients ?? [],
+          summary: this._state.captureSummary,
         })
     );
   }
@@ -1406,9 +1417,13 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._state.addr.exportOpts = { ...this._state.addr.exportOpts, [el.dataset.aopt]: el.checked };
       return this._update();
     }
-    if (el.id === "cap-if" || el.id === "cap-sec" || el.id === "cap-mb") {
+    if (el.id === "cap-if" || el.id === "cap-sec" || el.id === "cap-mb" || el.id === "cap-dev") {
       const form = this._state.captureForm;
       if (el.id === "cap-if") form.interface = el.value;
+      else if (el.id === "cap-dev") {
+        form.mac = el.value;
+        return this._update();
+      }
       else form[el.id === "cap-sec" ? "seconds" : "mb"] = Number(el.value);
       return;
     }

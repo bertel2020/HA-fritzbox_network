@@ -271,6 +271,7 @@ export function renderDevice(client, ctx) {
           <button class="btn" data-act="rename" data-k="rename" ${client.entity_id ? "" : "disabled"}>${escapeHtml(t.rename)}</button>
           <button class="btn" data-act="ha" data-k="ha" ${client.device_id ? "" : "disabled"}>${ic("external")}${escapeHtml(t.openInHa)}</button>
           <button class="btn" data-act="show-map" data-k="show-map">${ic("map")}${escapeHtml(t.showInMap)}</button>
+          <button class="btn" data-act="cap-device" data-k="cap-device">${escapeHtml(t.inet.capture.ofDevice)}</button>
         </div></section>
       <section class="card sec"><span class="label">${escapeHtml(t.master)}</span><dl>${master}</dl>
         ${groupsSection(client, data, t)}

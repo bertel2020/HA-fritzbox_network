@@ -5,7 +5,7 @@ import { fill } from "./texts.js";
 
 /** The form values to start with. */
 export function captureDefaults(limits) {
-  return { interface: "internet", seconds: limits?.seconds ?? 60, mb: limits?.mb ?? 50 };
+  return { interface: "internet", seconds: limits?.seconds ?? 60, mb: limits?.mb ?? 50, mac: "" };
 }
 
 function option(value, label, chosen) {
@@ -27,17 +27,41 @@ function result(job, t, language) {
   return `<p class="hint">${escapeHtml(fill(c.done, { size: formatBytes(job.bytes, language), reason: c.reasons[job.reason] ?? "" }))}</p>`;
 }
 
-function fileLine(file, t, language) {
+/** A summary of one capture: the volume, the protocols, the biggest conversations and the DNS names. */
+function summaryBlock(summary, t, language) {
+  const c = t.inet.capture.summary;
+  const who = (ip, name) => (name ? `${name} (${ip})` : ip);
+  const protocols = Object.entries(summary.data.protocols)
+    .map(([name, n]) => `${name.toUpperCase()} ${n}`)
+    .join(" · ");
+  const flows = summary.data.flows
+    .map(
+      (f) =>
+        `<li><span class="pdesc">${escapeHtml(who(f.a, f.a_name))} ↔ ${escapeHtml(who(f.b, f.b_name))}<small> ${escapeHtml(f.protocol.toUpperCase())}${f.port ? ` ${f.port}` : ""}</small></span><span class="pmap">${escapeHtml(formatBytes(f.bytes, language))}</span></li>`
+    )
+    .join("");
+  const dns = summary.data.dns.map((d) => `<li><span class="pdesc">${escapeHtml(d.name)}</span><span class="pmap">${d.count}×</span></li>`).join("");
+  return `<div class="capsum"><span class="label">${escapeHtml(fill(c.title, { name: summary.name }))}</span>
+    <p class="hint">${escapeHtml(fill(c.totals, { packets: summary.data.packets, size: formatBytes(summary.data.bytes, language), seconds: summary.data.seconds }))} · ${escapeHtml(protocols)}</p>
+    <span class="label">${escapeHtml(c.flows)}</span>${flows ? `<ul class="ports">${flows}</ul>` : `<p class="hint">${escapeHtml(c.none)}</p>`}
+    <span class="label">${escapeHtml(c.dns)}</span>${dns ? `<ul class="ports">${dns}</ul>` : `<p class="hint">${escapeHtml(c.noDns)}</p>`}
+    <p class="hint">${escapeHtml(c.hint)}</p></div>`;
+}
+
+function fileLine(file, t, language, clients) {
   const c = t.inet.capture;
+  const device = file.device ? clients.find((d) => d.id === file.device) : null;
+  const detail = file.device ? ` · ${device?.name ?? file.device}` : "";
   const when = new Date(file.time).toLocaleString(language || "en", { dateStyle: "short", timeStyle: "medium" });
-  return `<li><span class="pdesc">${escapeHtml(c.interfaces[file.interface] ?? file.interface)}<small> ${escapeHtml(when)} · ${escapeHtml(formatBytes(file.bytes, language))}</small></span>
-    <span class="capbtns"><button class="btn" data-act="cap-dl" data-name="${escapeHtml(file.name)}">${escapeHtml(c.download)}</button>
-    <button class="btn dp" data-act="cap-del" data-name="${escapeHtml(file.name)}" aria-label="${escapeHtml(fill(c.deleteLabel, { name: file.name }))}">${escapeHtml(c.delete)}</button></span></li>`;
+  return `<li><span class="pdesc">${escapeHtml(c.interfaces[file.interface] ?? file.interface)}<small> ${escapeHtml(when)} · ${escapeHtml(formatBytes(file.bytes, language))}${escapeHtml(detail)}</small></span>
+    <span class="capbtns"><button class="btn sm" data-act="cap-sum" data-name="${escapeHtml(file.name)}">${escapeHtml(c.analyse)}</button><button class="btn sm" data-act="cap-dl" data-name="${escapeHtml(file.name)}">${escapeHtml(c.download)}</button>
+    <button class="btn sm dp" data-act="cap-del" data-name="${escapeHtml(file.name)}" aria-label="${escapeHtml(fill(c.deleteLabel, { name: file.name }))}">${escapeHtml(c.delete)}</button></span></li>`;
 }
 
 /** The card: the form, or the running capture, and the kept files. `capture` is null while loading. */
 export function renderCapture(capture, ctx) {
   const { t, language, canWrite, form } = ctx;
+  const clients = ctx.clients ?? [];
   const c = t.inet.capture;
   if (capture === "failed") return `<section class="card sec"><span class="label">${escapeHtml(c.title)}</span><p class="hint">${escapeHtml(c.unavailable)}</p></section>`;
   if (!capture) return `<section class="card sec"><span class="label">${escapeHtml(c.title)}</span><p class="hint">${escapeHtml(t.loading)}</p></section>`;
@@ -47,15 +71,17 @@ export function renderCapture(capture, ctx) {
   const off = busy ? " disabled" : "";
   const controls = `<div class="capform">
       <label class="field"><span class="label">${escapeHtml(c.interface)}</span><select id="cap-if"${off}>${capture.interfaces.map((i) => option(i, c.interfaces[i] ?? i, form.interface)).join("")}</select></label>
+      <label class="field"><span class="label">${escapeHtml(c.device)}</span><select id="cap-dev"${off}>${option("", c.allDevices, form.mac)}${clients.map((d) => option(d.mac, d.name, form.mac)).join("")}</select></label>
       <label class="field"><span class="label">${escapeHtml(c.seconds)}</span><input type="number" id="cap-sec" min="${lim.min_seconds}" max="${lim.max_seconds}" value="${escapeHtml(form.seconds)}"${off} /></label>
       <label class="field"><span class="label">${escapeHtml(c.size)}</span><input type="number" id="cap-mb" min="1" max="${lim.max_mb}" value="${escapeHtml(form.mb)}"${off} /></label>
       <button class="btn p" data-act="cap-start"${busy ? " disabled" : ""}>${escapeHtml(c.start)}</button></div>`;
   const files = capture.files.length
-    ? `<ul class="ports capfiles">${capture.files.map((f) => fileLine(f, t, language)).join("")}</ul>`
+    ? `<ul class="ports capfiles">${capture.files.map((f) => fileLine(f, t, language, clients)).join("")}</ul>`
     : `<p class="hint">${escapeHtml(c.none)}</p>`;
   return `<section class="card sec"><span class="label">${escapeHtml(c.title)}</span>
     ${controls}
     ${busy ? running(job, t, language) : result(job, t, language)}
     ${files}
-    <p class="hint">${escapeHtml(c.hint)}</p></section>`;
+    ${ctx.summary ? summaryBlock(ctx.summary, t, language) : ""}
+    <p class="hint">${escapeHtml(c.hint)}</p>${form.mac ? `<p class="hint">${escapeHtml(c.deviceHint)}</p>` : ""}</section>`;
 }

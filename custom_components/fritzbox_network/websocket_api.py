@@ -68,6 +68,7 @@ HISTORY_COMMAND = f"{DOMAIN}/history/summary"
 HISTORY_DEVICE_COMMAND = f"{DOMAIN}/history/device"
 CAPTURE_STATUS_COMMAND = f"{DOMAIN}/capture/status"
 CAPTURE_START_COMMAND = f"{DOMAIN}/capture/start"
+CAPTURE_SUMMARY_COMMAND = f"{DOMAIN}/capture/summary"
 CAPTURE_STOP_COMMAND = f"{DOMAIN}/capture/stop"
 CAPTURE_DELETE_COMMAND = f"{DOMAIN}/capture/delete"
 FILTER_PREVIEW_COMMAND = f"{DOMAIN}/filter/preview"
@@ -788,6 +789,7 @@ async def ws_capture_status(
         vol.Required("interface"): vol.In(list(INTERFACES)),
         vol.Required("seconds"): vol.All(int, vol.Range(min=MIN_SECONDS, max=MAX_SECONDS)),
         vol.Required("mb"): vol.All(int, vol.Range(min=1, max=MAX_BYTES // 1048576)),
+        vol.Optional("mac"): vol.All(str, vol.Length(max=40)),
     }
 )
 @websocket_api.require_admin
@@ -796,16 +798,68 @@ async def ws_capture_start(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """Start recording on an interface of the box."""
-    if _loaded_coordinator(hass, connection, msg) is None:
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
         return
     manager = hass.data[KEY_CAPTURES][msg["entry_id"]]
+    mac = ips = None
+    if msg.get("mac"):
+        mac = format_mac(msg["mac"])
+        host = found[1].all_hosts.get(mac)
+        ips = (host.ip,) if host and host.ip else ()
     try:
-        manager.start(msg["interface"], msg["seconds"], msg["mb"] * 1048576)
+        manager.start(msg["interface"], msg["seconds"], msg["mb"] * 1048576, mac, ips or ())
     except ValueError as err:
         connection.send_error(msg["id"], ERR_BUSY if str(err) == "busy" else ERR_INVALID, str(err))
         return
     connection.send_result(
         msg["id"], await hass.async_add_executor_job(_capture_state, hass, msg["entry_id"])
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): CAPTURE_SUMMARY_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("name"): str,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_capture_summary(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """What a kept capture contains: the protocols, the biggest conversations, the DNS names."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    manager = hass.data[KEY_CAPTURES][msg["entry_id"]]
+    summary = await hass.async_add_executor_job(manager.summary, msg["name"])
+    if summary is None:
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "No such capture")
+        return
+    names = {h.ip: h.name for h in found[1].all_hosts.values() if h.ip}
+    flows = [
+        {
+            "a": a,
+            "b": b,
+            "a_name": names.get(a),
+            "b_name": names.get(b),
+            "protocol": protocol,
+            "port": port,
+            "bytes": size,
+            "packets": summary.flow_packets[(a, b, protocol, port)],
+        }
+        for (a, b, protocol, port), size in summary.flows.most_common(10)
+    ]
+    connection.send_result(
+        msg["id"],
+        {
+            "packets": summary.packets,
+            "bytes": summary.bytes,
+            "seconds": summary.seconds,
+            "protocols": dict(summary.protocols.most_common()),
+            "flows": flows,
+            "dns": [{"name": n, "count": c} for n, c in summary.dns.most_common(15)],
+        },
     )
 
 
@@ -948,6 +1002,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_reboot)
     websocket_api.async_register_command(hass, ws_capture_status)
     websocket_api.async_register_command(hass, ws_capture_start)
+    websocket_api.async_register_command(hass, ws_capture_summary)
     websocket_api.async_register_command(hass, ws_capture_stop)
     websocket_api.async_register_command(hass, ws_capture_delete)
     websocket_api.async_register_command(hass, ws_filter_preview)

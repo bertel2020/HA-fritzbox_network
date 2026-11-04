@@ -1110,3 +1110,24 @@ test("the capture card offers the interfaces, locks the form while recording and
 
   assert.match(capture.renderCapture("failed", ctx), /nichts gesagt/);
 });
+
+test("the capture card narrows to a device and shows the summary of a file", () => {
+  const status = {
+    job: null,
+    files: [{ name: "lan_20261104-101500-aabbccddee01.pcap", bytes: 5000, time: "2026-11-04T10:15:00Z", interface: "lan", device: "aabbccddee01" }],
+    interfaces: ["internet", "lan"],
+    url: "/x/",
+    limits: { min_seconds: 5, max_seconds: 600, seconds: 60, max_mb: 200, mb: 50 },
+  };
+  const clients = [{ mac: "aa:bb:cc:dd:ee:01", id: "aabbccddee01", name: "Fernseher" }];
+  const summary = {
+    name: status.files[0].name,
+    data: { packets: 4, bytes: 4000, seconds: 3, protocols: { udp: 4 }, flows: [{ a: "192.168.1.10", b: "8.8.8.8", a_name: "Fernseher", b_name: null, protocol: "udp", port: 53, bytes: 900, packets: 2 }], dns: [{ name: "example.org", count: 2 }] },
+  };
+  const html = capture.renderCapture(status, { t, language: "de", canWrite: true, clients, summary, form: { ...capture.captureDefaults(status.limits), mac: "aa:bb:cc:dd:ee:01" } });
+  assert.match(html, /<option value="aa:bb:cc:dd:ee:01" selected>Fernseher/);
+  assert.match(html, /· Fernseher<\/small>/);
+  assert.match(html, /Fernseher \(192\.168\.1\.10\) ↔ 8\.8\.8\.8/);
+  assert.match(html, /example\.org/);
+  assert.match(html, /Auf der Internetseite/);
+});
