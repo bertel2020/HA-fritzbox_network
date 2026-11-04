@@ -510,7 +510,7 @@ def _stream(handler, quiet=False):
         return
 
 
-@pytest.mark.enable_socket
+@pytest.mark.usefixtures("socket_enabled")
 def test_a_capture_answered_with_text_names_what_the_box_said(tmp_path):
     import pytest
 
@@ -523,7 +523,7 @@ def test_a_capture_answered_with_text_names_what_the_box_said(tmp_path):
         _capture(host, tmp_path, 5)
 
 
-@pytest.mark.enable_socket
+@pytest.mark.usefixtures("socket_enabled")
 def test_a_capture_that_never_ends_stops_when_the_time_is_up(tmp_path):
     started = time.monotonic()
     with _box(_stream) as host:
@@ -535,7 +535,7 @@ def test_a_capture_that_never_ends_stops_when_the_time_is_up(tmp_path):
     assert path.read_bytes().startswith(PCAP_HEAD)
 
 
-@pytest.mark.enable_socket
+@pytest.mark.usefixtures("socket_enabled")
 def test_a_quiet_capture_stops_when_the_user_stops_it(tmp_path):
     import threading
 
@@ -549,7 +549,7 @@ def test_a_quiet_capture_stops_when_the_user_stops_it(tmp_path):
     assert time.monotonic() - started < 5
 
 
-@pytest.mark.enable_socket
+@pytest.mark.usefixtures("socket_enabled")
 def test_a_capture_stops_at_the_size_limit(tmp_path):
     with _box(_stream) as host:
         reason, path = _capture(host, tmp_path, 30, max_bytes=100)
@@ -558,7 +558,7 @@ def test_a_capture_stops_at_the_size_limit(tmp_path):
     assert path.stat().st_size >= 100
 
 
-@pytest.mark.enable_socket
+@pytest.mark.usefixtures("socket_enabled")
 def test_the_modified_tcpdump_header_of_the_box_is_accepted(tmp_path):
     import struct
 
