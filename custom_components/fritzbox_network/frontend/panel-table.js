@@ -24,6 +24,7 @@ export { DEFAULT_PAGE_SIZE, PAGE_SIZES };
 
 const COLUMNS = [
   { id: "name", sort: "name" },
+  { id: "ip", sort: "ip", wide: true },
   { id: "link", sort: "link", wide: true },
   { id: "rate", sort: "rate" },
   { id: "history" },
@@ -65,12 +66,13 @@ function row(client, state, t, now, volumes) {
           .map((i) => `<i class="${i <= bars ? "on" : ""}" style="height:${3 + i * 3}px"></i>`)
           .join("")}</span>`
       : "";
-  const sub = client.online ? [client.ip, client.vendor].filter(Boolean).join(" · ") : fill(t.lastOnline, { when: whenText(client.last_online, now, t) });
+  const sub = client.online ? client.vendor ?? "" : fill(t.lastOnline, { when: whenText(client.last_online, now, t) });
   const link = client.link_type === "lan" ? "lan" : client.link_type === "wlan" ? "wifi" : "help";
   const chips = `${isBlocked(client) ? `<span class="chip bad">${escapeHtml(t.blockedChip)}</span>` : ""}${client.guest ? `<span class="chip info">${escapeHtml(t.guestChip)}</span>` : ""}${weak ? `<span class="chip warn" title="${escapeHtml(fill(t.weakTitle, { percent: weakPercent(client) }))}">${escapeHtml(t.weakShort)}</span>` : ""}`;
   return `<tr data-dev="${escapeHtml(client.id)}" class="${client.online ? "" : "off"}"${state.sel === client.id ? ' aria-current="true"' : ""}>
     <td><span class="who2"><span class="dot ${client.online ? "on" : ""}"></span><span class="link">${ic(link)}</span>
       <span class="who"><button class="tlink" data-dev="${escapeHtml(client.id)}">${escapeHtml(client.name)}</button><small>${escapeHtml(sub)}</small></span></span></td>
+    <td class="wide">${escapeHtml(client.ip ?? "–")}</td>
     <td class="wide">${escapeHtml(connectionText(client, state.data?.nodes ?? [], t))}</td>
     <td class="num">${escapeHtml(client.online ? rateText(client) : "–")}${signal}<span class="chips2">${chips}</span></td>
     <td class="hist">${sparkHtml(client, state.history, t)}</td>

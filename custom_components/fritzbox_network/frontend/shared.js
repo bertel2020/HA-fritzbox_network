@@ -243,12 +243,16 @@ export function labelCounts(data) {
     .filter((label) => label.count);
 }
 
+/** An address padded so that a text comparison sorts it numerically; devices without one come last. */
+const ipKey = (ip) => (ip ? ip.split(".").map((n) => n.padStart(3, "0")).join(".") : "~");
+
 const SORTS = {
   name: (a, b) => a.name.localeCompare(b.name),
   signal: (a, b) => (b.signal_dbm ?? -999) - (a.signal_dbm ?? -999),
   rate: (a, b) => (b.rate_download ?? -1) - (a.rate_download ?? -1),
   last: (a, b) => Date.parse(b.last_online ?? 0) - Date.parse(a.last_online ?? 0),
   traffic: (a, b, volumes) => (volumes?.[b.mac] ?? -1) - (volumes?.[a.mac] ?? -1),
+  ip: (a, b) => ipKey(a.ip).localeCompare(ipKey(b.ip)),
   link: (a, b) => `${a.link_type ?? "~"}${a.band ?? ""}`.localeCompare(`${b.link_type ?? "~"}${b.band ?? ""}`),
 };
 
