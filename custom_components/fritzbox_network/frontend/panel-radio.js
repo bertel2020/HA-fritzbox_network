@@ -1,6 +1,6 @@
 /* The radio check of the diagnosis page: every access point with its radios, how busy they are and who hangs on them. */
 
-import { BUSY_UTILIZATION, escapeHtml, isWeak } from "./shared.js";
+import { BUSY_UTILIZATION, escapeHtml, isWeak, noteHtml } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { UPLINK_WEAK_DBM } from "./panel-hints.js";
@@ -67,8 +67,10 @@ function radioLine(radio, t) {
     radio.weak ? fill(r.weak, { n: radio.weak }) : "",
   ].filter(Boolean);
   const load = radio.utilization === null ? "–" : `${radio.utilization} %`;
-  return `<li class="${radio.level}"><span class="pdesc">${escapeHtml(t.bandGroups[radio.band] ?? radio.band)}<small> ${escapeHtml(parts.join(" · "))}</small></span>
-    <span class="pmap"><span class="stat ${radio.level === "ok" ? "ok" : "warn"}" title="${escapeHtml(r.loadTitle)}">${escapeHtml(load)}</span></span></li>`;
+  const width = Math.max(0, Math.min(100, radio.utilization ?? 0));
+  return `<li class="radiorow ${radio.level}"><div class="rtop"><b>${escapeHtml(t.bandGroups[radio.band] ?? radio.band)}</b><span class="rpct" title="${escapeHtml(r.loadTitle)}">${escapeHtml(load)}</span></div>
+    <span class="meter" role="progressbar" aria-label="${escapeHtml(r.loadTitle)}" aria-valuemin="0" aria-valuemax="100"${radio.utilization === null ? "" : ` aria-valuenow="${width}"`}><i class="${radio.level}" style="width:${width}%"></i></span>
+    <small>${escapeHtml(parts.join(" · "))}</small></li>`;
 }
 
 /** The card; nothing where the box tells no access points. */
@@ -80,9 +82,9 @@ export function renderRadio(data, ctx) {
   const blocks = check.nodes
     .map((node) => {
       const wired = node.wired ? ` · ${fill(r.wired, { n: node.wired })}` : "";
-      const lines = node.radios.length ? `<ul class="ports">${node.radios.map((radio) => radioLine(radio, t)).join("")}</ul>` : `<p class="hint">${escapeHtml(r.noRadio)}</p>`;
+      const lines = node.radios.length ? `<ul class="radios">${node.radios.map((radio) => radioLine(radio, t)).join("")}</ul>` : `<p class="hint">${escapeHtml(r.noRadio)}</p>`;
       return `<div class="apblock"><div class="aphead"><b>${escapeHtml(node.name)}</b>
-        <small class="${node.uplinkWeak ? "weak" : ""}">${escapeHtml(uplinkText(node, t, language))}${escapeHtml(wired)}</small></div>${lines}</div>`;
+        <span class="chip ${node.uplinkWeak ? "warn" : ""}">${escapeHtml(uplinkText(node, t, language))}</span>${wired ? `<small>${escapeHtml(wired.replace(/^ · /, ""))}</small>` : ""}</div>${lines}</div>`;
     })
     .join("");
   const verdict = check.issues
@@ -90,5 +92,5 @@ export function renderRadio(data, ctx) {
     : `<p class="hintline info"><span aria-hidden="true">${ic("check")}</span><span>${escapeHtml(r.ok)}</span></p>`;
   return `<section class="card sec"><span class="label">${escapeHtml(r.title)}</span>
     ${verdict}${blocks}
-    <p class="hint">${escapeHtml(r.hint)}</p></section>`;
+    ${noteHtml(t.diag.note, r.hint)}</section>`;
 }

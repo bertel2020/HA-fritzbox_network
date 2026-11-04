@@ -1,6 +1,6 @@
 /* The event log of the box on the diagnosis page: DSL, network, Wi-Fi, phone and system messages, by group. */
 
-import { escapeHtml } from "./shared.js";
+import { escapeHtml, noteHtml } from "./shared.js";
 import { fill } from "./texts.js";
 
 export const LOG_GROUPS = ["", "net", "wlan", "sys", "fon", "usb"];
@@ -74,7 +74,7 @@ export function renderLog(log, ctx) {
     body = `${chips}${shown.length ? `<ul class="ports logrows">${rows}</ul>${more}` : `<p class="hint">${escapeHtml(c.none)}</p>`}`;
   }
   return `<section class="card sec"><span class="label">${escapeHtml(c.title)}</span>
-    <div class="seg" role="radiogroup" aria-label="${escapeHtml(c.title)}">${groups}</div>
+    <div class="seg logseg" role="radiogroup" aria-label="${escapeHtml(c.title)}">${groups}</div>
     ${body}
-    <p class="hint">${escapeHtml(c.hint)}</p></section>`;
+    ${noteHtml(t.diag.note, c.hint)}</section>`;
 }

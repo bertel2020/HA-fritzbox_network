@@ -1142,9 +1142,11 @@ test("the capture card narrows to a device and shows the summary of a file", () 
 
 const check = await import(`${base}panel-check.js`);
 
-test("the connection check shows the steps and names what to look at", () => {
-  assert.match(check.renderCheck(null, { t }), /Verbindung prüfen/);
-  assert.match(check.renderCheck("running", { t }), /disabled/);
+test("the connection card shows the steps as tiles and names what to look at", () => {
+  const empty = { enabled: false, interval: 300, steps: ["box", "internet", "dns", "web", "ipv6"], samples: [] };
+  const ctx = { t, language: "de", now: 0 };
+  assert.match(check.renderConnection(null, empty, ctx), /Verbindung prüfen/);
+  assert.match(check.renderConnection("running", empty, ctx), /data-act="check-run" disabled/);
   const result = {
     verdict: "dns",
     steps: [
@@ -1155,11 +1157,14 @@ test("the connection check shows the steps and names what to look at", () => {
       { key: "ipv6", ok: false, ms: null, error: "timeout" },
     ],
   };
-  const html = check.renderCheck(result, { t });
+  const html = check.renderConnection(result, empty, ctx);
   assert.match(html, /3.2 ms/);
   assert.match(html, /fehlgeschlagen \(timeout\)/);
   assert.match(html, /Namensserver/);
-  assert.match(html, /nicht verfügbar/);
+  assert.match(html, /<b>nicht verfügbar<\/b>/);
+  assert.match(html, /class="checktile off" title="[^"]*kein Fehler/);
+  assert.equal((html.match(/<details class="explain">/g) ?? []).length, 1); // the two notes are one
+  assert.match(check.renderConnection("failed", empty, ctx), /nicht gelaufen/);
 });
 
 const logPage = await import(`${base}panel-log.js`);
@@ -1215,7 +1220,7 @@ test("the radio check lists the radios with their load and counts the weak devic
 
   const html = radioPage.renderRadio(radioData, { t, language: "de" });
   assert.match(html, /Funk-Check/);
-  assert.match(html, /Flur<\/b>\s*<small class="weak">per WLAN angebunden, 5 GHz, -80 dBm/);
+  assert.match(html, /Flur<\/b>\s*<span class="chip warn">per WLAN angebunden, 5 GHz, -80 dBm<\/span><\/div>/); // no empty note after it
   assert.match(html, /Kanal 100 · Rauschen -95 dBm · 1 Geräte/);
   assert.match(html, /88 %/);
   assert.equal(radioPage.renderRadio({ nodes: [], clients: [] }, { t, language: "de" }), "");
@@ -1278,14 +1283,17 @@ test("the course of the connection is put into 15 minute buckets by the worst re
   assert.deepEqual(summary, { last: 12, median: 12, failed: 1, runs: 3 });
 });
 
-test("the course card has a switch, says why it is empty and draws a strip per step", () => {
+test("the course has a switch, says why it is empty and draws a strip per step", () => {
   const base = { enabled: false, interval: 300, steps: ["box", "internet", "dns", "web", "ipv6"], samples: [] };
-  const off = latencyPage.renderLatency(base, { t, language: "de", now: 1_793_000_000 });
-  assert.match(off, /data-act="latency-switch" data-on="1"/);
-  assert.match(off, /Keine Aufzeichnung/);
-  const on = latencyPage.renderLatency({ ...base, enabled: true, samples: [[1_792_999_700, 3, 12, 20, 80, null]] }, { t, language: "de", now: 1_793_000_000 });
-  assert.match(on, /data-on="0">Aufzeichnung beenden/);
-  assert.equal((on.match(/<svg class="latstrip"/g) ?? []).length, 5);
-  assert.match(on, /zuletzt 12 ms/);
-  assert.match(latencyPage.renderLatency("failed", { t, language: "de", now: 0 }), /nicht gelesen/);
+  const ctx = { t, language: "de", now: 1_793_000_000 };
+  assert.match(latencyPage.latencyButton(base, t), /data-act="latency-switch" data-on="1">Verlauf aufzeichnen/);
+  assert.match(latencyPage.latencyBody(base, ctx), /Keine Aufzeichnung/);
+  assert.match(latencyPage.latencyBody({ ...base, enabled: true }, ctx), /Aufzeichnung läuft/);
+  const on = { ...base, enabled: true, samples: [[1_792_999_700, 3, 12, 20, 80, null]] };
+  assert.match(latencyPage.latencyButton(on, t), /data-on="0">Aufzeichnung beenden/);
+  const body = latencyPage.latencyBody(on, ctx);
+  assert.equal((body.match(/<svg class="latstrip"/g) ?? []).length, 5);
+  assert.match(body, /zuletzt 12 ms/);
+  assert.match(latencyPage.latencyBody("failed", ctx), /nicht gelesen/);
+  assert.match(latencyPage.latencyHint(on, t), /alle 5 Minuten/);
 });

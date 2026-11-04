@@ -1,6 +1,6 @@
 /* The packet capture of the internet page: choose an interface and a time, record, download the pcap. */
 
-import { escapeHtml, formatBytes } from "./shared.js";
+import { escapeHtml, formatBytes, noteHtml } from "./shared.js";
 import { fill } from "./texts.js";
 
 /** The form values to start with. */
@@ -103,5 +103,5 @@ export function renderCapture(capture, ctx) {
     ${busy ? running(job, t, language) : result(job, t, language)}
     ${files}
     ${ctx.summary ? summaryBlock(ctx.summary, t, language) : ""}
-    <p class="hint">${escapeHtml(c.hint)}</p>${form.mac ? `<p class="hint">${escapeHtml(c.deviceHint)}</p>` : ""}</section>`;
+    ${noteHtml(t.diag.note, c.hint)}${form.mac ? `<p class="hint">${escapeHtml(c.deviceHint)}</p>` : ""}</section>`;
 }

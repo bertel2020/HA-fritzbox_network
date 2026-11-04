@@ -1,27 +1,35 @@
-/* The connection check of the diagnosis page: the box, the internet, names and the web, tried from Home Assistant. */
+/* The connection card of the diagnosis page: the check from Home Assistant, and below it the course over the day. */
 
-import { escapeHtml } from "./shared.js";
+import { escapeHtml, noteHtml } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
+import { latencyBody, latencyButton, latencyHint } from "./panel-latency.js";
 
-/** The card: a button, and after a run the steps with the time they took and a verdict. */
-export function renderCheck(check, ctx) {
+function stepTiles(check, c) {
+  return `<div class="checktiles">${check.steps
+    .map((s) => {
+      const state = s.ok ? "ok" : s.key === "ipv6" ? "off" : "bad";
+      const value = s.ok ? fill(c.ms, { ms: s.ms }) : s.key === "ipv6" ? c.noIpv6 : fill(c.failed, { error: s.error ?? "" });
+      const title = [c.steps[s.key], s.key === "ipv6" && !s.ok ? c.noIpv6Title : ""].filter(Boolean).join(": ");
+      return `<div class="checktile ${state}" title="${escapeHtml(title)}"><span class="ico" aria-hidden="true">${ic(s.ok ? "check" : "alert")}</span>
+        <span class="who"><small>${escapeHtml(c.short[s.key])}</small><b>${escapeHtml(value)}</b></span></div>`;
+    })
+    .join("")}</div>
+    <p class="hintline ${check.verdict === "ok" ? "info" : "bad"}">${escapeHtml(c.verdicts[check.verdict])}</p>`;
+}
+
+/**
+ * The card: the buttons for the check and the recording, the result of the last check as one tile
+ * per step with a verdict, and the course of the day as one strip per step.
+ */
+export function renderConnection(check, latency, ctx) {
   const { t } = ctx;
   const c = t.diag.check;
   const running = check === "running";
-  const steps =
-    check && check !== "running" && check !== "failed"
-      ? `<ul class="ports checksteps">${check.steps
-          .map(
-            (s) =>
-              `<li class="${s.ok ? "" : "bad"}"><span class="pdesc"><span aria-hidden="true">${ic(s.ok ? "check" : "alert")}</span> ${escapeHtml(c.steps[s.key])}</span>
-                <span class="pmap">${escapeHtml(s.ok ? fill(c.ms, { ms: s.ms }) : s.key === "ipv6" ? c.noIpv6 : fill(c.failed, { error: s.error ?? "" }))}</span></li>`
-          )
-          .join("")}</ul>
-        <p class="hintline ${check.verdict === "ok" ? "info" : "bad"}">${escapeHtml(c.verdicts[check.verdict])}</p>`
-      : "";
-  return `<section class="card sec"><span class="label">${escapeHtml(c.title)}</span>
-    <div class="btn-row tight"><button class="btn p" data-act="check-run"${running ? " disabled" : ""}>${escapeHtml(running ? c.running : c.run)}</button></div>
-    ${check === "failed" ? `<p class="hint">${escapeHtml(c.error)}</p>` : steps}
-    <p class="hint">${escapeHtml(c.hint)}</p></section>`;
+  const result = check && check !== "running" && check !== "failed" ? stepTiles(check, c) : "";
+  return `<section class="card sec"><span class="label">${escapeHtml(t.diag.connection)}</span>
+    <div class="btn-row tight"><button class="btn p" data-act="check-run"${running ? " disabled" : ""}>${escapeHtml(running ? c.running : c.run)}</button>${latencyButton(latency, t)}</div>
+    ${check === "failed" ? `<p class="hint">${escapeHtml(c.error)}</p>` : result}
+    <div class="course">${latencyBody(latency, ctx)}</div>
+    ${noteHtml(t.diag.note, c.hint, latencyHint(latency, t))}</section>`;
 }

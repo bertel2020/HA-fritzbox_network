@@ -478,22 +478,53 @@ export const PANEL_CSS = `
   .caprun small { color: var(--muted); }
   ul.checksteps li.bad .pdesc { color: var(--danger, #b3261e); }
   .apblock + .apblock { margin-top: 14px; }
-  .aphead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin-top: 10px; }
+  .aphead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 12px; }
   .aphead small { color: var(--muted); }
-  .aphead small.weak { color: var(--warn); }
+  ul.radios { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 12px; }
+  .radiorow .rtop { display: flex; justify-content: space-between; align-items: baseline; }
+  .radiorow .rpct { font-variant-numeric: tabular-nums; font-weight: 500; }
+  .radiorow.warn .rpct { color: var(--warn); }
+  .radiorow.bad .rpct { color: var(--bad); }
+  .radiorow .meter { display: block; margin-top: 4px; }
+  .radiorow .meter i.warn { background: var(--warn); }
+  .radiorow .meter i.bad { background: var(--bad); }
+  .radiorow small { display: block; color: var(--muted); margin-top: 4px; }
+  .checktiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; margin: 14px 0 4px; }
+  .checktile { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 14px; background: var(--neutral-soft); }
+  .checktile .ico { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--surface); flex: none; }
+  .checktile .ico svg { width: 16px; height: 16px; }
+  .checktile.ok .ico { color: var(--ok); }
+  .checktile.bad { background: var(--bad-soft); }
+  .checktile.bad .ico { color: var(--bad); }
+  .checktile.off { opacity: .75; }
+  .checktile .who { display: grid; min-width: 0; }
+  .checktile small { color: var(--muted); font-size: 12px; }
+  .checktile b { font-weight: 500; }
+  details.explain { margin-top: 14px; }
+  details.explain summary { cursor: pointer; color: var(--muted); font-size: 13px; width: fit-content; }
+  details.explain summary:hover { color: var(--text); }
+  details.explain .hint { margin: 6px 0 0; }
   .logkinds { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
   button.chip { cursor: pointer; border: 1px solid transparent; }
   button.chip[aria-pressed="true"] { border-color: currentColor; }
   ul.logrows li.mark .pdesc { font-weight: 500; }
-  .latrow { margin-top: 12px; }
-  .lathead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  .course { margin-top: 18px; }
+  .latrow { margin-top: 14px; }
+  .latrow:first-child { margin-top: 0; }
+  .lathead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
   .lathead small { color: var(--muted); }
-  svg.latstrip { display: block; width: 100%; height: 22px; margin-top: 4px; }
-  .lat.ok { fill: var(--ok); background: var(--ok); }
+  svg.latstrip { display: block; width: 100%; height: 14px; margin-top: 6px; }
+  .lat.ok { fill: var(--ok); background: var(--ok); opacity: .8; }
   .lat.slow { fill: var(--warn); background: var(--warn); }
   .lat.fail { fill: var(--bad); background: var(--bad); }
   .lat.none { fill: var(--line); background: var(--line); }
   i.lat { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+  .seg.logseg { display: flex; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .seg.logseg button { flex: none; }
+  @container app (max-width: 600px) {
+    ul.logrows li { grid-template-columns: 1fr; gap: 2px; }
+    ul.logrows .pmap { text-align: left; font-size: 12px; }
+  }
   ul.logrows { margin-top: 10px; max-height: 420px; overflow: auto; }
   ul.logrows .pmap { white-space: nowrap; }
   .capbtns { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -638,7 +669,10 @@ export const PANEL_CSS = `
   /* address page */
   #addresses-view > * + *, #addresses-view .alayout + * { margin-top: 16px; }
   #internet-view .phead, #addresses-view .phead, #diagnose-view .phead { margin-bottom: 16px; }
-  #diagnose-view > .card + .card, #diagnose-view > .card + .col { margin-top: 16px; }
+  #diagnose-view > * + * { margin-top: 16px; }
+  #diagnose-view .phead { margin-bottom: 0; }
+  .diagrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(440px, 100%), 1fr)); gap: 16px; align-items: start; }
+  .diagrow > .card { margin-top: 0; }
   #addresses-view .atiles { margin-top: 0; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
   #addresses-view .tile b, #addresses-view .tile small { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
   #addresses-view .tile { box-shadow: var(--shadow); border: 1px solid var(--line); background: var(--surface); }

@@ -220,6 +220,8 @@ const en = {
   },
   diag: {
     title: "Diagnosis",
+    connection: "Connection",
+    note: "How does it work?",
     lead: "Tools to find out what happens in the network.",
     check: {
       title: "Connection check",
@@ -227,7 +229,9 @@ const en = {
       running: "Checking …",
       ms: "{ms} ms",
       failed: "failed ({error})",
-      noIpv6: "not available (many lines have none)",
+      noIpv6: "not available",
+      noIpv6Title: "Many lines have no IPv6; that is no fault.",
+      short: { box: "Box", internet: "Internet", dns: "Names (DNS)", web: "Website", ipv6: "IPv6" },
       error: "The check did not run.",
       steps: { box: "Box reachable from Home Assistant", internet: "Internet by address (1.1.1.1)", dns: "Resolve a name (DNS)", web: "Reach a website by name", ipv6: "Internet over IPv6" },
       verdicts: {
@@ -961,6 +965,8 @@ const de = {
   },
   diag: {
     title: "Diagnose",
+    connection: "Verbindung",
+    note: "Wie funktioniert das?",
     lead: "Werkzeuge, um herauszufinden, was im Netz passiert.",
     check: {
       title: "Verbindungs-Check",
@@ -968,7 +974,9 @@ const de = {
       running: "Prüfe …",
       ms: "{ms} ms",
       failed: "fehlgeschlagen ({error})",
-      noIpv6: "nicht verfügbar (viele Anschlüsse haben keines)",
+      noIpv6: "nicht verfügbar",
+      noIpv6Title: "Viele Anschlüsse haben kein IPv6; das ist kein Fehler.",
+      short: { box: "Box", internet: "Internet", dns: "Namen (DNS)", web: "Webseite", ipv6: "IPv6" },
       error: "Der Check ist nicht gelaufen.",
       steps: { box: "Box von Home Assistant erreichbar", internet: "Internet über Adresse (1.1.1.1)", dns: "Namen auflösen (DNS)", web: "Webseite über Namen erreichen", ipv6: "Internet über IPv6" },
       verdicts: {

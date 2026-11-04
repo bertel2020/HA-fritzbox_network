@@ -9,6 +9,11 @@ export const BANDS = { "2_4ghz": "2.4 GHz", "5ghz": "5 GHz", "6ghz": "6 GHz" };
 export const BUSY_UTILIZATION = 70;
 
 
+/** An explanation that stays closed until it is wanted: a summary line and the paragraphs. */
+export function noteHtml(label, ...texts) {
+  return `<details class="explain"><summary>${escapeHtml(label)}</summary>${texts.map((text) => `<p class="hint">${escapeHtml(text)}</p>`).join("")}</details>`;
+}
+
 export function escapeHtml(value) {
   return String(value ?? "").replace(
     /[&<>"']/g,
