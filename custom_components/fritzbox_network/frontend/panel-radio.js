@@ -40,11 +40,15 @@ export function radioCheck(data) {
     const uplinkWeak = uplink?.type === "wlan" && typeof uplink.signal_dbm === "number" && uplink.signal_dbm <= UPLINK_WEAK_DBM;
     return { mac: node.mac, name: node.name, role: node.role, uplink, uplinkWeak, radios, wired: here.filter((c) => c.link_type === "lan").length };
   });
-  const issues = nodes.reduce(
-    (sum, n) => sum + Number(n.uplinkWeak) + n.radios.filter((r) => r.level !== "ok" || r.weak > 0).length,
-    0
-  );
-  return { nodes, issues };
+  // what stands out, one entry each, so the card can say what it is and where
+  const findings = nodes.flatMap((n) => [
+    ...(n.uplinkWeak ? [{ kind: "uplink", node: n.name, dbm: n.uplink.signal_dbm }] : []),
+    ...n.radios.flatMap((r) => [
+      ...(r.level !== "ok" ? [{ kind: "busy", node: n.name, band: r.band, percent: r.utilization }] : []),
+      ...(r.weak > 0 ? [{ kind: "weak", node: n.name, band: r.band, n: r.weak }] : []),
+    ]),
+  ]);
+  return { nodes, issues: findings.length, findings };
 }
 
 function uplinkText(node, t, language) {
@@ -87,8 +91,13 @@ export function renderRadio(data, ctx) {
         <span class="chip ${node.uplinkWeak ? "warn" : ""}">${escapeHtml(uplinkText(node, t, language))}</span>${wired ? `<small>${escapeHtml(wired.replace(/^ · /, ""))}</small>` : ""}</div>${lines}</div>`;
     })
     .join("");
+  const finding = (f) => {
+    const band = t.bandGroups[f.band] ?? f.band ?? "";
+    return fill(r.findings[f.kind], { node: f.node, band, percent: f.percent, dbm: f.dbm, n: f.n });
+  };
   const verdict = check.issues
-    ? `<p class="hintline warn"><span aria-hidden="true">${ic("alert")}</span><span>${escapeHtml(fill(r.issues, { n: check.issues }))}</span></p>`
+    ? `<p class="hintline warn"><span aria-hidden="true">${ic("alert")}</span><span>${escapeHtml(fill(r.issues, { n: check.issues }))}</span></p>
+      <ul class="ports">${check.findings.map((f) => `<li><span class="pdesc">${escapeHtml(finding(f))}</span></li>`).join("")}</ul>`
     : `<p class="hintline info"><span aria-hidden="true">${ic("check")}</span><span>${escapeHtml(r.ok)}</span></p>`;
   return `<section class="card sec"><span class="label">${escapeHtml(r.title)}</span>
     ${verdict}${blocks}

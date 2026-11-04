@@ -1231,6 +1231,8 @@ test("the radio check lists the radios with their load and counts the weak devic
   assert.match(html, /Flur<\/b>\s*<span class="chip warn">per WLAN angebunden, 5 GHz, -80 dBm<\/span><\/div>/); // no empty note after it
   assert.match(html, /Kanal 100 · Rauschen -95 dBm · 1 Geräte/);
   assert.match(html, /88 %/);
+  assert.match(html, /Funkmodul ist zu 88 % ausgelastet/); // each finding is said, not only counted
+  assert.match(html, /Flur: Der Repeater hängt per schwachem WLAN \(-80 dBm\)/);
   assert.equal(radioPage.renderRadio({ nodes: [], clients: [] }, { t, language: "de" }), "");
   assert.match(radioPage.renderRadio({ nodes: [{ mac: "aa", name: "Box", role: "master", radios: { "5ghz": { channel: 36, utilization: 5, noise_dbm: -95 } } }], clients: [] }, { t, language: "de" }), /fällt nichts auf/);
 });

@@ -266,7 +266,12 @@ const en = {
     radio: {
       title: "Wi-Fi check",
       ok: "Nothing stands out on the radios.",
-      issues: "{n} things stand out.",
+      issues: "{n} things stand out:",
+      findings: {
+        busy: "{node}, {band}: the radio is {percent} % busy, devices on it get slow.",
+        weak: "{node}, {band}: {n} devices on a weak connection.",
+        uplink: "{node}: the repeater is linked to the box by a weak Wi-Fi ({dbm} dBm), this slows every device behind it.",
+      },
       master: "The box",
       cable: "linked by cable",
       wifi: "linked by Wi-Fi, {band}{dbm}",
@@ -1018,7 +1023,12 @@ const de = {
     radio: {
       title: "Funk-Check",
       ok: "Auf den Funkmodulen fällt nichts auf.",
-      issues: "{n} Dinge fallen auf.",
+      issues: "{n} Dinge fallen auf:",
+      findings: {
+        busy: "{node}, {band}: Das Funkmodul ist zu {percent} % ausgelastet, Geräte darauf werden langsam.",
+        weak: "{node}, {band}: {n} Geräte mit schwacher Verbindung.",
+        uplink: "{node}: Der Repeater hängt per schwachem WLAN ({dbm} dBm) an der Box, das bremst jedes Gerät dahinter.",
+      },
       master: "Die Box",
       cable: "per Kabel angebunden",
       wifi: "per WLAN angebunden, {band}{dbm}",
