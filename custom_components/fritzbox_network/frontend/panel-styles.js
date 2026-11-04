@@ -481,6 +481,10 @@ export const PANEL_CSS = `
   .aphead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; margin-top: 10px; }
   .aphead small { color: var(--muted); }
   .aphead small.weak { color: var(--warn); }
+  .logkinds { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0 2px; }
+  button.chip { cursor: pointer; border: 1px solid transparent; }
+  button.chip[aria-pressed="true"] { border-color: currentColor; }
+  ul.logrows li.mark .pdesc { font-weight: 500; }
   ul.logrows { margin-top: 10px; max-height: 420px; overflow: auto; }
   ul.logrows .pmap { white-space: nowrap; }
   .capbtns { display: flex; gap: 6px; flex-wrap: wrap; }

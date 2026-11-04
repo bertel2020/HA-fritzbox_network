@@ -1221,3 +1221,33 @@ test("the radio check lists the radios with their load and counts the weak devic
   assert.equal(radioPage.renderRadio({ nodes: [], clients: [] }, { t, language: "de" }), "");
   assert.match(radioPage.renderRadio({ nodes: [{ mac: "aa", name: "Box", role: "master", radios: { "5ghz": { channel: 36, utilization: 5, noise_dbm: -95 } } }], clients: [] }, { t, language: "de" }), /fällt nichts auf/);
 });
+
+test("the event log marks what stands out, counts the last 24 hours and narrows to one kind", () => {
+  const NOW_LOG = new Date(2026, 10, 4, 14, 0, 0).getTime();
+  const events = [
+    { id: "1", group: "wlan", date: "04.11.26", time: "13:29:39", msg: "Temporärer Kanalwechsel (Zero Wait DFS) wegen Radar" },
+    { id: "2", group: "wlan", date: "03.11.26", time: "19:24:11", msg: "Radar wurde auf Kanal 100 erkannt" },
+    { id: "3", group: "wlan", date: "01.11.26", time: "08:00:00", msg: "Radar wurde auf Kanal 52 erkannt" },
+    { id: "4", group: "net", date: "04.11.26", time: "03:12:13", msg: "IPv6-Präfix wurde erfolgreich aktualisiert." },
+    { id: "5", group: "sys", date: "04.11.26", time: "13:43:13", msg: "Anmeldung des Benutzers anna an der Benutzeroberfläche." },
+    { id: "6", group: "sys", date: "04.11.26", time: "13:50:00", msg: "Die Anmeldung des Benutzers bob ist fehlgeschlagen." },
+  ];
+  assert.equal(logPage.classify(events[3].msg), "prefix");
+  assert.equal(logPage.classify(events[4].msg), null);
+  assert.equal(logPage.classify(events[5].msg), "login");
+  assert.ok(logPage.eventTime(events[0]) > logPage.eventTime(events[1]));
+  assert.ok(Number.isNaN(logPage.eventTime({ date: "x", time: "y" })));
+
+  const marks = Object.fromEntries(logPage.logHighlights(events, NOW_LOG).map((m) => [m.id, [m.total, m.recent]]));
+  assert.deepEqual(marks.radar, [3, 2]);
+  assert.deepEqual(marks.login, [1, 1]);
+  assert.equal(marks.dsl, undefined);
+
+  const all = logPage.renderLog({ events }, { t, group: "", now: NOW_LOG });
+  assert.match(all, /2 Radar-Ereignisse \(24 h\)/);
+  assert.match(all, /data-log-kind="radar" aria-pressed="false"/);
+  const narrowed = logPage.renderLog({ events }, { t, group: "", kind: "radar", now: NOW_LOG });
+  assert.match(narrowed, /data-log-kind="radar" aria-pressed="true"/);
+  assert.doesNotMatch(narrowed, /Präfix wurde/);
+  assert.match(narrowed, /Kanal 52/);
+});

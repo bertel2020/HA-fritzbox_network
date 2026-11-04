@@ -161,6 +161,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       check: null,
       log: null,
       logGroup: "",
+      logKind: null,
       data: null,
       filter: "all",
       query: "",
@@ -852,7 +853,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(t.diag.title)}</h1><p class="lead">${escapeHtml(t.diag.lead)}</p></div>` +
         renderCheck(this._state.check, { t }) +
         renderRadio(this._state.data, { t, language: this._hass?.language }) +
-        renderLog(this._state.log, { t, group: this._state.logGroup }) +
+        renderLog(this._state.log, { t, group: this._state.logGroup, kind: this._state.logKind }) +
         renderCapture(this._state.capture, {
           t,
           language: this._hass?.language,
@@ -1620,8 +1621,13 @@ class FritzboxNetworkPanel extends HTMLElement {
       globalThis.history.pushState(null, "", target.getAttribute("href"));
       globalThis.dispatchEvent(new CustomEvent("location-changed", { composed: true }));
       return;
+    } else if (ds.logKind) {
+      state.logKind = state.logKind === ds.logKind ? null : ds.logKind;
+      this._update();
+      return;
     } else if (ds.logGroup !== undefined) {
       state.logGroup = ds.logGroup;
+      state.logKind = null;
       state.log = null;
       this._update();
       this._loadLog();
