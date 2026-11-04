@@ -434,3 +434,50 @@ def test_the_web_login_asks_for_the_challenge_with_a_get():
     assert client._web_login() == "0123456789abcdef"  # noqa: SLF001
     assert calls[0][0] == "get"
     assert calls[1][2]["response"] == web_login_response(challenge, "secret")
+
+
+def _capture_client(monkeypatch, chunks):
+    from custom_components.fritzbox_network import api
+
+    class Response:
+        headers = {"Content-Type": "application/octet-stream"}
+
+        def raise_for_status(self):
+            return None
+
+        def iter_content(self, chunk_size=None):
+            yield from chunks
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return False
+
+    monkeypatch.setattr(api.requests, "get", lambda *a, **k: Response())
+    client = api.FritzNetworkClient("192.0.2.1", None, "user", "secret")
+    client._web_sid = "0123456789abcdef"  # noqa: SLF001
+    return client
+
+
+def test_a_capture_answered_with_text_names_what_the_box_said(monkeypatch, tmp_path):
+    import threading
+
+    import pytest
+
+    client = _capture_client(monkeypatch, [b"Permission denied for this user\n"])
+    with pytest.raises(ValueError, match="Permission denied"):
+        client.capture("1-lan", tmp_path / "x.pcap", 5, 10_000, threading.Event(), lambda n: None)
+
+
+def test_a_capture_stops_at_the_size_limit(monkeypatch, tmp_path):
+    import threading
+
+    head = b"\xd4\xc3\xb2\xa1" + b"\0" * 20
+    client = _capture_client(monkeypatch, [head, b"x" * 100, b"y" * 100])
+    path = tmp_path / "x.pcap"
+
+    reason = client.capture("1-lan", path, 5, 100, threading.Event(), lambda n: None)
+
+    assert reason == "size"
+    assert path.read_bytes().startswith(head)

@@ -76,6 +76,13 @@ MAX_PORT_MAPPINGS = 128
 REQUEST_TIMEOUT = 10
 # seconds without a byte from a capture before it counts as ended: a quiet line sends nothing
 CAPTURE_READ_TIMEOUT = 20
+# the first four bytes of a pcap file, in either byte order and with nanosecond stamps
+PCAP_MAGICS = (
+    b"\xd4\xc3\xb2\xa1",
+    b"\xa1\xb2\xc3\xd4",
+    b"\x4d\x3c\xb2\xa1",
+    b"\xa1\xb2\x3c\x4d",
+)
 
 
 def web_login_response(challenge: str, password: str) -> str:
@@ -248,26 +255,31 @@ class FritzNetworkClient:
         deadline = time.monotonic() + seconds
         written = 0
         reason = "time"
-        with (
-            requests.get(
-                url,
-                params=params,
-                stream=True,
-                timeout=(REQUEST_TIMEOUT, CAPTURE_READ_TIMEOUT),
-                verify=False,  # noqa: S501
-            ) as response,
-            open(path, "wb") as target,
-        ):
-            response.raise_for_status()
-            if "text/html" in response.headers.get("Content-Type", ""):
-                self._web_sid = None
-                raise PermissionError("the box refused the capture")
-            try:
-                for chunk in response.iter_content(chunk_size=16384):
-                    if chunk:
-                        target.write(chunk)
-                        written += len(chunk)
-                        progress(written)
+        try:
+            with (
+                requests.get(
+                    url,
+                    params=params,
+                    stream=True,
+                    timeout=(REQUEST_TIMEOUT, CAPTURE_READ_TIMEOUT),
+                    verify=False,  # noqa: S501
+                ) as response,
+                open(path, "wb") as target,
+            ):
+                response.raise_for_status()
+                # chunk_size None: data is handed on as it arrives, so the time and the stop
+                # button are looked at often and not only after a full buffer
+                for chunk in response.iter_content(chunk_size=None):
+                    if not chunk:
+                        continue
+                    if written == 0 and chunk[:4] not in PCAP_MAGICS:
+                        # the box answers a refusal as text, not as a capture
+                        self._web_sid = None
+                        text = chunk[:200].decode("utf-8", "replace").strip()
+                        raise ValueError(f"the box did not send a capture: {text}")
+                    target.write(chunk)
+                    written += len(chunk)
+                    progress(written)
                     if stop.is_set():
                         reason = "stopped"
                         break
@@ -276,9 +288,13 @@ class FritzNetworkClient:
                         break
                     if time.monotonic() >= deadline:
                         break
-            except requests.exceptions.ReadTimeout:
-                # a quiet interface sends nothing for a while: what came so far is the capture
-                reason = "stopped" if stop.is_set() else "quiet"
+        except requests.exceptions.ReadTimeout:
+            # a quiet interface sends nothing for a while: what came so far is the capture
+            if written == 0:
+                raise ValueError(
+                    f"the box sent nothing for {CAPTURE_READ_TIMEOUT} s (a quiet interface?)"
+                ) from None
+            reason = "stopped" if stop.is_set() else "quiet"
         if written == 0:
             raise ValueError("the box sent no data")
         return reason

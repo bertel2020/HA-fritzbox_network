@@ -82,6 +82,16 @@ def main() -> None:
             ).text
             ids = sorted(set(re.findall(r"ifaceorminor=([0-9A-Za-z_-]+)", text)))
             lines.append(f"{page}: {len(text)} bytes, interfaces: {ids or 'none found'}")
+            hints = re.findall(
+                r"(?i)[^\n]{0,60}(?:iface|capture_notimeout|ifaceorminor)[^\n]{0,90}", text
+            )
+            for hint in list(dict.fromkeys(h.strip() for h in hints))[:12]:
+                lines.append(f"    hint: {mask(hint)}")
+            # the names of the form fields that hold a choice of interface
+            for tag in re.findall(
+                r"(?i)<(?:input|option|button)[^>]*(?:iface|eth|wlan|lan|internet)[^>]*>", text
+            )[:12]:
+                lines.append(f"    field: {mask(tag[:160])}")
             found += ids
     except Exception as err:  # noqa: BLE001
         lines.append(f"FAILED {type(err).__name__}: {mask(err)}")
