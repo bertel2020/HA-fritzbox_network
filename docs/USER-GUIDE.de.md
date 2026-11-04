@@ -129,12 +129,13 @@ Das Gerät der FRITZ!Box hat außerdem drei Diagnose-Sensoren, standardmäßig a
 
 ### Aktionen
 
-Beide brauchen das Recht „FRITZ!Box Einstellungen“ und nehmen ein Gerät, eine Entität oder einen Bereich als Ziel.
+`set_name` und `wake_on_lan` brauchen das Recht „FRITZ!Box Einstellungen“ und nehmen ein Gerät, eine Entität oder einen Bereich als Ziel. `capture` braucht den Zugriff auf die Weboberfläche der Box (geprüft ist es mit dem Recht „FRITZ!Box Einstellungen“) und nimmt ein Gerät nur als Ziel, wenn der Mitschnitt auf dieses beschränkt sein soll.
 
 | Aktion | Was sie tut |
 |--------|-------------|
 | `fritzbox_network.set_name` | Benennt das Gerät in der FRITZ!Box selbst um (`name`). Der Name in Home Assistant folgt, wenn Namen übernommen werden; Entity-IDs ändern sich nie. Abgelehnt bei Geräten, deren Namen die Box nicht ändern lässt. |
 | `fritzbox_network.wake_on_lan` | Sendet das Wake-on-LAN-Signal der Box an das Gerät, ohne den (standardmäßig deaktivierten) Button. |
+| `fritzbox_network.capture` | Startet einen Paketmitschnitt im Hintergrund: `interface` (Name der Schnittstelle in der Box, vorbelegt `1-lan`; die Liste zeigt das Panel unter Diagnose), `duration` in Sekunden (5 bis 600) und `size` in MB. Mit einem Gerät als Ziel bleibt nur dessen Verkehr. Meldet einen Fehler, wenn schon ein Mitschnitt läuft. Die Datei erscheint im Panel unter Diagnose. |
 
 ### Ereignisse
 
@@ -278,6 +279,19 @@ Eine Aktion ist aus und nennt den Grund, wenn dem Box-Benutzer das Recht „FRIT
 
 **Verlauf.** Die Geräteseite führt mit zwei Knöpfen ins Logbuch und in den Verlauf von Home Assistant für das Gerät. Dort stehen Roaming und Online-Zeiten. Das Panel führt keinen eigenen Verlauf: Signal und Rate haben nur dann einen, wenn du ihre Sensoren in den Geräteeinstellungen aktivierst (sie sind standardmäßig aus).
 
+**Geräte.** Die Tabs **Einbinden** und **Aufräumen** sind ein Tab **Geräte** mit einer Umschaltung oben auf beiden Seiten (Adressen `#/filter` und `#/cleanup`). Der Zähler am Tab zählt die Geräte, die lange offline sind.
+
+**Diagnose.** Die Seite `#/diagnose` sammelt Werkzeuge, um herauszufinden, was im Netz passiert.
+
+- **Verbindung.** „Verbindung prüfen“ probiert von Home Assistant aus nacheinander die Box (der Anschluss für TR-064), das Internet über eine Adresse (`1.1.1.1`, Port 443), das Auflösen eines Namens (DNS), eine Webseite über ihren Namen (`example.org`) und IPv6. Das Urteil nennt den ersten Schritt, der scheitert; fehlendes IPv6 ist kein Fehler. „Verlauf aufzeichnen“ wiederholt den Check alle 5 Minuten und zeigt den Tag als ein Band je Schritt (ein Balken sind 15 Minuten: schnell, langsam, fehlgeschlagen) mit der letzten und der üblichen Zeit. Der Verlauf ist **aus, bis du ihn einschaltest**; die Zeiten bleiben drei Tage und über Neustarts erhalten.
+- **Funk-Check.** Jeder Access Point mit seinen Funkmodulen: Kanal, Auslastung als Balken (ab 70 % orange, ab 85 % rot), Rauschen, die Zahl der Geräte darauf und wie viele davon eine schwache Verbindung haben. Dazu die Anbindung eines Repeaters (Kabel oder WLAN mit Band und Signal). Das Gesamturteil zählt, was auffällt. Er benutzt nur Werte, die das Panel ohnehin hat.
+- **Ereignisprotokoll der Box.** Die Meldungen der Box nach Gruppen (Netzwerk, WLAN, System, Telefon, USB), die neuesten 100. Das Protokoll gibt die Box nur an einen Benutzer mit dem Recht „FRITZ!Box Einstellungen“ heraus. Schaltflächen heben hervor, was auffällt, mit der Zahl der letzten 24 Stunden: Radar-Ereignisse (Kanalwechsel der 5-GHz-Funkmodule), DSL-Meldungen, fehlgeschlagene Anmeldungen, IPv6-Präfixwechsel und Meldungen zur Internetverbindung. Ein Tipp zeigt nur diese Meldungen. Erkannt wird nach dem Text der Meldung (deutsch und englisch); eine Meldung in einer anderen Sprache bleibt ohne Markierung.
+- **Paketmitschnitt.** Zeichnet den Verkehr einer Schnittstelle der Box als Datei auf. Die Auswahl liest das Panel von der Box selbst (Internetverbindungen, LAN-Anschlüsse, WLAN-Zugangspunkte und die Routing-Schnittstellen, die den gesamten Verkehr führen). Dauer 5 bis 600 Sekunden (vorbelegt 60), Größenlimit bis 200 MB (vorbelegt 50); die Aufzeichnung endet nach der Zeit, am Limit oder mit „Beenden“. Es läuft immer nur ein Mitschnitt je Box. Ein Mitschnitt ohne Verkehr meldet „keine Daten“, etwa bei Gastnetz oder ungenutzten Anschlüssen.
+  - **Vorhandene Mitschnitte:** Die letzten 20 Dateien liegen unter `/config/fritzbox_captures/<ID des Eintrags>/` und lassen sich herunterladen (Format „modified tcpdump“, Wireshark öffnet es) oder löschen.
+  - **Auswerten** zeigt die Protokolle, die größten Verbindungen mit den Namen der Geräte und die angefragten DNS-Namen. Verschlüsselter Verkehr zeigt nur, wer wie viel gesprochen hat, nicht was.
+  - **Nur dieses Gerät** (oder auf der Seite eines Geräts „Verkehr mitschneiden“) behält nur den Verkehr dieses Geräts, erkannt an MAC- und IP-Adresse. Auf der Internetseite haben alle Geräte die Adresse der Box: Wähle dann LAN oder WLAN.
+  - **Wichtig:** Ein Mitschnitt kann Passwörter und andere private Daten enthalten. Die Dateien liegen im Konfigurationsordner und damit auch in Backups von Home Assistant. Lösche sie, wenn du sie nicht mehr brauchst. Die Aktion `fritzbox_network.capture` startet einen Mitschnitt aus einer Automation.
+
 **Aufräumen.** Die Box merkt sich jedes Gerät, das sie je gesehen hat. Hier stehen die Offline-Geräte, deren letzte Online-Zeit bekannt ist, mit Knöpfen für die Tage (3, 7, 14, 30, 90 Tage, 1 Jahr; vorbelegt mit der nächsten Stufe zur Option „Tage offline, bis ein Gerät als weg gilt“). Wähle Geräte aus oder alle und tippe auf „N Geräte ausblenden“: Ein Dialog nennt die Namen und die Folgen, erst dann werden sie ausgeblendet und mit ihren Entitäten aus Home Assistant entfernt. Online-Geräte, die Box und Repeater lehnt der Server ab, auch wenn das Panel sie anbieten würde. Darunter steht die Liste **Ausgeblendet** mit „Einblenden“; das lädt die Integration neu. Das ist dieselbe Liste wie die ausgeblendeten Geräte in den Optionen und die Reparatur für lange offline Geräte.
 
 **Filter.** Der Gerätefilter der Optionen (Alle Geräte, Nur ausgewählte, Alle außer ausgewählten, Gastnetz und private MAC-Adressen ignorieren) mit einer **Vorschau**: Sie zeigt, welche Geräte bleiben, dazukommen oder **samt Entitäten entfernt werden**, bevor etwas geschrieben wird. „Filter anwenden“ fragt mit den Namen der Geräte nach, die verschwinden. Das Panel schickt dabei die Liste mit, die du gesehen hast: Hat sich die Liste inzwischen geändert (ein Gerät ging online, die Box listet ein anderes), schreibt der Server nichts und du siehst die neue Vorschau. Entfernte Geräte verlieren ihre eigenen Namen, ihre Entitäts-IDs und ihren Verlauf; Bezüge in Automationen zeigen danach ins Leere. „Für Offline-Geräte keine Geräte anlegen“ gibt es weiter nur in den Optionen.
@@ -303,10 +317,11 @@ Automationen, die auf Core-Entity-IDs verweisen, musst du auf die neuen IDs umst
 
 ## Datenschutz und Sicherheit
 
-- Die Kommunikation mit der FRITZ!Box bleibt im lokalen Netz (HTTP oder, wenn gewählt, HTTPS). Es gibt keine Verbindung ins Internet.
+- Die Kommunikation mit der FRITZ!Box bleibt im lokalen Netz (HTTP oder, wenn gewählt, HTTPS). Die Integration baut keine Verbindung ins Internet auf, außer für den **Verbindungs-Check** im Diagnose-Tab: Er verbindet sich auf Knopfdruck mit `1.1.1.1` und `example.org`, und wenn du den Verlauf einschaltest, alle 5 Minuten.
 - Die Zugangsdaten liegen im Eintrag von Home Assistant. Lege der Integration einen eigenen Benutzer mit nur dem nötigen Recht an, ohne Zugriff aus dem Internet.
 - MAC- und IP-Adressen und Gerätenamen stehen als Entitätsattribute in Home Assistant. Wer dort Zugriff hat, sieht sie.
 - Die **Diagnosedaten** (⋮ am Eintrag → Diagnose herunterladen) entfernen Zugangsdaten, die Adresse der Box sowie MAC- und IP-Adressen und Namen der Geräte. Sie zeigen außerdem, wie lange die letzte und die langsamste Abfrage dauerte, und die Internetverbindung (Zustand, Raten, DSL-Werte, Art der letzten Ereignisse) ohne die externen Adressen, DNS-Server und das Leitungsspektrum, dazu Gast-WLAN und Firmware-Angebot. Sieh die Datei vor dem Teilen trotzdem durch.
+- **Paketmitschnitte** enthalten den Verkehr der aufgezeichneten Schnittstelle, auch Passwörter und andere private Daten, soweit er unverschlüsselt ist. Sie liegen unter `/config/fritzbox_captures` und damit in Backups. Nur Administratoren können sie aufzeichnen, auswerten und herunterladen.
 - Die Integration kann den Internetzugang von Geräten sperren. Wer in Home Assistant Schalter bedienen darf, kann das also auch.
 
 ## Markenhinweis
@@ -329,6 +344,8 @@ Die Integration enthält ein eigenes Symbol im von Home Assistant unterstützten
 | Der Schalter für den Internetzugang zeigt den alten Zustand | Die Box meldet Änderungen manchmal erst nach etwa einer Minute; der Schalter zeigt die neue Stellung bis dahin sofort |
 | Internetzugang lässt sich nicht schalten | Das Gerät braucht eine IPv4-Adresse; reine IPv6-Geräte lassen sich nicht sperren. Die Box sperrt über die Adresse: Hat sie sich seit der letzten Aktualisierung geändert, lehnt der Schalter ab und funktioniert nach der nächsten Aktualisierung wieder |
 | Ein Gerät steht doppelt | Es hat zwei MAC-Adressen (LAN und WLAN), oder eine private MAC hat gewechselt; das überzählige Gerät löschen oder per Filter ausblenden |
+| Der Mitschnitt meldet „keine Daten“ | Die Schnittstelle hatte in der Zeit keinen Verkehr (Gastnetz, ungenutzte Anschlüsse) oder es gibt sie nicht; eine andere wählen oder länger aufzeichnen |
+| Das Ereignisprotokoll bleibt leer oder wird abgelehnt | Dem Benutzer das Recht „FRITZ!Box Einstellungen“ geben |
 | Zu viele Entitäten | Option „Für Offline-Geräte keine Geräte anlegen“ einschalten, Filter nutzen |
 
 Für detaillierte Meldungen unter **Einstellungen → System → Protokolle** nach `fritzbox_network` suchen. Mit Log-Stufe `debug` für `custom_components.fritzbox_network` erscheint pro Abfrage ihre Dauer.

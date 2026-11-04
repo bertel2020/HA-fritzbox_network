@@ -129,12 +129,13 @@ The box device also has three diagnostic, off by default: **Last update** (the l
 
 ### Actions
 
-Both need the right "FRITZ!Box settings" and take a device, an entity or an area as the target.
+`set_name` and `wake_on_lan` need the right "FRITZ!Box settings" and take a device, an entity or an area as the target. `capture` needs access to the web interface of the box (it is tested with the right "FRITZ!Box settings") and takes a device as the target only if the recording is to be narrowed to it.
 
 | Action | What it does |
 |--------|--------------|
 | `fritzbox_network.set_name` | Renames the device in the FRITZ!Box itself (`name`). The name in Home Assistant follows if names are taken over; entity ids never change. Refused for devices whose name the box does not let change. |
 | `fritzbox_network.wake_on_lan` | Sends the Wake on LAN signal of the box to the device, without the (off by default) button. |
+| `fritzbox_network.capture` | Starts a packet capture in the background: `interface` (name of the interface in the box, preset `1-lan`; the panel lists them under Diagnosis), `duration` in seconds (5 to 600) and `size` in MB. With a device as the target only its traffic is kept. Fails if a capture is already running. The file appears in the panel under Diagnosis. |
 
 ### Events
 
@@ -278,6 +279,19 @@ An action is off and says why when the box user lacks the "FRITZ!Box settings" r
 
 **History.** The device page has two buttons that lead to the logbook and the history of Home Assistant for the device. Roaming and the times online are there. The panel keeps no history of its own: signal and rate only have one if you enable their sensors in the device settings (they are off by default).
 
+**Devices.** The tabs **Include** and **Clean up** are one tab, **Devices**, with a switch at the top of both pages (addresses `#/filter` and `#/cleanup`). The count on the tab is the number of devices that have been offline for long.
+
+**Diagnosis.** The page `#/diagnose` collects tools to find out what happens in the network.
+
+- **Connection.** "Check the connection" tries, from Home Assistant, the box (the TR-064 port), the internet by an address (`1.1.1.1`, port 443), resolving a name (DNS), a website by its name (`example.org`) and IPv6, one after another. The verdict names the first step that fails; a missing IPv6 is no fault. "Record the course" repeats the check every 5 minutes and shows the day as one strip per step (a bar is 15 minutes: fast, slow, failed) with the last and the usual time. The course is **off until you switch it on**; the times are kept for three days and over restarts.
+- **Wi-Fi check.** Every access point with its radios: channel, load as a bar (orange from 70 %, red from 85 %), noise, the number of devices on it and how many of them are on a weak link. Also how a repeater is linked (cable, or Wi-Fi with band and signal). The overall verdict counts what stands out. It uses only values the panel has anyway.
+- **Event log of the box.** The messages of the box by group (network, Wi-Fi, system, phone, USB), the newest 100. The box gives the log only to a user with the right "FRITZ!Box settings". Buttons highlight what stands out, with the count of the last 24 hours: radar events (channel changes of the 5 GHz radios), DSL messages, failed logins, IPv6 prefix changes and messages about the internet connection. A tap shows only those messages. They are found by the text of the message (German and English); a message in another language gets no mark.
+- **Packet capture.** Records the traffic of one interface of the box into a file. The panel reads the choice from the box itself (internet connections, LAN ports, Wi-Fi access points and the routing interfaces that carry all traffic). 5 to 600 seconds (preset 60), size limit up to 200 MB (preset 50); the recording ends after the time, at the limit or with "Stop". Only one recording runs per box. A recording without traffic says "no data", for example for the guest network or unused ports.
+  - **Existing recordings:** the last 20 files are in `/config/fritzbox_captures/<id of the entry>/` and can be downloaded (format "modified tcpdump", Wireshark opens it) or deleted.
+  - **Analyse** shows the protocols, the biggest conversations with the names of the devices and the DNS names asked for. Encrypted traffic shows who talked and how much, not what.
+  - **Only this device** (or "Record traffic" on the page of a device) keeps only the traffic of that device, found by its MAC and IP address. On the internet side every device has the address of the box: choose LAN or Wi-Fi then.
+  - **Important:** a recording can contain passwords and other private data. The files are in the configuration folder and so also in backups of Home Assistant. Delete them when you no longer need them. The action `fritzbox_network.capture` starts a recording from an automation.
+
 **Clean up.** The box remembers every device it has ever seen. Here are the offline devices whose last time online is known, with buttons for the days (3, 7, 14, 30, 90 days, 1 year) (preset to the step nearest to the option "Days offline until a device counts as gone"). Pick devices or all of them and tap "Hide N devices": a dialog names the devices and the consequences, and only then are they hidden and removed from Home Assistant with their entities. The server refuses online devices, the box and repeaters, even if the panel offered them. Below is the **Hidden** list with "Show again", which reloads the integration. It is the same list as the hidden devices in the options and the repair for long-offline devices.
 
 **Filter.** The device filter of the options (all devices, only selected, all except selected, ignore guest network and private MAC addresses) with a **preview**: it shows which devices stay, come back or are **removed with their entities** before anything is written. "Apply filter" asks again with the names of the devices that disappear. The panel sends the list you saw: if it changed meanwhile (a device went online, the box lists another one), the server writes nothing and you see the new preview. Removed devices lose their own names, their entity ids and their history; references in automations then point nowhere. "Do not create devices for offline devices" stays in the options only.
@@ -303,10 +317,11 @@ Automations that refer to core entity ids have to be changed to the new ids; the
 
 ## Privacy and security
 
-- Communication with the FRITZ!Box stays on your local network (HTTP or, if chosen, HTTPS). There is no connection to the internet.
+- Communication with the FRITZ!Box stays on your local network (HTTP or, if chosen, HTTPS). The integration makes no connection to the internet, except for the **connection check** on the Diagnosis tab: it connects to `1.1.1.1` and `example.org` when you press the button, and every 5 minutes if you switch the course on.
 - The credentials are stored in the entry in Home Assistant. Create a dedicated user for the integration with only the necessary right, without access from the internet.
 - MAC and IP addresses and device names appear as entity attributes in Home Assistant; whoever has access there can see them.
 - The **diagnostics** (⋮ on the entry → Download diagnostics) remove credentials, the address of the box and the MAC and IP addresses and names of the devices. They also show how long the last and the slowest poll took, and the internet connection (state, rates, DSL values, kind of the last events) without the external addresses, DNS servers and the line spectrum, plus guest Wi-Fi and firmware offer. Look through the file before you share it anyway.
+- **Packet captures** contain the traffic of the recorded interface, passwords and other private data included as far as it is unencrypted. They are in `/config/fritzbox_captures` and so in backups. Only administrators can record, analyse and download them.
 - The integration can block the internet access of devices. Whoever may operate switches in Home Assistant can do that too.
 
 ## Trademark notice
@@ -329,6 +344,8 @@ The integration ships its own icon in the local directory `custom_components/fri
 | The internet access switch shows the old state | The box sometimes reports changes only after about a minute; the switch shows the new position at once until then |
 | Internet access cannot be switched | The device needs an IPv4 address; IPv6-only devices cannot be blocked. The box blocks by address: if the address changed since the last update, the switch refuses and works again after the next update |
 | A device appears twice | It has two MAC addresses (LAN and WLAN), or a private MAC has changed; delete the extra device or hide it with the filter |
+| The capture says "no data" | The interface had no traffic in that time (guest network, unused ports) or does not exist; choose another or record longer |
+| The event log stays empty or is refused | Give the user the right "FRITZ!Box settings" |
 | Too many entities | Turn on "Do not create devices for offline hosts", use the filter |
 
 For detailed messages search **Settings → System → Logs** for `fritzbox_network`. With log level `debug` for `custom_components.fritzbox_network` the duration of every poll shows up.
