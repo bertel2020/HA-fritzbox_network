@@ -24,6 +24,8 @@ import threading
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from fritzconnection.core.exceptions import FritzAuthorizationError  # noqa: E402
+
 from custom_components.fritzbox_network import pcap  # noqa: E402
 from custom_components.fritzbox_network.api import FritzNetworkClient  # noqa: E402
 from custom_components.fritzbox_network.capture import INTERFACES  # noqa: E402
@@ -43,9 +45,18 @@ def main() -> None:
     tls = os.environ.get("FRITZ_TLS") == "1"
     client = FritzNetworkClient(host, None, user, password, tls)
     client.connect()
+    try:
+        rights = client.can_write()
+    except FritzAuthorizationError:
+        # stop at once: more tries with a wrong login only make the box block the address
+        raise SystemExit(
+            "The box refused the login (401). Check FRITZ_USER and FRITZ_PASSWORD (quote the "
+            "password in single quotes, a $ or ! in it is eaten by the shell) and that the user "
+            "may use apps and TR-064. Not trying further."
+        ) from None
     lines = [
         f"box: {client.model_name}, firmware {client.system_version}",
-        f"user may change settings (BoxAdmin readwrite): {client.can_write()}",
+        f"user may change settings (BoxAdmin readwrite): {rights}",
         "",
     ]
 
