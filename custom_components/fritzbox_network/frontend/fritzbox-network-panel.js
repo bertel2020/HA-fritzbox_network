@@ -158,6 +158,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       capture: null,
       captureForm: captureDefaults(null),
       captureSummary: null,
+      captureDetecting: false,
       check: null,
       latency: null,
       log: null,
@@ -490,6 +491,19 @@ class FritzboxNetworkPanel extends HTMLElement {
         state.captureForm = { ...state.captureForm, interface: state.captureForm.interface.startsWith("2-") ? defaultInterface(state.capture.interfaces) : state.captureForm.interface, mac: this._selected()?.mac ?? "" };
         globalThis.location.hash = "#/diagnose";
         return;
+      } else if (ds.act === "cap-detect") {
+        state.captureDetecting = true;
+        this._update();
+        try {
+          const found = await this._ws("capture/bands");
+          state.capture = found;
+          const names = Object.entries(found.bands).map(([id, band]) => `${found.interfaces.find((i) => i.id === id)?.label ?? id} = ${t.bandGroups[band] ?? band}`);
+          const open = found.undecided.map((id) => found.interfaces.find((i) => i.id === id)?.label ?? id);
+          showToast(this.shadowRoot, names.length ? fill(c.detectDone, { found: names.join(", "), open: open.length ? fill(c.detectOpen, { names: open.join(", ") }) : "" }) : c.detectNone);
+        } finally {
+          state.captureDetecting = false;
+          this._update();
+        }
       } else if (ds.act === "cap-sum") {
         state.captureSummary = { name: ds.name, data: await this._ws("capture/summary", { name: ds.name }) };
         this._update();
@@ -887,6 +901,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           language: this._hass?.language,
           canWrite: Boolean(this._state.data?.can_write),
           form: this._state.captureForm,
+          detecting: this._state.captureDetecting,
           clients: this._state.data?.clients ?? [],
           summary: this._state.captureSummary,
         })

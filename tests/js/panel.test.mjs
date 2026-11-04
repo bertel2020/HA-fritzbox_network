@@ -1297,3 +1297,27 @@ test("the course has a switch, says why it is empty and draws a strip per step",
   assert.match(latencyPage.latencyBody("failed", ctx), /nicht gelesen/);
   assert.match(latencyPage.latencyHint(on, t), /alle 5 Minuten/);
 });
+
+test("the capture list names the Wi-Fi access points after their band and offers to find it", () => {
+  const status = {
+    job: null,
+    files: [{ name: "1vap1_20261104-101500.pcap", bytes: 5000, time: "2026-11-04T10:15:00Z", interface: "1vap1", device: null }],
+    interfaces: [
+      { id: "1-lan", label: "lan", group: "lan", slug: "1lan", band: null },
+      { id: "1-vap0", label: "vap0", group: "wlan", slug: "1vap0", band: "2_4ghz" },
+      { id: "1-vap1", label: "vap1", group: "wlan", slug: "1vap1", band: "5ghz" },
+    ],
+    url: "/x/",
+    limits: { min_seconds: 5, max_seconds: 600, seconds: 60, max_mb: 200, mb: 50 },
+  };
+  const ctx = { t, language: "de", canWrite: true, clients: [], form: capture.captureDefaults(status.limits) };
+  const html = capture.renderCapture(status, ctx);
+  assert.match(html, /<option value="1-vap0">WLAN 2,4 GHz: vap0 \(1-vap0\)/);
+  assert.match(html, /<option value="1-lan">lan \(1-lan\)/); // no band known: the name of the box
+  assert.match(html, /WLAN 5 GHz: vap1 \(1-vap1\)<small>/); // also in the list of the files
+  assert.match(html, /data-act="cap-detect">WLAN-Bänder erkennen/);
+
+  assert.match(capture.renderCapture(status, { ...ctx, detecting: true }), /data-act="cap-detect" disabled>Erkenne/);
+  const noPoints = { ...status, interfaces: status.interfaces.filter((i) => i.id === "1-lan") };
+  assert.doesNotMatch(capture.renderCapture(noPoints, ctx), /cap-detect/); // nothing to detect on a box without them
+});

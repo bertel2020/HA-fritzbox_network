@@ -13,15 +13,22 @@ export function defaultInterface(interfaces) {
   return (interfaces.find((i) => i.id === "1-lan") ?? interfaces[0])?.id ?? "";
 }
 
+/** The name of an interface: the one the box gives with its id, and the band where it is known. */
+export function interfaceLabel(i, t) {
+  const c = t.inet.capture;
+  const name = `${i.label} (${i.id})`;
+  return i.band ? fill(c.bandLabel, { band: t.bandGroups[i.band] ?? i.band, name }) : name;
+}
+
 /** The select of the interfaces, in groups; the name is the one the box gives, with its id. */
-function interfaceOptions(interfaces, chosen, c) {
+function interfaceOptions(interfaces, chosen, c, t) {
   const groups = [...new Set(interfaces.map((i) => i.group))];
   return groups
     .map(
       (group) =>
         `<optgroup label="${escapeHtml(c.groups[group] ?? group)}">${interfaces
           .filter((i) => i.group === group)
-          .map((i) => option(i.id, `${i.label} (${i.id})`, chosen))
+          .map((i) => option(i.id, interfaceLabel(i, t), chosen))
           .join("")}</optgroup>`
     )
     .join("");
@@ -72,7 +79,7 @@ function fileLine(file, t, language, clients, interfaces) {
   const device = file.device ? clients.find((d) => d.id === file.device) : null;
   const detail = file.device ? ` · ${device?.name ?? file.device}` : "";
   const when = new Date(file.time).toLocaleString(language || "en", { dateStyle: "short", timeStyle: "medium" });
-  return `<li><span class="pdesc">${escapeHtml(interfaces.find((i) => i.slug === file.interface)?.label ?? file.interface)}<small> ${escapeHtml(when)} · ${escapeHtml(formatBytes(file.bytes, language))}${escapeHtml(detail)}</small></span>
+  return `<li><span class="pdesc">${escapeHtml(((i) => (i ? interfaceLabel(i, t) : file.interface))(interfaces.find((i) => i.slug === file.interface)))}<small> ${escapeHtml(when)} · ${escapeHtml(formatBytes(file.bytes, language))}${escapeHtml(detail)}</small></span>
     <span class="capbtns"><button class="btn sm" data-act="cap-sum" data-name="${escapeHtml(file.name)}">${escapeHtml(c.analyse)}</button><button class="btn sm" data-act="cap-dl" data-name="${escapeHtml(file.name)}">${escapeHtml(c.download)}</button>
     <button class="btn sm dp" data-act="cap-del" data-name="${escapeHtml(file.name)}" aria-label="${escapeHtml(fill(c.deleteLabel, { name: file.name }))}">${escapeHtml(c.delete)}</button></span></li>`;
 }
@@ -86,14 +93,17 @@ export function renderCapture(capture, ctx) {
   if (!capture) return `<section class="card sec"><span class="label">${escapeHtml(c.title)}</span><p class="hint">${escapeHtml(t.loading)}</p></section>`;
   const job = capture.job;
   const busy = job?.state === "running";
+  const detecting = Boolean(ctx.detecting || capture.detecting);
+  const hasAccessPoints = capture.interfaces.some((i) => /^1-vap\d+$/.test(i.id));
   const lim = capture.limits;
   const off = busy ? " disabled" : "";
   const controls = `<div class="capform">
-      <label class="field"><span class="label">${escapeHtml(c.interface)}</span><select id="cap-if"${off}>${interfaceOptions(capture.interfaces, form.interface, c)}</select></label>
+      <label class="field"><span class="label">${escapeHtml(c.interface)}</span><select id="cap-if"${off}>${interfaceOptions(capture.interfaces, form.interface, c, t)}</select></label>
       <label class="field"><span class="label">${escapeHtml(c.device)}</span><select id="cap-dev"${off}>${option("", c.allDevices, form.mac)}${clients.map((d) => option(d.mac, d.name, form.mac)).join("")}</select></label>
       <label class="field"><span class="label">${escapeHtml(c.seconds)}</span><input type="number" id="cap-sec" min="${lim.min_seconds}" max="${lim.max_seconds}" value="${escapeHtml(form.seconds)}"${off} /></label>
       <label class="field"><span class="label">${escapeHtml(c.size)}</span><input type="number" id="cap-mb" min="1" max="${lim.max_mb}" value="${escapeHtml(form.mb)}"${off} /></label>
-      <button class="btn p" data-act="cap-start"${busy ? " disabled" : ""}>${escapeHtml(c.start)}</button></div>`;
+      <button class="btn p" data-act="cap-start"${busy || detecting ? " disabled" : ""}>${escapeHtml(c.start)}</button></div>
+    ${hasAccessPoints ? `<div class="detectrow"><button class="btn sm" data-act="cap-detect"${busy || detecting ? " disabled" : ""}>${escapeHtml(detecting ? c.detecting : c.detect)}</button><small>${escapeHtml(c.detectHint)}</small></div>` : ""}`;
   const list = capture.files.length
     ? `<ul class="ports capfiles">${capture.files.map((f) => fileLine(f, t, language, clients, capture.interfaces)).join("")}</ul>`
     : `<p class="hint">${escapeHtml(c.none)}</p>`;

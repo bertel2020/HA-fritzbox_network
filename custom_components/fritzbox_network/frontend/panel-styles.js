@@ -529,6 +529,8 @@ export const PANEL_CSS = `
   ul.logrows .pmap { white-space: nowrap; }
   .capbtns { display: flex; gap: 6px; flex-wrap: wrap; }
   .subtabs { margin-bottom: 14px; }
+  .detectrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 4px 0 8px; }
+  .detectrow small { color: var(--muted); flex: 1 1 260px; }
   .capexisting { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
   .capsum { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
   .capsum ul.ports { margin-bottom: 10px; }
