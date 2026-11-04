@@ -101,6 +101,19 @@
       },
       "dsl_crc_errors": {
         "default": "mdi:alert-circle-outline"
+      },
+      "vpn_status": {
+        "default": "mdi:shield-lock-outline",
+        "state": {
+          "off": "mdi:shield-off-outline",
+          "not_connected": "mdi:shield-outline"
+        }
+      },
+      "vpn_since": {
+        "default": "mdi:clock-start"
+      },
+      "vpn_uid": {
+        "default": "mdi:identifier"
       }
     },
     "switch": {

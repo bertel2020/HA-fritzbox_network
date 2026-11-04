@@ -347,3 +347,43 @@ def test_two_connections_with_one_name_are_told_apart_by_the_identifier():
     assert keys["vpnconnection9001"] == "Anna iPhone#vpnconnection9001"
     assert keys["vpnconnection9002"] == "Anna iPhone#vpnconnection9002"
     assert keys["vpnconnection9003"] == "Holiday house"
+
+
+# --- more sensors ---
+
+
+def _vpn_sensor(hass, name, what):
+    return next(
+        (
+            s
+            for s in hass.states.async_all("sensor")
+            if s.attributes.get("friendly_name", "").endswith(f"VPN {name} {what}")
+        ),
+        None,
+    )
+
+
+async def test_each_connection_has_a_status_and_a_time_of_connection(hass, fake_client, entry):
+    _box(fake_client)
+    await _setup(hass, entry)
+
+    assert _vpn_sensor(hass, "Anna iPhone", "status").state == "connected"
+    assert _vpn_sensor(hass, "Bob laptop", "status").state == "not_connected"
+    assert _vpn_sensor(hass, "Old tablet", "status").state == "off"
+    assert _vpn_sensor(hass, "Anna iPhone", "connected since").state.startswith("2026-")
+    assert _vpn_sensor(hass, "Bob laptop", "connected since").state == "unknown"
+
+
+async def test_the_identifier_is_a_diagnostic_sensor_that_is_off_until_enabled(
+    hass, fake_client, entry
+):
+    from homeassistant.helpers import entity_registry as er
+
+    _box(fake_client)
+    await _setup(hass, entry)
+
+    assert _vpn_sensor(hass, "Anna iPhone", "identifier") is None
+    registry = er.async_get(hass)
+    found = [e for e in registry.entities.values() if e.unique_id.startswith("SERIAL1_vpn_uid_")]
+    assert len(found) == 4
+    assert all(e.disabled_by is er.RegistryEntryDisabler.INTEGRATION for e in found)

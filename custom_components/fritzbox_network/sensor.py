@@ -60,6 +60,9 @@ from .const import (
     KEY_RADIO_UTILIZATION,
     KEY_SIGNAL_STRENGTH,
     KEY_SSID,
+    KEY_VPN_SINCE,
+    KEY_VPN_STATUS,
+    KEY_VPN_UID,
     KEY_WLAN_BAND,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
@@ -69,7 +72,7 @@ from .entity import (
     async_setup_client_entities,
     async_setup_node_entities,
 )
-from .models import ClientLink, Host, InternetInfo, MeshNode, Radio
+from .models import ClientLink, Host, InternetInfo, MeshNode, Radio, VpnConnection
 
 CONNECTION_LAN = "lan"
 CONNECTION_WLAN = "wlan"
@@ -133,6 +136,32 @@ async def async_setup_entry(
         ]
     )
     _async_setup_internet(coordinator, entry, async_add_entities)
+    _async_setup_vpn(coordinator, entry, async_add_entities)
+
+
+@callback
+def _async_setup_vpn(
+    coordinator: FritzNetworkCoordinator,
+    entry: FritzNetworkConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    """Status, time of connection and identifier for each WireGuard connection."""
+    known: set[str] = set()
+
+    @callback
+    def _add() -> None:
+        new = [c for c in coordinator.data.vpn or () if c.key not in known]
+        if not new:
+            return
+        known.update(c.key for c in new)
+        async_add_entities(
+            FritzNetworkVpnSensor(coordinator, c, description)
+            for c in new
+            for description in VPN_SENSORS
+        )
+
+    _add()
+    entry.async_on_unload(coordinator.async_add_listener(_add))
 
 
 @callback
@@ -676,3 +705,82 @@ class FritzNetworkMeshStatus(_BoxDiagnostic):
     @property
     def native_value(self) -> str:
         return MESH_AVAILABLE if self.coordinator.data.mesh else MESH_UNAVAILABLE
+
+
+VPN_STATE_CONNECTED = "connected"
+VPN_STATE_IDLE = "not_connected"
+VPN_STATE_OFF = "off"
+
+
+def _vpn_status(connection: VpnConnection) -> str:
+    if connection.connected:
+        return VPN_STATE_CONNECTED
+    return VPN_STATE_IDLE if connection.active else VPN_STATE_OFF
+
+
+def _vpn_since(connection: VpnConnection) -> datetime | None:
+    return dt_util.utc_from_timestamp(connection.since) if connection.since else None
+
+
+@dataclass(frozen=True, kw_only=True)
+class VpnSensorDescription(SensorEntityDescription):
+    """A value of a WireGuard connection."""
+
+    value: Callable[[VpnConnection], str | datetime | None]
+
+
+VPN_SENSORS: tuple[VpnSensorDescription, ...] = (
+    VpnSensorDescription(
+        key=KEY_VPN_STATUS,
+        translation_key=KEY_VPN_STATUS,
+        device_class=SensorDeviceClass.ENUM,
+        options=[VPN_STATE_CONNECTED, VPN_STATE_IDLE, VPN_STATE_OFF],
+        value=_vpn_status,
+    ),
+    VpnSensorDescription(
+        key=KEY_VPN_SINCE,
+        translation_key=KEY_VPN_SINCE,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        value=_vpn_since,
+    ),
+    VpnSensorDescription(
+        key=KEY_VPN_UID,
+        translation_key=KEY_VPN_UID,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value=lambda connection: connection.uid,
+    ),
+)
+
+
+class FritzNetworkVpnSensor(CoordinatorEntity[FritzNetworkCoordinator], SensorEntity):
+    """A value of a WireGuard connection of the box, found again by its name."""
+
+    _attr_has_entity_name = True
+    entity_description: VpnSensorDescription
+
+    def __init__(
+        self,
+        coordinator: FritzNetworkCoordinator,
+        connection: VpnConnection,
+        description: VpnSensorDescription,
+    ) -> None:
+        super().__init__(coordinator)
+        self.entity_description = description
+        self._key = connection.key
+        self._attr_unique_id = f"{coordinator.serial}_{description.key}_{connection.key}"
+        self._attr_translation_placeholders = {"name": connection.name}
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+
+    @property
+    def connection(self) -> VpnConnection | None:
+        return self.coordinator.vpn_by_key(self._key)
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.connection is not None
+
+    @property
+    def native_value(self) -> str | datetime | None:
+        connection = self.connection
+        return self.entity_description.value(connection) if connection else None
