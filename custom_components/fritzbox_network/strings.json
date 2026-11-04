@@ -349,6 +349,10 @@
           "description": "Megabytes; the recording ends when they are reached."
         }
       }
+    },
+    "remove_unavailable_vpn": {
+      "name": "Remove unavailable VPN entities",
+      "description": "Removes the entities of WireGuard connections that no longer exist on the box, for example after one was deleted or renamed. Does nothing while the box tells no list of connections."
     }
   }
 }

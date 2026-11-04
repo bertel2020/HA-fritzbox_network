@@ -349,6 +349,10 @@
           "description": "Megabyte, die Aufzeichnung endet, wenn sie erreicht sind."
         }
       }
+    },
+    "remove_unavailable_vpn": {
+      "name": "Nicht verfügbare VPN-Entitäten entfernen",
+      "description": "Entfernt die Entitäten von WireGuard-Verbindungen, die es auf der Box nicht mehr gibt, etwa nach dem Löschen oder Umbenennen. Tut nichts, solange die Box keine Liste der Verbindungen nennt."
     }
   }
 }

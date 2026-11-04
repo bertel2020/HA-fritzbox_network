@@ -1,4 +1,4 @@
-"""Actions: rename a device in the box, wake a device up."""
+"""Actions: rename a device in the box, wake a device up, record traffic, tidy up VPN entities."""
 
 from __future__ import annotations
 
@@ -18,13 +18,21 @@ from .capture import (
     MAX_SECONDS,
     MIN_SECONDS,
 )
-from .const import DOMAIN
+from .const import (
+    DOMAIN,
+    KEY_VPN,
+    KEY_VPN_SINCE,
+    KEY_VPN_STATUS,
+    KEY_VPN_SWITCH,
+    KEY_VPN_UID,
+)
 from .coordinator import FritzNetworkCoordinator
 from .models import Host
 
 SERVICE_SET_NAME = "set_name"
 SERVICE_WAKE_ON_LAN = "wake_on_lan"
 SERVICE_CAPTURE = "capture"
+SERVICE_REMOVE_VPN = "remove_unavailable_vpn"
 
 ATTR_NAME = "name"
 
@@ -130,9 +138,47 @@ async def _async_capture(call: ServiceCall) -> None:
         ) from err
 
 
+VPN_UNIQUE_ID_KEYS = (KEY_VPN, KEY_VPN_SWITCH, KEY_VPN_STATUS, KEY_VPN_SINCE, KEY_VPN_UID)
+
+
+def stale_vpn_entities(
+    registry: er.EntityRegistry, coordinator: FritzNetworkCoordinator
+) -> list[er.RegistryEntry]:
+    """The WireGuard entities of a box for connections it does not list any more.
+
+    Nothing is stale while the box tells no list at all, so a box that is starting up or has
+    dropped the session never costs anyone their entities.
+    """
+    connections = coordinator.data.vpn
+    if connections is None:
+        return []
+    serial = coordinator.serial
+    wanted = {
+        f"{serial}_{kind}_{connection.key}"
+        for connection in connections
+        for kind in VPN_UNIQUE_ID_KEYS
+    }
+    return [
+        entry
+        for entry in er.async_entries_for_config_entry(registry, coordinator.config_entry.entry_id)
+        if entry.unique_id.startswith(f"{serial}_{KEY_VPN}") and entry.unique_id not in wanted
+    ]
+
+
+async def _async_remove_unavailable_vpn(call: ServiceCall) -> None:
+    """Remove the entities of WireGuard connections that no longer exist on the box."""
+    registry = er.async_get(call.hass)
+    for config_entry in call.hass.config_entries.async_loaded_entries(DOMAIN):
+        for entry in stale_vpn_entities(registry, config_entry.runtime_data):
+            registry.async_remove(entry.entity_id)
+
+
 def async_register(hass: HomeAssistant) -> None:
     hass.services.async_register(DOMAIN, SERVICE_SET_NAME, _async_set_name, SET_NAME_SCHEMA)
     hass.services.async_register(
         DOMAIN, SERVICE_WAKE_ON_LAN, _async_wake_on_lan, WAKE_ON_LAN_SCHEMA
     )
     hass.services.async_register(DOMAIN, SERVICE_CAPTURE, _async_capture, CAPTURE_SCHEMA)
+    hass.services.async_register(
+        DOMAIN, SERVICE_REMOVE_VPN, _async_remove_unavailable_vpn, vol.Schema({})
+    )

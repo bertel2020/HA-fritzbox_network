@@ -38,3 +38,5 @@ capture:
           min: 1
           max: 200
           unit_of_measurement: MB
+
+remove_unavailable_vpn:

@@ -138,6 +138,7 @@ The box device also has three diagnostic, off by default: **Last update** (the l
 | `fritzbox_network.set_name` | Renames the device in the FRITZ!Box itself (`name`). The name in Home Assistant follows if names are taken over; entity ids never change. Refused for devices whose name the box does not let change. |
 | `fritzbox_network.wake_on_lan` | Sends the Wake on LAN signal of the box to the device, without the (off by default) button. |
 | `fritzbox_network.capture` | Starts a packet capture in the background: `interface` (name of the interface in the box, preset `1-lan`; the panel lists them under Diagnosis), `duration` in seconds (5 to 600) and `size` in MB. With a device as the target only its traffic is kept. Fails if a capture is already running. The file appears in the panel under Diagnosis. |
+| `fritzbox_network.remove_unavailable_vpn` | Removes the entities of WireGuard connections that no longer exist on the box (deleted or renamed ones). Does nothing while the box tells no list of connections. |
 
 ### Events
 

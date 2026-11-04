@@ -387,3 +387,43 @@ async def test_the_identifier_is_a_diagnostic_sensor_that_is_off_until_enabled(
     found = [e for e in registry.entities.values() if e.unique_id.startswith("SERIAL1_vpn_uid_")]
     assert len(found) == 4
     assert all(e.disabled_by is er.RegistryEntryDisabler.INTEGRATION for e in found)
+
+
+# --- tidying up ---
+
+
+def _vpn_entries(hass, entry):
+    from homeassistant.helpers import entity_registry as er
+
+    return {
+        e.unique_id
+        for e in er.async_entries_for_config_entry(er.async_get(hass), entry.entry_id)
+        if e.unique_id.startswith("SERIAL1_vpn")
+    }
+
+
+async def test_the_tidy_up_removes_the_entities_of_a_deleted_connection_only(
+    hass, fake_client, entry
+):
+    _box(fake_client)
+    coordinator = await _setup(hass, entry)
+    assert len([u for u in _vpn_entries(hass, entry) if u.endswith("_Old tablet")]) == 5
+    assert len(_vpn_entries(hass, entry)) == 20
+
+    del fake_client.vpn["data"]["init"]["boxConnections"]["connection2"]
+    await coordinator.async_refresh()
+    await hass.services.async_call("fritzbox_network", "remove_unavailable_vpn", blocking=True)
+
+    left = _vpn_entries(hass, entry)
+    assert len(left) == 15
+    assert not [u for u in left if u.endswith("_Old tablet")]
+
+
+async def test_the_tidy_up_does_nothing_while_the_box_tells_no_list(hass, fake_client, entry):
+    _box(fake_client)
+    coordinator = await _setup(hass, entry)
+    coordinator.data.vpn = None
+
+    await hass.services.async_call("fritzbox_network", "remove_unavailable_vpn", blocking=True)
+
+    assert len(_vpn_entries(hass, entry)) == 20
