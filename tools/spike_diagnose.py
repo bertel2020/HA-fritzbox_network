@@ -3,8 +3,8 @@
 Credentials come from the environment, never from arguments:
     FRITZ_HOST (default 192.168.178.1), FRITZ_USER, FRITZ_PASSWORD, FRITZ_TLS=1 for https
     FRITZ_LIST_ONLY=1 only lists the interfaces with the names the box gives them (no captures)
-    FRITZ_BANDS=1 only finds out which band each Wi-Fi access point (vap0, vap1) carries: it records
-    a few seconds on each and counts the devices of each band that appear on it
+    FRITZ_BANDS=1 only finds out which band each Wi-Fi access point (vap0, vap1) carries, as the
+    panel does: it records ten seconds on each and counts the devices packets were sent to
 
 What it does (nothing on the box is changed):
 - reads the event log, with and without a group, and says how many messages came
@@ -32,9 +32,9 @@ from fritzconnection.core.exceptions import FritzAuthorizationError  # noqa: E40
 from custom_components.fritzbox_network import pcap  # noqa: E402
 from custom_components.fritzbox_network.api import FritzNetworkClient  # noqa: E402
 from custom_components.fritzbox_network.capture import (  # noqa: E402
-    count_bands,
+    WIFI_AP_RE,
     curate_interfaces,
-    decide_band,
+    detect_wifi_bands,
     wifi_bands,
 )
 
@@ -83,20 +83,15 @@ def main() -> None:
             f"devices on Wi-Fi by the mesh, all: {tally(everyone)}",
             f"devices on Wi-Fi at the box itself (not behind a repeater): {tally(bands)}",
         ]
+        accesspoints = [
+            item["id"]
+            for item in curate_interfaces(client.get_capture_interfaces())
+            if WIFI_AP_RE.match(item["id"])
+        ]
         with tempfile.TemporaryDirectory() as tmp:
-            for iface in ("1-vap0", "1-vap1"):
-                path = Path(tmp) / f"{iface}.pcap"
-                try:
-                    client.capture(iface, path, 12, 5_000_000, threading.Event(), lambda n: None)
-                    sent = count_bands(pcap.macs(path, receivers=False), bands)
-                    got = count_bands(pcap.macs(path, senders=False), bands)
-                    both = count_bands(pcap.macs(path), bands)
-                    lines += [
-                        f"{iface}: as sender {sent} -> {decide_band(sent)}",
-                        f"{iface}: as receiver {got}, both {both}",
-                    ]
-                except Exception as err:  # noqa: BLE001
-                    lines.append(f"{iface}: FAILED {type(err).__name__}: {mask(err)}")
+            result, votes = detect_wifi_bands(client, accesspoints, bands, Path(tmp))
+        for iface in accesspoints:
+            lines.append(f"{iface}: devices by band {votes[iface]} -> {result[iface]}")
         OUT.write_text("\n".join(lines) + "\n")
         print("\n".join(lines))
         return

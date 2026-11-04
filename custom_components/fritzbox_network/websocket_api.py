@@ -30,6 +30,7 @@ from .capture import (
     MIN_SECONDS,
     VIEW_URL,
     interface_slug,
+    wifi_bands,
 )
 from .connection_check import box_port, run_checks
 from .const import (
@@ -76,6 +77,7 @@ LOG_COMMAND = f"{DOMAIN}/diagnose/log"
 CHECK_COMMAND = f"{DOMAIN}/diagnose/check"
 CAPTURE_STATUS_COMMAND = f"{DOMAIN}/capture/status"
 CAPTURE_START_COMMAND = f"{DOMAIN}/capture/start"
+CAPTURE_BANDS_COMMAND = f"{DOMAIN}/capture/bands"
 CAPTURE_SUMMARY_COMMAND = f"{DOMAIN}/capture/summary"
 CAPTURE_STOP_COMMAND = f"{DOMAIN}/capture/stop"
 CAPTURE_DELETE_COMMAND = f"{DOMAIN}/capture/delete"
@@ -847,7 +849,11 @@ def _capture_state(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
     return {
         "job": manager.job.as_dict() if manager.job else None,
         "files": manager.files(),
-        "interfaces": [{**i, "slug": interface_slug(i["id"])} for i in manager.interfaces()],
+        "interfaces": [
+            {**i, "slug": interface_slug(i["id"]), "band": manager.bands.get(i["id"])}
+            for i in manager.interfaces()
+        ],
+        "detecting": manager.detecting,
         "url": VIEW_URL.replace("{entry_id}", entry_id).replace("{name}", ""),
         "limits": {
             "min_seconds": MIN_SECONDS,
@@ -906,6 +912,37 @@ async def ws_capture_start(
     connection.send_result(
         msg["id"], await hass.async_add_executor_job(_capture_state, hass, msg["entry_id"])
     )
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): CAPTURE_BANDS_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_capture_bands(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Find out which band the Wi-Fi access points carry (about ten seconds on each)."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    mesh = found[1].data.mesh
+    if mesh is None or mesh.master is None:
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "The box tells no mesh")
+        return
+    manager = hass.data[KEY_CAPTURES][msg["entry_id"]]
+    wifi = wifi_bands(mesh.links, mesh.master.mac)
+    try:
+        result = await hass.async_add_executor_job(manager.detect_bands, wifi)
+    except ValueError as err:
+        code = ERR_BUSY if str(err) == "busy" else ERR_INVALID
+        connection.send_error(msg["id"], code, str(err))
+        return
+    except (OSError, PermissionError) as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    manager.save_bands()
+    state = await hass.async_add_executor_job(_capture_state, hass, msg["entry_id"])
+    connection.send_result(msg["id"], {**state, **result})
 
 
 @websocket_api.websocket_command(
@@ -1098,6 +1135,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_check_connection)
     websocket_api.async_register_command(hass, ws_capture_status)
     websocket_api.async_register_command(hass, ws_capture_start)
+    websocket_api.async_register_command(hass, ws_capture_bands)
     websocket_api.async_register_command(hass, ws_capture_summary)
     websocket_api.async_register_command(hass, ws_capture_stop)
     websocket_api.async_register_command(hass, ws_capture_delete)

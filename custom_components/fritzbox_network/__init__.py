@@ -125,9 +125,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
         hass, entry.entry_id, entry.data[CONF_HOST], box_port(entry.data)
     )
     entry.runtime_data = coordinator
-    hass.data.setdefault(KEY_CAPTURES, {})[entry.entry_id] = CaptureManager(
-        hass, entry.entry_id, client
-    )
+    captures = await CaptureManager.async_load(hass, entry.entry_id, client)
+    hass.data.setdefault(KEY_CAPTURES, {})[entry.entry_id] = captures
+    entry.async_on_unload(captures.async_flush)
     entry.async_on_unload(lambda: _drop_capture(hass, entry))
 
     entry.async_on_unload(history.async_flush)

@@ -20,10 +20,11 @@ from typing import Any
 from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from . import pcap
-from .const import DOMAIN
+from .const import DOMAIN, HISTORY_SAVE_DELAY
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -36,6 +37,12 @@ DEFAULT_INTERFACES = [
 ]
 GROUP_ORDER = ["internet", "lan", "wlan", "vpn", "routing"]
 INTERFACES_MAX_AGE = 600
+STORAGE_VERSION = 1
+# the Wi-Fi access points of the box whose band is looked for
+WIFI_AP_RE = re.compile(r"^1-vap\d+$")
+DETECT_SECONDS = 10
+DETECT_PAUSE = 2.0
+DETECT_MAX_BYTES = 5 * 1024 * 1024
 MIN_SECONDS = 5
 MAX_SECONDS = 600
 DEFAULT_SECONDS = 60
@@ -129,6 +136,45 @@ def count_bands(seen: dict[str, int], bands: dict[str, str]) -> dict[str, int]:
     return votes
 
 
+def detect_wifi_bands(
+    client: Any,
+    interfaces: list[str],
+    bands: dict[str, str],
+    directory: Path,
+    seconds: int = DETECT_SECONDS,
+    pause: float = DETECT_PAUSE,
+) -> tuple[dict[str, str | None], dict[str, dict[str, int]]]:
+    """Which band each Wi-Fi access point carries, by the devices that packets are sent to on it.
+
+    Records a few seconds on each interface, one after the other with a pause. Only packets *to*
+    a device count: they leave over the access point the device is connected to, while a device
+    that sends can also show up where it only looks for networks. A device seen on more than one
+    interface says nothing and is left out. Returns the band per interface (None where it is not
+    clear) and the votes behind it. Blocking: call it from an executor thread.
+    """
+    seen: dict[str, set[str]] = {}
+    for n, interface in enumerate(interfaces):
+        if n:
+            time.sleep(pause)  # the box ends the one recording before it starts the next
+        path = directory / f"detect-{interface_slug(interface)}.pcap"
+        try:
+            client.capture(
+                interface, path, seconds, DETECT_MAX_BYTES, threading.Event(), lambda _: None
+            )
+            seen[interface] = set(pcap.macs(path, senders=False))
+        except ValueError:  # the box sent nothing: nobody is on that access point just now
+            seen[interface] = set()
+        finally:
+            path.unlink(missing_ok=True)
+    result: dict[str, str | None] = {}
+    votes: dict[str, dict[str, int]] = {}
+    for interface, macs in seen.items():
+        elsewhere = set().union(*(m for i, m in seen.items() if i != interface))
+        votes[interface] = count_bands(dict.fromkeys(macs - elsewhere, 1), bands)
+        result[interface] = decide_band(votes[interface])
+    return result, votes
+
+
 @dataclass
 class Job:
     """The capture that runs now or ran last."""
@@ -169,9 +215,58 @@ class CaptureManager:
         self._entry_id = entry_id
         self._client = client
         self.job: Job | None = None
+        self.bands: dict[str, str] = {}  # interface -> band, as last found
+        self._store: Store | None = None
+        self.detecting = False
         self._interfaces: list[dict[str, str]] | None = None
         self._interfaces_at = 0.0
         self._task: asyncio.Task[None] | None = None
+
+    @classmethod
+    async def async_load(cls, hass: HomeAssistant, entry_id: str, client: Any) -> CaptureManager:
+        """The manager with the bands found earlier, which are kept over restarts."""
+        manager = cls(hass, entry_id, client)
+        manager._store = Store(hass, STORAGE_VERSION, f"{DOMAIN}.capture.{entry_id}")  # noqa: SLF001
+        stored = await manager._store.async_load()  # noqa: SLF001
+        if isinstance(stored, dict) and isinstance(stored.get("bands"), dict):
+            manager.bands = {k: v for k, v in stored["bands"].items() if INTERFACE_RE.match(k)}
+        return manager
+
+    def save_bands(self) -> None:
+        """Keep the bands found; in the event loop, the thread that found them may not save."""
+        if self._store is not None:
+            self._store.async_delay_save(lambda: {"bands": self.bands}, HISTORY_SAVE_DELAY)
+
+    async def async_flush(self) -> None:
+        if self._store is not None:
+            await self._store.async_save({"bands": self.bands})
+
+    def detect_bands(self, wifi: dict[str, str]) -> dict[str, Any]:
+        """Find out which band the Wi-Fi access points of the box carry; blocking, for an executor.
+
+        ``wifi`` are the devices of the mesh on Wi-Fi at the box itself, {mac: band}. Refused while
+        a capture runs. What is found is kept; an access point it is not clear for is left unnamed.
+        """
+        if self.running or self.detecting:
+            raise ValueError("busy")
+        interfaces = [i["id"] for i in self.interfaces() if WIFI_AP_RE.match(i["id"])]
+        if not interfaces:
+            raise ValueError("no access points")
+        self.detecting = True
+        directory = self.directory
+        try:
+            directory.mkdir(parents=True, exist_ok=True)
+            result, votes = detect_wifi_bands(self._client, interfaces, wifi, directory)
+        finally:
+            self.detecting = False
+        found = {i: band for i, band in result.items() if band}
+        # an access point that is clear now replaces the old answer, an unclear one keeps none
+        self.bands = {**{k: v for k, v in self.bands.items() if k not in result}, **found}
+        return {
+            "bands": found,
+            "undecided": [i for i, band in result.items() if not band],
+            "votes": votes,
+        }
 
     @property
     def directory(self) -> Path:
@@ -208,7 +303,7 @@ class CaptureManager:
         """Begin a capture; raises ValueError for a bad request or when one is running."""
         if not INTERFACE_RE.match(interface):
             raise ValueError("unknown interface")
-        if self.running:
+        if self.running or self.detecting:
             raise ValueError("busy")
         seconds = max(MIN_SECONDS, min(MAX_SECONDS, seconds))
         max_bytes = max(1024 * 1024, min(MAX_BYTES, max_bytes))
