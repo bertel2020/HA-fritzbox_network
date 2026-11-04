@@ -213,3 +213,32 @@ def summarize(path: Path) -> Summary:
     if first is not None and last is not None:
         summary.seconds = round(last - first, 2)
     return summary
+
+
+# a record header: seconds, microseconds, captured length, original length
+_PLAUSIBLE_YEARS = (1_500_000_000, 2_500_000_000)
+MAX_PACKET = 262_144
+
+
+def record_order(data: bytes) -> str | None:
+    """The byte order if the data starts with a pcap record header, None if it does not.
+
+    The box streams a capture without the file header of pcap (an assumption read from the first
+    bytes it sends: a time stamp in the right years, then sensible lengths).
+    """
+    if len(data) < 16:
+        return None
+    for order in ("<", ">"):
+        seconds, micros, captured, length = struct.unpack(f"{order}IIII", data[:16])
+        if (
+            _PLAUSIBLE_YEARS[0] <= seconds <= _PLAUSIBLE_YEARS[1]
+            and micros < 1_000_000
+            and 0 < captured <= length <= MAX_PACKET
+        ):
+            return order
+    return None
+
+
+def file_header(order: str = "<", linktype: int = LINKTYPE_ETHERNET, snaplen: int = 65535) -> bytes:
+    """The header of a pcap file for Ethernet frames."""
+    return struct.pack(f"{order}IHHiIII", 0xA1B2C3D4, 2, 4, 0, 0, snaplen, linktype)

@@ -81,12 +81,21 @@ def main() -> None:
                 verify=False,
             ).text
             ids = sorted(set(re.findall(r"ifaceorminor=([0-9A-Za-z_-]+)", text)))
+            ids += re.findall(r"(?i)<button[^>]*name=.start.[^>]*value=.([0-9A-Za-z_-]+)", text)
+            ids = sorted(set(ids))
             lines.append(f"{page}: {len(text)} bytes, interfaces: {ids or 'none found'}")
             hints = re.findall(
                 r"(?i)[^\n]{0,60}(?:iface|capture_notimeout|ifaceorminor)[^\n]{0,90}", text
             )
             for hint in list(dict.fromkeys(h.strip() for h in hints))[:12]:
                 lines.append(f"    hint: {mask(hint)}")
+            # every row with a start button: its value and the text of the row, tags removed
+            for row in re.findall(
+                r"(?is)<tr[^>]*>(?:(?!</tr>).)*?name=.start.(?:(?!</tr>).)*?</tr>", text
+            )[:30]:
+                value = re.search(r'(?i)name=.start.[^>]*value=.([^">]+)', row)
+                label = re.sub(r"\s+", " ", re.sub(r"(?s)<[^>]+>", " ", row)).strip()
+                lines.append(f"    row: {value.group(1) if value else '?'} -> {mask(label[:100])}")
             # the names of the form fields that hold a choice of interface
             for tag in re.findall(
                 r"(?i)<(?:input|option|button)[^>]*(?:iface|eth|wlan|lan|internet)[^>]*>", text

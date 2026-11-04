@@ -547,3 +547,23 @@ def test_a_capture_stops_at_the_size_limit(tmp_path):
 
     assert reason == "size"
     assert path.stat().st_size >= 100
+
+
+@pytest.mark.enable_socket
+def test_a_capture_without_a_file_header_gets_one(tmp_path):
+    import struct
+
+    record = struct.pack("<IIII", 1_793_000_000, 5, 14, 14) + b"\xff" * 14
+
+    def headerless(handler):
+        handler.send_response(200)
+        handler.end_headers()
+        handler.wfile.write(record)
+
+    with _box(headerless) as host:
+        reason, path = _capture(host, tmp_path, 5)
+
+    assert reason in ("time", "stopped")
+    data = path.read_bytes()
+    assert data[:4] == b"\xd4\xc3\xb2\xa1"
+    assert data.endswith(record)

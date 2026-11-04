@@ -36,6 +36,7 @@ from fritzconnection.core.exceptions import (
 from homeassistant.helpers.device_registry import format_mac
 import requests
 
+from . import pcap
 from .const import HOST_FILTER_SERVICE_PREFIX, HOSTS_SERVICE
 from .models import (
     Host,
@@ -311,11 +312,19 @@ class FritzNetworkClient:
                         raise
                     if not chunk:
                         break
-                    if written == 0 and chunk[:4] not in PCAP_MAGICS:
-                        # the box answers a refusal as text, not as a capture
-                        self._web_sid = None
-                        text = chunk[:200].decode("utf-8", "replace").strip()
-                        raise ValueError(f"the box did not send a capture: {text}")
+                    if written == 0:
+                        if chunk[:4] in PCAP_MAGICS:
+                            pass
+                        elif (order := pcap.record_order(chunk)) is not None:
+                            # the box sends the packets without the header of a pcap file
+                            target.write(pcap.file_header(order))
+                        else:
+                            # a refusal comes as text; anything else is shown as bytes
+                            self._web_sid = None
+                            raise ValueError(
+                                f"the box did not send a capture: {chunk[:32].hex(' ')} "
+                                f"({chunk[:60].decode('utf-8', 'replace').strip()})"
+                            )
                     target.write(chunk)
                     written += len(chunk)
                     progress(written)

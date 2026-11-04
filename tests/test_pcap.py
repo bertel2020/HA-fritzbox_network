@@ -96,3 +96,23 @@ def test_a_cut_off_capture_keeps_what_is_complete(capture, tmp_path):
     cut = tmp_path / "cut.pcap"
     cut.write_bytes(capture.read_bytes()[:-10])
     assert pcap.summarize(cut).packets == 3
+
+
+def test_the_box_stream_without_a_file_header_is_recognised():
+    record = struct.pack("<IIII", 1_793_000_000, 5, 60, 60) + b"\0" * 60
+    assert pcap.record_order(record) == "<"
+    assert pcap.record_order(struct.pack(">IIII", 1_793_000_000, 5, 60, 60)) == ">"
+    assert pcap.record_order(b"Permission denied for this user, sorry about it") is None
+    assert pcap.record_order(b"short") is None
+
+
+def test_a_file_header_makes_the_stream_a_readable_capture(tmp_path):
+    frame = _frame(A, B, (192, 168, 1, 10), (8, 8, 8, 8), 17, _udp(5000, 53, _dns("example.org")))
+    record = struct.pack("<IIII", 1_793_000_000, 5, len(frame), len(frame)) + frame
+    path = tmp_path / "x.pcap"
+    path.write_bytes(pcap.file_header("<") + record)
+
+    summary = pcap.summarize(path)
+
+    assert summary.packets == 1
+    assert summary.dns == {"example.org": 1}
