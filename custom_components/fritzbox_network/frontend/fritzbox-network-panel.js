@@ -32,6 +32,7 @@ import { captureDefaults, defaultInterface, renderCapture } from "./panel-captur
 import { renderCheck } from "./panel-check.js";
 import { renderLog } from "./panel-log.js";
 import { renderRadio } from "./panel-radio.js";
+import { renderLatency } from "./panel-latency.js";
 import { BLOCK_COLORS, ENTRY_KINDS, addressModel, checkBlock, checkEntry, emptyOwn, entryPreview, groupPreview, normalizeOwn, parseRange, poolChange, renderAddresses } from "./panel-addresses.js";
 import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
@@ -159,6 +160,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       captureForm: captureDefaults(null),
       captureSummary: null,
       check: null,
+      latency: null,
       log: null,
       logGroup: "",
       logKind: null,
@@ -274,6 +276,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     clearInterval(this._clock);
     clearTimeout(this._enableTimer);
     clearTimeout(this._captureTimer);
+    clearTimeout(this._latencyTimer);
     this._resize?.disconnect();
     this._stop();
   }
@@ -349,6 +352,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     else if (this._state.tab === "filter") this._loadFilter();
     else if (this._state.tab === "internet") this._loadPorts();
     else if (this._state.tab === "diagnose") {
+      this._loadLatency();
       this._loadCapture();
       this._loadLog();
     }
@@ -420,6 +424,32 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._update();
     if (this._state.tab === "diagnose" && this._state.capture?.job?.state === "running") {
       this._captureTimer = setTimeout(() => this._loadCapture(), 1000);
+    }
+  }
+
+  /** The course of the connection is read when the page opens, and again every minute while it is open and recorded. */
+  async _loadLatency() {
+    clearTimeout(this._latencyTimer);
+    try {
+      this._state.latency = await this._ws("diagnose/latency");
+    } catch {
+      this._state.latency = "failed";
+    }
+    this._update();
+    if (this._state.tab === "diagnose" && this._state.latency?.enabled) {
+      this._latencyTimer = setTimeout(() => this._loadLatency(), 60000);
+    }
+  }
+
+  async _switchLatency(enabled) {
+    const state = this._state;
+    try {
+      state.latency = await this._ws("diagnose/latency/switch", { enabled });
+      this._update();
+      clearTimeout(this._latencyTimer);
+      if (state.latency.enabled) this._latencyTimer = setTimeout(() => this._loadLatency(), 5000);
+    } catch (err) {
+      showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
     }
   }
 
@@ -852,6 +882,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       "diagnose-view",
       `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(t.diag.title)}</h1><p class="lead">${escapeHtml(t.diag.lead)}</p></div>` +
         renderCheck(this._state.check, { t }) +
+        renderLatency(this._state.latency, { t, language: this._hass?.language, now: Date.now() / 1000 }) +
         renderRadio(this._state.data, { t, language: this._hass?.language }) +
         renderLog(this._state.log, { t, group: this._state.logGroup, kind: this._state.logKind }) +
         renderCapture(this._state.capture, {
@@ -1632,6 +1663,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._update();
       this._loadLog();
       return;
+    } else if (ds.act === "latency-switch") {
+      return this._switchLatency(ds.on === "1");
     } else if (ds.act === "check-run") {
       return this._runCheck();
     } else if (ds.act?.startsWith("cap-")) {

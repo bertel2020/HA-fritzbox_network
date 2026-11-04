@@ -485,6 +485,15 @@ export const PANEL_CSS = `
   button.chip { cursor: pointer; border: 1px solid transparent; }
   button.chip[aria-pressed="true"] { border-color: currentColor; }
   ul.logrows li.mark .pdesc { font-weight: 500; }
+  .latrow { margin-top: 12px; }
+  .lathead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+  .lathead small { color: var(--muted); }
+  svg.latstrip { display: block; width: 100%; height: 22px; margin-top: 4px; }
+  .lat.ok { fill: var(--ok); background: var(--ok); }
+  .lat.slow { fill: var(--warn); background: var(--warn); }
+  .lat.fail { fill: var(--bad); background: var(--bad); }
+  .lat.none { fill: var(--line); background: var(--line); }
+  i.lat { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
   ul.logrows { margin-top: 10px; max-height: 420px; overflow: auto; }
   ul.logrows .pmap { white-space: nowrap; }
   .capbtns { display: flex; gap: 6px; flex-wrap: wrap; }

@@ -1251,3 +1251,41 @@ test("the event log marks what stands out, counts the last 24 hours and narrows 
   assert.doesNotMatch(narrowed, /Präfix wurde/);
   assert.match(narrowed, /Kanal 52/);
 });
+
+const latencyPage = await import(`${base}panel-latency.js`);
+
+test("the course of the connection is put into 15 minute buckets by the worst result", () => {
+  const steps = ["box", "internet", "dns", "web", "ipv6"];
+  const now = 1_793_000_000;
+  const at = (minutesAgo, ...ms) => [now - minutesAgo * 60, ...ms];
+  const samples = [
+    at(5, 3, 12, 20, 80, 30),
+    at(4, 3, 12, 400, 80, null), // dns slow, no IPv6
+    at(40, 3, null, null, null, null), // the internet was gone
+  ];
+  const dns = latencyPage.latencyBuckets(samples, steps, "dns", now);
+  assert.equal(dns.length, 96);
+  const slow = dns.filter((b) => b.state === "slow");
+  assert.equal(slow.length, 1); // the two runs of a quarter of an hour make one bar: the worse one counts
+  assert.equal(slow[0].ms, 400);
+  assert.equal(dns.filter((b) => b.state === "fail").length, 1);
+  assert.equal(dns.filter((b) => b.state === "none").length, 94);
+
+  const ipv6 = latencyPage.latencyBuckets(samples, steps, "ipv6", now);
+  assert.equal(ipv6.filter((b) => b.state === "fail").length, 0); // an absent IPv6 is not a failure
+
+  const summary = latencyPage.latencySummary(samples.sort((a, b) => a[0] - b[0]), steps, "internet");
+  assert.deepEqual(summary, { last: 12, median: 12, failed: 1, runs: 3 });
+});
+
+test("the course card has a switch, says why it is empty and draws a strip per step", () => {
+  const base = { enabled: false, interval: 300, steps: ["box", "internet", "dns", "web", "ipv6"], samples: [] };
+  const off = latencyPage.renderLatency(base, { t, language: "de", now: 1_793_000_000 });
+  assert.match(off, /data-act="latency-switch" data-on="1"/);
+  assert.match(off, /Keine Aufzeichnung/);
+  const on = latencyPage.renderLatency({ ...base, enabled: true, samples: [[1_792_999_700, 3, 12, 20, 80, null]] }, { t, language: "de", now: 1_793_000_000 });
+  assert.match(on, /data-on="0">Aufzeichnung beenden/);
+  assert.equal((on.match(/<svg class="latstrip"/g) ?? []).length, 5);
+  assert.match(on, /zuletzt 12 ms/);
+  assert.match(latencyPage.renderLatency("failed", { t, language: "de", now: 0 }), /nicht gelesen/);
+});

@@ -56,6 +56,7 @@ from .const import (
 )
 from .filters import select_hosts
 from .history import DeviceHistory
+from .latency import LatencyMonitor
 from .models import (
     FirmwareInfo,
     Host,
@@ -108,6 +109,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.history = history
         # what the user noted about the address space; set up with the entry
         self.addresses: AddressNotes | None = None
+        self.latency: LatencyMonitor | None = None
         # Unfiltered host list: the options flow offers it for selection.
         self.all_hosts: dict[str, Host] = {}
         # None until the first poll: what the box lists then is not new.

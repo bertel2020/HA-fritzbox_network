@@ -9,7 +9,7 @@ from typing import Any
 
 from fritzconnection.core.exceptions import FritzConnectionException
 from homeassistant.components import websocket_api
-from homeassistant.const import CONF_HOST, CONF_PORT
+from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import (
     device_registry as dr,
@@ -31,7 +31,7 @@ from .capture import (
     VIEW_URL,
     interface_slug,
 )
-from .connection_check import run_checks
+from .connection_check import box_port, run_checks
 from .const import (
     CONF_FILTER_DEVICES,
     CONF_FILTER_MODE,
@@ -39,7 +39,6 @@ from .const import (
     CONF_IGNORE_GUESTS,
     CONF_IGNORE_PRIVATE_MACS,
     CONF_STALE_DAYS,
-    CONF_USE_TLS,
     DEFAULT_STALE_DAYS,
     DOMAIN,
     FILTER_ALL,
@@ -52,6 +51,7 @@ from .const import (
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .filters import FILTER_OPTIONS, select_hosts
+from .latency import INTERVAL, STEPS
 from .models import MeshNode, MeshTopology, check_address_range, is_private_mac, mac_id
 from .repairs import async_update_stale_issue, last_online
 
@@ -70,6 +70,8 @@ ADDRESS_SAVE_COMMAND = f"{DOMAIN}/address/save"
 ADDRESS_POOL_COMMAND = f"{DOMAIN}/address/pool"
 HISTORY_COMMAND = f"{DOMAIN}/history/summary"
 HISTORY_DEVICE_COMMAND = f"{DOMAIN}/history/device"
+LATENCY_COMMAND = f"{DOMAIN}/diagnose/latency"
+LATENCY_SWITCH_COMMAND = f"{DOMAIN}/diagnose/latency/switch"
 LOG_COMMAND = f"{DOMAIN}/diagnose/log"
 CHECK_COMMAND = f"{DOMAIN}/diagnose/check"
 CAPTURE_STATUS_COMMAND = f"{DOMAIN}/capture/status"
@@ -768,8 +770,7 @@ async def ws_check_connection(
     if (found := _loaded_coordinator(hass, connection, msg)) is None:
         return
     entry = found[0]
-    port = entry.data.get(CONF_PORT) or (49443 if entry.data.get(CONF_USE_TLS) else 49000)
-    connection.send_result(msg["id"], await run_checks(entry.data[CONF_HOST], port))
+    connection.send_result(msg["id"], await run_checks(entry.data[CONF_HOST], box_port(entry.data)))
 
 
 @websocket_api.websocket_command(
@@ -793,6 +794,52 @@ async def ws_device_log(
         connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
         return
     connection.send_result(msg["id"], {"events": events})
+
+
+def _latency_state(coordinator: FritzNetworkCoordinator) -> dict[str, Any]:
+    monitor = coordinator.latency
+    return {
+        "enabled": monitor.enabled if monitor else False,
+        "interval": int(INTERVAL.total_seconds()),
+        "steps": STEPS,
+        "samples": monitor.samples() if monitor else [],
+    }
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): LATENCY_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@callback
+def ws_latency(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The course of the connection of the last 24 hours, and whether it is being recorded."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    connection.send_result(msg["id"], _latency_state(found[1]))
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): LATENCY_SWITCH_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("enabled"): bool,
+    }
+)
+@websocket_api.require_admin
+@callback
+def ws_latency_switch(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Start or stop recording the course of the connection."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    if found[1].latency is None:
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Nothing to record with")
+        return
+    found[1].latency.set_enabled(msg["enabled"])
+    connection.send_result(msg["id"], _latency_state(found[1]))
 
 
 def _capture_state(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
@@ -1045,6 +1092,8 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_history_device)
     websocket_api.async_register_command(hass, ws_reconnect)
     websocket_api.async_register_command(hass, ws_reboot)
+    websocket_api.async_register_command(hass, ws_latency)
+    websocket_api.async_register_command(hass, ws_latency_switch)
     websocket_api.async_register_command(hass, ws_device_log)
     websocket_api.async_register_command(hass, ws_check_connection)
     websocket_api.async_register_command(hass, ws_capture_status)

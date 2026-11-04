@@ -164,3 +164,44 @@ async def test_the_event_log_of_the_box_can_be_read_by_group(
     assert len(everything["events"]) == 2
     assert [e["group"] for e in wifi["events"]] == ["wlan"]
     assert not bad["success"]
+
+
+async def test_the_course_of_the_connection_is_recorded_only_while_switched_on(
+    hass, hass_ws_client, fake_client, entry, monkeypatch
+):
+    from custom_components.fritzbox_network import latency
+
+    async def fake_checks(host, port):
+        return {
+            "verdict": "ok",
+            "steps": [
+                {"key": "box", "ok": True, "ms": 3.0, "error": None},
+                {"key": "internet", "ok": True, "ms": 12.0, "error": None},
+                {"key": "dns", "ok": False, "ms": None, "error": "timeout"},
+                {"key": "web", "ok": False, "ms": None, "error": "timeout"},
+                {"key": "ipv6", "ok": False, "ms": None, "error": "timeout"},
+            ],
+        }
+
+    monkeypatch.setattr(latency, "run_checks", fake_checks)
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    state = f"{DOMAIN}/diagnose/latency"
+
+    off = (await _call(client, state, entry_id=entry.entry_id))["result"]
+    assert off["enabled"] is False
+    assert off["samples"] == []
+    assert off["steps"] == ["box", "internet", "dns", "web", "ipv6"]
+
+    await entry.runtime_data.latency.async_sample()
+    assert (await _call(client, state, entry_id=entry.entry_id))["result"]["samples"] == []
+
+    on = (await _call(client, f"{state}/switch", entry_id=entry.entry_id, enabled=True))["result"]
+    assert on["enabled"] is True
+    await hass.async_block_till_done()
+    samples = (await _call(client, state, entry_id=entry.entry_id))["result"]["samples"]
+    assert [s[1:] for s in samples] == [[3.0, 12.0, None, None, None]]
+
+    await _call(client, f"{state}/switch", entry_id=entry.entry_id, enabled=False)
+    await entry.runtime_data.latency.async_sample()
+    assert len((await _call(client, state, entry_id=entry.entry_id))["result"]["samples"]) == 1

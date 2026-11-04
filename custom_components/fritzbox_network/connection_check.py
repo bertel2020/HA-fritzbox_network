@@ -7,6 +7,10 @@ import socket
 import time
 from typing import Any
 
+from homeassistant.const import CONF_PORT
+
+from .const import CONF_USE_TLS
+
 TIMEOUT = 4.0
 # a public address that answers on 443 without a name, and one name to resolve and connect to
 INTERNET_V4 = "1.1.1.1"
@@ -34,6 +38,11 @@ async def _connect(host: str, port: int) -> None:
 
 async def _resolve(name: str) -> None:
     await asyncio.get_running_loop().getaddrinfo(name, 443, type=socket.SOCK_STREAM)
+
+
+def box_port(data: dict[str, Any]) -> int:
+    """The port the box answers on: the one set for the entry, else that of TR-064."""
+    return int(data.get(CONF_PORT) or (49443 if data.get(CONF_USE_TLS) else 49000))
 
 
 async def run_checks(box_host: str, box_port: int) -> dict[str, Any]:

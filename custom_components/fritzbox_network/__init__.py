@@ -25,6 +25,7 @@ from homeassistant.helpers.typing import ConfigType
 from .addresses import AddressNotes
 from .api import FritzNetworkClient
 from .capture import KEY_CAPTURES, CaptureDownloadView, CaptureManager
+from .connection_check import box_port
 from .const import (
     CONF_HIDDEN_MACS,
     CONF_STALE_REPAIR,
@@ -34,6 +35,7 @@ from .const import (
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .history import DeviceHistory
+from .latency import LatencyMonitor
 from .panel import async_drop_panel, async_ensure_panel, async_serve_frontend
 from .repairs import (
     async_remove_internet_issues,
@@ -119,6 +121,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
     coordinator = FritzNetworkCoordinator(hass, entry, client, serial, can_write, box.id, history)
     await coordinator.async_config_entry_first_refresh()
     coordinator.addresses = await AddressNotes.async_load(hass, entry.entry_id)
+    coordinator.latency = await LatencyMonitor.async_load(
+        hass, entry.entry_id, entry.data[CONF_HOST], box_port(entry.data)
+    )
     entry.runtime_data = coordinator
     hass.data.setdefault(KEY_CAPTURES, {})[entry.entry_id] = CaptureManager(
         hass, entry.entry_id, client
@@ -127,6 +132,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
 
     entry.async_on_unload(history.async_flush)
     entry.async_on_unload(coordinator.addresses.async_flush)
+    entry.async_on_unload(coordinator.latency.async_flush)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     entry.async_on_unload(
         coordinator.async_add_listener(lambda: async_update_internet_issues(hass, entry))
