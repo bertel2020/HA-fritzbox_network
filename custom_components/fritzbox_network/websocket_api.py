@@ -778,6 +778,7 @@ async def ws_reconnect(
         vol.Required("entry_id"): str,
         vol.Required("uid"): str,
         vol.Required("enabled"): bool,
+        vol.Optional("name"): str,
     }
 )
 @websocket_api.require_admin
@@ -795,7 +796,7 @@ async def ws_vpn_switch(
         )
         return
     try:
-        await coordinator.async_set_vpn(msg["uid"], msg["enabled"])
+        await coordinator.async_set_vpn(msg["uid"], msg["enabled"], msg.get("name"))
     except HomeAssistantError as err:
         connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
         return

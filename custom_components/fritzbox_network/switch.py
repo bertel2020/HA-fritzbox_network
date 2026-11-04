@@ -108,6 +108,7 @@ class FritzNetworkVpnSwitch(CoordinatorEntity[FritzNetworkCoordinator], SwitchEn
     def __init__(self, coordinator: FritzNetworkCoordinator, connection: VpnConnection) -> None:
         super().__init__(coordinator)
         self._uid = connection.uid
+        self._name = connection.name
         self._attr_unique_id = f"{coordinator.serial}_{KEY_VPN_SWITCH}_{connection.uid}"
         self._attr_translation_placeholders = {"name": connection.name}
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
@@ -126,10 +127,10 @@ class FritzNetworkVpnSwitch(CoordinatorEntity[FritzNetworkCoordinator], SwitchEn
         return connection.active if connection else None
 
     async def async_turn_on(self, **kwargs: Any) -> None:
-        await self.coordinator.async_set_vpn(self._uid, True)
+        await self.coordinator.async_set_vpn(self._uid, True, self._name)
 
     async def async_turn_off(self, **kwargs: Any) -> None:
-        await self.coordinator.async_set_vpn(self._uid, False)
+        await self.coordinator.async_set_vpn(self._uid, False, self._name)
 
 
 class FritzNetworkGuestWifi(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity):

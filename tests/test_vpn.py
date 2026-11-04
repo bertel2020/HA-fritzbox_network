@@ -120,7 +120,7 @@ async def test_a_failing_read_keeps_what_was_known(hass, fake_client, entry):
     assert coordinator.data.vpn == known
 
 
-# --- switching ---------------------------------------------------------------------------------
+# --- switching ---
 
 from unittest.mock import MagicMock  # noqa: E402
 
@@ -256,3 +256,60 @@ def test_the_client_renews_a_dropped_session_once_and_refuses_odd_identifiers():
     assert client._fc.session.put.call_args.kwargs["headers"]["Authorization"] == "AVM-SID new"
     with pytest.raises(ValueError):
         client.set_vpn("../x", True)
+
+
+# --- an empty answer of the box ---
+
+
+async def test_an_empty_or_missing_list_is_believed_only_after_three_polls(
+    hass, fake_client, entry
+):
+    _box(fake_client)
+    coordinator = await _setup(hass, entry)
+    assert len(coordinator.data.vpn) == 4
+
+    fake_client.vpn = {"data": {"init": {"boxConnections": {}}}}
+    for _ in range(2):
+        await coordinator.async_refresh()
+        assert len(coordinator.data.vpn) == 4
+    await coordinator.async_refresh()
+    assert coordinator.data.vpn == []
+
+    # the same for a page the box does not give (dropped session, start-up)
+    _box(fake_client)
+    await coordinator.async_refresh()
+    assert len(coordinator.data.vpn) == 4
+    fake_client.vpn = None
+    for _ in range(2):
+        await coordinator.async_refresh()
+        assert len(coordinator.data.vpn) == 4
+    await coordinator.async_refresh()
+    assert coordinator.data.vpn is None
+
+
+async def test_a_list_that_comes_back_resets_the_count(hass, fake_client, entry):
+    _box(fake_client)
+    coordinator = await _setup(hass, entry)
+    gone = {"data": {"init": {"boxConnections": {}}}}
+    good = fake_client.vpn
+    for answer in (gone, gone, good, gone, gone):
+        fake_client.vpn = answer
+        await coordinator.async_refresh()
+    assert len(coordinator.data.vpn) == 4
+
+
+# --- the box renumbers ---
+
+
+async def test_a_connection_that_is_now_another_one_is_not_switched(hass, fake_client, entry):
+    _box(fake_client)
+    await _setup(hass, entry)
+    entity = _switch_id(hass, "Anna iPhone")
+    # a connection was deleted on the box: the identifier now belongs to another one
+    fake_client.vpn["data"]["init"]["boxConnections"]["connection1"]["name"] = "Someone else"
+    coordinator = hass.config_entries.async_entries("fritzbox_network")[0].runtime_data
+    await coordinator.async_refresh()
+
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call("switch", "turn_off", {"entity_id": entity}, blocking=True)
+    assert ("vpn", "vpnconnection9001", False) not in fake_client.calls

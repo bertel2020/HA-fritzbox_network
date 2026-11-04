@@ -906,7 +906,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._renderVpn();
     const name = state.data?.vpn?.find((c) => c.uid === uid)?.name ?? "";
     try {
-      await this._ws("vpn/switch", { uid, enabled });
+      await this._ws("vpn/switch", { uid, enabled, name });
       showToast(this.shadowRoot, fill(enabled ? this._t.vpnPage.toastOn : this._t.vpnPage.toastOff, { name }));
     } catch (err) {
       showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));

@@ -54,6 +54,7 @@ from .const import (
     INTERNET_NOISE_WARN_DB,
     MAX_BACKOFF_SECONDS,
     ROAM_CONFIRM_POLLS,
+    VPN_EMPTY_POLLS,
     VPN_VERIFY_SECONDS,
     WAN_OVERRIDE_SECONDS,
 )
@@ -130,6 +131,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         # id -> name of the access profiles of the box, read now and then
         self.filter_profiles: dict[str, str] = {}
         self._polls = 0
+        # polls in a row that gave no WireGuard list although there had been one
+        self._vpn_empty = 0
         # the internet connection: the slow part of the last read, the byte counters of the poll
         # before, the throughput since then, the last hour of it and what happened to the line
         self._internet_slow: dict[str, Any] = {}
@@ -189,13 +192,28 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             self._firmware = offer
 
     def _fetch_vpn(self) -> list[VpnConnection] | None:
-        """The WireGuard connections; what was known stays if the box does not answer."""
+        """The WireGuard connections; what was known stays if the box does not answer.
+
+        A list that is empty or missing although there were connections is not believed at once:
+        the box answers like that while it starts up or when the session was dropped. It is taken
+        after ``VPN_EMPTY_POLLS`` polls in a row.
+        """
         previous = self.data.vpn if self.data else None
         try:
-            return parse_vpn(self.client.get_vpn())
+            found = parse_vpn(self.client.get_vpn())
         except (*_FETCH_ERRORS, requests.RequestException, PermissionError, TypeError) as err:
             _LOGGER.debug("WireGuard connections unavailable: %s", err)
             return previous
+        if previous and not found:
+            self._vpn_empty += 1
+            if self._vpn_empty < VPN_EMPTY_POLLS:
+                _LOGGER.debug(
+                    "No WireGuard list from the box (%d), keeping the last", self._vpn_empty
+                )
+                return previous
+        else:
+            self._vpn_empty = 0
+        return found
 
     def _fetch_guest_wifi(self) -> bool | None:
         try:
@@ -642,14 +660,16 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.async_set_updated_data(replace(self.data, guest_wifi=enabled))
         await self.async_request_refresh()
 
-    async def async_set_vpn(self, uid: str, enabled: bool) -> None:
+    async def async_set_vpn(self, uid: str, enabled: bool, name: str | None = None) -> None:
         """Switch a WireGuard connection and show what the box then reports.
 
         The box takes the change without an answer that says so, so the connection is read back:
         if it is not in the state asked for, the action failed.
         """
         known = next((c for c in self.data.vpn or () if c.uid == uid), None)
-        if known is None or not known.editable:
+        # the box numbers its connections: after one was deleted or added, an identifier can
+        # belong to another connection than before. Never switch one the caller did not mean.
+        if known is None or not known.editable or (name is not None and known.name != name):
             raise HomeAssistantError(translation_domain=DOMAIN, translation_key="vpn_unknown")
         try:
             await self.hass.async_add_executor_job(self.client.set_vpn, uid, enabled)

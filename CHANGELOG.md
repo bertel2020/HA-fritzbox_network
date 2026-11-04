@@ -6,7 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
-- WireGuard (VPN): Jede Verbindung der Box ist ein Binärsensor „VPN <Name>“ (an, solange der Tunnel steht; Attribute: Art, aktiviert, verbunden seit, Gegennetz), und das Seitenpanel hat den neuen Reiter **VPN** (`#/vpn`) mit den Geräten und den Kopplungen zwischen Standorten, ihrem Zustand und den Geräten, die per VPN kommen. Aus der Oberfläche der Box gelesen; die Schlüssel der Box auf dieser Seite werden nie gelesen. Jede Verbindung hat einen Schalter „VPN <Name> aktiviert“ und eine Schaltfläche im VPN-Reiter, für Konten mit dem Recht, Einstellungen zu ändern; die Verbindung wird zurückgelesen, und eine von der Box nicht übernommene Änderung ist ein Fehler.
+- WireGuard (VPN): Jede Verbindung der Box ist ein Binärsensor „VPN <Name>“ (an, solange der Tunnel steht; Attribute: Art, aktiviert, verbunden seit, Gegennetz), und das Seitenpanel hat den neuen Reiter **VPN** (`#/vpn`) mit den Geräten und den Kopplungen zwischen Standorten, ihrem Zustand und den Geräten, die per VPN kommen. Aus der Oberfläche der Box gelesen; die Schlüssel der Box auf dieser Seite werden nie gelesen. Jede Verbindung hat einen Schalter „VPN <Name> aktiviert“ und eine Schaltfläche im VPN-Reiter, für Konten mit dem Recht, Einstellungen zu ändern; die Verbindung wird zurückgelesen, und eine von der Box nicht übernommene Änderung ist ein Fehler. Die Box nummeriert ihre Verbindungen durch, deshalb schaltet ein Schalter keine Verbindung, deren Name nicht mehr der ist, für den er angelegt wurde, und eine leere Antwort der Box gilt erst nach drei Abrufen.
 
 ## 1.1.0 – 2026-11-04
 
