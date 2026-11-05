@@ -603,8 +603,8 @@ test("several new connections in a day are one hint, an old one does not count",
   const at = (hours) => new Date(now - hours * 3600000).toISOString();
   const events = (kinds) => kinds.map(([kind, hours]) => ({ kind, time: at(hours), detail: null }));
   const hints = (list) => internetPage.internetHints({ ...internet, events: events(list) }, now).map((h) => h.key);
-  assert.deepEqual(hints([["reconnected", 1], ["reconnected", 5], ["reconnected", 9]]), ["reconnects"]);
-  assert.deepEqual(hints([["reconnected", 1], ["reconnected", 5], ["reconnected", 30]]), []);
+  assert.deepEqual(hints([["reconnected", 1], ["reconnected", 5], ["reconnected", 9], ["reconnected", 12], ["reconnected", 15]]), ["reconnects"]);
+  assert.deepEqual(hints([["reconnected", 1], ["reconnected", 5], ["reconnected", 9], ["reconnected", 12], ["reconnected", 30]]), []);
   // a loss and its new connection are one interruption
   assert.deepEqual(hints([["disconnected", 2], ["reconnected", 1], ["disconnected", 4], ["reconnected", 3]]), []);
   assert.deepEqual(internetPage.internetHints(null, now), []);

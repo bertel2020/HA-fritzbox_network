@@ -342,7 +342,7 @@ const DAY = 86400000;
 // the noise margin in dB below which a DSL line gets unstable
 const NOISE_WARN = 10;
 const NOISE_BAD = 6;
-const RECONNECTS_WARN = 3;
+const RECONNECTS_WARN = 5;
 // the share of the line rate that counts as full, over the last samples
 const SATURATED = 0.9;
 const SATURATED_SAMPLES = 3;

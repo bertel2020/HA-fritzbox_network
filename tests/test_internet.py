@@ -337,7 +337,7 @@ async def test_a_connection_that_keeps_dropping_is_a_repair(hass, fake_client, e
     registry = ir.async_get(hass)
     issue = f"internet_reconnects_{entry.entry_id}"
     uptime = fake_client.internet_fast["GetStatusInfo"]
-    for value in (100, 10, 100, 10, 100, 10):
+    for value in (100, 10, 100, 10, 100, 10, 100, 10, 100, 10):
         uptime["NewUptime"] = value
         await _poll(hass, coordinator)
     assert registry.async_get_issue("fritzbox_network", issue) is not None
