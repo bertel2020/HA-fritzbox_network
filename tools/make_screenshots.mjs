@@ -234,7 +234,7 @@ const SCENES = {
   net: { kind: "panel", viewport: [1280, 820], hash: "" },
   map: { kind: "panel", viewport: [1280, 1100], hash: "", view: "map" },
   internet: { kind: "panel", viewport: [1280, 1740], hash: "#/internet" },
-  device: { kind: "panel", viewport: [1280, 920], hash: "#/device/3ca62f200004" },
+  device: { kind: "panel", viewport: [1280, 1160], hash: "#/device/3ca62f200004" },
   cleanup: { kind: "panel", viewport: [1280, 760], hash: "#/cleanup" },
   filter: { kind: "panel", viewport: [1280, 920], hash: "#/filter" },
   topology: { kind: "card", viewport: [460, 700], type: "fritzbox-network-topology-card", config: {} },
@@ -346,7 +346,15 @@ try {
                       i * step, 1, c?.link_type === "wlan" ? Math.round((c.signal_dbm ?? -60) + 6 * Math.sin(i / 7) + (i % 5)) : null,
                       Math.round((c?.rate_download ?? 100) * (0.8 + 0.2 * Math.sin(i / 5))),
                     ]);
-                    return { day: make(288, 300), week: make(168, 3600) };
+                    const pad = (n) => String(n).padStart(2, "0");
+                    const traffic = {};
+                    for (let i = 0; i < 20; i++) {
+                      const d = new Date(Date.now() - i * 86400000);
+                      const key = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+                      const down = (0.6 + 0.5 * Math.sin(i / 2) ** 2) * 1e9;
+                      traffic[key] = [Math.round(i === 0 ? 1.26e9 : down), Math.round(i === 0 ? 3.68e8 : down / 7)];
+                    }
+                    return { day: make(288, 300), week: make(168, 3600), traffic };
                   }
                   case "fritzbox_network/history/summary": {
                     // a steady wobble per device, so the sparklines have something to draw

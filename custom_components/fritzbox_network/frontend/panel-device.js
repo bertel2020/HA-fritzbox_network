@@ -315,12 +315,14 @@ function trendSection(client, ctx) {
   ].join("");
   const days = trend.data?.traffic;
   const volume = Object.keys(days ?? {}).length
-    ? `<div class="volume"><span class="label">${escapeHtml(t.trafficTitle)}</span><div class="vols">${[1, 7, 30]
-        .map((n) => {
-          const [down, up] = trafficSum(days, n);
-          return `<div><span class="hint">${escapeHtml(t.trafficRanges[n])}</span><b>↓ ${escapeHtml(formatBytes(down, ctx.language))}</b> <small>↑ ${escapeHtml(formatBytes(up, ctx.language))}</small></div>`;
-        })
-        .join("")}</div></div>`
+    ? (() => {
+        const sums = [1, 7, 30].map((n) => ({ n, sum: trafficSum(days, n) }));
+        const top = Math.max(...sums.map(({ sum }) => sum[0]), 1);
+        const tiles = sums
+          .map(({ n, sum: [down, up] }) => `<div class="vol"><span class="hint">${escapeHtml(t.trafficRanges[n])}</span><b><i class="vd">↓</i> ${escapeHtml(formatBytes(down, ctx.language))}</b><span class="vbar" aria-hidden="true"><i style="width:${((down / top) * 100).toFixed(1)}%"></i></span><small><i class="vu">↑</i> ${escapeHtml(formatBytes(up, ctx.language))}</small></div>`)
+          .join("");
+        return `<div class="volume"><span class="label">${escapeHtml(t.trafficTitle)}</span><div class="vols">${tiles}</div></div>`;
+      })()
     : "";
   const buttons = ["day", "week"]
     .map((r) => `<button data-range="${r}" aria-pressed="${r === range}">${escapeHtml(t.trendRanges[r])}</button>`)
