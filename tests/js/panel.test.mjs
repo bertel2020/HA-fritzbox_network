@@ -1022,10 +1022,10 @@ test("the pool card is only offered to someone who may write, and warns before i
 test("all pages are tabs, the internet tab carries the state of the line and clean-up its count", () => {
   const html = panel.renderNav({ tab: "internet", data: { internet: { connected: false } } }, t, 3);
   const labels = [...html.matchAll(/<button[^>]*>([^<]+)/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ["Netzwerk", "Internet", "Adressraum", "Diagnose", "Geräte"]);
+  assert.deepEqual(labels, ["Netzwerk", "Internet", "Adressraum", "Diagnose", "Verwalten"]);
   assert.match(html, /data-tab="internet" aria-selected="true" aria-label="Internet, Getrennt"/);
   assert.match(html, /<i class="dot " aria-hidden="true"><\/i>/);
-  assert.match(html, /Geräte<em>3<\/em>/);
+  assert.match(html, /Verwalten<em>3<\/em>/);
   assert.match(panel.renderNav({ tab: "net", data: { internet: { connected: true } } }, t, 0), /<i class="dot on"/);
   assert.doesNotMatch(panel.renderNav({ tab: "net", data: null }, t, 0), /<i class="dot|<em>/);
 });

@@ -464,7 +464,7 @@ const en = {
     toastOff: "{name} is switched off",
     hint: "Read from the web interface of the box, as the box shows it. The box tells no data volume or last contact for a tunnel; for the traffic, record the WireGuard interface on the diagnosis page. Switching a connection off ends the tunnel.",
   },
-  tabs: { net: "Network", vpn: "VPN", internet: "Internet", addresses: "Address space", diagnose: "Diagnosis", devices: "Devices", cleanup: "Clean up", filter: "Include" },
+  tabs: { net: "Network", vpn: "VPN", internet: "Internet", addresses: "Address space", diagnose: "Diagnosis", devices: "Manage", cleanup: "Clean up", filter: "Include" },
   navLabel: "Pages",
   cleanup: {
     title: "Clean up",
@@ -1247,7 +1247,7 @@ const de = {
     toastOff: "{name} ist ausgeschaltet",
     hint: "Aus der Oberfläche der Box gelesen, so wie sie es zeigt. Datenmenge und letzten Kontakt je Tunnel nennt die Box nicht; für den Verkehr nimm auf der Diagnose-Seite die WireGuard-Schnittstelle auf. Eine Verbindung auszuschalten beendet den Tunnel.",
   },
-  tabs: { net: "Netzwerk", vpn: "VPN", internet: "Internet", addresses: "Adressraum", diagnose: "Diagnose", devices: "Geräte", cleanup: "Aufräumen", filter: "Einbinden" },
+  tabs: { net: "Netzwerk", vpn: "VPN", internet: "Internet", addresses: "Adressraum", diagnose: "Diagnose", devices: "Verwalten", cleanup: "Aufräumen", filter: "Einbinden" },
   navLabel: "Seiten",
   cleanup: {
     title: "Aufräumen",

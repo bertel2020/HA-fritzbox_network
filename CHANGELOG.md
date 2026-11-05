@@ -15,6 +15,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Geändert
 
+- Seitenpanel: Der Tab **Geräte** (Einbinden und Aufräumen) heißt jetzt **Verwalten**, weil die Geräteliste der Tab „Netzwerk“ ist. Die Adressen `#/filter` und `#/cleanup` bleiben gleich.
 - Die Box und ihre Repeater haben keine Schalter für Internetzugang, Priorität und automatisches Wake on LAN, keinen Wake-on-LAN-Knopf, keine Auswahl „Zugangsprofil“ und keine Sensoren „Access Point“ und „Zuletzt online“: Sie sind keine Clients, eine Sperre träfe alles dahinter. Entitäten früherer Versionen werden beim Start entfernt.
 - Die WireGuard-Entitäten liegen auf einem eigenen Gerät **WireGuard VPN** hinter der Box statt auf dem Gerät der Box; ihre Namen tragen kein „VPN“ mehr davor (aus „VPN Anna iPhone“ wird „WireGuard VPN Anna iPhone“, die Entity-IDs bleiben). Das Gerät lässt sich nicht löschen, solange die Box Verbindungen nennt; die Aktion `remove_unavailable_vpn` nimmt es mit, wenn keine Verbindung mehr da ist.
 - Die Reparatur „Die Internetverbindung bricht immer wieder ab“ kommt erst ab 5 neuen Verbindungen in 24 Stunden (vorher 3), ebenso der Hinweis in der Internetseite des Panels.
