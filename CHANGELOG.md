@@ -11,6 +11,8 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Geräte: Diagnose-Sensor **Hersteller** (aus der OUI-Liste von Home Assistant; nicht für zufällige MAC-Adressen), Diagnose-Sensor **Adresszuweisung** („Immer dieselbe“ oder „Dynamisch vergeben“; aus der Weboberfläche der Box, höchstens drei Geräte je Abruf und jedes höchstens einmal je Stunde, nur wo die Box antwortet). Der IP-Sensor nennt als Attribute, ob die Adresse im DHCP-Bereich liegt, Gast, VPN, Schnittstelle, Port und Hostname.
 - Box: Diagnose-Sensor **DHCP-Bereich belegt** (in Prozent der Adressen im Bereich, die ein aktives Gerät hat; Attribute: belegt, Größe des Bereichs) und, standardmäßig aus, **Externe IPv6-Adresse**.
 
+- Neue Option **Wake on LAN auch für WLAN-Geräte** (standardmäßig aus): Sonst gibt es den Wake-on-LAN-Knopf und den Schalter „Automatisch Wake on LAN“ nur für Geräte, die nicht bekanntermaßen am WLAN hängen. Ausschalten entfernt Angelegtes nicht.
+
 ### Geändert
 
 - Die Box und ihre Repeater haben keine Schalter für Internetzugang, Priorität und automatisches Wake on LAN, keinen Wake-on-LAN-Knopf, keine Auswahl „Zugangsprofil“ und keine Sensoren „Access Point“ und „Zuletzt online“: Sie sind keine Clients, eine Sperre träfe alles dahinter. Entitäten früherer Versionen werden beim Start entfernt.

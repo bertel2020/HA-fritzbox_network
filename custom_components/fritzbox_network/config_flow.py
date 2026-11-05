@@ -32,6 +32,7 @@ from .const import (
     CONF_STALE_DAYS,
     CONF_STALE_REPAIR,
     CONF_USE_TLS,
+    CONF_WAKE_ON_LAN_WIFI,
     DEFAULT_ADOPT_NAMES,
     DEFAULT_CONSIDER_HOME,
     DEFAULT_IGNORE_GUESTS,
@@ -41,6 +42,7 @@ from .const import (
     DEFAULT_SKIP_OFFLINE,
     DEFAULT_STALE_DAYS,
     DEFAULT_STALE_REPAIR,
+    DEFAULT_WAKE_ON_LAN_WIFI,
     DOMAIN,
     FILTER_ALL,
     FILTER_EXCLUDE,
@@ -256,6 +258,10 @@ class FritzNetworkOptionsFlow(OptionsFlow):
                 vol.Optional(
                     CONF_SHOW_VENDOR,
                     default=options.get(CONF_SHOW_VENDOR, DEFAULT_SHOW_VENDOR),
+                ): bool,
+                vol.Optional(
+                    CONF_WAKE_ON_LAN_WIFI,
+                    default=options.get(CONF_WAKE_ON_LAN_WIFI, DEFAULT_WAKE_ON_LAN_WIFI),
                 ): bool,
                 vol.Optional(
                     CONF_STALE_REPAIR,

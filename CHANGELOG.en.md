@@ -11,6 +11,8 @@ All notable changes to this integration are recorded here.
 - Devices: **Vendor** diagnostic sensor (from the OUI list of Home Assistant; not for randomized MAC addresses), **Address assignment** diagnostic sensor ("Always the same" or "Handed out"; read from the web interface of the box, at most three devices per poll and each at most once an hour, only where the box answers). The IP address sensor tells as attributes whether the address is in the DHCP range, guest, VPN, interface, port and hostname.
 - Box: **DHCP range in use** diagnostic sensor (percent of the addresses in the range that an active device has; attributes: in use, size of the range) and, off by default, **External IPv6 address**.
 
+- New option **Wake on LAN also for Wi-Fi devices** (off by default): otherwise the Wake on LAN button and the "Automatic Wake on LAN" switch exist only for devices not known to sit on Wi-Fi. Turning it off does not remove what was created.
+
 ### Changed
 
 - The box and its repeaters have no switches for internet access, priority and automatic Wake on LAN, no Wake on LAN button, no "Access profile" selection and no "Access point" and "Last online" sensors: they are no clients, a block would hit everything behind them. Entities of earlier versions are removed at start.

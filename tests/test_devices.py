@@ -612,3 +612,18 @@ async def test_no_address_assignment_where_the_box_does_not_tell(hass, fake_clie
 
     registry = er.async_get(hass)
     assert registry.async_get("sensor.fritz_020000000004_address_assignment") is None
+
+
+async def test_wake_on_lan_for_wifi_devices_is_an_option(hass, fake_client, entry):
+    wifi = "020000000003"
+    hass.config_entries.async_update_entry(entry, options={"wake_on_lan_wifi": False})
+    await _setup(hass, entry)
+    registry = er.async_get(hass)
+    assert registry.async_get(f"button.fritz_{wifi}_wake_on_lan") is None
+    assert registry.async_get(f"switch.fritz_{wifi}_auto_wake_on_lan") is None
+    assert registry.async_get("button.fritz_020000000004_wake_on_lan")
+
+    hass.config_entries.async_update_entry(entry, options={"wake_on_lan_wifi": True})
+    await hass.async_block_till_done()
+    assert registry.async_get(f"button.fritz_{wifi}_wake_on_lan")
+    assert registry.async_get(f"switch.fritz_{wifi}_auto_wake_on_lan")

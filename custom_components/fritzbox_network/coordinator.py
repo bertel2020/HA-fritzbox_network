@@ -34,11 +34,13 @@ from .const import (
     CONF_SCAN_INTERVAL,
     CONF_SHOW_VENDOR,
     CONF_SKIP_OFFLINE,
+    CONF_WAKE_ON_LAN_WIFI,
     DEFAULT_ADOPT_NAMES,
     DEFAULT_CONSIDER_HOME,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SHOW_VENDOR,
     DEFAULT_SKIP_OFFLINE,
+    DEFAULT_WAKE_ON_LAN_WIFI,
     DOMAIN,
     EVENT_DEVICE_RENAMED,
     EVENT_DEVICE_ROAMED,
@@ -517,6 +519,16 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
 
     def _apply_filters(self, hosts: list[Host], mesh: MeshTopology | None) -> dict[str, Host]:
         return select_hosts(hosts, mesh, self._options)
+
+    def wants_wake_on_lan(self, host: Host) -> bool:
+        """Whether the device gets the Wake on LAN controls.
+
+        Not the ones known to sit on Wi-Fi, where a magic packet mostly does not arrive, unless the
+        option says so. An offline device has no interface type and always gets them.
+        """
+        return host.interface_type != "802.11" or self._options.get(
+            CONF_WAKE_ON_LAN_WIFI, DEFAULT_WAKE_ON_LAN_WIFI
+        )
 
     def lost_repeaters(self) -> list[tuple[str, str]]:
         """The repeaters with a device here that the box does not list in its mesh now.

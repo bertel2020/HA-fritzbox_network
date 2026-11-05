@@ -61,9 +61,9 @@ async def async_setup_entry(
                 FritzNetworkPriority(coordinator, host),
                 # like the Wake on LAN button: not for devices known to sit on Wi-Fi
                 *(
-                    []
-                    if host.interface_type == "802.11"
-                    else [FritzNetworkAutoWakeOnLan(coordinator, host)]
+                    [FritzNetworkAutoWakeOnLan(coordinator, host)]
+                    if coordinator.wants_wake_on_lan(host)
+                    else []
                 ),
             ]
         ),

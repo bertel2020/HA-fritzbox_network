@@ -38,7 +38,7 @@ async def async_setup_entry(
         async_add_entities,
         lambda coordinator, host: (
             []
-            if host.interface_type == "802.11" or is_mesh_node(coordinator, host)
+            if not coordinator.wants_wake_on_lan(host) or is_mesh_node(coordinator, host)
             else [FritzNetworkWakeOnLan(coordinator, host)]
         ),
     )
