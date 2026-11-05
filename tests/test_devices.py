@@ -563,5 +563,6 @@ async def test_a_repeater_gets_no_client_switches(hass, fake_client, entry):
     assert registry.async_get("device_tracker.fritz_" + node) is not None
     for key in ("internet_access", "priority", "auto_wake_on_lan"):
         assert registry.async_get(f"switch.fritz_{node}_{key}") is None
+    assert registry.async_get(f"button.fritz_{node}_wake_on_lan") is None
     # a client still has them
     assert registry.async_get("switch.fritz_020000000003_internet_access")
