@@ -13,7 +13,7 @@ All notable changes to this integration are recorded here.
 
 ### Changed
 
-- The box and its repeaters have no switches for internet access, priority and automatic Wake on LAN, no Wake on LAN button and no "Access point" and "Last online" sensors: they are no clients, a block would hit everything behind them. Entities of earlier versions are removed at start.
+- The box and its repeaters have no switches for internet access, priority and automatic Wake on LAN, no Wake on LAN button, no "Access profile" selection and no "Access point" and "Last online" sensors: they are no clients, a block would hit everything behind them. Entities of earlier versions are removed at start.
 - The repair "The internet connection keeps dropping" comes from 5 new connections in 24 hours (3 before), and so does the hint on the internet page of the panel.
 
 ## 1.1.0 – 2026-11-04

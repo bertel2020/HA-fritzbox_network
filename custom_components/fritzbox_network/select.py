@@ -10,7 +10,12 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
 from .const import DOMAIN, KEY_ACCESS_PROFILE
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
-from .entity import FritzNetworkClientEntity, async_setup_client_entities
+from .entity import (
+    FritzNetworkClientEntity,
+    async_remove_node_client_entities,
+    async_setup_client_entities,
+    is_mesh_node,
+)
 from .models import Host
 
 PARALLEL_UPDATES = 0
@@ -24,10 +29,16 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     if not coordinator.can_write or not coordinator.filter_profiles:
         return
+    async_remove_node_client_entities(hass, entry, "select", (KEY_ACCESS_PROFILE,))
     async_setup_client_entities(
         entry,
         async_add_entities,
-        lambda coordinator, host: [FritzNetworkAccessProfile(coordinator, host)],
+        # the box and the repeaters are no clients: a profile would not mean anything for them
+        lambda coordinator, host: (
+            []
+            if is_mesh_node(coordinator, host)
+            else [FritzNetworkAccessProfile(coordinator, host)]
+        ),
     )
 
 
