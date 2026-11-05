@@ -26,7 +26,6 @@ from .const import (
     DOMAIN,
     KEY_VPN,
     KEY_VPN_SINCE,
-    KEY_VPN_STATUS,
     KEY_VPN_SWITCH,
     KEY_VPN_UID,
     vpn_identifier,
@@ -143,7 +142,7 @@ async def _async_capture(call: ServiceCall) -> None:
         ) from err
 
 
-VPN_UNIQUE_ID_KEYS = (KEY_VPN, KEY_VPN_SWITCH, KEY_VPN_STATUS, KEY_VPN_SINCE, KEY_VPN_UID)
+VPN_UNIQUE_ID_KEYS = (KEY_VPN, KEY_VPN_SWITCH, KEY_VPN_SINCE, KEY_VPN_UID)
 
 
 def stale_vpn_entities(

@@ -363,13 +363,14 @@ def _vpn_sensor(hass, name, what):
     )
 
 
-async def test_each_connection_has_a_status_and_a_time_of_connection(hass, fake_client, entry):
+async def test_each_connection_has_a_time_of_connection_and_no_status_sensor(
+    hass, fake_client, entry
+):
     _box(fake_client)
     await _setup(hass, entry)
 
-    assert _vpn_sensor(hass, "Anna iPhone", "status").state == "connected"
-    assert _vpn_sensor(hass, "Bob laptop", "status").state == "not_connected"
-    assert _vpn_sensor(hass, "Old tablet", "status").state == "off"
+    # the switch and the connection sensor say it: on, off, connected
+    assert _vpn_sensor(hass, "Anna iPhone", "status") is None
     assert _vpn_sensor(hass, "Anna iPhone", "connected since").state.startswith("2026-")
     assert _vpn_sensor(hass, "Bob laptop", "connected since").state == "unknown"
 
@@ -407,15 +408,15 @@ async def test_the_tidy_up_removes_the_entities_of_a_deleted_connection_only(
 ):
     _box(fake_client)
     coordinator = await _setup(hass, entry)
-    assert len([u for u in _vpn_entries(hass, entry) if u.endswith("_Old tablet")]) == 5
-    assert len(_vpn_entries(hass, entry)) == 20
+    assert len([u for u in _vpn_entries(hass, entry) if u.endswith("_Old tablet")]) == 4
+    assert len(_vpn_entries(hass, entry)) == 16
 
     del fake_client.vpn["data"]["init"]["boxConnections"]["connection2"]
     await coordinator.async_refresh()
     await hass.services.async_call("fritzbox_network", "remove_unavailable_vpn", blocking=True)
 
     left = _vpn_entries(hass, entry)
-    assert len(left) == 15
+    assert len(left) == 12
     assert not [u for u in left if u.endswith("_Old tablet")]
 
 
@@ -426,7 +427,7 @@ async def test_the_tidy_up_does_nothing_while_the_box_tells_no_list(hass, fake_c
 
     await hass.services.async_call("fritzbox_network", "remove_unavailable_vpn", blocking=True)
 
-    assert len(_vpn_entries(hass, entry)) == 20
+    assert len(_vpn_entries(hass, entry)) == 16
 
 
 async def test_the_connections_share_one_wireguard_device_behind_the_box(hass, fake_client, entry):
@@ -472,3 +473,22 @@ async def test_the_tidy_up_takes_the_wireguard_device_when_no_connection_is_left
     devices = dr.async_get(hass)
     assert devices.async_get_device(identifiers={("fritzbox_network", "SERIAL1_vpn")}) is None
     assert devices.async_get_device(identifiers={("fritzbox_network", "SERIAL1")}) is not None
+
+
+async def test_the_status_sensors_of_earlier_versions_are_removed_at_start(
+    hass, fake_client, entry
+):
+    from homeassistant.helpers import entity_registry as er
+
+    _box(fake_client)
+    registry = er.async_get(hass)
+    old = registry.async_get_or_create(
+        "sensor",
+        "fritzbox_network",
+        "SERIAL1_vpn_status_Anna iPhone",
+        config_entry=entry,
+        suggested_object_id="vpn_anna_iphone_status",
+    )
+    await _setup(hass, entry)
+
+    assert registry.async_get(old.entity_id) is None

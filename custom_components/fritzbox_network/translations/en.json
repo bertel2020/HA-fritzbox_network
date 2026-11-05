@@ -216,14 +216,6 @@
       "dsl_crc_errors": {
         "name": "DSL CRC errors"
       },
-      "vpn_status": {
-        "name": "{name} status",
-        "state": {
-          "connected": "Connected",
-          "not_connected": "On, not connected",
-          "off": "Off"
-        }
-      },
       "vpn_since": {
         "name": "{name} connected since"
       },

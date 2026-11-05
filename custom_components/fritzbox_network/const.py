@@ -105,7 +105,7 @@ KEY_GUEST_WIFI = "guest_wifi"
 KEY_INTERNET_CONNECTED = "internet_connected"
 KEY_VPN = "vpn"
 KEY_VPN_SWITCH = "vpn_switch"
-KEY_VPN_STATUS = "vpn_status"
+KEY_VPN_STATUS = "vpn_status"  # no longer an entity, still the id of the ones to remove
 KEY_VPN_SINCE = "vpn_since"
 KEY_VPN_UID = "vpn_uid"
 # seconds the box needs before a switched VPN connection shows its new state

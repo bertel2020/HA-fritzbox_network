@@ -23,6 +23,7 @@ from homeassistant.const import (
     UnitOfTime,
 )
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoredExtraData, RestoreEntity
@@ -182,8 +183,19 @@ async def async_setup_entry(
         ]
     )
     _async_setup_internet(coordinator, entry, async_add_entities)
+    _async_remove_vpn_status(hass, entry)
     _async_setup_vpn(coordinator, entry, async_add_entities)
     _async_setup_dhcp_pool(coordinator, entry, async_add_entities)
+
+
+@callback
+def _async_remove_vpn_status(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
+    """Remove the status sensors of earlier versions: the switch and the sensor say the same."""
+    registry = er.async_get(hass)
+    prefix = f"{entry.runtime_data.serial}_{KEY_VPN_STATUS}_"
+    for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if entity.domain == "sensor" and entity.unique_id.startswith(prefix):
+            registry.async_remove(entity.entity_id)
 
 
 @callback
@@ -980,17 +992,6 @@ class FritzNetworkDhcpPool(_BoxSensor):
         }
 
 
-VPN_STATE_CONNECTED = "connected"
-VPN_STATE_IDLE = "not_connected"
-VPN_STATE_OFF = "off"
-
-
-def _vpn_status(connection: VpnConnection) -> str:
-    if connection.connected:
-        return VPN_STATE_CONNECTED
-    return VPN_STATE_IDLE if connection.active else VPN_STATE_OFF
-
-
 def _vpn_since(connection: VpnConnection) -> datetime | None:
     return dt_util.utc_from_timestamp(connection.since) if connection.since else None
 
@@ -1003,13 +1004,6 @@ class VpnSensorDescription(SensorEntityDescription):
 
 
 VPN_SENSORS: tuple[VpnSensorDescription, ...] = (
-    VpnSensorDescription(
-        key=KEY_VPN_STATUS,
-        translation_key=KEY_VPN_STATUS,
-        device_class=SensorDeviceClass.ENUM,
-        options=[VPN_STATE_CONNECTED, VPN_STATE_IDLE, VPN_STATE_OFF],
-        value=_vpn_status,
-    ),
     VpnSensorDescription(
         key=KEY_VPN_SINCE,
         translation_key=KEY_VPN_SINCE,
