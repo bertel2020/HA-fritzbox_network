@@ -142,7 +142,7 @@ function sample(lang) {
     wifi("3c:a6:2f:20:00:02", "phone2", "iPhone Ben", "192.168.178.62", null, BOX, -57, [650, 585], { private_mac: true }),
     wifi("3c:a6:2f:20:00:03", "laptop", "MacBook Pro", "192.168.178.63", "Apple", REPEATER_LIVING, -52, [866, 866], { labels: ["work"] }),
     wifi("3c:a6:2f:20:00:04", "tablet", en ? "Kids tablet" : "Kindertablet", "192.168.178.64", "Amazon Technologies", REPEATER_LIVING, -71, [86, 72, "5ghz", 433], {
-      labels: ["kids"], priority: true,
+      labels: ["kids"], priority: true, filter_profile: en ? "Kids" : "Kinder", filter_profile_id: "filtprof2",
     }),
     wifi("3c:a6:2f:20:00:05", "speaker", en ? "Kitchen speaker" : "Küchenlautsprecher", "192.168.178.70", "Sonos", BOX, -62, [72, 72, "2_4ghz", 144]),
     wifi("3c:a6:2f:20:00:06", "camera", en ? "Garden camera" : "Gartenkamera", "192.168.178.71", "Espressif", REPEATER_GARDEN, -78, [29, 29, "2_4ghz", 144]),
@@ -162,6 +162,7 @@ function sample(lang) {
   const topology = {
     entry_id: "box1",
     can_write: true,
+    profiles: [{ id: "filtprof1", name: "Standard" }, { id: "filtprof2", name: en ? "Kids" : "Kinder" }, { id: "filtprof3", name: en ? "Guests" : "Gäste" }],
     labels,
     internet: internet(en),
     firmware: null,
@@ -234,7 +235,7 @@ const SCENES = {
   net: { kind: "panel", viewport: [1280, 820], hash: "" },
   map: { kind: "panel", viewport: [1280, 1100], hash: "", view: "map" },
   internet: { kind: "panel", viewport: [1280, 1740], hash: "#/internet" },
-  device: { kind: "panel", viewport: [1280, 1160], hash: "#/device/3ca62f200004" },
+  device: { kind: "panel", viewport: [1280, 1450], hash: "#/device/3ca62f200004" },
   cleanup: { kind: "panel", viewport: [1280, 760], hash: "#/cleanup" },
   filter: { kind: "panel", viewport: [1280, 920], hash: "#/filter" },
   topology: { kind: "card", viewport: [460, 700], type: "fritzbox-network-topology-card", config: {} },

@@ -129,13 +129,15 @@ test("an action needs the right, an IP address and its entity", () => {
 });
 
 test("the device page shows the data and the actions", () => {
-  const html = device.renderDevice(data.clients[0], { t, now: NOW, data, hass, threshold: 1 / 3 });
+  const withProfiles = { ...data, profiles: [{ id: "filtprof1", name: "Standard" }, { id: "filtprof2", name: "Kinder" }] };
+  const client = { ...data.clients[0], filter_profile_id: "filtprof2", priority: true };
+  const html = device.renderDevice(client, { t, now: NOW, data: withProfiles, hass, threshold: 1 / 3 });
   assert.match(html, /<h1 id="dtitle" tabindex="-1">tv &lt;b&gt;<\/h1>/);
-  assert.match(html, /Gesperrt: das Gerät kommt nicht ins Internet/);
-  assert.match(html, /data-sw="internet_access" data-entity="switch.tv_i"/);
+  assert.match(html, /Internet gesperrt/);
   assert.match(html, /aria-checked="false"[^>]*data-sw="internet_access"/);
   assert.match(html, /aria-checked="true"[^>]*data-sw="priority"/);
-  assert.match(html, /<option selected>Kinder<\/option>/);
+  assert.match(html, /<option value="filtprof2" selected>Kinder<\/option>/);
+  assert.match(html, /<option value="filtprof1" >Standard<\/option>/);
 });
 
 test("without the right the actions are off and say why", () => {
@@ -186,23 +188,15 @@ test("the connection path goes through the repeater with the line of its uplink"
   assert.equal(offline.at(-2).text, "offline");
 });
 
-test("an action off in Home Assistant shows the known value and offers to switch it on", () => {
+test("the controls work without entities; a note offers to switch the entities on", () => {
   const off = { states: { "switch.tv_i": { state: "off" } } };
-  const client = { ...data.clients[0], priority: true, filter_profile: "Kinder" };
-  const html = device.renderDevice(client, { t, now: NOW, data, hass: off, threshold: 1 / 3 });
-  assert.match(html, /Zugangsprofil<span class="val-line">Kinder<\/span><small>Ausgeschaltet in Home Assistant<\/small>/);
-  assert.match(html, /Priorisierung<span class="val-line">An<\/span>/);
-  assert.match(html, /data-enable="select.tv_s"[^>]*>Einschalten/);
-  assert.doesNotMatch(html, /<select/);
-  assert.match(html, /3 Aktionen sind in Home Assistant ausgeschaltet/);
-  assert.match(html, /data-enable="all"[^>]*>Alle einschalten/);
-  const busy = device.renderDevice(client, {
-    t, now: NOW, data, hass: off, threshold: 1 / 3, enabling: new Set(["select.tv_s", "switch.tv_p"]),
-  });
-  assert.match(busy, /Wird eingeschaltet/);
-  assert.match(busy, /data-enable="select.tv_s"[^>]*disabled/);
-  // one left to switch on: no button for all
-  assert.doesNotMatch(busy, /data-enable="all"/);
+  const html = device.renderDevice(data.clients[0], { t, now: NOW, data, hass: off, threshold: 1 / 3 });
+  assert.match(html, /data-sw="priority"[^>]*>/);
+  assert.doesNotMatch(html, /data-sw="priority"[^>]*disabled/);
+  assert.match(html, /Für Automationen stehen 3 Entitäten bereit/);
+  assert.match(html, /data-enable="all"[^>]*>Aktivieren/);
+  // all entities are there: no note
+  assert.doesNotMatch(device.renderDevice(data.clients[0], { t, now: NOW, data, hass, threshold: 1 / 3 }), /data-enable="all"/);
 });
 
 test("the plan to switch on lists only what is off, can be written and is not under way", () => {

@@ -186,3 +186,53 @@ async def test_a_filter_option_the_panel_may_not_set_is_refused(
     result = await _call(client, PREVIEW, entry_id=entry.entry_id, options={"hidden_macs": [LAN]})
 
     assert not result["success"]
+
+
+ACTION = f"{DOMAIN}/device/action"
+
+
+async def test_a_device_is_changed_at_the_box_without_any_entity(
+    hass, hass_ws_client, fake_client, entry
+):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    ip = next(h.ip for h in fake_client.hosts if h.mac == LAN)
+
+    for action, value, call in (
+        ("internet_access", False, ("internet", ip, False)),
+        ("priority", True, ("priority", ip, True)),
+        ("filter_profile", "filtprof2", ("profile", ip, "filtprof2")),
+    ):
+        result = await _call(client, ACTION, entry_id=entry.entry_id, mac=LAN, action=action, value=value)
+        assert result["success"], result
+        assert call in fake_client.calls
+    result = await _call(client, ACTION, entry_id=entry.entry_id, mac=LAN, action="wake_on_lan")
+    assert result["success"]
+    assert ("wol", LAN) in fake_client.calls
+
+
+async def test_a_device_action_refuses_unknown_values_devices_and_missing_rights(
+    hass, hass_ws_client, fake_client, entry
+):
+    coordinator = await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    unknown_profile = await _call(
+        client, ACTION, entry_id=entry.entry_id, mac=LAN, action="filter_profile", value="nope"
+    )
+    assert not unknown_profile["success"]
+    not_a_switch = await _call(
+        client, ACTION, entry_id=entry.entry_id, mac=LAN, action="priority", value="on"
+    )
+    assert not not_a_switch["success"]
+    unknown_device = await _call(
+        client, ACTION, entry_id=entry.entry_id, mac="02:99:99:99:99:99", action="priority", value=True
+    )
+    assert unknown_device["error"]["code"] == "not_found"
+
+    coordinator.can_write = False
+    refused = await _call(
+        client, ACTION, entry_id=entry.entry_id, mac=LAN, action="priority", value=True
+    )
+    assert refused["error"]["code"] == "unauthorized"
+    assert not [c for c in fake_client.calls if c[0] in ("priority", "profile")]

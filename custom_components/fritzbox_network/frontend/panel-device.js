@@ -42,76 +42,46 @@ export function enablePlan(client, hass, canWrite, enabling = new Set()) {
     .map((status) => status.entity);
 }
 
-/** In place of the control: the known value, "off in Home Assistant" and the button to switch it on. */
-function enableControl(key, status, enabling, t) {
-  const busy = enabling.has(status.entity);
-  return {
-    hint: busy ? t.enabling : t.entityOff,
-    control: `<button class="btn sm" data-enable="${escapeHtml(status.entity)}" data-k="en-${key}" ${busy ? "disabled" : ""}>${
-      busy ? `<span class="spin" aria-hidden="true"></span>${escapeHtml(t.enableWait)}` : escapeHtml(t.enable)
-    }</button>`,
-  };
+/** The reason a control cannot be used, or "": the box user needs the right, and most actions an IPv4 address. */
+function blockedReason(client, canWrite, t, { needsIp = true } = {}) {
+  if (!canWrite) return t.noRights;
+  if (needsIp && !client.ip) return t.noIp;
+  return "";
 }
 
-function actionRow(label, value, hint, control) {
-  return `<div class="action"><div>${escapeHtml(label)}${value ? `<span class="val-line">${escapeHtml(value)}</span>` : ""}<small>${escapeHtml(hint)}</small></div>
-    <div class="ctl">${control}</div></div>`;
+function controlRow(label, hint, control) {
+  return `<div class="action"><div>${escapeHtml(label)}<small>${escapeHtml(hint)}</small></div><div class="ctl">${control}</div></div>`;
 }
 
-function switchRow(id, label, hint, status, known, ctx) {
-  const { t, enabling } = ctx;
-  const on = status.state ? status.state.state === "on" : known;
-  const value = on ? (id === "internet_access" ? t.valueAllowed : t.valueOn) : id === "internet_access" ? t.valueBlocked : t.valueOff;
-  if (status.reason === "disabled") {
-    const off = enableControl(id, status, enabling, t);
-    return actionRow(label, value, off.hint, off.control);
-  }
-  return actionRow(
-    label,
-    "",
-    status.reason ? t[status.reason] : hint,
-    `<button class="switch" role="switch" aria-checked="${on}" aria-label="${escapeHtml(label)}" data-sw="${id}" data-entity="${escapeHtml(status.entity ?? "")}" data-k="sw-${id}" ${status.state ? "" : "disabled"}></button>`
-  );
+function switchButton(id, label, on, reason) {
+  return `<button class="switch" role="switch" aria-checked="${on}" aria-label="${escapeHtml(label)}" data-sw="${id}" data-k="sw-${id}" ${reason ? "disabled" : ""}></button>`;
 }
 
-/** The access profile as a choice among the options the select entity offers, else the known one. */
-function profileRow(client, hass, canWrite, ctx) {
-  const { t, enabling } = ctx;
-  if (!client.actions?.access_profile) return "";
-  const status = actionStatus(client, "access_profile", hass, canWrite);
-  const known = client.filter_profile ?? "";
-  if (status.reason === "disabled") {
-    const off = enableControl("access_profile", status, enabling, t);
-    return actionRow(t.profile, known, off.hint, off.control);
-  }
-  if (!status.state) return actionRow(t.profile, "", t[status.reason], `<span class="val">${escapeHtml(known || "–")}</span>`);
-  const options = status.state.attributes?.options ?? [];
-  const current = status.state.state;
-  return actionRow(
-    t.profile,
-    "",
-    t.profileHint,
-    `<select data-profile data-entity="${escapeHtml(status.entity)}" data-k="profile" aria-label="${escapeHtml(t.profile)}">${options
-      .map((o) => `<option ${o === current ? "selected" : ""}>${escapeHtml(o)}</option>`)
-      .join("")}</select>`
-  );
-}
-
-function wolRow(client, hass, canWrite, ctx) {
-  const { t, enabling } = ctx;
-  if (!client.actions?.wake_on_lan) return "";
-  const status = actionStatus(client, "wake_on_lan", hass, canWrite, { needsIp: false });
-  if (status.reason === "disabled") {
-    const off = enableControl("wake_on_lan", status, enabling, t);
-    return actionRow(t.wol, "", off.hint, off.control);
-  }
-  const usable = Boolean(status.state) && !client.online;
-  return actionRow(
+/** The controls of the device. They work at the box itself, so they need no entity in Home Assistant. */
+function controlsCard(client, data, canWrite, t) {
+  const reason = blockedReason(client, canWrite, t);
+  const blocked = isBlocked(client);
+  const status = `<div class="inet-status ${blocked ? "bad" : "ok"}"><span class="dot" aria-hidden="true"></span><span>${escapeHtml(
+    blocked ? t.internetOff : t.internetOn
+  )}</span>${switchButton("internet_access", t.internet, !blocked, reason)}</div>${reason ? `<p class="hint">${escapeHtml(reason)}</p>` : ""}`;
+  const profiles = data.profiles ?? [];
+  const profile = profiles.length
+    ? controlRow(
+        t.profile,
+        t.profileHint,
+        `<select data-profile data-k="profile" aria-label="${escapeHtml(t.profile)}" ${reason ? "disabled" : ""}>${profiles
+          .map((p) => `<option value="${escapeHtml(p.id)}" ${p.id === client.filter_profile_id ? "selected" : ""}>${escapeHtml(p.name)}</option>`)
+          .join("")}</select>`
+      )
+    : "";
+  const priority = controlRow(t.priority, t.priorityHint, switchButton("priority", t.priority, Boolean(client.priority), reason));
+  const wolReason = blockedReason(client, canWrite, t, { needsIp: false });
+  const wol = controlRow(
     t.wol,
-    "",
-    status.reason ? t[status.reason] : client.online ? t.wolHint : t.wolReady,
-    `<button class="btn sm" data-act="wol" data-entity="${escapeHtml(status.entity ?? "")}" data-k="wol" ${usable ? "" : "disabled"}>${escapeHtml(t.wake)}</button>`
+    t.wolHint,
+    `<button class="btn sm" data-act="wol" data-k="wol" ${wolReason || client.online ? "disabled" : ""}>${escapeHtml(t.wake)}</button>`
   );
+  return `<section class="card sec"><span class="label">${escapeHtml(t.controls)}</span>${status}${profile}${priority}${wol}</section>`;
 }
 
 function bandName(band, t) {
@@ -250,35 +220,26 @@ export function renderDevice(client, ctx) {
     .map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${v}</dd>`)
     .join("");
 
-  const rowCtx = { t, enabling };
-  const internet = actionStatus(client, "internet_access", hass, canWrite);
-  const priority = actionStatus(client, "priority", hass, canWrite);
-  const blocked = internet.state ? internet.state.state !== "on" : isBlocked(client);
   const off = enablePlan(client, hass, canWrite, enabling);
-  const note =
-    off.length >= 2
-      ? `<div class="note"><span>${escapeHtml(fill(t.disabledNote, { n: off.length }))}</span><button class="btn sm" data-enable="all" data-k="en-all">${escapeHtml(t.enableAll)}</button></div>`
-      : "";
+  const note = off.length
+    ? `<div class="entities-note"><span>${escapeHtml(fill(t.entitiesNote, { n: off.length }))}</span><button class="btn sm" data-enable="all" data-k="en-all">${escapeHtml(t.entitiesEnable)}</button></div>`
+    : "";
   return `${headHtml(client, ctx)}
     <div class="chips-row">${chips}</div>
     <div class="dsecs">
       <section class="card sec wide"><span class="label">${escapeHtml(t.connection)}</span>${pathHtml(client, data, t, ctx.threshold)}${tilesHtml(client, data, t)}</section>
       ${trendSection(client, ctx)}
-      <section class="card sec"><span class="label">${escapeHtml(t.actions)}</span>
-        ${note}
-        ${switchRow("internet_access", t.internet, blocked ? t.internetBlocked : t.internetAllowed, internet, !blocked, rowCtx)}
-        ${switchRow("priority", t.priority, t.priorityHint, priority, Boolean(client.priority), rowCtx)}
-        ${profileRow(client, hass, canWrite, rowCtx)}
-        ${wolRow(client, hass, canWrite, rowCtx)}
+      ${controlsCard(client, data, canWrite, t)}
+      <section class="card sec"><span class="label">${escapeHtml(t.master)}</span><dl>${master}</dl>
+        ${groupsSection(client, data, t)}
+        ${historySection(client, t)}</section>
+      <section class="card sec wide"><span class="label">${escapeHtml(t.deviceTools)}</span>
         <div class="btn-row">
           <button class="btn" data-act="rename" data-k="rename" ${client.entity_id ? "" : "disabled"}>${escapeHtml(t.rename)}</button>
           <button class="btn" data-act="ha" data-k="ha" ${client.device_id ? "" : "disabled"}>${ic("external")}${escapeHtml(t.openInHa)}</button>
           <button class="btn" data-act="show-map" data-k="show-map">${ic("map")}${escapeHtml(t.showInMap)}</button>
           <button class="btn" data-act="cap-device" data-k="cap-device">${escapeHtml(t.inet.capture.ofDevice)}</button>
-        </div></section>
-      <section class="card sec"><span class="label">${escapeHtml(t.master)}</span><dl>${master}</dl>
-        ${groupsSection(client, data, t)}
-        ${historySection(client, t)}</section>
+        </div>${note}</section>
     </div>`;
 }
 

@@ -67,6 +67,7 @@ UNHIDE_COMMAND = f"{DOMAIN}/devices/unhide"
 RECONNECT_COMMAND = f"{DOMAIN}/internet/reconnect"
 REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
 VPN_SWITCH_COMMAND = f"{DOMAIN}/vpn/switch"
+DEVICE_ACTION_COMMAND = f"{DOMAIN}/device/action"
 PORTS_COMMAND = f"{DOMAIN}/ports/list"
 IP_COMMAND = f"{DOMAIN}/device/ip"
 ADDRESS_OVERVIEW_COMMAND = f"{DOMAIN}/address/overview"
@@ -313,6 +314,7 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
                 "wan_access": host.wan_access,
                 "priority": host.priority,
                 "filter_profile": coordinator.filter_profiles.get(host.filter_profile or ""),
+                "filter_profile_id": host.filter_profile,
                 "private_mac": is_private_mac(host.mac),
                 "device_id": device.id if device else None,
                 "last_online": last.isoformat() if last else None,
@@ -334,6 +336,10 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
             for label in sorted(
                 lr.async_get(hass).async_list_labels(), key=lambda label: label.name.lower()
             )
+        ],
+        "profiles": [
+            {"id": profile_id, "name": name}
+            for profile_id, name in coordinator.filter_profiles.items()
         ],
         "internet": _internet(coordinator),
         "firmware": _firmware(coordinator),
@@ -823,6 +829,56 @@ async def ws_vpn_switch(
 
 
 @websocket_api.websocket_command(
+    {
+        vol.Required("type"): DEVICE_ACTION_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("mac"): str,
+        vol.Required("action"): vol.In(
+            ["internet_access", "priority", "filter_profile", "wake_on_lan"]
+        ),
+        vol.Optional("value"): vol.Any(bool, str),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_device_action(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Change a device at the box directly, whether or not Home Assistant has an entity for it."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    coordinator = found[1]
+    if not coordinator.can_write:
+        connection.send_error(
+            msg["id"], websocket_api.ERR_UNAUTHORIZED, "No right to change settings"
+        )
+        return
+    host = coordinator.all_hosts.get(format_mac(msg["mac"]))
+    if host is None:
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "No such device")
+        return
+    action, value = msg["action"], msg.get("value")
+    try:
+        if action == "wake_on_lan":
+            await coordinator.async_wake_on_lan(host)
+        elif action == "filter_profile":
+            if not isinstance(value, str) or value not in coordinator.filter_profiles:
+                raise HomeAssistantError("Unknown access profile")
+            await coordinator.async_set_filter_profile(host, value)
+        else:
+            if not isinstance(value, bool):
+                raise HomeAssistantError("A switch needs true or false")
+            if action == "internet_access":
+                await coordinator.async_set_internet_access(host, value)
+            else:
+                await coordinator.async_set_priority(host, value)
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    connection.send_result(msg["id"], {})
+
+
+@websocket_api.websocket_command(
     {vol.Required("type"): REBOOT_COMMAND, vol.Required("entry_id"): str}
 )
 @websocket_api.require_admin
@@ -1203,6 +1259,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_history_device)
     websocket_api.async_register_command(hass, ws_reconnect)
     websocket_api.async_register_command(hass, ws_vpn_switch)
+    websocket_api.async_register_command(hass, ws_device_action)
     websocket_api.async_register_command(hass, ws_reboot)
     websocket_api.async_register_command(hass, ws_latency)
     websocket_api.async_register_command(hass, ws_latency_switch)

@@ -7,6 +7,7 @@ import {
   filterChanged,
   nearestStep,
   pagerFor,
+  isBlocked,
   panelCounts,
   plotText,
   routeFromHash,
@@ -37,7 +38,7 @@ import { BLOCK_COLORS, ENTRY_KINDS, addressModel, checkBlock, checkEntry, emptyO
 import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
-import { enablePlan, renderDevice, entityState } from "./panel-device.js";
+import { enablePlan, renderDevice } from "./panel-device.js";
 import { openDialog, showToast } from "./panel-dialogs.js";
 import { pickedMacs, renderHidden, renderStale, staleList, visibleStale } from "./panel-cleanup.js";
 import { pickable, renderFilterControls, renderPicker, renderPickerHead, renderPreview } from "./panel-filter.js";
@@ -1595,7 +1596,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       rememberPageSize(this._state.pageSize);
     } else if (el.id === "group") this._state.group = el.value;
     else if (el.id === "box") return this._switchBox(el.value);
-    else if (el.matches("[data-profile]")) return this._call("select", "select_option", { option: el.value }, el.dataset.entity, this._t.toastProfile);
+    else if (el.matches("[data-profile]")) return this._deviceAction("filter_profile", el.value, this._t.toastProfile);
     else if (el.dataset.pick) {
       const picked = this._state.picked;
       if (picked.has(el.dataset.pick)) picked.delete(el.dataset.pick);
@@ -1753,9 +1754,9 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._leaveDevice();
       return;
     } else if (ds.sw) {
-      return this._toggle(ds.sw, ds.entity);
+      return this._toggle(ds.sw);
     } else if (ds.act === "wol") {
-      return this._call("button", "press", {}, ds.entity, t.toastWol);
+      return this._deviceAction("wake_on_lan", undefined, t.toastWol);
     } else if (ds.act === "rename") {
       return this._rename();
     } else if (ds.act === "ha") {
@@ -1961,19 +1962,30 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._renderDetail();
   }
 
-  async _toggle(kind, entityId) {
+  async _toggle(kind) {
     const t = this._t;
     const client = this._selected();
-    const state = entityState(this._hass, entityId);
-    if (!client || !state) return;
-    const turnOff = state.state === "on";
+    if (!client) return;
+    const turnOff = kind === "internet_access" ? !isBlocked(client) : Boolean(client.priority);
     const done =
       kind === "internet_access"
         ? fill(turnOff ? t.toastBlocked : t.toastAllowed, { name: client.name })
         : turnOff
           ? t.toastPriorityOff
           : t.toastPriorityOn;
-    await this._call("switch", turnOff ? "turn_off" : "turn_on", {}, entityId, done);
+    await this._deviceAction(kind, !turnOff, done);
+  }
+
+  /** Changes the open device at the box itself; a refusal shows as a toast with what the box says. */
+  async _deviceAction(action, value, success) {
+    const client = this._selected();
+    if (!client) return;
+    try {
+      await this._ws("device/action", { mac: client.mac, action, ...(value === undefined ? {} : { value }) });
+      showToast(this.shadowRoot, success);
+    } catch (err) {
+      showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
+    }
   }
 
   async _rename() {

@@ -340,6 +340,13 @@ export const PANEL_CSS = `
   .switch[aria-checked="true"] { background: var(--accent); }
   .switch[aria-checked="true"]::after { transform: translateX(20px); }
   .switch[disabled] { opacity: .55; cursor: default; }
+  .inet-status { display: flex; align-items: center; gap: 10px; border-radius: 8px; padding: 10px 12px; margin-bottom: 4px; font-weight: 500; }
+  .inet-status .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: currentColor; }
+  .inet-status .switch { margin-left: auto; }
+  .inet-status.ok { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
+  .inet-status.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
+  .sec > .inet-status + .action { border-top: 0; }
+  .entities-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-2); font-size: 12px; color: var(--muted); }
   .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
   .sec .note { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; font-size: 13px; }
   .sec .note span { flex: 1 1 180px; }
