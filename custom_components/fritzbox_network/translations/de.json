@@ -93,6 +93,9 @@
           "dhcp": "Dynamisch vergeben"
         }
       },
+      "uplink": {
+        "name": "Uplink"
+      },
       "vendor": {
         "name": "Hersteller"
       },
@@ -254,6 +257,9 @@
       }
     },
     "binary_sensor": {
+      "mesh_connected": {
+        "name": "Mesh-Verbindung"
+      },
       "guest": {
         "name": "Gastnetz"
       },

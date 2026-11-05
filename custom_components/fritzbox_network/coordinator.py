@@ -558,6 +558,10 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         """
         registry = dr.async_get(self.hass)
         for device in dr.async_entries_for_config_entry(registry, self.config_entry.entry_id):
+            # a repeater is part of the network whatever the filters say, also while the box does
+            # not list it: its mesh entities tell that it is gone
+            if any(domain == DOMAIN for domain, _ in device.identifiers):
+                continue
             mac = next(
                 (m for kind, m in device.connections if kind == CONNECTION_NETWORK_MAC), None
             )

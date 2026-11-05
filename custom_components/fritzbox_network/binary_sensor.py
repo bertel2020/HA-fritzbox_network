@@ -10,10 +10,15 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, KEY_GUEST, KEY_INTERNET_CONNECTED, KEY_VPN
+from .const import DOMAIN, KEY_GUEST, KEY_INTERNET_CONNECTED, KEY_MESH_CONNECTED, KEY_VPN
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
-from .entity import FritzNetworkClientEntity, async_setup_client_entities
-from .models import Host, VpnConnection
+from .entity import (
+    FritzNetworkClientEntity,
+    FritzNetworkNodeEntity,
+    async_setup_client_entities,
+    async_setup_node_entities,
+)
+from .models import Host, MeshNode, VpnConnection
 
 PARALLEL_UPDATES = 0
 
@@ -27,6 +32,14 @@ async def async_setup_entry(
         entry,
         async_add_entities,
         lambda coordinator, host: [FritzNetworkGuest(coordinator, host)],
+    )
+    # the box is the mesh: only the repeaters can be lost
+    async_setup_node_entities(
+        entry,
+        async_add_entities,
+        lambda coordinator, node: (
+            [] if node.role == "master" else [FritzNetworkMeshConnected(coordinator, node)]
+        ),
     )
     _async_setup_internet(entry, async_add_entities)
     _async_setup_vpn(entry, async_add_entities)
@@ -90,6 +103,39 @@ class FritzNetworkGuest(FritzNetworkClientEntity, BinarySensorEntity):
     def is_on(self) -> bool | None:
         host = self.host
         return host.guest if host else None
+
+
+class FritzNetworkMeshConnected(FritzNetworkNodeEntity, BinarySensorEntity):
+    """On = the repeater is part of the mesh of the box; off = the box does not list it any more."""
+
+    _attr_translation_key = KEY_MESH_CONNECTED
+    _attr_device_class = BinarySensorDeviceClass.CONNECTIVITY
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, node: MeshNode) -> None:
+        super().__init__(coordinator, node, "binary_sensor", KEY_MESH_CONNECTED)
+
+    @property
+    def available(self) -> bool:
+        # unlike the other values of a node it says something while the node is gone: off
+        return self.coordinator.last_update_success
+
+    @property
+    def is_on(self) -> bool | None:
+        # without a topology nothing is known: that is not the same as a lost repeater
+        if self.coordinator.data.mesh is None:
+            return None
+        return self.node is not None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, str | None] | None:
+        if (node := self.node) is None:
+            return None
+        return {
+            "role": node.role,
+            "model": node.model,
+            "firmware": node.firmware,
+            "mesh_version": node.meshd_version,
+        }
 
 
 class FritzNetworkInternetConnected(CoordinatorEntity[FritzNetworkCoordinator], BinarySensorEntity):

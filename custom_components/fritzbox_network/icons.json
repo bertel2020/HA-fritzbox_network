@@ -11,6 +11,9 @@
           "dhcp": "mdi:swap-horizontal"
         }
       },
+      "uplink": {
+        "default": "mdi:router-network-wireless"
+      },
       "vendor": {
         "default": "mdi:factory"
       },
@@ -169,6 +172,12 @@
     "binary_sensor": {
       "guest": {
         "default": "mdi:account-multiple-outline"
+      },
+      "mesh_connected": {
+        "default": "mdi:router-wireless",
+        "state": {
+          "off": "mdi:router-wireless-off"
+        }
       },
       "internet_connected": {
         "default": "mdi:web",

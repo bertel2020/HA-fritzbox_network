@@ -93,6 +93,9 @@
           "dhcp": "Handed out"
         }
       },
+      "uplink": {
+        "name": "Uplink"
+      },
       "vendor": {
         "name": "Vendor"
       },
@@ -254,6 +257,9 @@
       }
     },
     "binary_sensor": {
+      "mesh_connected": {
+        "name": "Mesh connection"
+      },
       "guest": {
         "name": "Guest network"
       },

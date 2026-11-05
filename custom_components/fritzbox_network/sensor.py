@@ -65,6 +65,7 @@ from .const import (
     KEY_RADIO_UTILIZATION,
     KEY_SIGNAL_STRENGTH,
     KEY_SSID,
+    KEY_UPLINK,
     KEY_VENDOR,
     KEY_VPN_SINCE,
     KEY_VPN_STATUS,
@@ -157,6 +158,7 @@ async def async_setup_entry(
         async_add_entities,
         lambda coordinator, node: [
             FritzNetworkClients(coordinator, node),
+            *([] if node.role == "master" else [FritzNetworkUplink(coordinator, node)]),
             *(
                 FritzNetworkRadio(coordinator, node, band, description)
                 for band in node.radios
@@ -385,6 +387,52 @@ class FritzNetworkRadio(FritzNetworkNodeEntity, SensorEntity):
         node = self.node
         radio = node.radios.get(self._band) if node else None
         return self.entity_description.value_fn(radio) if radio else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        """The network behind the channel: its name, width and security, and the guest network."""
+        node = self.node
+        radio = node.radios.get(self._band) if node else None
+        if radio is None or self.entity_description.key != KEY_RADIO_CHANNEL:
+            return None
+        return {
+            "ssid": radio.ssid,
+            "channel_width": radio.channel_width,
+            "security": radio.security,
+            "guest_network": radio.guest,
+        }
+
+
+class FritzNetworkUplink(FritzNetworkNodeEntity, SensorEntity):
+    """What a repeater hangs on: the node it is linked to, and how."""
+
+    _attr_translation_key = KEY_UPLINK
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, node: MeshNode) -> None:
+        super().__init__(coordinator, node, "sensor", KEY_UPLINK)
+
+    @property
+    def _link(self) -> ClientLink | None:
+        mesh = self.coordinator.data.mesh
+        return mesh.links.get(self._mac) if mesh else None
+
+    @property
+    def native_value(self) -> str | None:
+        link = self._link
+        return (link.ap_name or link.ap_mac) if link else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        if (link := self._link) is None:
+            return None
+        return {
+            "connection": CONNECTION_WLAN if link.link_type == "WLAN" else CONNECTION_LAN,
+            "band": link.band,
+            "signal_dbm": link.signal_dbm,
+            "rate_download": link.rate_download,
+            "rate_upload": link.rate_upload,
+        }
 
 
 class FritzNetworkClients(FritzNetworkNodeEntity, SensorEntity):

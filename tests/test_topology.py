@@ -323,3 +323,38 @@ async def test_topology_is_sent_again_when_a_label_is_set_or_made(
     )
     update = (await client.receive_json())["event"]
     assert {c["mac"]: c for c in update["clients"]}[LAN]["labels"] == [label.label_id]
+
+
+async def test_a_repeater_is_connected_to_the_mesh_until_the_box_stops_listing_it(
+    hass, fake_client, entry
+):
+    from .conftest import REPEATER
+
+    coordinator = await _setup(hass, entry)
+    repeater = REPEATER.replace(":", "").lower()
+    state = hass.states.get(f"binary_sensor.fritz_{repeater}_mesh_connected")
+    assert state.state == "on"
+    assert state.attributes["role"] == "slave"
+    assert state.attributes["mesh_version"] == "8.62"
+    # the box has no such sensor: it is the mesh
+    assert (
+        hass.states.get(f"binary_sensor.fritz_{BOX.replace(':', '').lower()}_mesh_connected")
+        is None
+    )
+
+    link = fake_client.mesh.links.get(REPEATER)
+    uplink = hass.states.get(f"sensor.fritz_{repeater}_uplink")
+    assert uplink.state == ((link.ap_name or link.ap_mac) if link else "unknown")
+
+    fake_client.mesh.nodes = {
+        uid: n for uid, n in fake_client.mesh.nodes.items() if n.mac != REPEATER
+    }
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert hass.states.get(f"binary_sensor.fritz_{repeater}_mesh_connected").state == "off"
+
+    # no topology at all is not a lost repeater
+    fake_client.mesh = None
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert hass.states.get(f"binary_sensor.fritz_{repeater}_mesh_connected").state == "unknown"
