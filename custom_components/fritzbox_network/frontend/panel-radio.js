@@ -40,7 +40,7 @@ export function radioCheck(data) {
     });
     const uplink = node.uplink ?? null;
     const uplinkWeak = uplink?.type === "wlan" && typeof uplink.signal_dbm === "number" && uplink.signal_dbm <= UPLINK_WEAK_DBM;
-    return { mac: node.mac, name: node.name, role: node.role, firmware: node.firmware ?? null, uplink, uplinkWeak, radios, wired: here.filter((c) => c.link_type === "lan").length };
+    return { mac: node.mac, name: node.name, role: node.role, firmware: node.firmware ?? null, meshVersion: node.mesh_version ?? null, uplink, uplinkWeak, radios, wired: here.filter((c) => c.link_type === "lan").length };
   });
   // what stands out, one entry each, so the card can say what it is and where
   const lost = (data?.lost_repeaters ?? []).map((repeater) => ({ kind: "lost", node: repeater.name }));
@@ -90,7 +90,7 @@ export function renderRadio(data, ctx) {
   if (!check.nodes.length) return "";
   const blocks = check.nodes
     .map((node) => {
-      const wired = [node.firmware ? fill(r.firmware, { v: node.firmware }) : "", node.wired ? fill(r.wired, { n: node.wired }) : ""].filter(Boolean).join(" · ");
+      const wired = [node.firmware ? fill(r.firmware, { v: node.firmware }) : "", node.meshVersion ? fill(r.mesh, { v: node.meshVersion }) : "", node.wired ? fill(r.wired, { n: node.wired }) : ""].filter(Boolean).join(" · ");
       const lines = node.radios.length ? `<ul class="radios">${node.radios.map((radio) => radioLine(radio, t)).join("")}</ul>` : `<p class="hint">${escapeHtml(r.noRadio)}</p>`;
       return `<div class="apblock"><div class="aphead"><b>${escapeHtml(node.name)}</b>
         <span class="chip ${node.uplinkWeak ? "warn" : ""}">${escapeHtml(uplinkText(node, t, language))}</span>${wired ? `<small>${escapeHtml(wired)}</small>` : ""}</div>${lines}</div>`;

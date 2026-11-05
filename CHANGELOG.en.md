@@ -12,6 +12,7 @@ All notable changes to this integration are recorded here.
 - Box: **DHCP range in use** diagnostic sensor (percent of the addresses in the range that an active device has; attributes: first and last address, size of the range, in use, offline, free, first free address, known fixed addresses, subnet mask, gateway, reserved addresses) and, off by default, **External IPv6 address**.
 
 - New option **Wake on LAN also for Wi-Fi devices** (off by default): otherwise the Wake on LAN button and the "Automatic Wake on LAN" switch exist only for devices not known to sit on Wi-Fi. Turning it off does not remove what was created.
+- Side panel, Wi-Fi check: each access point shows the mesh version next to the firmware.
 
 ### Changed
 

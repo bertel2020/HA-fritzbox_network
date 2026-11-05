@@ -12,6 +12,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Box: Diagnose-Sensor **DHCP-Bereich belegt** (in Prozent der Adressen im Bereich, die ein aktives Gerät hat; Attribute: erste und letzte Adresse, Größe des Bereichs, belegt, offline, frei, erste freie Adresse, bekannte feste Adressen, Netzmaske, Gateway, reservierte Adressen) und, standardmäßig aus, **Externe IPv6-Adresse**.
 
 - Neue Option **Wake on LAN auch für WLAN-Geräte** (standardmäßig aus): Sonst gibt es den Wake-on-LAN-Knopf und den Schalter „Automatisch Wake on LAN“ nur für Geräte, die nicht bekanntermaßen am WLAN hängen. Ausschalten entfernt Angelegtes nicht.
+- Seitenpanel, Funk-Check: Jeder Access Point zeigt neben der Firmware die Mesh-Version.
 
 ### Geändert
 
