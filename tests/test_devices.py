@@ -543,3 +543,25 @@ async def test_radio_sensors_of_an_access_point(hass, fake_client, entry):
     assert hass.states.get(ids["radio_noise"]).state == "-86"
     assert hass.states.get(ids["radio_utilization"]).attributes["unit_of_measurement"] == "%"
     assert "2.4 GHz" in hass.states.get(ids["radio_channel"]).attributes["friendly_name"]
+
+
+async def test_a_repeater_gets_no_client_switches(hass, fake_client, entry):
+    from dataclasses import replace
+
+    from .conftest import REPEATER
+
+    fake_client.hosts = [
+        *fake_client.hosts,
+        replace(
+            fake_client.hosts[0], mac=REPEATER, mac_list=[REPEATER], name="repeater", active=True
+        ),
+    ]
+    await _setup(hass, entry)
+    registry = er.async_get(hass)
+
+    node = REPEATER.lower().replace(":", "")
+    assert registry.async_get("device_tracker.fritz_" + node) is not None
+    for key in ("internet_access", "priority", "auto_wake_on_lan"):
+        assert registry.async_get(f"switch.fritz_{node}_{key}") is None
+    # a client still has them
+    assert registry.async_get("switch.fritz_020000000003_internet_access")

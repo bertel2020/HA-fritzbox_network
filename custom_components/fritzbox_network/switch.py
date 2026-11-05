@@ -23,7 +23,12 @@ from .const import (
     KEY_VPN_SWITCH,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
-from .entity import FritzNetworkClientEntity, async_setup_client_entities
+from .entity import (
+    FritzNetworkClientEntity,
+    async_remove_node_client_entities,
+    async_setup_client_entities,
+    is_mesh_node,
+)
 from .models import Host, VpnConnection
 
 _LOGGER = logging.getLogger(__name__)
@@ -41,19 +46,27 @@ async def async_setup_entry(
 ) -> None:
     if not entry.runtime_data.can_write:
         return
+    async_remove_node_client_entities(
+        hass, entry, "switch", (KEY_INTERNET_ACCESS, KEY_PRIORITY, KEY_AUTO_WOL)
+    )
     async_setup_client_entities(
         entry,
         async_add_entities,
-        lambda coordinator, host: [
-            FritzNetworkInternetAccess(coordinator, host),
-            FritzNetworkPriority(coordinator, host),
-            # like the Wake on LAN button: not for devices known to sit on Wi-Fi
-            *(
-                []
-                if host.interface_type == "802.11"
-                else [FritzNetworkAutoWakeOnLan(coordinator, host)]
-            ),
-        ],
+        lambda coordinator, host: (
+            # the box and the repeaters are no clients: blocking one would cut off what hangs on it
+            []
+            if is_mesh_node(coordinator, host)
+            else [
+                FritzNetworkInternetAccess(coordinator, host),
+                FritzNetworkPriority(coordinator, host),
+                # like the Wake on LAN button: not for devices known to sit on Wi-Fi
+                *(
+                    []
+                    if host.interface_type == "802.11"
+                    else [FritzNetworkAutoWakeOnLan(coordinator, host)]
+                ),
+            ]
+        ),
     )
     _async_setup_guest_wifi(entry, async_add_entities)
     _async_setup_vpn(entry, async_add_entities)

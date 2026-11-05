@@ -4,8 +4,9 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -93,6 +94,30 @@ def async_setup_client_entities(
 
     _add_new_hosts()
     entry.async_on_unload(coordinator.async_add_listener(_add_new_hosts))
+
+
+def is_mesh_node(coordinator: FritzNetworkCoordinator, host: Host) -> bool:
+    """Whether the host is the box or a repeater: not a client, so no client controls."""
+    mesh = coordinator.data.mesh
+    return bool(mesh) and mesh.node_of(host) is not None
+
+
+@callback
+def async_remove_node_client_entities(
+    hass: HomeAssistant,
+    entry: FritzNetworkConfigEntry,
+    domain: str,
+    keys: tuple[str, ...],
+) -> None:
+    """Remove the client controls an earlier version created for the box and repeaters."""
+    mesh = entry.runtime_data.data.mesh
+    if not mesh:
+        return
+    wanted = {f"{mac}_{key}" for node in mesh.nodes.values() for mac in node.macs for key in keys}
+    registry = er.async_get(hass)
+    for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if entity.domain == domain and entity.unique_id in wanted:
+            registry.async_remove(entity.entity_id)
 
 
 class FritzNetworkNodeEntity(CoordinatorEntity[FritzNetworkCoordinator]):
