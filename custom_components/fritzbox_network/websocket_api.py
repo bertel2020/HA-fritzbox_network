@@ -301,6 +301,7 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
                 "online": coordinator.is_connected(host),
                 "guest": host.guest,
                 "vendor": coordinator.panel_vendor(host.mac),
+                "hostname": host.hostname,
                 "entity_id": registry.async_get_entity_id("device_tracker", DOMAIN, host.mac),
                 "ap_mac": link.ap_mac if link else None,
                 "link_type": link.link_type.lower() if link else None,

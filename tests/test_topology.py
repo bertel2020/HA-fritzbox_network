@@ -248,6 +248,7 @@ async def test_topology_carries_what_the_panel_shows(hass, hass_ws_client, fake_
     lan = {c["mac"]: c for c in topology["clients"]}[LAN]
     for field in (
         "ssid",
+        "hostname",
         "port",
         "speed",
         "vpn",

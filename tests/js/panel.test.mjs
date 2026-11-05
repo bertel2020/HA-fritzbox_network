@@ -1421,3 +1421,12 @@ test("the radio line names the network and the encryption as people say it", () 
   };
   assert.match(radioPage.renderRadio(data, { t, language: "de" }), /Zuhause · Kanal 36 · 160 MHz · WPA2\/WPA3 · Rauschen -95 dBm · 0 Geräte/);
 });
+
+test("the device page shows the hostname where it tells more than the name", () => {
+  const ctx = { t, now: NOW, data, hass, threshold: 1 / 3 };
+  const named = { ...data.clients[0], hostname: "esp-kitchen<1>" };
+  assert.match(device.renderDevice(named, ctx), /<dt>Hostname<\/dt><dd><span class="mono">esp-kitchen&lt;1&gt;<\/span><\/dd>/);
+  const same = { ...data.clients[0], hostname: data.clients[0].name.toUpperCase() };
+  assert.doesNotMatch(device.renderDevice(same, ctx), /<dt>Hostname<\/dt>/);
+  assert.doesNotMatch(device.renderDevice({ ...data.clients[0], hostname: null }, ctx), /<dt>Hostname<\/dt>/);
+});

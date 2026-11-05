@@ -237,6 +237,9 @@ export function renderDevice(client, ctx) {
   const master = [
     [t.mac, `<span class="mono">${escapeHtml(client.mac)}</span>`],
     [t.ip, `<span class="mono">${escapeHtml(client.ip ?? t.unknown)}</span>${ipBadge(ctx.ip, client, t)}`],
+    client.hostname && client.hostname.toLowerCase() !== client.name.toLowerCase()
+      ? [t.hostname, `<span class="mono">${escapeHtml(client.hostname)}</span>`]
+      : null,
     [t.vendor, escapeHtml(client.vendor ?? (client.private_mac ? t.vendorPrivate : t.unknown))],
     [t.accessPoint, escapeHtml(node?.name ?? t.notAssigned)],
     client.ssid ? [t.network, escapeHtml(client.ssid)] : null,

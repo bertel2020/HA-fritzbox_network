@@ -14,6 +14,7 @@ All notable changes to this integration are recorded here.
 - New option **Wake on LAN also for Wi-Fi devices** (off by default): otherwise the Wake on LAN button and the "Automatic Wake on LAN" switch exist only for devices not known to sit on Wi-Fi. Turning it off does not remove what was created.
 - Side panel, Wi-Fi check: each access point shows the mesh version next to the firmware.
 - Side panel, Wi-Fi check: each radio names the network (SSID) and the encryption (WPA2, WPA3, WPA2/WPA3).
+- Side panel, device page: the **hostname** of the device is listed where it says something other than the name.
 
 ### Changed
 
