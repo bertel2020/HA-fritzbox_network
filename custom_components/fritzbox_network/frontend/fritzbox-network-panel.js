@@ -312,8 +312,17 @@ class FritzboxNetworkPanel extends HTMLElement {
   /** Subscribes to the topology of the chosen box; quiet: a failure is the caller's to handle. */
   async _subscribe({ quiet = false } = {}) {
     try {
+      if (this._unsub) {
+        this._unsub();
+        this._unsub = null;
+      }
       this._unsub = await this._hass.connection.subscribeMessage(
         (data) => {
+          if (data.reload) {
+            // the options changed somewhere else and the box reloads: this subscription is gone with it
+            this._onBoxReload();
+            return;
+          }
           this._state.data = data;
           this._error = null;
           this._updatedAt = Date.now();
@@ -336,16 +345,44 @@ class FritzboxNetworkPanel extends HTMLElement {
    * the subscription belongs to the coordinator that is gone: take it up again once the box is back.
    */
   async _resubscribeAfterReload() {
-    if (this._unsub) {
-      this._unsub();
-      this._unsub = null;
+    this._resubscribing = true;
+    try {
+      if (this._unsub) {
+        this._unsub();
+        this._unsub = null;
+      }
+      for (let attempt = 0; attempt < 8; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        if (await this._subscribe({ quiet: true })) return true;
+      }
+      this._fail({});
+      return false;
+    } finally {
+      this._resubscribing = false;
     }
-    for (let attempt = 0; attempt < 8; attempt += 1) {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      if (await this._subscribe({ quiet: true })) return true;
+  }
+
+  /**
+   * The options changed somewhere else, for example in the settings of the integration. Take the
+   * subscription up again and bring the open filter page up to date: a draft nobody touched is
+   * replaced, one with changes stays, with a note that saving it overwrites what changed.
+   */
+  async _onBoxReload() {
+    if (this._resubscribing) return; // the panel's own change: it takes this up itself
+    if (!(await this._resubscribeAfterReload())) return;
+    const page = this._state.filterPage;
+    if (!page) return;
+    if (!filterChanged(page.current, page.draft)) {
+      await this._loadFilter();
+      return;
     }
-    this._fail({});
-    return false;
+    try {
+      page.current = (await this._ws("filter/preview")).options;
+      showToast(this.shadowRoot, this._t.filter.toastChangedElsewhere);
+      await this._runPreview();
+    } catch (err) {
+      this._fail(err);
+    }
   }
 
   /** Fetches what the page just opened needs. */

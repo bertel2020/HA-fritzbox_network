@@ -18,6 +18,7 @@ from homeassistant.helpers import (
     label_registry as lr,
 )
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.util import dt as dt_util
 import voluptuous as vol
 
@@ -50,6 +51,7 @@ from .const import (
     KEY_INTERNET_ACCESS,
     KEY_PRIORITY,
     KEY_WAKE_ON_LAN,
+    options_reload_signal,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .filters import FILTER_OPTIONS, select_hosts
@@ -368,6 +370,11 @@ def ws_subscribe_topology(
         )
 
     @callback
+    def _on_reload() -> None:
+        # the options changed and the entry reloads: this subscription is of no use after it
+        connection.send_message(websocket_api.event_message(msg["id"], {"reload": True}))
+
+    @callback
     def _on_entity_registry(event: Any) -> None:
         entry = er.async_get(hass).async_get(event.data["entity_id"])
         if entry is not None and entry.platform == DOMAIN:
@@ -382,6 +389,7 @@ def ws_subscribe_topology(
         coordinator.async_add_listener(_send),
         hass.bus.async_listen(er.EVENT_ENTITY_REGISTRY_UPDATED, _on_entity_registry),
         hass.bus.async_listen(lr.EVENT_LABEL_REGISTRY_UPDATED, _on_label_registry),
+        async_dispatcher_connect(hass, options_reload_signal(entries[0].entry_id), _on_reload),
     ]
 
     @callback

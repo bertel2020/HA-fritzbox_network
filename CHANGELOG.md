@@ -15,6 +15,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Geändert
 
+- Seitenpanel: Ändern sich die Optionen an anderer Stelle (etwa in den Einstellungen der Integration) und lädt die Box neu, nimmt das Panel seine Verbindung wieder auf, statt mit alten Zahlen stehen zu bleiben. Die offene Seite **Einbinden** übernimmt die neuen Filter; hast du dort schon Änderungen im Entwurf, bleiben sie, mit dem Hinweis, dass Speichern die fremde Änderung überschreibt.
 - Seitenpanel: Der Tab **Geräte** (Einbinden und Aufräumen) heißt jetzt **Verwalten**, weil die Geräteliste der Tab „Netzwerk“ ist. Die Adressen `#/filter` und `#/cleanup` bleiben gleich.
 - Die Box und ihre Repeater haben keine Schalter für Internetzugang, Priorität und automatisches Wake on LAN, keinen Wake-on-LAN-Knopf, keine Auswahl „Zugangsprofil“ und keine Sensoren „Access Point“ und „Zuletzt online“: Sie sind keine Clients, eine Sperre träfe alles dahinter. Entitäten früherer Versionen werden beim Start entfernt.
 - Die WireGuard-Entitäten liegen auf einem eigenen Gerät **WireGuard VPN** hinter der Box statt auf dem Gerät der Box; ihre Namen tragen kein „VPN“ mehr davor (aus „VPN Anna iPhone“ wird „WireGuard VPN Anna iPhone“, die Entity-IDs bleiben). Das Gerät lässt sich nicht löschen, solange die Box Verbindungen nennt; die Aktion `remove_unavailable_vpn` nimmt es mit, wenn keine Verbindung mehr da ist.

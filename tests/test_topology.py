@@ -1,5 +1,6 @@
 """The topology subscription behind the card."""
 
+import asyncio
 from dataclasses import replace
 
 from homeassistant.helpers import device_registry as dr, entity_registry as er
@@ -427,3 +428,30 @@ async def test_topology_names_the_repeaters_the_box_does_not_list(
     await hass.async_block_till_done()
     event = await client.receive_json()
     assert event["event"]["lost_repeaters"] == [{"mac": REPEATER, "name": "FRITZ!Repeater 1200 AX"}]
+
+
+async def test_the_panel_is_told_when_the_options_make_the_entry_reload(
+    hass, hass_ws_client, fake_client, entry
+):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    await _subscribe(client)
+
+    # a device removed by hand only joins the hidden list: no reload, nothing to tell
+    hass.config_entries.async_update_entry(
+        entry, options={**entry.options, "hidden_macs": ["02:00:00:00:00:99"]}
+    )
+    await hass.async_block_till_done()
+
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "ignore_guests": True})
+    await hass.async_block_till_done()
+
+    seen = []
+    while True:
+        try:
+            message = await asyncio.wait_for(client.receive_json(), timeout=1)
+        except TimeoutError:
+            break
+        seen.append(message["event"])
+    assert {"reload": True} in seen
+    assert sum(event == {"reload": True} for event in seen) == 1

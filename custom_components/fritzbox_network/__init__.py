@@ -19,6 +19,7 @@ from homeassistant.helpers import (
     issue_registry as ir,
 )
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceEntry
+from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
 from homeassistant.helpers.typing import ConfigType
 
@@ -32,6 +33,7 @@ from .const import (
     CONF_USE_TLS,
     DEFAULT_STALE_REPAIR,
     DOMAIN,
+    options_reload_signal,
     vpn_identifier,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
@@ -207,6 +209,8 @@ async def _async_update_listener(hass: HomeAssistant, entry: FritzNetworkConfigE
     if old == new_without_hidden and old_hidden <= new_hidden:
         coordinator.options_snapshot = new
         return
+    # the panel is told: its subscription belongs to the coordinator that goes
+    async_dispatcher_send(hass, options_reload_signal(entry.entry_id))
     await hass.config_entries.async_reload(entry.entry_id)
 
 

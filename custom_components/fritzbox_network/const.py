@@ -134,6 +134,11 @@ KEY_DHCP_POOL = "dhcp_pool"
 KEY_MESH_NODES = "mesh_nodes"
 
 
+def options_reload_signal(entry_id: str) -> str:
+    """The signal sent before an entry reloads because its options changed."""
+    return f"{DOMAIN}_options_reload_{entry_id}"
+
+
 def vpn_identifier(serial: str) -> str:
     """The identifier of the device that carries the WireGuard connections of a box."""
     return f"{serial}_vpn"

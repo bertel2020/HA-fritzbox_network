@@ -523,6 +523,7 @@ const en = {
     applyBody: "{remove} devices are removed from Home Assistant with their entities, {add} are added. If the list changed meanwhile, nothing is written and you see the new numbers.",
     toastApplied: "Changes applied",
     toastChanged: "The list changed. Check the new numbers.",
+    toastChangedElsewhere: "The filters were changed elsewhere. Your draft is still open; saving it overwrites that change.",
     unchanged: "Nothing changes with this setting.",
   },
   addr: {
@@ -1306,6 +1307,7 @@ const de = {
     applyBody: "{remove} Geräte werden samt Entitäten aus Home Assistant entfernt, {add} kommen dazu. Hat sich die Liste inzwischen geändert, wird nichts geschrieben und du siehst die neuen Zahlen.",
     toastApplied: "Änderungen angewendet",
     toastChanged: "Die Liste hat sich geändert. Prüfe die neuen Zahlen.",
+    toastChangedElsewhere: "Die Filter wurden an anderer Stelle geändert. Dein Entwurf bleibt offen; Speichern überschreibt diese Änderung.",
     unchanged: "Mit diesem Filter ändert sich nichts.",
   },
   addr: {
