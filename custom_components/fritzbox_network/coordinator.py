@@ -61,6 +61,7 @@ from .const import (
     VPN_EMPTY_POLLS,
     VPN_VERIFY_SECONDS,
     WAN_OVERRIDE_SECONDS,
+    vpn_identifier,
 )
 from .filters import select_hosts
 from .history import DeviceHistory
@@ -547,6 +548,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         ):
             macs = {mac for domain, mac in device.identifiers if domain == DOMAIN}
             macs.discard(self.serial)
+            macs.discard(vpn_identifier(self.serial))
             if not macs:
                 continue
             mac = next(iter(macs))

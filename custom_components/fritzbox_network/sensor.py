@@ -81,6 +81,7 @@ from .entity import (
     async_setup_client_entities,
     async_setup_node_entities,
     is_mesh_node,
+    vpn_device_info,
 )
 from .models import ClientLink, Host, InternetInfo, MeshNode, Radio, VpnConnection
 from .vendor import vendor_of
@@ -1042,7 +1043,7 @@ class FritzNetworkVpnSensor(CoordinatorEntity[FritzNetworkCoordinator], SensorEn
         self._key = connection.key
         self._attr_unique_id = f"{coordinator.serial}_{description.key}_{connection.key}"
         self._attr_translation_placeholders = {"name": connection.name}
-        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+        self._attr_device_info = vpn_device_info(coordinator)
 
     @property
     def connection(self) -> VpnConnection | None:

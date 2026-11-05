@@ -427,3 +427,48 @@ async def test_the_tidy_up_does_nothing_while_the_box_tells_no_list(hass, fake_c
     await hass.services.async_call("fritzbox_network", "remove_unavailable_vpn", blocking=True)
 
     assert len(_vpn_entries(hass, entry)) == 20
+
+
+async def test_the_connections_share_one_wireguard_device_behind_the_box(hass, fake_client, entry):
+    from homeassistant.helpers import device_registry as dr, entity_registry as er
+
+    from custom_components.fritzbox_network import async_remove_config_entry_device
+
+    _box(fake_client)
+    coordinator = await _setup(hass, entry)
+
+    devices = dr.async_get(hass)
+    vpn = devices.async_get_device(identifiers={("fritzbox_network", "SERIAL1_vpn")})
+    box = devices.async_get_device(identifiers={("fritzbox_network", "SERIAL1")})
+    assert vpn.name == "WireGuard VPN"
+    assert vpn.via_device_id == box.id
+    entities = er.async_entries_for_device(
+        er.async_get(hass), vpn.id, include_disabled_entities=True
+    )
+    assert {e.unique_id for e in entities} == _vpn_entries(hass, entry)
+    assert (
+        hass.states.get(entities[0].entity_id)
+        .attributes["friendly_name"]
+        .startswith("WireGuard VPN ")
+    )
+    # it is no repeater that went missing, and it stays while the box lists connections
+    assert coordinator.lost_repeaters() == []
+    assert not await async_remove_config_entry_device(hass, entry, vpn)
+
+
+async def test_the_tidy_up_takes_the_wireguard_device_when_no_connection_is_left(
+    hass, fake_client, entry
+):
+    from homeassistant.helpers import device_registry as dr
+
+    _box(fake_client)
+    coordinator = await _setup(hass, entry)
+    fake_client.vpn["data"]["init"]["boxConnections"].clear()
+    # an empty list is believed after three polls
+    for _ in range(3):
+        await coordinator.async_refresh()
+    await hass.services.async_call("fritzbox_network", "remove_unavailable_vpn", blocking=True)
+
+    devices = dr.async_get(hass)
+    assert devices.async_get_device(identifiers={("fritzbox_network", "SERIAL1_vpn")}) is None
+    assert devices.async_get_device(identifiers={("fritzbox_network", "SERIAL1")}) is not None

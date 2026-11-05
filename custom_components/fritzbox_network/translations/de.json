@@ -217,7 +217,7 @@
         "name": "DSL-CRC-Fehler"
       },
       "vpn_status": {
-        "name": "VPN {name} Status",
+        "name": "{name} Status",
         "state": {
           "connected": "Verbunden",
           "not_connected": "Ein, nicht verbunden",
@@ -225,10 +225,10 @@
         }
       },
       "vpn_since": {
-        "name": "VPN {name} verbunden seit"
+        "name": "{name} verbunden seit"
       },
       "vpn_uid": {
-        "name": "VPN {name} Kennung"
+        "name": "{name} Kennung"
       }
     },
     "select": {
@@ -250,7 +250,7 @@
         "name": "Gast-WLAN"
       },
       "vpn_switch": {
-        "name": "VPN {name} aktiviert"
+        "name": "{name} aktiviert"
       }
     },
     "button": {
@@ -272,7 +272,7 @@
         "name": "Internetverbindung"
       },
       "vpn": {
-        "name": "VPN {name}"
+        "name": "{name}"
       }
     },
     "update": {

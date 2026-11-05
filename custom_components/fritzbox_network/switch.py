@@ -28,6 +28,7 @@ from .entity import (
     async_remove_node_client_entities,
     async_setup_client_entities,
     is_mesh_node,
+    vpn_device_info,
 )
 from .models import Host, VpnConnection
 
@@ -123,7 +124,7 @@ class FritzNetworkVpnSwitch(CoordinatorEntity[FritzNetworkCoordinator], SwitchEn
         self._key = connection.key
         self._attr_unique_id = f"{coordinator.serial}_{KEY_VPN_SWITCH}_{connection.key}"
         self._attr_translation_placeholders = {"name": connection.name}
-        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+        self._attr_device_info = vpn_device_info(coordinator)
 
     @property
     def connection(self) -> VpnConnection | None:

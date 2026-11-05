@@ -5,7 +5,11 @@ from __future__ import annotations
 from fritzconnection.core.exceptions import FritzConnectionException
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv, entity_registry as er
+from homeassistant.helpers import (
+    config_validation as cv,
+    device_registry as dr,
+    entity_registry as er,
+)
 from homeassistant.helpers.service import async_extract_entity_ids
 import voluptuous as vol
 
@@ -25,6 +29,7 @@ from .const import (
     KEY_VPN_STATUS,
     KEY_VPN_SWITCH,
     KEY_VPN_UID,
+    vpn_identifier,
 )
 from .coordinator import FritzNetworkCoordinator
 from .models import Host
@@ -165,12 +170,25 @@ def stale_vpn_entities(
     ]
 
 
+def _remove_empty_vpn_device(
+    hass: HomeAssistant, registry: er.EntityRegistry, coordinator: FritzNetworkCoordinator
+) -> None:
+    """Take the WireGuard device away once no connection has an entity on it."""
+    devices = dr.async_get(hass)
+    device = devices.async_get_device(identifiers={(DOMAIN, vpn_identifier(coordinator.serial))})
+    if device and not er.async_entries_for_device(
+        registry, device.id, include_disabled_entities=True
+    ):
+        devices.async_remove_device(device.id)
+
+
 async def _async_remove_unavailable_vpn(call: ServiceCall) -> None:
     """Remove the entities of WireGuard connections that no longer exist on the box."""
     registry = er.async_get(call.hass)
     for config_entry in call.hass.config_entries.async_loaded_entries(DOMAIN):
         for entry in stale_vpn_entities(registry, config_entry.runtime_data):
             registry.async_remove(entry.entity_id)
+        _remove_empty_vpn_device(call.hass, registry, config_entry.runtime_data)
 
 
 def async_register(hass: HomeAssistant) -> None:

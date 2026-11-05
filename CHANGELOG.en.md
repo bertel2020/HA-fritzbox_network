@@ -16,6 +16,7 @@ All notable changes to this integration are recorded here.
 ### Changed
 
 - The box and its repeaters have no switches for internet access, priority and automatic Wake on LAN, no Wake on LAN button, no "Access profile" selection and no "Access point" and "Last online" sensors: they are no clients, a block would hit everything behind them. Entities of earlier versions are removed at start.
+- The WireGuard entities sit on a device of their own, **WireGuard VPN**, behind the box instead of on the device of the box; their names no longer start with "VPN" ("VPN Anna iPhone" becomes "WireGuard VPN Anna iPhone", the entity ids stay). The device cannot be deleted while the box lists connections; the action `remove_unavailable_vpn` takes it away when no connection is left.
 - The repair "The internet connection keeps dropping" comes from 5 new connections in 24 hours (3 before), and so does the hint on the internet page of the panel.
 
 ## 1.1.0 – 2026-11-04

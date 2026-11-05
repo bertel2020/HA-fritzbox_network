@@ -217,7 +217,7 @@
         "name": "DSL CRC errors"
       },
       "vpn_status": {
-        "name": "VPN {name} status",
+        "name": "{name} status",
         "state": {
           "connected": "Connected",
           "not_connected": "On, not connected",
@@ -225,10 +225,10 @@
         }
       },
       "vpn_since": {
-        "name": "VPN {name} connected since"
+        "name": "{name} connected since"
       },
       "vpn_uid": {
-        "name": "VPN {name} identifier"
+        "name": "{name} identifier"
       }
     },
     "select": {
@@ -250,7 +250,7 @@
         "name": "Guest Wi-Fi"
       },
       "vpn_switch": {
-        "name": "VPN {name} enabled"
+        "name": "{name} enabled"
       }
     },
     "button": {
@@ -272,7 +272,7 @@
         "name": "Internet connection"
       },
       "vpn": {
-        "name": "VPN {name}"
+        "name": "{name}"
       }
     },
     "update": {

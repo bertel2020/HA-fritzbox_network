@@ -132,6 +132,13 @@ KEY_FAILED_POLLS = "failed_polls"
 KEY_MESH_STATUS = "mesh_status"
 KEY_DHCP_POOL = "dhcp_pool"
 KEY_MESH_NODES = "mesh_nodes"
+
+
+def vpn_identifier(serial: str) -> str:
+    """The identifier of the device that carries the WireGuard connections of a box."""
+    return f"{serial}_vpn"
+
+
 KEY_ADDRESS_ASSIGNMENT = "address_assignment"
 KEY_REFRESH = "refresh"
 

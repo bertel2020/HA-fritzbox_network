@@ -32,6 +32,7 @@ from .const import (
     CONF_USE_TLS,
     DEFAULT_STALE_REPAIR,
     DOMAIN,
+    vpn_identifier,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .history import DeviceHistory
@@ -230,6 +231,9 @@ async def async_remove_config_entry_device(
     coordinator = entry.runtime_data
     if (DOMAIN, coordinator.serial) in device_entry.identifiers:
         return False
+    if (DOMAIN, vpn_identifier(coordinator.serial)) in device_entry.identifiers:
+        # the WireGuard device goes with its connections: while the box lists one it would be back
+        return not coordinator.data.vpn
     mesh = coordinator.data.mesh
     if mesh and any((DOMAIN, n.mac) in device_entry.identifiers for n in mesh.nodes.values()):
         return False

@@ -11,7 +11,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, KEY_TRACKER
+from .const import DOMAIN, KEY_TRACKER, vpn_identifier
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .models import Host, MeshNode, mac_id
 
@@ -94,6 +94,17 @@ def async_setup_client_entities(
 
     _add_new_hosts()
     entry.async_on_unload(coordinator.async_add_listener(_add_new_hosts))
+
+
+def vpn_device_info(coordinator: FritzNetworkCoordinator) -> DeviceInfo:
+    """The device of the WireGuard connections: one for all of them, behind the box."""
+    return DeviceInfo(
+        identifiers={(DOMAIN, vpn_identifier(coordinator.serial))},
+        name="WireGuard VPN",
+        manufacturer="AVM",
+        model="WireGuard",
+        via_device_id=coordinator.box_device_id,
+    )
 
 
 def is_mesh_node(coordinator: FritzNetworkCoordinator, host: Host) -> bool:
