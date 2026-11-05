@@ -61,6 +61,7 @@ from .const import (
     KEY_RADIO_UTILIZATION,
     KEY_SIGNAL_STRENGTH,
     KEY_SSID,
+    KEY_VENDOR,
     KEY_VPN_SINCE,
     KEY_VPN_STATUS,
     KEY_VPN_UID,
@@ -76,6 +77,7 @@ from .entity import (
     is_mesh_node,
 )
 from .models import ClientLink, Host, InternetInfo, MeshNode, Radio, VpnConnection
+from .vendor import vendor_of
 
 CONNECTION_LAN = "lan"
 CONNECTION_WLAN = "wlan"
@@ -109,6 +111,16 @@ async def async_setup_entry(
                 ]
             ),
         ],
+    )
+    # only for devices with a vendor behind their MAC: a randomized address has none
+    async_setup_client_entities(
+        entry,
+        async_add_entities,
+        lambda coordinator, host: (
+            [FritzNetworkVendor(coordinator, host)]
+            if not is_mesh_node(coordinator, host) and vendor_of(host.mac)
+            else []
+        ),
     )
     # only for devices the box has a connection for, so offline devices get
     # none until they come online
@@ -362,6 +374,20 @@ class FritzNetworkIpAddress(FritzNetworkClientEntity, SensorEntity):
     @property
     def native_value(self) -> str | None:
         return host.ip if (host := self.host) else None
+
+
+class FritzNetworkVendor(FritzNetworkClientEntity, SensorEntity):
+    """The vendor behind the MAC address, whatever the option for the device info says."""
+
+    _attr_translation_key = KEY_VENDOR
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, host: Host) -> None:
+        super().__init__(coordinator, host, "sensor", KEY_VENDOR)
+
+    @property
+    def native_value(self) -> str | None:
+        return vendor_of(self._mac)
 
 
 class FritzNetworkConnectionType(FritzNetworkClientEntity, SensorEntity):

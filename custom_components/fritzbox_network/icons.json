@@ -4,6 +4,9 @@
       "ip_address": {
         "default": "mdi:ip-network"
       },
+      "vendor": {
+        "default": "mdi:factory"
+      },
       "connection_type": {
         "default": "mdi:lan",
         "state": {

@@ -2,7 +2,8 @@
 
 from dataclasses import replace
 
-from homeassistant.helpers import device_registry as dr
+from homeassistant.const import EntityCategory
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from pytest_homeassistant_custom_component.common import async_capture_events
 
@@ -85,3 +86,21 @@ async def test_the_panel_shows_the_vendor_whatever_the_option_says(
     event = await client.receive_json()
     vendors = {c["mac"]: c["vendor"] for c in event["event"]["clients"]}
     assert vendors[ESP] == "Espressif Inc."
+
+
+async def test_the_vendor_is_a_diagnostic_sensor_whatever_the_option_says(hass, fake_client, entry):
+    private = "26:0a:c4:00:00:01"
+    fake_client.hosts = [
+        *fake_client.hosts,
+        _esp_host(fake_client),
+        _esp_host(fake_client, private),
+    ]
+
+    await _setup(hass, entry)
+
+    registry = er.async_get(hass)
+    sensor = registry.async_get("sensor.fritz_240ac4000001_vendor")
+    assert sensor.entity_category is EntityCategory.DIAGNOSTIC
+    assert hass.states.get("sensor.fritz_240ac4000001_vendor").state == "Espressif Inc."
+    # a randomized address has no vendor, so there is nothing to show
+    assert registry.async_get("sensor.fritz_260ac4000001_vendor") is None

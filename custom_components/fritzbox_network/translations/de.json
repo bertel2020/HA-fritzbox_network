@@ -86,6 +86,9 @@
       "ip_address": {
         "name": "IP-Adresse"
       },
+      "vendor": {
+        "name": "Hersteller"
+      },
       "connection_type": {
         "name": "Verbindung",
         "state": {

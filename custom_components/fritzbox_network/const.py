@@ -80,6 +80,7 @@ ROAM_CONFIRM_POLLS = 2
 KEY_TRACKER = "tracker"
 KEY_IP_ADDRESS = "ip_address"
 KEY_CONNECTION_TYPE = "connection_type"
+KEY_VENDOR = "vendor"
 KEY_ACCESS_POINT = "access_point"
 KEY_ONLINE_SINCE = "online_since"
 KEY_LAST_ONLINE = "last_online"
