@@ -2,7 +2,7 @@
 
 All notable changes to this integration are recorded here.
 
-## Unreleased
+## 1.2.0 – 2026-11-05
 
 ### New
 
@@ -19,6 +19,8 @@ All notable changes to this integration are recorded here.
 
 ### Changed
 
+- Side panel, device page: The **Controls** card (internet access as a status bar, access profile, priority, Wake on LAN) switches at the box itself and no longer needs entities enabled in Home Assistant; the tools (rename, network map, capture) have their own **Device** card. The note about entities that are off is a side note there. New command `fritzbox_network/device/action` in the panel backend.
+- Side panel, device page: The **data volume** (today, 7 and 30 days) is shown in tiles with a bar for the download and coloured arrows instead of three widely spread columns.
 - Side panel: when the options change elsewhere (for example in the settings of the integration) and the box reloads, the panel takes its connection up again instead of standing still with old numbers. The open **Include** page takes the new filters; if you already have changes in the draft they stay, with a note that saving overwrites the other change.
 - Side panel: the **Devices** tab (Include and Clean up) is now **Manage**, because the list of devices is the "Network" tab. The addresses `#/filter` and `#/cleanup` stay the same.
 - The box and its repeaters have no switches for internet access, priority and automatic Wake on LAN, no Wake on LAN button, no "Access profile" selection and no "Access point" and "Last online" sensors: they are no clients, a block would hit everything behind them. Entities of earlier versions are removed at start.

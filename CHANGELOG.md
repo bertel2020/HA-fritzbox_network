@@ -2,7 +2,7 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
-## Unveröffentlicht
+## 1.2.0 – 2026-11-05
 
 ### Neu
 
@@ -19,6 +19,8 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Geändert
 
+- Seitenpanel, Geräteseite: Die Karte **Steuerung** (Internetzugang als Statusbalken, Zugangsprofil, Priorisierung, Wake on LAN) schaltet direkt an der Box und braucht keine aktivierten Entitäten in Home Assistant mehr; die Werkzeuge (Umbenennen, Netzkarte, Mitschneiden) stehen in der eigenen Karte **Gerät**. Der Hinweis auf ausgeschaltete Entitäten ist eine Randnotiz dort. Neuer Befehl `fritzbox_network/device/action` im Panel-Backend.
+- Seitenpanel, Geräteseite: Das **Datenvolumen** (Heute, 7 und 30 Tage) steht in Kacheln mit Balken für den Download und farbigen Pfeilen statt in drei weit verteilten Spalten.
 - Seitenpanel: Ändern sich die Optionen an anderer Stelle (etwa in den Einstellungen der Integration) und lädt die Box neu, nimmt das Panel seine Verbindung wieder auf, statt mit alten Zahlen stehen zu bleiben. Die offene Seite **Einbinden** übernimmt die neuen Filter; hast du dort schon Änderungen im Entwurf, bleiben sie, mit dem Hinweis, dass Speichern die fremde Änderung überschreibt.
 - Seitenpanel: Der Tab **Geräte** (Einbinden und Aufräumen) heißt jetzt **Verwalten**, weil die Geräteliste der Tab „Netzwerk“ ist. Die Adressen `#/filter` und `#/cleanup` bleiben gleich.
 - Die Box und ihre Repeater haben keine Schalter für Internetzugang, Priorität und automatisches Wake on LAN, keinen Wake-on-LAN-Knopf, keine Auswahl „Zugangsprofil“ und keine Sensoren „Access Point“ und „Zuletzt online“: Sie sind keine Clients, eine Sperre träfe alles dahinter. Entitäten früherer Versionen werden beim Start entfernt.
