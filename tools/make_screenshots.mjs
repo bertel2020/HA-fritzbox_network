@@ -246,7 +246,8 @@ const SCENES = {
 };
 
 const LANGS = { de: "screenshots", en: "screenshots-en" };
-const TYPES = { ".js": "text/javascript", ".html": "text/html" };
+const TYPES = { ".js": "text/javascript", ".html": "text/html", ".png": "image/png" };
+const brand = join(frontend, "..", "brand");
 
 const iconPath = (name) => mdi["mdi" + name.replace(/^mdi:/, "").replace(/(^|-)(\w)/g, (_, __, c) => c.toUpperCase())];
 
@@ -283,8 +284,11 @@ try {
         await page.route(`${ORIGIN}/**`, (route) => {
           const path = new URL(route.request().url()).pathname;
           if (path === "/") return route.fulfill({ contentType: "text/html", body: HARNESS(theme, scene.kind) });
-          const file = join(frontend, path);
-          if (!file.startsWith(frontend) || !existsSync(file)) return route.fulfill({ status: 404 });
+          // Home Assistant serves the brand folder next to the frontend files
+          const inBrand = path.startsWith("/brand/");
+          const base = inBrand ? brand : frontend;
+          const file = inBrand ? join(brand, path.slice(7)) : join(frontend, path);
+          if (!file.startsWith(base) || !existsSync(file)) return route.fulfill({ status: 404 });
           return route.fulfill({ contentType: TYPES[extname(file)] ?? "text/plain", body: readFileSync(file) });
         });
         await page.goto(`${ORIGIN}/${scene.hash ?? ""}`);
