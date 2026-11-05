@@ -86,6 +86,13 @@
       "ip_address": {
         "name": "IP-Adresse"
       },
+      "address_assignment": {
+        "name": "Adresszuweisung",
+        "state": {
+          "fixed": "Immer dieselbe",
+          "dhcp": "Dynamisch vergeben"
+        }
+      },
       "vendor": {
         "name": "Hersteller"
       },

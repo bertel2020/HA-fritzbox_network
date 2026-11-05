@@ -42,6 +42,10 @@ WAN_OVERRIDE_SECONDS = 120
 FILTER_PROFILE_REFRESH_POLLS = 20
 # A new firmware is not urgent to the minute: ask for it every n-th poll (about an hour).
 FIRMWARE_REFRESH_POLLS = 120
+# the fixed-address state of a device comes from the web interface, one request per device:
+# a few devices per poll, each read again after this many seconds
+RESERVATION_PER_POLL = 3
+RESERVATION_REFRESH_SECONDS = 3600
 BACKOFF_AFTER_FAILURES = 3
 # The addresses, link rates and DSL line change rarely: read them every n-th poll, and at once
 # after the box reconnected.
@@ -123,6 +127,7 @@ KEY_LAST_UPDATE = "last_update"
 KEY_FAILED_POLLS = "failed_polls"
 KEY_MESH_STATUS = "mesh_status"
 KEY_DHCP_POOL = "dhcp_pool"
+KEY_ADDRESS_ASSIGNMENT = "address_assignment"
 KEY_REFRESH = "refresh"
 
 # Keys of the Wi-Fi radio sensors of an access point; the band is added to the unique id.

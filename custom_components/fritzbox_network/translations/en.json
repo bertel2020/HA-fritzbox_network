@@ -86,6 +86,13 @@
       "ip_address": {
         "name": "IP address"
       },
+      "address_assignment": {
+        "name": "Address assignment",
+        "state": {
+          "fixed": "Always the same",
+          "dhcp": "Handed out"
+        }
+      },
       "vendor": {
         "name": "Vendor"
       },

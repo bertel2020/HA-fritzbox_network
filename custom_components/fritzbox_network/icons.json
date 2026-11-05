@@ -4,6 +4,13 @@
       "ip_address": {
         "default": "mdi:ip-network"
       },
+      "address_assignment": {
+        "default": "mdi:ip-network",
+        "state": {
+          "fixed": "mdi:pin",
+          "dhcp": "mdi:swap-horizontal"
+        }
+      },
       "vendor": {
         "default": "mdi:factory"
       },

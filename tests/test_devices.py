@@ -2,6 +2,7 @@
 
 from dataclasses import replace
 
+from homeassistant.const import EntityCategory
 from homeassistant.core import State
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import device_registry as dr, entity_registry as er, issue_registry as ir
@@ -582,3 +583,31 @@ async def test_the_ip_address_tells_where_it_comes_from(hass, fake_client, entry
         assert state.attributes["in_dhcp_range"] is expected
         assert state.attributes["guest"] is host.guest
         assert state.attributes["interface"] == host.interface_type
+
+
+async def test_the_address_assignment_follows_what_the_box_tells_a_few_devices_per_poll(
+    hass, fake_client, entry
+):
+    coordinator = await _setup(hass, entry)
+    for _ in range(6):
+        await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    registry = er.async_get(hass)
+    lan = registry.async_get("sensor.fritz_020000000004_address_assignment")
+    assert lan is not None
+    assert lan.entity_category is EntityCategory.DIAGNOSTIC
+    assert hass.states.get(lan.entity_id).state == "dhcp"
+    # the box itself is no client
+    assert registry.async_get("sensor.fritz_020000000005_address_assignment") is None
+
+
+async def test_no_address_assignment_where_the_box_does_not_tell(hass, fake_client, entry):
+    fake_client.get_ip_reservations = lambda macs, max_age=600: {m: None for m in macs}
+    coordinator = await _setup(hass, entry)
+    for _ in range(6):
+        await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    registry = er.async_get(hass)
+    assert registry.async_get("sensor.fritz_020000000004_address_assignment") is None

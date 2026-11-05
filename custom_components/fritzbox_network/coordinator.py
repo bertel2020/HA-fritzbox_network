@@ -53,6 +53,8 @@ from .const import (
     INTERNET_HISTORY,
     INTERNET_NOISE_WARN_DB,
     MAX_BACKOFF_SECONDS,
+    RESERVATION_PER_POLL,
+    RESERVATION_REFRESH_SECONDS,
     ROAM_CONFIRM_POLLS,
     VPN_EMPTY_POLLS,
     VPN_VERIFY_SECONDS,
@@ -145,6 +147,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._firmware: FirmwareInfo | None = None
         # the DHCP range of the box, asked for now and then
         self._dhcp_pool: tuple[int, int] | None = None
+        # whether the box always gives a device the same address: mac -> (when read, fixed or None)
+        self.ip_reservations: dict[str, tuple[float, bool | None]] = {}
         # since when the noise margin of the DSL line has been below the limit
         self.internet_low_margin_since: datetime | None = None
         self.internet_samples: deque[tuple[float, float, float]] = deque(maxlen=INTERNET_HISTORY)
@@ -206,6 +210,38 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         if network is not None:
             self._dhcp_pool = dhcp_pool_of(network)
 
+    def _fetch_reservations(self, hosts: list[Host]) -> None:
+        """Read the fixed-address state of a few devices, the ones never read or read longest ago.
+
+        The box tells it only in its web interface, one request per device, so a poll does not read
+        more than ``RESERVATION_PER_POLL`` of them. A device the box does not answer for is asked
+        again after the same time as the others.
+        """
+        now = time.monotonic()
+        due = sorted(
+            (
+                h
+                for h in hosts
+                if (read := self.ip_reservations.get(h.mac)) is None
+                or now - read[0] > RESERVATION_REFRESH_SECONDS
+            ),
+            key=lambda h: (h.mac in self.ip_reservations, not h.active),
+        )[:RESERVATION_PER_POLL]
+        if not due:
+            return
+        macs = [h.mac for h in due]
+        try:
+            found = self.client.get_ip_reservations(macs, max_age=0)
+        except (*_FETCH_ERRORS, requests.RequestException, PermissionError, TypeError) as err:
+            _LOGGER.debug("Fixed addresses unavailable: %s", err)
+            found = {}
+        for mac in macs:
+            reservation = found.get(mac)
+            self.ip_reservations[mac] = (
+                now,
+                reservation["fixed"] if isinstance(reservation, dict) else None,
+            )
+
     def _fetch_vpn(self) -> list[VpnConnection] | None:
         """The WireGuard connections; what was known stays if the box does not answer.
 
@@ -266,6 +302,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         vpn = self._fetch_vpn()
         self._fetch_firmware()
         self._fetch_dhcp_pool()
+        self._fetch_reservations([h for h in hosts if h.ip and not h.guest])
         self._polls += 1
         return hosts, mesh, internet, guest, vpn
 

@@ -32,6 +32,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     DOMAIN,
     KEY_ACCESS_POINT,
+    KEY_ADDRESS_ASSIGNMENT,
     KEY_CLIENTS,
     KEY_CONNECTION_TYPE,
     KEY_DEVICES_OFFLINE,
@@ -84,6 +85,8 @@ from .vendor import vendor_of
 
 CONNECTION_LAN = "lan"
 CONNECTION_WLAN = "wlan"
+ADDRESS_FIXED = "fixed"
+ADDRESS_DHCP = "dhcp"
 MESH_AVAILABLE = "available"
 MESH_UNAVAILABLE = "unavailable"
 
@@ -114,6 +117,18 @@ async def async_setup_entry(
                 ]
             ),
         ],
+    )
+    # only once the box has told: it does not for every model, and not at once for every device
+    async_setup_client_entities(
+        entry,
+        async_add_entities,
+        lambda coordinator, host: (
+            []
+            if is_mesh_node(coordinator, host) or host.guest
+            else [FritzNetworkAddressAssignment(coordinator, host)]
+            if (read := coordinator.ip_reservations.get(host.mac)) and read[1] is not None
+            else None
+        ),
     )
     # only for devices with a vendor behind their MAC: a randomized address has none
     async_setup_client_entities(
@@ -421,6 +436,25 @@ class FritzNetworkIpAddress(FritzNetworkClientEntity, SensorEntity):
             return pool[0] <= int(ipaddress.IPv4Address(host.ip)) <= pool[1]
         except ipaddress.AddressValueError:
             return None
+
+
+class FritzNetworkAddressAssignment(FritzNetworkClientEntity, SensorEntity):
+    """Whether the box always gives the device the same address or hands one out as it comes."""
+
+    _attr_translation_key = KEY_ADDRESS_ASSIGNMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_device_class = SensorDeviceClass.ENUM
+    _attr_options = [ADDRESS_FIXED, ADDRESS_DHCP]
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, host: Host) -> None:
+        super().__init__(coordinator, host, "sensor", KEY_ADDRESS_ASSIGNMENT)
+
+    @property
+    def native_value(self) -> str | None:
+        read = self.coordinator.ip_reservations.get(self._mac)
+        if read is None or read[1] is None:
+            return None
+        return ADDRESS_FIXED if read[1] else ADDRESS_DHCP
 
 
 class FritzNetworkVendor(FritzNetworkClientEntity, SensorEntity):
