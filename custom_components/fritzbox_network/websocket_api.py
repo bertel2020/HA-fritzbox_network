@@ -252,11 +252,17 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
                 "name": coordinator.node_name(n),
                 "role": n.role,
                 "model": n.model,
+                "firmware": n.firmware,
+                "mesh_version": n.meshd_version,
                 "radios": {
                     band: {
                         "channel": radio.channel,
                         "utilization": radio.utilization,
                         "noise_dbm": radio.noise_dbm,
+                        "ssid": radio.ssid,
+                        "channel_width": radio.channel_width,
+                        "security": radio.security,
+                        "guest": radio.guest,
                     }
                     for band, radio in n.radios.items()
                 },
@@ -330,6 +336,10 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
         "firmware": _firmware(coordinator),
         "vpn": _vpn(coordinator),
         "nodes": nodes,
+        # repeaters with a device here that the box does not list in its mesh now
+        "lost_repeaters": [
+            {"mac": mac, "name": name} for mac, name in coordinator.lost_repeaters()
+        ],
         "clients": clients,
     }
 

@@ -1390,3 +1390,21 @@ test("the VPN page offers the switch only with the right to write and for connec
   assert.match(off, /data-on="1">Einschalten/);
   assert.match(vpnPage.renderVpn(data, { t, now: 0, canWrite: true, busy: new Set(["a"]) }), /data-key="a" data-on="0" disabled/);
 });
+
+test("a repeater the box no longer lists is a hint and a finding of the radio check", () => {
+  const data = {
+    nodes: [{ mac: "aa", name: "Box", role: "master", radios: { "5ghz": { channel: 36, utilization: 5, noise_dbm: -95, channel_width: "160 MHz", guest: true } }, firmware: "8.20" }],
+    lost_repeaters: [{ mac: "bb", name: "Keller" }],
+    clients: [],
+  };
+  const hints = hintsModule.networkHints(data, t);
+  assert.deepEqual(hints.map((h) => [h.key, h.level, h.values.name]), [["repeaterLost", "warn", "Keller"]]);
+  assert.match(hintsModule.renderHints(data, t), /Keller: Die Box führt diesen Repeater nicht mehr/);
+
+  const check = radioPage.radioCheck(data);
+  assert.deepEqual(check.findings, [{ kind: "lost", node: "Keller" }]);
+  const html = radioPage.renderRadio(data, { t, language: "de" });
+  assert.match(html, /Keller: Die Box führt diesen Repeater nicht mehr in ihrem Mesh/);
+  assert.match(html, /Firmware 8\.20/);
+  assert.match(html, /Kanal 36 · 160 MHz · Rauschen -95 dBm · 0 Geräte · Gästenetz/);
+});

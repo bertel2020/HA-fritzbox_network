@@ -28,6 +28,9 @@ export function networkHints(data, t) {
       hints.push({ level: "warn", key: "uplinkWeak", values: { name: node.name, dbm: uplink.signal_dbm } });
     }
   }
+  for (const repeater of data?.lost_repeaters ?? []) {
+    hints.push({ level: "warn", key: "repeaterLost", values: { name: repeater.name } });
+  }
   const firmware = data?.firmware;
   if (firmware?.latest && firmware.latest !== firmware.installed) {
     hints.push({ level: "info", key: "firmware", values: { version: firmware.latest } });

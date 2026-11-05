@@ -224,7 +224,15 @@ async def test_topology_carries_the_radios_and_the_band(hass, hass_ws_client, fa
     radios = {n["mac"]: n["radios"] for n in topology["nodes"]}
     assert radios[BOX]
     for radio in radios[BOX].values():
-        assert set(radio) == {"channel", "utilization", "noise_dbm"}
+        assert set(radio) == {
+            "channel",
+            "utilization",
+            "noise_dbm",
+            "ssid",
+            "channel_width",
+            "security",
+            "guest",
+        }
     assert all("band" in c for c in topology["clients"])
 
 
@@ -398,3 +406,24 @@ async def test_a_repeater_the_box_stops_listing_is_counted_and_a_repair_after_a_
     await hass.async_block_till_done()
     assert registry.async_get_issue("fritzbox_network", issue) is None
     assert coordinator.repeaters_lost_since == {}
+
+
+async def test_topology_names_the_repeaters_the_box_does_not_list(
+    hass, hass_ws_client, fake_client, entry
+):
+    from .conftest import REPEATER
+
+    coordinator = await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    topology = await _subscribe(client)
+    assert topology["lost_repeaters"] == []
+    repeater = next(n for n in topology["nodes"] if n["mac"] == REPEATER)
+    assert repeater["firmware"] and repeater["mesh_version"] == "8.62"
+
+    fake_client.mesh.nodes = {
+        uid: n for uid, n in fake_client.mesh.nodes.items() if n.mac != REPEATER
+    }
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    event = await client.receive_json()
+    assert event["event"]["lost_repeaters"] == [{"mac": REPEATER, "name": "FRITZ!Repeater 1200 AX"}]
