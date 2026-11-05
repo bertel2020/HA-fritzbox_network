@@ -78,6 +78,9 @@
       "external_ipv4": {
         "default": "mdi:ip-network-outline"
       },
+      "external_ipv6": {
+        "default": "mdi:ip-network-outline"
+      },
       "dsl_rate_down": {
         "default": "mdi:speedometer"
       },

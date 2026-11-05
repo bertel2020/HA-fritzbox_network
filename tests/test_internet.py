@@ -195,7 +195,13 @@ async def test_the_values_of_the_line_are_off_until_they_are_enabled(hass, fake_
     await _setup(hass, entry)
     registry = er.async_get(hass)
 
-    for key in ("dsl_noise_margin_down", "dsl_rate_up", "dsl_crc_errors", "external_ipv4"):
+    for key in (
+        "dsl_noise_margin_down",
+        "dsl_rate_up",
+        "dsl_crc_errors",
+        "external_ipv4",
+        "external_ipv6",
+    ):
         reg = registry.async_get(f"sensor.fritz_network_{key}")
         assert reg is not None, key
         assert reg.disabled_by == er.RegistryEntryDisabler.INTEGRATION

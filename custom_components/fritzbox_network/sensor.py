@@ -44,6 +44,7 @@ from .const import (
     KEY_DSL_RATE_DOWN,
     KEY_DSL_RATE_UP,
     KEY_EXTERNAL_IPV4,
+    KEY_EXTERNAL_IPV6,
     KEY_FAILED_POLLS,
     KEY_INTERNET_DOWNLOAD,
     KEY_INTERNET_UPLOAD,
@@ -582,6 +583,13 @@ INTERNET_SENSORS = (
         entity_category=EntityCategory.DIAGNOSTIC,
         entity_registry_enabled_default=False,
         value_fn=lambda c, i: i.external_ipv4,
+    ),
+    InternetSensorDescription(
+        key=KEY_EXTERNAL_IPV6,
+        translation_key=KEY_EXTERNAL_IPV6,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda c, i: i.external_ipv6,
     ),
     InternetSensorDescription(
         **_measurement(

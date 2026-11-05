@@ -168,6 +168,9 @@
       "external_ipv4": {
         "name": "Externe IPv4-Adresse"
       },
+      "external_ipv6": {
+        "name": "Externe IPv6-Adresse"
+      },
       "dsl_rate_down": {
         "name": "DSL-Leitungsrate Download"
       },
