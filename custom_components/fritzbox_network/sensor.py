@@ -69,8 +69,10 @@ from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import (
     FritzNetworkClientEntity,
     FritzNetworkNodeEntity,
+    async_remove_node_client_entities,
     async_setup_client_entities,
     async_setup_node_entities,
+    is_mesh_node,
 )
 from .models import ClientLink, Host, InternetInfo, MeshNode, Radio, VpnConnection
 
@@ -88,15 +90,23 @@ async def async_setup_entry(
     entry: FritzNetworkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
+    async_remove_node_client_entities(hass, entry, "sensor", (KEY_ACCESS_POINT, KEY_LAST_ONLINE))
     async_setup_client_entities(
         entry,
         async_add_entities,
         lambda coordinator, host: [
             FritzNetworkIpAddress(coordinator, host),
             FritzNetworkConnectionType(coordinator, host),
-            FritzNetworkAccessPoint(coordinator, host),
             FritzNetworkOnlineSince(coordinator, host),
-            FritzNetworkLastOnline(coordinator, host),
+            # the box and the repeaters are no clients at an access point, and always on
+            *(
+                []
+                if is_mesh_node(coordinator, host)
+                else [
+                    FritzNetworkAccessPoint(coordinator, host),
+                    FritzNetworkLastOnline(coordinator, host),
+                ]
+            ),
         ],
     )
     # only for devices the box has a connection for, so offline devices get
