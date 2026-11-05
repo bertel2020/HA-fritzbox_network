@@ -132,6 +132,8 @@ export function addressModel({ network, clients, nodes, fixed, own }) {
   const used = usable.filter((c) => c.device);
   const poolCells = cells.filter((c) => c.pool && c.state !== "na");
   const poolUsed = poolCells.filter((c) => c.device).length;
+  // the lowest address of the range that nobody has and nothing holds back
+  const firstFree = poolCells.find((c) => c.state === "free")?.n ?? null;
   const first = usable[0]?.n ?? 1;
   const last = usable[usable.length - 1]?.n ?? 254;
 
@@ -158,6 +160,7 @@ export function addressModel({ network, clients, nodes, fixed, own }) {
     reservedFree: cells.filter((c) => c.state === "res" || c.state === "hold" || c.state === "ext").length,
     poolSize: poolCells.length,
     poolUsed,
+    firstFree,
     wider: prefix < 24,
     first,
     last,
@@ -414,6 +417,12 @@ function usageTile(m, a) {
   return `<div class="tile wide"><span class="label">${escapeHtml(a.tiles.usage)}</span><b>${escapeHtml(fill(a.tiles.usedValue, { used: m.used, total: m.usable }))}</b>${bar}<small>${escapeHtml(sub)}</small></div>`;
 }
 
+/** The text under the range: how much is used and free, and the first address that is free. */
+export function poolSub(m, a, percent) {
+  const text = fill(a.tiles.poolSub, { n: m.poolSize, used: m.poolUsed, free: m.poolSize - m.poolUsed, percent });
+  return m.firstFree === null ? text : `${text} · ${fill(a.tiles.poolFirstFree, { ip: `${m.baseText}${m.firstFree}` })}`;
+}
+
 function tiles(m, t) {
   const a = t.addr;
   const percent = m.poolSize ? Math.round((m.poolUsed / m.poolSize) * 100) : 0;
@@ -423,7 +432,7 @@ function tiles(m, t) {
   return `<div class="tiles atiles">
     ${tile(a.tiles.net, `${m.baseText}0/${m.prefix}`, fill(a.tiles.mask, { mask: m.mask }))}
     ${tile(a.tiles.gateway, m.gateway ?? "–", fill(a.tiles.gatewaySub, { name: m.gatewayName, dhcp: m.dhcp ? a.on : a.off }))}
-    ${tile(a.tiles.pool, m.hasPool ? `.${m.poolFrom} – .${m.poolTo}` : a.tiles.noPool, m.hasPool ? fill(a.tiles.poolSub, { n: m.poolSize, used: m.poolUsed, free: m.poolSize - m.poolUsed, percent }) : "", m.hasPool ? meter(m.poolUsed / (m.poolSize || 1), percent >= 80 ? "var(--warn)" : "var(--accent)") : "")}
+    ${tile(a.tiles.pool, m.hasPool ? `.${m.poolFrom} – .${m.poolTo}` : a.tiles.noPool, m.hasPool ? poolSub(m, a, percent) : "", m.hasPool ? meter(m.poolUsed / (m.poolSize || 1), percent >= 80 ? "var(--warn)" : "var(--accent)") : "")}
     ${usageTile(m, a)}
   </div>`;
 }

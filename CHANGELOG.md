@@ -15,6 +15,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Seitenpanel, Funk-Check: Jeder Access Point zeigt neben der Firmware die Mesh-Version.
 - Seitenpanel, Funk-Check: Jedes Funkmodul nennt den Netzwerknamen (SSID) und die Verschlüsselung (WPA2, WPA3, WPA2/WPA3).
 - Seitenpanel, Geräteseite: Der **Hostname** des Geräts steht unter den Angaben, wo er etwas anderes sagt als der Name.
+- Seitenpanel, Adressraum: Die Kachel des DHCP-Bereichs nennt die **erste freie Adresse** im Bereich.
 
 ### Geändert
 

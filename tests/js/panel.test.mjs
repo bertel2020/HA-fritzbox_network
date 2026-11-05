@@ -882,6 +882,12 @@ test("the model sorts the addresses of the /24 by what they are", () => {
   assert.equal(m.poolUsed, 2);
   assert.equal(m.free, 254 - 5 - 1);
   assert.deepEqual(m.zones.map((z) => [z.id, z.from, z.to]), [["low", 1, 99], ["pool", 100, 200], ["high", 201, 254]]);
+  // the first free address of the range: free, in the range, and nothing free below it
+  assert.equal(m.cells[m.firstFree].state, "free");
+  assert.ok(m.firstFree >= 100 && m.firstFree <= 200);
+  assert.ok(m.cells.slice(100, m.firstFree).every((c) => c.state !== "free"));
+  assert.match(addresses.poolSub(m, t.addr, 3), new RegExp(`erste freie: 192\\.168\\.79\\.${m.firstFree}$`));
+  assert.doesNotMatch(addresses.poolSub({ ...m, firstFree: null }, t.addr, 3), /erste freie/);
 });
 
 test("a network smaller than a /24 leaves the rest unusable, a missing gateway still finds the network", () => {
