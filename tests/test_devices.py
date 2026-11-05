@@ -569,3 +569,16 @@ async def test_a_repeater_gets_no_client_switches(hass, fake_client, entry):
     assert registry.async_get(f"sensor.fritz_{node}_ip_address") is not None
     # a client still has them
     assert registry.async_get("switch.fritz_020000000003_internet_access")
+
+
+async def test_the_ip_address_tells_where_it_comes_from(hass, fake_client, entry):
+    fake_client.network = {**fake_client.network, "pool_from": "192.0.2.1", "pool_to": "192.0.2.4"}
+    await _setup(hass, entry)
+
+    inside = next(h for h in fake_client.hosts if h.ip == "192.0.2.3")
+    outside = next(h for h in fake_client.hosts if h.ip == "192.0.2.8")
+    for host, expected in ((inside, True), (outside, False)):
+        state = hass.states.get(f"sensor.fritz_{host.mac.replace(':', '').lower()}_ip_address")
+        assert state.attributes["in_dhcp_range"] is expected
+        assert state.attributes["guest"] is host.guest
+        assert state.attributes["interface"] == host.interface_type

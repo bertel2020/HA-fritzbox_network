@@ -6,6 +6,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 import ipaddress
+from typing import Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -398,6 +399,28 @@ class FritzNetworkIpAddress(FritzNetworkClientEntity, SensorEntity):
     @property
     def native_value(self) -> str | None:
         return host.ip if (host := self.host) else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        if (host := self.host) is None:
+            return None
+        return {
+            "in_dhcp_range": self._in_dhcp_range(host),
+            "guest": host.guest,
+            "vpn": host.vpn,
+            "interface": host.interface_type,
+            "port": host.port,
+            "hostname": host.hostname,
+        }
+
+    def _in_dhcp_range(self, host: Host) -> bool | None:
+        """Whether the address lies in the range the box hands out; None where it is not known."""
+        if (pool := self.coordinator.data.dhcp_pool) is None or not host.ip:
+            return None
+        try:
+            return pool[0] <= int(ipaddress.IPv4Address(host.ip)) <= pool[1]
+        except ipaddress.AddressValueError:
+            return None
 
 
 class FritzNetworkVendor(FritzNetworkClientEntity, SensorEntity):
