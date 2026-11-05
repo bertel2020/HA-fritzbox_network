@@ -203,7 +203,9 @@ async def test_a_device_is_changed_at_the_box_without_any_entity(
         ("priority", True, ("priority", ip, True)),
         ("filter_profile", "filtprof2", ("profile", ip, "filtprof2")),
     ):
-        result = await _call(client, ACTION, entry_id=entry.entry_id, mac=LAN, action=action, value=value)
+        result = await _call(
+            client, ACTION, entry_id=entry.entry_id, mac=LAN, action=action, value=value
+        )
         assert result["success"], result
         assert call in fake_client.calls
     result = await _call(client, ACTION, entry_id=entry.entry_id, mac=LAN, action="wake_on_lan")
@@ -226,7 +228,12 @@ async def test_a_device_action_refuses_unknown_values_devices_and_missing_rights
     )
     assert not not_a_switch["success"]
     unknown_device = await _call(
-        client, ACTION, entry_id=entry.entry_id, mac="02:99:99:99:99:99", action="priority", value=True
+        client,
+        ACTION,
+        entry_id=entry.entry_id,
+        mac="02:99:99:99:99:99",
+        action="priority",
+        value=True,
     )
     assert unknown_device["error"]["code"] == "not_found"
 
