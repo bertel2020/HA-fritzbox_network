@@ -276,6 +276,8 @@ class NetworkData:
     firmware: FirmwareInfo | None = None
     # the WireGuard connections; None where the box does not tell them
     vpn: list[VpnConnection] | None = None
+    # first and last address of the range the DHCP server hands out, as numbers
+    dhcp_pool: tuple[int, int] | None = None
 
 
 def _text(item: ET.Element, tag: str) -> str | None:
@@ -516,6 +518,18 @@ def parse_network(result: dict[str, Any]) -> dict[str, Any] | None:
         "pool_to": _address(result.get("NewMaxAddress")),
         "reserved": split(result.get("NewReservedAddresses")),
     }
+
+
+def dhcp_pool_of(network: dict[str, Any] | None) -> tuple[int, int] | None:
+    """The DHCP range of ``parse_network`` as two numbers; None if the server is off."""
+    if not network or not network.get("dhcp"):
+        return None
+    try:
+        first = int(ipaddress.IPv4Address(network["pool_from"]))
+        last = int(ipaddress.IPv4Address(network["pool_to"]))
+    except (ipaddress.AddressValueError, TypeError):
+        return None
+    return (first, last) if first <= last else None
 
 
 def check_address_range(network: dict[str, Any], first: str, last: str) -> str | None:

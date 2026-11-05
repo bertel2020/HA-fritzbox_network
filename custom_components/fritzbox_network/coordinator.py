@@ -69,6 +69,7 @@ from .models import (
     MeshTopology,
     NetworkData,
     VpnConnection,
+    dhcp_pool_of,
     parse_firmware,
     parse_internet,
     parse_vpn,
@@ -142,6 +143,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._guest_override: tuple[bool, float] | None = None
         # the firmware offer of the box, asked for now and then
         self._firmware: FirmwareInfo | None = None
+        # the DHCP range of the box, asked for now and then
+        self._dhcp_pool: tuple[int, int] | None = None
         # since when the noise margin of the DSL line has been below the limit
         self.internet_low_margin_since: datetime | None = None
         self.internet_samples: deque[tuple[float, float, float]] = deque(maxlen=INTERNET_HISTORY)
@@ -190,6 +193,18 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             return
         if offer is not None:
             self._firmware = offer
+
+    def _fetch_dhcp_pool(self) -> None:
+        """The DHCP range, now and then; what was known stays if the box does not answer."""
+        if self._polls % FIRMWARE_REFRESH_POLLS:
+            return
+        try:
+            network = self.client.get_network()
+        except (*_FETCH_ERRORS, TypeError) as err:
+            _LOGGER.debug("DHCP range unavailable: %s", err)
+            return
+        if network is not None:
+            self._dhcp_pool = dhcp_pool_of(network)
 
     def _fetch_vpn(self) -> list[VpnConnection] | None:
         """The WireGuard connections; what was known stays if the box does not answer.
@@ -250,6 +265,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         guest = self._fetch_guest_wifi()
         vpn = self._fetch_vpn()
         self._fetch_firmware()
+        self._fetch_dhcp_pool()
         self._polls += 1
         return hosts, mesh, internet, guest, vpn
 
@@ -289,6 +305,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             guest_wifi=self._apply_guest_override(guest),
             firmware=self._firmware,
             vpn=vpn,
+            dhcp_pool=self._dhcp_pool,
         )
 
     def _record_history(self, selected: dict[str, Host], mesh: MeshTopology | None) -> None:
@@ -620,15 +637,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._overrides[(mac, attr)] = (value, time.monotonic() + WAN_OVERRIDE_SECONDS)
         hosts = dict(self.data.hosts)
         self._apply_overrides(hosts)
-        self.async_set_updated_data(
-            NetworkData(
-                hosts=hosts,
-                mesh=self.data.mesh,
-                internet=self.data.internet,
-                guest_wifi=self.data.guest_wifi,
-                firmware=self.data.firmware,
-            )
-        )
+        self.async_set_updated_data(replace(self.data, hosts=hosts))
         await self.async_request_refresh()
 
     async def async_set_name(self, host: Host, name: str) -> None:

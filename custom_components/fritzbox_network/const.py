@@ -122,6 +122,7 @@ KEY_DSL_CRC_ERRORS = "dsl_crc_errors"
 KEY_LAST_UPDATE = "last_update"
 KEY_FAILED_POLLS = "failed_polls"
 KEY_MESH_STATUS = "mesh_status"
+KEY_DHCP_POOL = "dhcp_pool"
 KEY_REFRESH = "refresh"
 
 # Keys of the Wi-Fi radio sensors of an access point; the band is added to the unique id.

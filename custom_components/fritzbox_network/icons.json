@@ -41,6 +41,9 @@
       "failed_polls": {
         "default": "mdi:alert-circle-outline"
       },
+      "dhcp_pool": {
+        "default": "mdi:ip-network"
+      },
       "mesh_status": {
         "default": "mdi:lan",
         "state": {

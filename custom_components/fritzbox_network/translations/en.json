@@ -120,6 +120,9 @@
       "failed_polls": {
         "name": "Failed polls"
       },
+      "dhcp_pool": {
+        "name": "DHCP range in use"
+      },
       "mesh_status": {
         "name": "Mesh status",
         "state": {

@@ -120,6 +120,9 @@
       "failed_polls": {
         "name": "Fehlgeschlagene Abfragen"
       },
+      "dhcp_pool": {
+        "name": "DHCP-Bereich belegt"
+      },
       "mesh_status": {
         "name": "Mesh-Status",
         "state": {

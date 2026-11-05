@@ -528,3 +528,25 @@ def test_the_byte_counters_prefer_the_64_bit_ones_of_the_add_on_info():
     info = parse_internet(INTERNET_FAST, INTERNET_SLOW)
     assert (info.bytes_sent, info.bytes_received) == (1_000_000, 5_000_000)
     assert parse_internet({"GetStatusInfo": status}, {}).bytes_sent is None
+
+
+async def test_the_load_of_the_dhcp_range_counts_the_devices_online_in_it(hass, fake_client, entry):
+    fake_client.network = {**fake_client.network, "pool_from": "192.0.2.1", "pool_to": "192.0.2.10"}
+    await _setup(hass, entry)
+
+    used = sum(
+        h.active and h.ip is not None and h.ip.startswith("192.0.2.") and int(h.ip[8:]) <= 10
+        for h in fake_client.hosts
+    )
+    assert used
+    state = hass.states.get("sensor.fritz_network_dhcp_pool")
+    assert float(state.state) == used * 10
+    assert state.attributes["addresses_in_use"] == used
+    assert state.attributes["addresses_in_range"] == 10
+
+
+async def test_there_is_no_dhcp_load_where_the_server_is_off(hass, fake_client, entry):
+    fake_client.network = {**fake_client.network, "dhcp": False}
+    await _setup(hass, entry)
+
+    assert hass.states.get("sensor.fritz_network_dhcp_pool") is None

@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
+import ipaddress
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -35,6 +36,7 @@ from .const import (
     KEY_DEVICES_OFFLINE,
     KEY_DEVICES_ONLINE,
     KEY_DEVICES_TOTAL,
+    KEY_DHCP_POOL,
     KEY_DSL_ATTENUATION_DOWN,
     KEY_DSL_ATTENUATION_UP,
     KEY_DSL_CRC_ERRORS,
@@ -160,6 +162,28 @@ async def async_setup_entry(
     )
     _async_setup_internet(coordinator, entry, async_add_entities)
     _async_setup_vpn(coordinator, entry, async_add_entities)
+    _async_setup_dhcp_pool(coordinator, entry, async_add_entities)
+
+
+@callback
+def _async_setup_dhcp_pool(
+    coordinator: FritzNetworkCoordinator,
+    entry: FritzNetworkConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    """The load of the DHCP range, once the box has told its range."""
+    added = False
+
+    @callback
+    def _add() -> None:
+        nonlocal added
+        if added or coordinator.data.dhcp_pool is None:
+            return
+        added = True
+        async_add_entities([FritzNetworkDhcpPool(coordinator)])
+
+    _add()
+    entry.async_on_unload(coordinator.async_add_listener(_add))
 
 
 @callback
@@ -749,6 +773,46 @@ class FritzNetworkMeshStatus(_BoxDiagnostic):
     @property
     def native_value(self) -> str:
         return MESH_AVAILABLE if self.coordinator.data.mesh else MESH_UNAVAILABLE
+
+
+class FritzNetworkDhcpPool(_BoxSensor):
+    """How much of the DHCP range of the box is in use: the devices online with an address in it."""
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_suggested_display_precision = 0
+
+    def __init__(self, coordinator: FritzNetworkCoordinator) -> None:
+        super().__init__(coordinator, KEY_DHCP_POOL)
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.coordinator.data.dhcp_pool is not None
+
+    def _used(self) -> int:
+        first, last = self.coordinator.data.dhcp_pool
+        count = 0
+        for host in self.coordinator.all_hosts.values():
+            if not host.active or not host.ip:
+                continue
+            try:
+                count += first <= int(ipaddress.IPv4Address(host.ip)) <= last
+            except ipaddress.AddressValueError:
+                continue
+        return count
+
+    @property
+    def native_value(self) -> float | None:
+        if (pool := self.coordinator.data.dhcp_pool) is None:
+            return None
+        return round(100 * self._used() / (pool[1] - pool[0] + 1), 1)
+
+    @property
+    def extra_state_attributes(self) -> dict[str, int] | None:
+        if (pool := self.coordinator.data.dhcp_pool) is None:
+            return None
+        return {"addresses_in_use": self._used(), "addresses_in_range": pool[1] - pool[0] + 1}
 
 
 VPN_STATE_CONNECTED = "connected"
