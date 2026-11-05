@@ -95,6 +95,11 @@ class Radio:
     channel: int | None = None
     utilization: int | None = None
     noise_dbm: int | None = None
+    ssid: str | None = None
+    channel_width: str | None = None
+    security: str | None = None
+    # whether the radio also carries the guest network
+    guest: bool = False
 
 
 @dataclass
@@ -108,6 +113,7 @@ class MeshNode:
     firmware: str | None
     role: str
     macs: frozenset[str] = frozenset()
+    meshd_version: str | None = None
     radios: dict[str, Radio] = field(default_factory=dict)
 
 
@@ -373,24 +379,36 @@ def _int(value: Any) -> int | None:
     return value if isinstance(value, int) and not isinstance(value, bool) else None
 
 
+def _text_or_none(value: Any) -> str | None:
+    return value if isinstance(value, str) and value else None
+
+
 def _radios(node: dict[str, Any]) -> dict[str, Radio]:
     """The radios a node offers its own network on, by band.
 
     The guest network is a second interface on the same radio and says the same.
     """
     radios: dict[str, Radio] = {}
-    for interface in _dicts(node.get("node_interfaces")):
+    interfaces = [i for i in _dicts(node.get("node_interfaces")) if i.get("type") == "WLAN"]
+    for interface in interfaces:
         band = _band(interface)
-        if interface.get("type") != "WLAN" or interface.get("opmode") != "AP" or band is None:
+        if interface.get("opmode") != "AP" or band is None:
             continue
+        info = interface.get("current_channel_info") or {}
         radios.setdefault(
             band,
             Radio(
                 channel=_int(interface.get("current_channel")),
                 utilization=_int(interface.get("channel_utilization")),
                 noise_dbm=_int(interface.get("anpi")),
+                ssid=_text_or_none(interface.get("ssid")),
+                channel_width=_text_or_none(info.get("channel_width")),
+                security=_text_or_none(interface.get("security")),
             ),
         )
+    for interface in interfaces:
+        if interface.get("opmode") == "AP_GUEST" and (radio := radios.get(_band(interface) or "")):
+            radio.guest = True
     return radios
 
 
@@ -444,6 +462,7 @@ def parse_mesh(raw: str | bytes) -> MeshTopology:
                     if m
                 ),
                 radios=_radios(node),
+                meshd_version=_text_or_none(node.get("meshd_version")),
             )
 
     seen_links: set[str] = set()

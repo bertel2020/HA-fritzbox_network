@@ -356,3 +356,22 @@ def test_the_band_of_a_wifi_interface_is_decided_by_the_devices_seen_on_it():
     assert decide_band({"5ghz": 3, "2_4ghz": 2}) is None  # mixed: no answer
     assert decide_band({"5ghz": 1}) is None  # one device is too little
     assert decide_band({}) is None
+
+
+def test_the_radios_tell_network_name_width_security_and_the_guest_network():
+    mesh = parse_mesh((FIXTURES / "mesh.json").read_text())
+
+    box = mesh.master
+    assert box.meshd_version == "8.207"
+    assert box.radios["5ghz"].ssid == "name-16"
+    assert box.radios["5ghz"].channel_width == "160 MHz"
+    assert box.radios["5ghz"].security == "WPA2PSK"
+    assert box.radios["2_4ghz"].channel_width == "40 MHz"
+    assert box.radios["5ghz"].guest and box.radios["2_4ghz"].guest
+    # a radio without a guest network says so
+    node = {
+        "node_interfaces": [
+            {"type": "WLAN", "opmode": "AP", "current_channel_info": {"primary_freq": 5180000}}
+        ]
+    }
+    assert _radios(node)["5ghz"].guest is False
