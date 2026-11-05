@@ -12,7 +12,7 @@ rules:
   docs-actions: done
   docs-high-level-description: done
   docs-installation-instructions: done
-  docs-removal-instructions: todo
+  docs-removal-instructions: done
   entity-event-setup: done
   entity-unique-id: done
   has-entity-name: done
@@ -37,14 +37,16 @@ rules:
   discovery-update-info:
     status: exempt
     comment: No discovery.
-  discovery: todo
+  discovery:
+    status: exempt
+    comment: The box is reached by an address the user enters; no discovery is offered yet.
   docs-data-update: done
   docs-examples: done
-  docs-known-limitations: todo
-  docs-supported-devices: todo
+  docs-known-limitations: done
+  docs-supported-devices: done
   docs-supported-functions: done
   docs-troubleshooting: done
-  docs-use-cases: todo
+  docs-use-cases: done
   dynamic-devices: done
   entity-category: done
   entity-device-class: done

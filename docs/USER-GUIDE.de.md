@@ -11,6 +11,7 @@ Die Integration arbeitet lokal mit der FRITZ!Box und baut keine Internetverbindu
 - [Voraussetzungen auf der FRITZ!Box](#voraussetzungen-auf-der-fritzbox)
 - [Installation](#installation)
 - [Update](#update)
+- [Entfernen](#entfernen)
 - [Optionen](#optionen)
 - [Entitäten](#entitäten)
 - [Namen und Entity-IDs](#namen-und-entity-ids)
@@ -21,6 +22,9 @@ Die Integration arbeitet lokal mit der FRITZ!Box und baut keine Internetverbindu
 - [Zusammen mit der Core-Integration](#zusammen-mit-der-core-integration)
 - [Datenschutz und Sicherheit](#datenschutz-und-sicherheit)
 - [Markenhinweis](#markenhinweis)
+- [Unterstützte Geräte](#unterstützte-geräte)
+- [Anwendungsfälle](#anwendungsfälle)
+- [Bekannte Einschränkungen](#bekannte-einschränkungen)
 - [Fehlerbehebung](#fehlerbehebung)
 - [Entwicklung und Tests](#entwicklung-und-tests)
 - [Änderungsverlauf](../CHANGELOG.md)
@@ -64,6 +68,13 @@ Host (Standard `192.168.178.1`), Benutzer und Kennwort eingeben, optional Port u
 ## Update
 
 Über HACS aktualisieren und Home Assistant neu starten. Die Entity-IDs ändern sich dabei nicht.
+
+## Entfernen
+
+1. Automationen, Dashboards und Blueprints entfernen, die Entitäten der Integration nutzen.
+2. **Einstellungen → Geräte & Dienste → FRITZ!Box Netzwerk → ⋮ → Löschen.** Geräte und Entitäten des Eintrags verschwinden damit.
+3. In HACS: **FRITZ!Box Netzwerk → ⋮ → Entfernen**, danach Home Assistant neu starten. Bei manueller Installation den Ordner `custom_components/fritzbox_network` löschen.
+4. Optional: den Ordner `/config/fritzbox_captures` (Mitschnitte) und in der FRITZ!Box den für die Integration angelegten Benutzer löschen.
 
 ## Optionen
 
@@ -333,6 +344,29 @@ Automationen, die auf Core-Entity-IDs verweisen, musst du auf die neuen IDs umst
 Die Integration enthält ein eigenes Symbol im von Home Assistant unterstützten lokalen Verzeichnis `custom_components/fritzbox_network/brand/`, aber keine Marken oder Logos von AVM.
 
 > **Markenhinweis:** Dieses Projekt ist eine unabhängige, inoffizielle Integration und steht in keiner Verbindung zu AVM bzw. der FRITZ! GmbH. FRITZ!, FRITZ!Box und FRITZ!OS sind geschützte Marken ihrer jeweiligen Inhaber. „Home Assistant“ ist eine Marke der Open Home Foundation.
+
+## Unterstützte Geräte
+
+- **FRITZ!Box**-Router mit eingeschaltetem TR-064 (siehe Voraussetzungen). Weitere Funktionen (Mesh, WireGuard, Adressvergabe, Mitschnitt) brauchen ein aktuelles FRITZ!OS und entfallen, wo die Box sie nicht anbietet.
+- **FRITZ!Repeater** und andere Mesh-Zugangspunkte, solange die Box sie in ihrem Mesh listet.
+- Nicht unterstützt: ein Repeater als Ziel der Einrichtung (mit dem Mesh-Master verbinden) und Router anderer Hersteller.
+
+## Anwendungsfälle
+
+- Anwesenheit: ein Gerätetracker je Netzwerkgerät, per MAC-Adresse, für Automationen wie „Licht aus, wenn das letzte Handy geht".
+- Kindersicherung: den Internetzugang eines Geräts per Schalter nach Zeitplan sperren.
+- Wake on LAN: PC oder Server aus einem Dashboard oder einer Automation starten.
+- Leitungswache: Internetausfall, geänderte externe Adresse oder verlorenen Repeater über Sensoren und Reparaturen bemerken und per Blueprint benachrichtigt werden.
+- Diagnose: Funk-Check, Topologie, Mitschnitt und Verbindungsprüfung im Seitenpanel.
+
+## Bekannte Einschränkungen
+
+- Die Daten kommen per Abfrage (Standard alle 30 Sekunden); eine Änderung erscheint daher verzögert. Die Box meldet manche Änderungen selbst erst nach etwa einer Minute.
+- Der Internetzugang lässt sich nur für Geräte mit IPv4-Adresse sperren; die Box sperrt nach Adresse.
+- Was über TR-064 hinausgeht (VPN, Adressvergabe, Mitschnitt), wird aus der Weboberfläche der Box gelesen. AVM kann sie mit einem FRITZ!OS-Update ändern; die Entitäten sind dann nicht verfügbar oder bleiben leer, bis die Integration angepasst ist.
+- Private (zufällige) MAC-Adressen gelten nach einem Wechsel als neue Geräte.
+- Einstellungen kann nur ein Benutzer mit dem Recht „FRITZ!Box-Einstellungen" ändern.
+- Nur eine FRITZ!Box je Eintrag; die Core-Integration „AVM FRITZ!Box Tools" ist zu trennen (siehe oben).
 
 ## Fehlerbehebung
 

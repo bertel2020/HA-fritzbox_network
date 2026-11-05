@@ -11,6 +11,7 @@ The integration works locally with the FRITZ!Box and makes no connections to the
 - [Requirements on the FRITZ!Box](#requirements-on-the-fritzbox)
 - [Installation](#installation)
 - [Update](#update)
+- [Removal](#removal)
 - [Options](#options)
 - [Entities](#entities)
 - [Names and entity ids](#names-and-entity-ids)
@@ -21,6 +22,9 @@ The integration works locally with the FRITZ!Box and makes no connections to the
 - [Next to the core integration](#next-to-the-core-integration)
 - [Privacy and security](#privacy-and-security)
 - [Trademark notice](#trademark-notice)
+- [Supported devices](#supported-devices)
+- [Use cases](#use-cases)
+- [Known limitations](#known-limitations)
 - [Troubleshooting](#troubleshooting)
 - [Development and tests](#development-and-tests)
 - [Changelog](../CHANGELOG.en.md)
@@ -64,6 +68,13 @@ Enter the host (default `192.168.178.1`), user and password, optionally the port
 ## Update
 
 Update through HACS and restart Home Assistant. Entity ids do not change.
+
+## Removal
+
+1. Remove automations, dashboards and blueprints that use entities of the integration.
+2. **Settings → Devices & services → FRITZ!Box Network → ⋮ → Delete.** The devices and entities of the entry are removed with it.
+3. In HACS: **FRITZ!Box Network → ⋮ → Remove**, then restart Home Assistant. With a manual installation delete the folder `custom_components/fritzbox_network`.
+4. Optional: delete the folder `/config/fritzbox_captures` (packet captures) and, on the FRITZ!Box, the user you created for the integration.
 
 ## Options
 
@@ -333,6 +344,29 @@ Automations that refer to core entity ids have to be changed to the new ids; the
 The integration ships its own icon in the local directory `custom_components/fritzbox_network/brand/` that Home Assistant supports, but no trademarks or logos of AVM.
 
 > **Trademark notice:** This project is an independent, unofficial integration and not affiliated with AVM or FRITZ! GmbH. FRITZ!, FRITZ!Box and FRITZ!OS are registered trademarks of their respective owners. "Home Assistant" is a trademark of the Open Home Foundation.
+
+## Supported devices
+
+- **FRITZ!Box** routers with TR-064 turned on (see the requirements). Further features (mesh, WireGuard, address assignment, packet capture) need a current FRITZ!OS and are skipped where the box does not offer them.
+- **FRITZ!Repeater** and other mesh access points as long as the box lists them in its mesh.
+- Not supported: a repeater as the target of the setup (connect to the mesh master), and routers of other makers.
+
+## Use cases
+
+- Presence: a device tracker per network device, tracked by MAC address, for automations such as "lights off when the last phone leaves".
+- Parental control: block the internet access of a device on a schedule with the switch.
+- Wake on LAN: start a PC or server from a dashboard or an automation.
+- Line watch: notice an internet outage, a changed external address or a lost repeater from sensors and repairs, and get notified with the blueprints.
+- Diagnosis: Wi-Fi check, topology, packet capture and the connection check from the side panel.
+
+## Known limitations
+
+- The data come by polling (default every 30 seconds), so a change shows up with a delay. The box itself reports some changes only after about a minute.
+- Internet access can only be blocked for devices with an IPv4 address; the box blocks by address.
+- Anything beyond TR-064 (VPN, address assignment, capture) is read from the web interface of the box. AVM can change it with a FRITZ!OS update; the entities then become unavailable or stay empty until the integration is adapted.
+- Private (randomized) MAC addresses count as new devices when they change.
+- Settings can only be changed by a user with the right "FRITZ!Box settings".
+- Only one FRITZ!Box per entry; the core integration "AVM FRITZ!Box Tools" has to be separated (see above).
 
 ## Troubleshooting
 
