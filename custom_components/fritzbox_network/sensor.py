@@ -925,29 +925,58 @@ class FritzNetworkDhcpPool(_BoxSensor):
     def available(self) -> bool:
         return super().available and self.coordinator.data.dhcp_pool is not None
 
-    def _used(self) -> int:
+    def _hosts_in_range(self) -> list[tuple[int, Host]]:
+        """The devices of the box with an address in the range, with the address as a number."""
         first, last = self.coordinator.data.dhcp_pool
-        count = 0
+        found = []
         for host in self.coordinator.all_hosts.values():
-            if not host.active or not host.ip:
+            if not host.ip:
                 continue
             try:
-                count += first <= int(ipaddress.IPv4Address(host.ip)) <= last
+                number = int(ipaddress.IPv4Address(host.ip))
             except ipaddress.AddressValueError:
                 continue
-        return count
+            if first <= number <= last:
+                found.append((number, host))
+        return found
 
     @property
     def native_value(self) -> float | None:
         if (pool := self.coordinator.data.dhcp_pool) is None:
             return None
-        return round(100 * self._used() / (pool[1] - pool[0] + 1), 1)
+        used = sum(host.active for _, host in self._hosts_in_range())
+        return round(100 * used / (pool[1] - pool[0] + 1), 1)
 
     @property
-    def extra_state_attributes(self) -> dict[str, int] | None:
+    def extra_state_attributes(self) -> dict[str, Any] | None:
         if (pool := self.coordinator.data.dhcp_pool) is None:
             return None
-        return {"addresses_in_use": self._used(), "addresses_in_range": pool[1] - pool[0] + 1}
+        size = pool[1] - pool[0] + 1
+        in_range = self._hosts_in_range()
+        taken = {number for number, _ in in_range}
+        used = sum(host.active for _, host in in_range)
+        first_free = next((n for n in range(pool[0], pool[1] + 1) if n not in taken), None)
+        reservations = self.coordinator.ip_reservations
+        network = self.coordinator.network or {}
+        return {
+            "first_address": str(ipaddress.IPv4Address(pool[0])),
+            "last_address": str(ipaddress.IPv4Address(pool[1])),
+            "addresses_in_range": size,
+            "addresses_in_use": used,
+            # known to the box but offline: the box may still keep the address for them
+            "addresses_offline": len(in_range) - used,
+            "addresses_free": size - len(in_range),
+            "first_free_address": (
+                str(ipaddress.IPv4Address(first_free)) if first_free is not None else None
+            ),
+            # only of the devices the box has been asked about so far
+            "fixed_addresses_known": sum(
+                1 for _, host in in_range if reservations.get(host.mac, (0, None))[1] is True
+            ),
+            "subnet_mask": network.get("mask"),
+            "gateway": network.get("gateway"),
+            "reserved_addresses": network.get("reserved") or [],
+        }
 
 
 VPN_STATE_CONNECTED = "connected"

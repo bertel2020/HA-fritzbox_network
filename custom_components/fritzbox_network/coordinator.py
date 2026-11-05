@@ -151,6 +151,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._dhcp_pool: tuple[int, int] | None = None
         # whether the box always gives a device the same address: mac -> (when read, fixed or None)
         self.ip_reservations: dict[str, tuple[float, bool | None]] = {}
+        # the home network as the box described it last: mask, gateway, DHCP range, reserved
+        self.network: dict[str, Any] | None = None
         # the repeaters the box did not list, and since when
         self.repeaters_lost_since: dict[str, datetime] = {}
         # since when the noise margin of the DSL line has been below the limit
@@ -213,6 +215,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             return
         if network is not None:
             self._dhcp_pool = dhcp_pool_of(network)
+            self.network = network
 
     def _fetch_reservations(self, hosts: list[Host]) -> None:
         """Read the fixed-address state of a few devices, the ones never read or read longest ago.

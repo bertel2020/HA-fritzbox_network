@@ -544,6 +544,20 @@ async def test_the_load_of_the_dhcp_range_counts_the_devices_online_in_it(hass, 
     assert state.attributes["addresses_in_use"] == used
     assert state.attributes["addresses_in_range"] == 10
 
+    known = sum(
+        h.ip is not None and h.ip.startswith("192.0.2.") and int(h.ip[8:]) <= 10
+        for h in fake_client.hosts
+    )
+    attributes = state.attributes
+    assert attributes["first_address"] == "192.0.2.1"
+    assert attributes["last_address"] == "192.0.2.10"
+    assert attributes["addresses_offline"] == known - used
+    assert attributes["addresses_free"] == 10 - known
+    assert attributes["first_free_address"] not in {h.ip for h in fake_client.hosts}
+    assert attributes["subnet_mask"] == "255.255.255.0"
+    assert attributes["gateway"] == "192.168.178.1"
+    assert attributes["reserved_addresses"] == []
+
 
 async def test_there_is_no_dhcp_load_where_the_server_is_off(hass, fake_client, entry):
     fake_client.network = {**fake_client.network, "dhcp": False}
