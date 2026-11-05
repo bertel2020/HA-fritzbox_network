@@ -13,6 +13,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 - Neue Option **Wake on LAN auch für WLAN-Geräte** (standardmäßig aus): Sonst gibt es den Wake-on-LAN-Knopf und den Schalter „Automatisch Wake on LAN“ nur für Geräte, die nicht bekanntermaßen am WLAN hängen. Ausschalten entfernt Angelegtes nicht.
 - Seitenpanel, Funk-Check: Jeder Access Point zeigt neben der Firmware die Mesh-Version.
+- Seitenpanel, Funk-Check: Jedes Funkmodul nennt den Netzwerknamen (SSID) und die Verschlüsselung (WPA2, WPA3, WPA2/WPA3).
 
 ### Geändert
 

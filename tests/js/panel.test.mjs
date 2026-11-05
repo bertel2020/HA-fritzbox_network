@@ -1408,3 +1408,16 @@ test("a repeater the box no longer lists is a hint and a finding of the radio ch
   assert.match(html, /Firmware 8\.20 · Mesh 8\.207/);
   assert.match(html, /Kanal 36 · 160 MHz · Rauschen -95 dBm · 0 Geräte · Gästenetz/);
 });
+
+test("the radio line names the network and the encryption as people say it", () => {
+  assert.equal(radioPage.securityLabel("WPA2PSK"), "WPA2");
+  assert.equal(radioPage.securityLabel("WPA2_WPA3_MIXED"), "WPA2/WPA3");
+  assert.equal(radioPage.securityLabel("UNDEFINED"), "");
+  assert.equal(radioPage.securityLabel(null), "");
+  assert.equal(radioPage.securityLabel("WEIRD"), "WEIRD");
+  const data = {
+    nodes: [{ mac: "aa", name: "Box", role: "master", radios: { "5ghz": { channel: 36, utilization: 5, noise_dbm: -95, ssid: "Zuhause", channel_width: "160 MHz", security: "WPA2_WPA3_MIXED" } } }],
+    clients: [],
+  };
+  assert.match(radioPage.renderRadio(data, { t, language: "de" }), /Zuhause · Kanal 36 · 160 MHz · WPA2\/WPA3 · Rauschen -95 dBm · 0 Geräte/);
+});

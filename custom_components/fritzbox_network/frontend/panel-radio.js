@@ -8,6 +8,14 @@ import { UPLINK_WEAK_DBM } from "./panel-hints.js";
 // a radio this busy slows every device on it down
 export const VERY_BUSY_UTILIZATION = 85;
 
+const SECURITY = { WPA2PSK: "WPA2", WPA3SAE: "WPA3", WPA2_WPA3_MIXED: "WPA2/WPA3", WPAPSK: "WPA", OPEN: "open", NONE: "open" };
+
+/** The encryption as people say it ("WPA2PSK" is "WPA2"); what the box names but we do not know stays as it is. */
+export function securityLabel(raw) {
+  if (typeof raw !== "string" || !raw || raw === "UNDEFINED") return "";
+  return SECURITY[raw] ?? raw;
+}
+
 /** "ok", "warn" or "bad" for the load of a radio; "ok" where the box tells no load. */
 export function utilizationLevel(percent) {
   if (typeof percent !== "number") return "ok";
@@ -32,6 +40,8 @@ export function radioCheck(data) {
         utilization: radio.utilization ?? null,
         noise: radio.noise_dbm ?? null,
         width: radio.channel_width ?? null,
+        ssid: radio.ssid ?? null,
+        security: securityLabel(radio.security),
         guest: radio.guest === true,
         devices: on.length,
         weak: on.filter((c) => isWeak(c)).length,
@@ -68,8 +78,10 @@ function uplinkText(node, t, language) {
 function radioLine(radio, t) {
   const r = t.diag.radio;
   const parts = [
+    radio.ssid ?? "",
     radio.channel !== null ? fill(r.channel, { n: radio.channel }) : "",
     radio.width ? radio.width : "",
+    radio.security,
     radio.noise !== null ? fill(r.noise, { dbm: radio.noise }) : "",
     fill(r.devices, { n: radio.devices }),
     radio.weak ? fill(r.weak, { n: radio.weak }) : "",
