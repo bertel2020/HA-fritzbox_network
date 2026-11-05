@@ -58,6 +58,7 @@ from .const import (
     KEY_LAST_UPDATE,
     KEY_LINK_RATE_DOWNLOAD,
     KEY_LINK_RATE_UPLOAD,
+    KEY_MESH_NODES,
     KEY_MESH_STATUS,
     KEY_ONLINE_SINCE,
     KEY_RADIO_CHANNEL,
@@ -173,6 +174,7 @@ async def async_setup_entry(
             FritzNetworkDevicesOnline(coordinator),
             FritzNetworkDevicesOffline(coordinator),
             FritzNetworkDevicesTotal(coordinator),
+            FritzNetworkMeshNodes(coordinator),
             FritzNetworkLastUpdate(coordinator),
             FritzNetworkFailedPolls(coordinator),
             FritzNetworkMeshStatus(coordinator),
@@ -864,6 +866,34 @@ class FritzNetworkFailedPolls(_BoxDiagnostic):
     @property
     def native_value(self) -> int:
         return self.coordinator.failed_polls
+
+
+class FritzNetworkMeshNodes(_BoxSensor):
+    """How many access points the mesh has, the box itself included.
+
+    A repeater the box stops listing makes it drop, and the attributes name it.
+    """
+
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: FritzNetworkCoordinator) -> None:
+        super().__init__(coordinator, KEY_MESH_NODES)
+
+    @property
+    def native_value(self) -> int | None:
+        mesh = self.coordinator.data.mesh
+        return len(mesh.nodes) if mesh else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        mesh = self.coordinator.data.mesh
+        if mesh is None:
+            return None
+        return {
+            "repeaters": sum(n.role != "master" for n in mesh.nodes.values()),
+            "lost_repeaters": [name for _, name in self.coordinator.lost_repeaters()],
+        }
 
 
 class FritzNetworkMeshStatus(_BoxDiagnostic):

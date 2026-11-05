@@ -358,3 +358,43 @@ async def test_a_repeater_is_connected_to_the_mesh_until_the_box_stops_listing_i
     await coordinator.async_refresh()
     await hass.async_block_till_done()
     assert hass.states.get(f"binary_sensor.fritz_{repeater}_mesh_connected").state == "unknown"
+
+
+async def test_a_repeater_the_box_stops_listing_is_counted_and_a_repair_after_a_while(
+    hass, fake_client, entry
+):
+    from datetime import timedelta
+
+    from homeassistant.helpers import issue_registry as ir
+    from homeassistant.util import dt as dt_util
+
+    from .conftest import REPEATER
+
+    coordinator = await _setup(hass, entry)
+    nodes = dict(fake_client.mesh.nodes)
+    state = hass.states.get("sensor.fritz_network_mesh_nodes")
+    assert state.state == str(len(nodes))
+    assert state.attributes["repeaters"] == 1
+    assert state.attributes["lost_repeaters"] == []
+
+    fake_client.mesh.nodes = {uid: n for uid, n in nodes.items() if n.mac != REPEATER}
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    state = hass.states.get("sensor.fritz_network_mesh_nodes")
+    assert state.state == str(len(nodes) - 1)
+    assert state.attributes["lost_repeaters"] == ["FRITZ!Repeater 1200 AX"]
+    issue = f"mesh_repeater_lost_{entry.entry_id}"
+    registry = ir.async_get(hass)
+    # not at once: a repeater that restarts is gone for a few minutes
+    assert registry.async_get_issue("fritzbox_network", issue) is None
+
+    coordinator.repeaters_lost_since[REPEATER] = dt_util.utcnow() - timedelta(minutes=11)
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert registry.async_get_issue("fritzbox_network", issue) is not None
+
+    fake_client.mesh.nodes = nodes
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert registry.async_get_issue("fritzbox_network", issue) is None
+    assert coordinator.repeaters_lost_since == {}

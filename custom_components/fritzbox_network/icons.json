@@ -54,6 +54,9 @@
       "dhcp_pool": {
         "default": "mdi:ip-network"
       },
+      "mesh_nodes": {
+        "default": "mdi:router-network"
+      },
       "mesh_status": {
         "default": "mdi:lan",
         "state": {

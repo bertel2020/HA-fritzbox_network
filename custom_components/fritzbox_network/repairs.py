@@ -24,6 +24,7 @@ from .const import (
     INTERNET_LOW_MARGIN_SECONDS,
     INTERNET_RECONNECTS_WARN,
     KEY_LAST_ONLINE,
+    MESH_REPEATER_LOST_SECONDS,
 )
 from .coordinator import FritzNetworkConfigEntry
 from .models import Host
@@ -31,6 +32,7 @@ from .models import Host
 ISSUE_STALE_DEVICES = "stale_devices"
 ISSUE_INTERNET_LINE = "internet_line"
 ISSUE_INTERNET_RECONNECTS = "internet_reconnects"
+ISSUE_MESH_REPEATER_LOST = "mesh_repeater_lost"
 
 
 def last_online(hass: HomeAssistant, host: Host) -> datetime | None:
@@ -85,6 +87,49 @@ async def async_update_stale_issue(hass: HomeAssistant, entry: FritzNetworkConfi
 
 def async_remove_stale_issue(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
     ir.async_delete_issue(hass, DOMAIN, f"{ISSUE_STALE_DEVICES}_{entry.entry_id}")
+
+
+@callback
+def async_remove_mesh_issue(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
+    ir.async_delete_issue(hass, DOMAIN, f"{ISSUE_MESH_REPEATER_LOST}_{entry.entry_id}")
+
+
+@callback
+def async_update_mesh_issue(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
+    """Raise a repair for a repeater the box has not listed for a while, remove it when it is back.
+
+    Not at once: a repeater that restarts or updates is gone for a few minutes. A repeater that is
+    meant to be gone is removed as a device by hand, which also takes the repair away.
+    """
+    coordinator = entry.runtime_data
+    now = dt_util.utcnow()
+    lost = dict(coordinator.lost_repeaters())
+    since = coordinator.repeaters_lost_since
+    for mac in [m for m in since if m not in lost]:
+        del since[mac]
+    for mac in lost:
+        since.setdefault(mac, now)
+    names = sorted(
+        (
+            name
+            for mac, name in lost.items()
+            if (now - since[mac]).total_seconds() >= MESH_REPEATER_LOST_SECONDS
+        ),
+        key=str.lower,
+    )
+    issue_id = f"{ISSUE_MESH_REPEATER_LOST}_{entry.entry_id}"
+    if not names:
+        ir.async_delete_issue(hass, DOMAIN, issue_id)
+        return
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        issue_id,
+        is_fixable=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key=ISSUE_MESH_REPEATER_LOST,
+        translation_placeholders={"count": str(len(names)), "names": ", ".join(names)},
+    )
 
 
 @callback

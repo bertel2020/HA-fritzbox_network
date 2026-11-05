@@ -70,6 +70,8 @@ INTERNET_ADDRESSES_KEPT = 20
 INTERNET_NOISE_WARN_DB = 10
 INTERNET_LOW_MARGIN_SECONDS = 3600
 INTERNET_RECONNECTS_WARN = 5
+# a repeater the box does not list for this long is a repair: a restart or an update is shorter
+MESH_REPEATER_LOST_SECONDS = 600
 
 EVENT_DEVICE_RENAMED = f"{DOMAIN}_device_renamed"
 EVENT_NEW_DEVICE = f"{DOMAIN}_new_device"
@@ -127,6 +129,7 @@ KEY_LAST_UPDATE = "last_update"
 KEY_FAILED_POLLS = "failed_polls"
 KEY_MESH_STATUS = "mesh_status"
 KEY_DHCP_POOL = "dhcp_pool"
+KEY_MESH_NODES = "mesh_nodes"
 KEY_ADDRESS_ASSIGNMENT = "address_assignment"
 KEY_REFRESH = "refresh"
 

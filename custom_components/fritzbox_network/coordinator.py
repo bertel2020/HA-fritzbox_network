@@ -149,6 +149,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._dhcp_pool: tuple[int, int] | None = None
         # whether the box always gives a device the same address: mac -> (when read, fixed or None)
         self.ip_reservations: dict[str, tuple[float, bool | None]] = {}
+        # the repeaters the box did not list, and since when
+        self.repeaters_lost_since: dict[str, datetime] = {}
         # since when the noise margin of the DSL line has been below the limit
         self.internet_low_margin_since: datetime | None = None
         self.internet_samples: deque[tuple[float, float, float]] = deque(maxlen=INTERNET_HISTORY)
@@ -515,6 +517,27 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
 
     def _apply_filters(self, hosts: list[Host], mesh: MeshTopology | None) -> dict[str, Host]:
         return select_hosts(hosts, mesh, self._options)
+
+    def lost_repeaters(self) -> list[tuple[str, str]]:
+        """The repeaters with a device here that the box does not list in its mesh now.
+
+        (MAC, name) of each. Empty while there is no topology: then nothing is known.
+        """
+        mesh = self.data.mesh if self.data else None
+        if mesh is None:
+            return []
+        lost = []
+        for device in dr.async_entries_for_config_entry(
+            dr.async_get(self.hass), self.config_entry.entry_id
+        ):
+            macs = {mac for domain, mac in device.identifiers if domain == DOMAIN}
+            macs.discard(self.serial)
+            if not macs:
+                continue
+            mac = next(iter(macs))
+            if mesh.node_by_mac(mac) is None:
+                lost.append((mac, device.name_by_user or device.name or mac))
+        return sorted(lost, key=lambda item: item[1].lower())
 
     def vendor(self, mac: str) -> str | None:
         """The vendor of a MAC address, if the option to show it is on."""

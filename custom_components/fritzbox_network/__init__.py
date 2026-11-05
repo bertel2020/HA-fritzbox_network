@@ -39,8 +39,10 @@ from .latency import LatencyMonitor
 from .panel import async_drop_panel, async_ensure_panel, async_serve_frontend
 from .repairs import (
     async_remove_internet_issues,
+    async_remove_mesh_issue,
     async_remove_stale_issue,
     async_update_internet_issues,
+    async_update_mesh_issue,
     async_update_stale_issue,
 )
 from .services import async_register as async_register_services
@@ -138,6 +140,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
         coordinator.async_add_listener(lambda: async_update_internet_issues(hass, entry))
     )
     entry.async_on_unload(lambda: async_remove_internet_issues(hass, entry))
+    entry.async_on_unload(
+        coordinator.async_add_listener(lambda: async_update_mesh_issue(hass, entry))
+    )
+    entry.async_on_unload(lambda: async_remove_mesh_issue(hass, entry))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_ensure_panel(hass)
     _setup_stale_check(hass, entry)

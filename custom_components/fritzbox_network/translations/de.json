@@ -133,6 +133,9 @@
       "dhcp_pool": {
         "name": "DHCP-Bereich belegt"
       },
+      "mesh_nodes": {
+        "name": "Mesh-Knoten"
+      },
       "mesh_status": {
         "name": "Mesh-Status",
         "state": {
@@ -333,6 +336,10 @@
     "internet_line": {
       "title": "Die DSL-Leitung ist schwach",
       "description": "Der Störabstand der DSL-Leitung liegt seit über einer Stunde unter 10 dB (jetzt {margin} dB). Die Verbindung kann abbrechen oder langsam werden. Prüfe Kabel und Dose und frage beim Anbieter nach, wenn es so bleibt. Die Internet-Seite im Panel „FRITZ!Box Netzwerk“ zeigt die Leitung."
+    },
+    "mesh_repeater_lost": {
+      "title": "Ein Repeater fehlt im Mesh",
+      "description": "Die Box führt seit einiger Zeit {count} Repeater nicht mehr in ihrem Mesh: {names}. Prüfe Strom und Verbindung des Repeaters. Die Meldung verschwindet, sobald die Box ihn wieder listet; ist er dauerhaft weg, lösche sein Gerät."
     },
     "internet_reconnects": {
       "title": "Die Internetverbindung bricht immer wieder ab",

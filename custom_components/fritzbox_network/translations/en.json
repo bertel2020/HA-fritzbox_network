@@ -133,6 +133,9 @@
       "dhcp_pool": {
         "name": "DHCP range in use"
       },
+      "mesh_nodes": {
+        "name": "Mesh nodes"
+      },
       "mesh_status": {
         "name": "Mesh status",
         "state": {
@@ -333,6 +336,10 @@
     "internet_line": {
       "title": "The DSL line is weak",
       "description": "The noise margin of the DSL line has been below 10 dB for over an hour (now {margin} dB). The connection may drop or slow down. Check the cable and the socket, and ask the provider if it stays. The internet page of the FRITZ!Box Network panel shows the line."
+    },
+    "mesh_repeater_lost": {
+      "title": "A repeater is missing in the mesh",
+      "description": "The box has not listed {count} repeater(s) in its mesh for a while: {names}. Check the power and the connection of the repeater. The issue goes away when the box lists it again; if it is gone for good, delete its device."
     },
     "internet_reconnects": {
       "title": "The internet connection keeps dropping",
