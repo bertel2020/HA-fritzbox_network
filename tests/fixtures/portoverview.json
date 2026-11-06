@@ -1,0 +1,43 @@
+{
+  "pid": "portoverview",
+  "data": {
+    "fbox": {"ipaddr": "203.0.113.7", "isIpv6Active": true},
+    "showIpv6": true,
+    "pcp": {"enabled": false, "port_ranges": ""},
+    "devices": [
+      {
+        "own_client_device": false,
+        "rules": [
+          {"app": "OpenVPN", "protocol": "UDP", "UID": "forw1", "port": "1194", "type": "port",
+           "accesstype": "ipv4", "fwport": "1194", "fwendport": "1194", "endport": "1194",
+           "activated": false, "state": 0},
+          {"app": "Wireguard", "protocol": "UDP", "UID": "forw2", "port": "51820", "type": "port",
+           "accesstype": "ipv4", "fwport": "51820", "fwendport": "51820", "endport": "51820",
+           "activated": false, "state": 0}
+        ],
+        "UID": "landevice1", "localIpv4": "192.168.178.40", "mac": "02:00:00:00:00:40",
+        "interfaceId": "::ff:fe00:40", "active": true, "devicename": "NAS", "upnp_count": 0
+      },
+      {
+        "own_client_device": false,
+        "rules": [
+          {"app": "Tracker_5027", "protocol": "UDP", "UID": "forw3", "port": "5027", "type": "port",
+           "accesstype": "ipv4", "fwport": "5027", "fwendport": "5027", "endport": "5027",
+           "adrlist": [{"port": "5027", "type": "ipv4", "adr": "203.0.113.7", "endport": "5027"}],
+           "activated": true, "state": 2},
+          {"app": "Tracker_5027", "protocol": "UDP", "UID": "forw4", "port": "5027", "type": "port",
+           "accesstype": "ipv6", "fwport": "5027", "fwendport": "5027", "endport": "5027",
+           "adrlist": [{"port": "5027", "type": "ipv6", "adr": "2001:db8:0:1::4521", "endport": "5027"}],
+           "activated": true, "state": 2},
+          {"app": "Games", "protocol": "TCP", "UID": "forw5", "port": "27000", "type": "port",
+           "accesstype": "ipv4", "fwport": "27015", "fwendport": "27030", "endport": "27015",
+           "activated": true, "state": 2},
+          {"app": "Remote", "protocol": "TCP", "UID": "forw6", "type": "myfritz",
+           "accesstype": "ipv4", "activated": true}
+        ],
+        "UID": "landevice2", "localIpv4": "192.168.178.41", "mac": "02:00:00:00:00:41",
+        "interfaceId": "::ff:fe00:41", "active": true, "devicename": "tracker", "upnp_count": 0
+      }
+    ]
+  }
+}

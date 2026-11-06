@@ -1400,6 +1400,21 @@ const routeRows = {
   ],
 };
 
+test("the port forwardings show IPv6, UPnP, ranges and what the box did not tell", () => {
+  const entry = { description: "Games", protocol: "TCP", external_port: 27015, external_port_end: 27030, internal_port: 27000, internal_port_end: 27015, client: "192.0.2.41", family: "ipv4", enabled: true, lease: 0, source: "manual" };
+  const html = internetPage.renderInternet(internet, { t, language: "de", now: 0, ports: { entries: [entry, { ...entry, description: "Web", external_port: 443, external_port_end: null, internal_port: 443, internal_port_end: null, family: "ipv6", source: "upnp", enabled: false }], manual_known: true } });
+  assert.match(html, /TCP 27015–27030 → 192\.0\.2\.41:27000–27015/);
+  assert.match(html, /TCP 443 → 192\.0\.2\.41:443/);
+  assert.match(html, /IPv6 · per UPnP geöffnet · aus/);
+  assert.doesNotMatch(html, /nicht genannt/);
+  const gap = internetPage.renderInternet(internet, { t, language: "de", now: 0, ports: { entries: [entry], manual_known: false } });
+  assert.match(gap, /die von Hand gesetzten Freigaben nicht genannt, nur die per UPnP/);
+  const none = internetPage.renderInternet(internet, { t, language: "de", now: 0, ports: { entries: [], manual_known: false } });
+  assert.match(none, /Kein Gerät hat per UPnP einen Port geöffnet\. Die Box hat die von Hand gesetzten nicht genannt/);
+  const empty = internetPage.renderInternet(internet, { t, language: "de", now: 0, ports: { entries: [], manual_known: true } });
+  assert.match(empty, /Es sind keine Ports zum Internet offen/);
+});
+
 test("the routes page is a page of the address tab, reached by #/routes", () => {
   assert.deepEqual(shared.routeFromHash("#/routes"), { tab: "routes", device: null });
   assert.match(panel.renderNav({ tab: "routes", data: {} }, t, 0), /data-tab="addresses" aria-selected="true"/);

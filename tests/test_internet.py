@@ -493,6 +493,80 @@ async def test_the_ports_are_only_read_on_demand(hass, fake_client, entry):
     assert reads == []
 
 
+async def test_the_ports_set_by_hand_come_with_the_ones_opened_by_upnp_without_doubles(
+    hass, hass_ws_client, fake_client, entry
+):
+    host = fake_client.hosts[0]
+    fake_client.port_forwardings = [
+        {
+            "uid": "forw1",
+            "description": "Web",
+            "protocol": "TCP",
+            "external_port": 443,
+            "external_port_end": None,
+            "internal_port": 443,
+            "internal_port_end": None,
+            "client": "2001:db8::1",  # an IPv6 rule has no IPv4 address: the MAC finds the device
+            "family": "ipv6",
+            "enabled": True,
+            "lease": 0,
+            "source": "manual",
+            "mac": host.mac,
+        }
+    ]
+    fake_client.ports = [
+        {  # the same forwarding as the one by hand: not listed twice
+            "description": "Web",
+            "protocol": "TCP",
+            "external_port": 443,
+            "internal_port": 443,
+            "client": "2001:db8::1",
+            "enabled": True,
+            "lease": 0,
+        },
+        {
+            "description": "Game",
+            "protocol": "UDP",
+            "external_port": 3074,
+            "internal_port": 3074,
+            "client": host.ip,
+            "enabled": True,
+            "lease": 600,
+        },
+    ]
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id(
+        {"type": "fritzbox_network/ports/list", "entry_id": entry.entry_id}
+    )
+    result = (await client.receive_json())["result"]
+
+    assert result["manual_known"] is True
+    assert [(e["description"], e["source"], e["family"]) for e in result["entries"]] == [
+        ("Web", "manual", "ipv6"),
+        ("Game", "upnp", "ipv4"),
+    ]
+    assert result["entries"][0]["device_name"] == host.name
+    assert "mac" not in result["entries"][0]
+    assert result["entries"][1]["device_id"] == host.mac.replace(":", "")
+
+
+async def test_the_ports_say_where_the_web_interface_did_not_tell_the_ones_set_by_hand(
+    hass, hass_ws_client, fake_client, entry
+):
+    fake_client.port_forwardings = None
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id(
+        {"type": "fritzbox_network/ports/list", "entry_id": entry.entry_id}
+    )
+    result = (await client.receive_json())["result"]
+
+    assert result == {"entries": [], "manual_known": False}
+
+
 async def test_the_routes_come_with_the_device_their_gateway_is(
     hass, hass_ws_client, fake_client, entry
 ):

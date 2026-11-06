@@ -49,6 +49,7 @@ from .models import (
     parse_ip_form,
     parse_mesh,
     parse_network,
+    parse_port_rules,
     parse_rights,
 )
 
@@ -548,6 +549,16 @@ class FritzNetworkClient:
                     continue
                 response.raise_for_status()
                 return
+
+    def get_port_forwardings(self) -> list[dict[str, Any]] | None:
+        """The port forwardings set in the box (and those of IPv6), read from its web interface.
+
+        TR-064 knows only the ones opened by UPnP. None where the page is not there or not the
+        expected one (another firmware, no right for the web interface).
+        """
+        with self._lock:
+            page = self._web_data(page="portoverview")
+        return parse_port_rules(page)
 
     def get_port_mappings(self) -> list[dict[str, Any]]:
         """The port forwardings of the box, those set by hand and those a device opened by UPnP."""

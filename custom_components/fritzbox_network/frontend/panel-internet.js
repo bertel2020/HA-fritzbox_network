@@ -389,17 +389,25 @@ function hintsHtml(internet, t, now) {
 }
 
 /** One port forwarding as a line: "TCP 443 → Living room TV:8443", the device a link to its page. */
+/** A port or a range of ports: "5000" or "5000–5010". */
+function portText(port, end) {
+  if (port === null || port === undefined) return "–";
+  return end ? `${port}–${end}` : String(port);
+}
+
 function portLine(entry, t) {
   const p = t.inet.ports;
   const target = entry.device_id
     ? `<button class="linklike" data-dev="${escapeHtml(entry.device_id)}">${escapeHtml(entry.device_name ?? entry.client)}</button>`
     : escapeHtml(entry.client ?? p.noClient);
   const notes = [
+    entry.family === "ipv6" ? p.ipv6 : "",
+    entry.source === "upnp" ? p.upnp : "",
     entry.enabled ? "" : p.off,
     entry.lease ? fill(p.lease, { time: formatDuration(entry.lease, t.inet.units) }) : "",
   ].filter(Boolean);
   return `<li class="${entry.enabled ? "" : "off"}"><span class="pdesc">${escapeHtml(entry.description ?? p.noName)}</span>
-    <span class="pmap">${escapeHtml(entry.protocol ?? "")} ${escapeHtml(String(entry.external_port ?? "–"))} → ${target}:${escapeHtml(String(entry.internal_port ?? "–"))}</span>
+    <span class="pmap">${escapeHtml(entry.protocol ?? "")} ${escapeHtml(portText(entry.external_port, entry.external_port_end))} → ${target}:${escapeHtml(portText(entry.internal_port, entry.internal_port_end))}</span>
     ${notes.length ? `<small>${escapeHtml(notes.join(" · "))}</small>` : ""}</li>`;
 }
 
@@ -409,9 +417,11 @@ function ports(state, t) {
   let body;
   if (state === "failed") body = `<p class="hint">${escapeHtml(p.failed)}</p>`;
   else if (!state) body = `<p class="hint">${escapeHtml(t.loading)}</p>`;
-  else if (!state.entries.length) body = `<p class="hint">${escapeHtml(p.none)}</p>`;
+  else if (!state.entries.length) body = `<p class="hint">${escapeHtml(state.manual_known === false ? p.noneUnknown : p.none)}</p>`;
   else body = `<ul class="ports">${state.entries.map((e) => portLine(e, t)).join("")}</ul>`;
-  return `<section class="card sec"><span class="label">${escapeHtml(p.title)}</span>${body}
+  // where the web interface could not be read, the ones set by hand are missing: say so
+  const gap = state !== "failed" && state && state.manual_known === false && state.entries.length ? `<p class="hint">${escapeHtml(p.manualUnknown)}</p>` : "";
+  return `<section class="card sec"><span class="label">${escapeHtml(p.title)}</span>${body}${gap}
     <p class="hint">${escapeHtml(p.hint)}</p></section>`;
 }
 

@@ -225,6 +225,64 @@ class VpnConnection:
 VPN_KINDS = {"wireguard_simple": "device", "wireguard_lan_lan": "site"}
 
 
+def _port(value: Any) -> int | None:
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return None
+    return number if 0 < number < 65536 else None
+
+
+def parse_port_rules(page: Any) -> list[dict[str, Any]] | None:
+    """The port forwardings set in the box, from the page "portoverview" of the web interface.
+
+    TR-064 lists only what devices opened by UPnP: on a box with forwardings set by hand its list
+    is empty. The page lists the devices, each with its rules. Per rule: the name of the
+    application, protocol, the port at the device (``port``/``endport``) and the port from outside
+    (``fwport``/``fwendport``; read as the forwarded one, the boxes seen so far use the same number
+    for both), whether it is switched on, and ``accesstype`` ("ipv4" or "ipv6"). An IPv6 rule is a
+    release of the firewall for the address of the device. None where the page is not the one
+    expected, an empty list where no rule is set.
+    """
+    if not isinstance(page, dict) or page.get("pid") != "portoverview":
+        return None
+    data = page.get("data")
+    devices = data.get("devices") if isinstance(data, dict) else None
+    if not isinstance(devices, list):
+        return None
+    entries: list[dict[str, Any]] = []
+    for device in _dicts(devices):
+        for rule in _dicts(device.get("rules")):
+            if rule.get("type") not in (None, "port"):
+                continue
+            family = "ipv6" if rule.get("accesstype") == "ipv6" else "ipv4"
+            if family == "ipv6":
+                addresses = [a.get("adr") for a in _dicts(rule.get("adrlist")) if a.get("adr")]
+                client = addresses[0] if addresses else device.get("interfaceId")
+            else:
+                client = device.get("localIpv4")
+            internal, external = _port(rule.get("port")), _port(rule.get("fwport"))
+            internal_end, external_end = _port(rule.get("endport")), _port(rule.get("fwendport"))
+            entries.append(
+                {
+                    "uid": rule.get("UID") or None,
+                    "description": str(rule.get("app") or "").strip() or None,
+                    "protocol": str(rule.get("protocol") or "").upper() or None,
+                    "external_port": external,
+                    "external_port_end": external_end if external_end != external else None,
+                    "internal_port": internal,
+                    "internal_port_end": internal_end if internal_end != internal else None,
+                    "client": client or None,
+                    "family": family,
+                    "enabled": bool(rule.get("activated")),
+                    "lease": 0,
+                    "source": "manual",
+                    "mac": _mac(device.get("mac")),
+                }
+            )
+    return entries
+
+
 def parse_vpn(page: dict[str, Any] | None) -> list[VpnConnection] | None:
     """The WireGuard connections from the VPN page of the web interface.
 

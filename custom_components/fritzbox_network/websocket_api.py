@@ -20,6 +20,7 @@ from homeassistant.helpers import (
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, format_mac
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.util import dt as dt_util
+import requests
 import voluptuous as vol
 
 from .capture import (
@@ -70,6 +71,8 @@ REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
 VPN_SWITCH_COMMAND = f"{DOMAIN}/vpn/switch"
 DEVICE_ACTION_COMMAND = f"{DOMAIN}/device/action"
 PORTS_COMMAND = f"{DOMAIN}/ports/list"
+# what reading a page of the web interface of the box can raise
+_WEB_ERRORS = (requests.RequestException, PermissionError, OSError, ValueError, KeyError, TypeError)
 ROUTES_COMMAND = f"{DOMAIN}/routes/list"
 ROUTE_SWITCH_COMMAND = f"{DOMAIN}/routes/switch"
 ROUTE_ADD_COMMAND = f"{DOMAIN}/routes/add"
@@ -594,16 +597,30 @@ async def ws_ports(
         return
     _, coordinator = found
     try:
-        entries = await hass.async_add_executor_job(coordinator.client.get_port_mappings)
+        upnp = await hass.async_add_executor_job(coordinator.client.get_port_mappings)
     except FritzConnectionException as err:
         connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
         return
-    hosts = {h.ip: h for h in coordinator.data.hosts.values() if h.ip}
+    # TR-064 lists only what devices opened by UPnP; the ones set by hand are in the web interface
+    try:
+        manual = await hass.async_add_executor_job(coordinator.client.get_port_forwardings)
+    except (*_WEB_ERRORS, FritzConnectionException):
+        manual = None
+    for entry in upnp:
+        entry.setdefault("source", "upnp")
+        entry.setdefault("family", "ipv4")
+    seen = {(e["protocol"], e["external_port"], e["client"]) for e in manual or ()}
+    entries = [
+        *(manual or ()),
+        *(e for e in upnp if (e["protocol"], e["external_port"], e["client"]) not in seen),
+    ]
+    by_ip = {h.ip: h for h in coordinator.data.hosts.values() if h.ip}
+    by_mac = {h.mac: h for h in coordinator.data.hosts.values()}
     for entry in entries:
-        host = hosts.get(entry["client"])
+        host = by_mac.get(entry.pop("mac", None)) or by_ip.get(entry["client"])
         entry["device_id"] = mac_id(host.mac) if host else None
         entry["device_name"] = host.name if host else None
-    connection.send_result(msg["id"], {"entries": entries})
+    connection.send_result(msg["id"], {"entries": entries, "manual_known": manual is not None})
 
 
 @websocket_api.websocket_command(

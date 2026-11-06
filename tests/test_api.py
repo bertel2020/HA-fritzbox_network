@@ -419,6 +419,46 @@ def test_the_routes_stop_where_the_box_runs_out_and_keep_an_odd_mask_readable():
     assert len(routes) == 1 and routes[0]["network"] == "10.0.0.0/bad"
 
 
+def test_the_port_forwardings_set_by_hand_are_read_from_the_page_of_the_web_interface():
+    import json
+    from pathlib import Path
+
+    page = json.loads(
+        (Path(__file__).parent / "fixtures" / "portoverview.json").read_text(encoding="utf-8")
+    )
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    client._fc = MagicMock()
+    client._web_data = MagicMock(return_value=page)
+
+    rules = client.get_port_forwardings()
+
+    client._web_data.assert_called_once_with(page="portoverview")
+    assert [r["uid"] for r in rules] == ["forw1", "forw2", "forw3", "forw4", "forw5"]
+    first, _, v4, v6, ranged = rules
+    assert first["description"] == "OpenVPN" and first["protocol"] == "UDP"
+    assert first["client"] == "192.168.178.40" and first["mac"] == "02:00:00:00:00:40"
+    assert first["enabled"] is False and v4["enabled"] is True
+    assert first["external_port"] == first["internal_port"] == 1194
+    assert first["external_port_end"] is None and first["family"] == "ipv4"
+    # a rule of IPv6 is for the address of the device, not for its IPv4 one
+    assert v6["family"] == "ipv6" and v6["client"] == "2001:db8:0:1::4521"
+    # a range keeps both ends, and the port at the device differs from the one from outside
+    assert (ranged["external_port"], ranged["external_port_end"]) == (27015, 27030)
+    assert (ranged["internal_port"], ranged["internal_port_end"]) == (27000, 27015)
+    # rules that are no port rule (a MyFRITZ share) are not listed
+    assert all(r["uid"] != "forw6" for r in rules)
+
+
+def test_the_page_of_the_port_forwardings_is_none_where_it_is_not_the_expected_one():
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    client._fc = MagicMock()
+    for page in ({"pid": "overview"}, {"pid": "portoverview", "data": {}}, "x", None):
+        client._web_data = MagicMock(return_value=page)
+        assert client.get_port_forwardings() is None
+    client._web_data = MagicMock(return_value={"pid": "portoverview", "data": {"devices": []}})
+    assert client.get_port_forwardings() == []
+
+
 def _internet_client(answers: dict[str, dict]) -> tuple[FritzNetworkClient, list[str]]:
     """A box that answers the actions named in ``answers`` and refuses all others."""
     client = FritzNetworkClient("192.168.178.1", None, "user", "secret")

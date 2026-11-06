@@ -83,6 +83,7 @@ class FakeClient:
         self.fail_actions = False
         self.guest_wifi: bool | None = False
         self.ports: list[dict] = []
+        self.port_forwardings: list[dict] | None = []
         self.routes: list[dict] = []
         self.routes_ignore = False
         self.routes_new_enabled = False  # as the real box: a new route starts switched off
@@ -182,6 +183,9 @@ class FakeClient:
 
     def get_port_mappings(self) -> list[dict]:
         return [dict(p) for p in self.ports]
+
+    def get_port_forwardings(self) -> list[dict] | None:
+        return None if self.port_forwardings is None else [dict(p) for p in self.port_forwardings]
 
     def get_routes(self) -> list[dict]:
         return [dict(r) for r in self.routes]
