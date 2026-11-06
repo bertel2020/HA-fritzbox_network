@@ -155,6 +155,9 @@
         "state": {
           "off": "mdi:shield-off-outline"
         }
+      },
+      "route_switch": {
+        "default": "mdi:router-network"
       }
     },
     "button": {

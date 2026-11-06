@@ -527,12 +527,16 @@ async def test_the_routes_come_with_the_device_their_gateway_is(
     assert result[2]["device_name"] is None and result[2]["gateway"] is None
 
 
-async def test_the_routes_are_only_read_on_demand(hass, fake_client, entry):
+async def test_the_routes_are_read_every_tenth_poll_not_with_each(hass, fake_client, entry):
     reads = []
     fake_client.get_routes = lambda: reads.append(1) or []
     coordinator = await _setup(hass, entry)
-    await _poll(hass, coordinator)
-    assert reads == []
+    assert len(reads) == 1  # the first poll reads them
+    for _ in range(9):
+        await _poll(hass, coordinator)
+    assert len(reads) == 1
+    await _poll(hass, coordinator)  # the tenth poll after the first
+    assert len(reads) == 2
 
 
 async def test_the_diagnostics_have_the_connection_without_its_addresses(hass, fake_client, entry):

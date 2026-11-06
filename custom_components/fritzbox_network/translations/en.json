@@ -243,6 +243,9 @@
       },
       "vpn_switch": {
         "name": "{name} enabled"
+      },
+      "route_switch": {
+        "name": "Route {network}"
       }
     },
     "button": {

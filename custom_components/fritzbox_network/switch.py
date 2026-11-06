@@ -10,6 +10,7 @@ from fritzconnection.core.exceptions import FritzConnectionException
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -20,6 +21,7 @@ from .const import (
     KEY_GUEST_WIFI,
     KEY_INTERNET_ACCESS,
     KEY_PRIORITY,
+    KEY_ROUTE_SWITCH,
     KEY_VPN_SWITCH,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
@@ -71,6 +73,7 @@ async def async_setup_entry(
     )
     _async_setup_guest_wifi(entry, async_add_entities)
     _async_setup_vpn(entry, async_add_entities)
+    _async_setup_routes(hass, entry, async_add_entities)
 
 
 @callback
@@ -111,6 +114,116 @@ def _async_setup_vpn(
 
     _add()
     entry.async_on_unload(coordinator.async_add_listener(_add))
+
+
+@callback
+def _async_setup_routes(
+    hass: HomeAssistant,
+    entry: FritzNetworkConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    """A switch for each static route of the box; one that is gone from the box goes with it.
+
+    A route is added when it shows up in the list, whoever made it. The entity of a route that is
+    no longer there is removed once the coordinator calls it gone (the box missed it in two reads
+    in a row, or it was deleted in the panel). At the first list, entities of an earlier run whose
+    route has vanished since are removed as well.
+    """
+    coordinator = entry.runtime_data
+    registry = er.async_get(hass)
+    prefix = f"{coordinator.serial}_{KEY_ROUTE_SWITCH}_"
+    known: set[str] = set()
+    cleaned = False
+
+    @callback
+    def _remove(network: str) -> None:
+        entity_id = registry.async_get_entity_id("switch", DOMAIN, f"{prefix}{network}")
+        if entity_id:
+            registry.async_remove(entity_id)
+
+    @callback
+    def _update() -> None:
+        nonlocal cleaned
+        routes = coordinator.data.routes
+        if routes is None:
+            return
+        present = {route["network"] for route in routes}
+        if not cleaned:
+            cleaned = True
+            for item in er.async_entries_for_config_entry(registry, entry.entry_id):
+                if item.domain != "switch" or not item.unique_id.startswith(prefix):
+                    continue
+                if item.unique_id[len(prefix) :] not in present:
+                    registry.async_remove(item.entity_id)
+        for network in list(coordinator.routes_gone):
+            coordinator.routes_gone.discard(network)
+            if network not in present:
+                known.discard(network)
+                _remove(network)
+        new = [route["network"] for route in routes if route["network"] not in known]
+        if new:
+            known.update(new)
+            async_add_entities([FritzNetworkRouteSwitch(coordinator, network) for network in new])
+
+    _update()
+    entry.async_on_unload(coordinator.async_add_listener(_update))
+
+
+class FritzNetworkRouteSwitch(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity):
+    """A static route of the box, switched on or off. Routes are made and deleted in the panel."""
+
+    _attr_has_entity_name = True
+    _attr_translation_key = KEY_ROUTE_SWITCH
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, network: str) -> None:
+        super().__init__(coordinator)
+        self._network = network
+        self._attr_unique_id = f"{coordinator.serial}_{KEY_ROUTE_SWITCH}_{network}"
+        self._attr_translation_placeholders = {"network": network}
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+
+    @property
+    def route(self) -> dict[str, Any] | None:
+        return next(
+            (r for r in self.coordinator.data.routes or () if r["network"] == self._network), None
+        )
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.route is not None
+
+    @property
+    def is_on(self) -> bool | None:
+        route = self.route
+        return route["enabled"] if route else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        route = self.route
+        if route is None:
+            return None
+        host = next(
+            (
+                h
+                for h in self.coordinator.data.hosts.values()
+                if route["gateway"] and h.ip == route["gateway"]
+            ),
+            None,
+        )
+        return {
+            "network": route["network"],
+            "gateway": route["gateway"],
+            "gateway_device": host.name if host else None,
+            "gateway_online": host.active if host else None,
+            "interface": route["interface"],
+            "metric": route["metric"],
+        }
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self.coordinator.async_set_route(self._network, True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self.coordinator.async_set_route(self._network, False)
 
 
 class FritzNetworkVpnSwitch(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity):

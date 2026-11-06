@@ -105,6 +105,7 @@ KEY_GUEST_WIFI = "guest_wifi"
 KEY_INTERNET_CONNECTED = "internet_connected"
 KEY_VPN = "vpn"
 KEY_VPN_SWITCH = "vpn_switch"
+KEY_ROUTE_SWITCH = "route_switch"
 KEY_VPN_STATUS = "vpn_status"  # no longer an entity, still the id of the ones to remove
 KEY_VPN_SINCE = "vpn_since"
 KEY_VPN_UID = "vpn_uid"
@@ -113,6 +114,13 @@ VPN_VERIFY_SECONDS = 1.5
 # polls in a row with no WireGuard list (empty or missing) before the box is believed: right after
 # a reboot or a dropped session it often answers with nothing
 VPN_EMPTY_POLLS = 3
+# the static routes are read every this many polls (5 minutes at the usual 30 seconds): they
+# change rarely, and each costs a request. After a switch, an add or a delete they are read at once.
+ROUTES_POLLS = 10
+# failed reads of the routes in a row after which the entities of the routes turn unavailable
+ROUTES_FAILED_READS = 3
+# reads in a row that miss a route after which its entity is removed (a route deleted in the box)
+ROUTES_GONE_READS = 2
 KEY_INTERNET_DOWNLOAD = "internet_download"
 KEY_INTERNET_UPLOAD = "internet_upload"
 KEY_INTERNET_UPTIME = "internet_uptime"

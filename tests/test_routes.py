@@ -388,3 +388,190 @@ def test_the_client_writes_a_new_route_in_the_form_of_the_box_and_deletes_by_the
         NewSourceIPAddress="0.0.0.0",
         NewSourceSubnetMask="0.0.0.0",
     )
+
+
+# the switches of the routes
+
+from fritzconnection.core.exceptions import FritzActionError  # noqa: E402
+from homeassistant.helpers import entity_registry as er  # noqa: E402
+
+
+async def _poll(hass, coordinator, *, read=True):
+    """One more poll; ``read`` makes it read the routes too (they are read every tenth poll)."""
+    if read:
+        coordinator._routes_force = True
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+
+def _entity(hass, coordinator, network):
+    return er.async_get(hass).async_get_entity_id(
+        "switch", DOMAIN, f"{coordinator.serial}_route_switch_{network}"
+    )
+
+
+async def test_each_route_is_a_switch_with_the_state_of_the_box_and_the_gateway(
+    hass, fake_client, entry, routes
+):
+    online = next(h for h in fake_client.hosts if h.ip and h.active)
+    routes[0]["gateway"] = online.ip
+    coordinator = await _setup(hass, entry)
+
+    first = hass.states.get(_entity(hass, coordinator, "10.8.0.0/24"))
+    second = hass.states.get(_entity(hass, coordinator, "172.16.0.0/16"))
+
+    assert first.state == "off" and second.state == "on"
+    assert first.attributes["friendly_name"].endswith("Route 10.8.0.0/24")
+    assert first.attributes["network"] == "10.8.0.0/24"
+    assert first.attributes["gateway"] == online.ip
+    assert first.attributes["gateway_device"] == online.name
+    assert first.attributes["gateway_online"] is True
+    assert first.attributes["metric"] == 0
+    # a gateway the box does not list has no device
+    assert (
+        second.attributes["gateway_device"] is None and second.attributes["gateway_online"] is None
+    )
+
+
+async def test_the_switch_switches_the_route_and_shows_what_the_box_then_says(
+    hass, fake_client, entry, routes
+):
+    coordinator = await _setup(hass, entry)
+    entity_id = _entity(hass, coordinator, "10.8.0.0/24")
+
+    await hass.services.async_call("switch", "turn_on", {"entity_id": entity_id}, blocking=True)
+
+    assert ("route", "10.8.0.0", "255.255.255.0", True) in fake_client.calls
+    assert hass.states.get(entity_id).state == "on"  # at once, not at the next read
+
+    await hass.services.async_call("switch", "turn_off", {"entity_id": entity_id}, blocking=True)
+    assert hass.states.get(entity_id).state == "off"
+
+    fake_client.routes_ignore = True
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call("switch", "turn_on", {"entity_id": entity_id}, blocking=True)
+    assert hass.states.get(entity_id).state == "off"
+
+
+async def test_without_the_right_to_write_there_are_no_switches_and_no_reads(
+    hass, fake_client, entry, routes
+):
+    fake_client.writable = False
+    reads = []
+    fake_client.get_routes = lambda: reads.append(1) or []
+    coordinator = await _setup(hass, entry)
+
+    assert _entity(hass, coordinator, "10.8.0.0/24") is None
+    assert not reads and coordinator.data.routes is None
+
+
+async def test_a_route_that_shows_up_in_the_box_gets_its_switch_at_the_next_read(
+    hass, fake_client, entry, routes
+):
+    coordinator = await _setup(hass, entry)
+    fake_client.routes.append(_route("10.7.0.0/24", "10.7.0.0", "255.255.255.0", "192.0.2.7", True))
+
+    await _poll(hass, coordinator, read=False)  # no read yet: not there
+    assert _entity(hass, coordinator, "10.7.0.0/24") is None
+    await _poll(hass, coordinator)
+
+    assert hass.states.get(_entity(hass, coordinator, "10.7.0.0/24")).state == "on"
+
+
+async def test_a_route_missing_in_two_reads_in_a_row_loses_its_switch(
+    hass, fake_client, entry, routes
+):
+    coordinator = await _setup(hass, entry)
+    gone = routes.pop(0)
+
+    await _poll(hass, coordinator)  # one read that misses it: it may be a hiccup of the box
+    entity_id = _entity(hass, coordinator, "10.8.0.0/24")
+    assert entity_id and hass.states.get(entity_id).state == "unavailable"
+    await _poll(hass, coordinator)  # the second one makes it sure
+
+    assert _entity(hass, coordinator, "10.8.0.0/24") is None
+
+    # a route that comes back gets a switch again
+    routes.append(gone)
+    await _poll(hass, coordinator)
+    assert _entity(hass, coordinator, "10.8.0.0/24")
+
+
+async def test_a_route_that_is_missed_once_and_found_again_keeps_its_switch(
+    hass, fake_client, entry, routes
+):
+    coordinator = await _setup(hass, entry)
+    gone = routes.pop(0)
+    await _poll(hass, coordinator)
+    routes.append(gone)
+    await _poll(hass, coordinator)
+    routes.pop()
+    await _poll(hass, coordinator)  # missed once again, but the count began anew
+
+    assert _entity(hass, coordinator, "10.8.0.0/24")
+
+
+async def test_failed_reads_keep_the_state_for_a_while_and_then_make_the_switches_unavailable(
+    hass, fake_client, entry, routes
+):
+    coordinator = await _setup(hass, entry)
+    entity_id = _entity(hass, coordinator, "172.16.0.0/16")
+
+    def refuse():
+        raise FritzActionError("refused")
+
+    fake_client.get_routes = refuse
+    await _poll(hass, coordinator)
+    await _poll(hass, coordinator)
+    assert hass.states.get(entity_id).state == "on"  # the last state stays
+    await _poll(hass, coordinator)
+    assert hass.states.get(entity_id).state == "unavailable"
+    assert _entity(hass, coordinator, "172.16.0.0/16")  # unavailable, not removed
+
+    fake_client.get_routes = lambda: [dict(r) for r in routes]
+    await _poll(hass, coordinator)
+    assert hass.states.get(entity_id).state == "on"
+
+
+async def test_a_route_added_or_deleted_in_the_panel_changes_the_switches_at_once(
+    hass, hass_ws_client, fake_client, entry, routes
+):
+    coordinator = await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id(
+        {
+            "type": ADD,
+            "entry_id": entry.entry_id,
+            "network": "10.9.0.0/24",
+            "gateway": "192.168.178.5",
+            "metric": 10,
+        }
+    )
+    assert (await client.receive_json())["success"] is True
+    await hass.async_block_till_done()
+    assert hass.states.get(_entity(hass, coordinator, "10.9.0.0/24")).state == "on"
+
+    await client.send_json_auto_id(
+        {"type": DELETE, "entry_id": entry.entry_id, "network": "10.9.0.0/24"}
+    )
+    assert (await client.receive_json())["success"] is True
+    await hass.async_block_till_done()
+    assert _entity(hass, coordinator, "10.9.0.0/24") is None
+
+
+async def test_the_switch_of_a_route_that_vanished_while_home_assistant_was_off_is_removed(
+    hass, fake_client, entry, routes
+):
+    registry = er.async_get(hass)
+    stale = registry.async_get_or_create(
+        "switch",
+        DOMAIN,
+        f"{entry.unique_id}_route_switch_10.99.0.0/24",
+        config_entry=entry,
+    )
+    assert registry.async_get(stale.entity_id) is not None  # there before the first read
+    coordinator = await _setup(hass, entry)
+
+    assert registry.async_get(stale.entity_id) is None
+    assert _entity(hass, coordinator, "10.8.0.0/24")  # the ones that are there stay

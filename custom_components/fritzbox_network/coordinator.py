@@ -17,7 +17,7 @@ from fritzconnection.core.exceptions import (
     FritzSecurityError,
 )
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import (
     ConfigEntryAuthFailed,
     HomeAssistantError,
@@ -62,6 +62,9 @@ from .const import (
     RESERVATION_PER_POLL,
     RESERVATION_REFRESH_SECONDS,
     ROAM_CONFIRM_POLLS,
+    ROUTES_FAILED_READS,
+    ROUTES_GONE_READS,
+    ROUTES_POLLS,
     VPN_EMPTY_POLLS,
     VPN_VERIFY_SECONDS,
     WAN_OVERRIDE_SECONDS,
@@ -144,6 +147,12 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._polls = 0
         # polls in a row that gave no WireGuard list although there had been one
         self._vpn_empty = 0
+        # the static routes: failed reads in a row, reads in a row that missed a route that was
+        # seen before, and the networks whose route is gone (their entities are removed)
+        self._routes_failed = 0
+        self._routes_missing: dict[str, int] = {}
+        self._routes_force = False
+        self.routes_gone: set[str] = set()
         # the internet connection: the slow part of the last read, the byte counters of the poll
         # before, the throughput since then, the last hour of it and what happened to the line
         self._internet_slow: dict[str, Any] = {}
@@ -255,6 +264,42 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 reservation["fixed"] if isinstance(reservation, dict) else None,
             )
 
+    def _fetch_routes(self) -> list[dict[str, Any]] | None:
+        """The static routes, read every ``ROUTES_POLLS`` polls; the last stay if a read fails.
+
+        Only read where there are entities for them, that is with the right to change settings.
+        After ``ROUTES_FAILED_READS`` failed reads in a row the routes count as unknown, so their
+        entities turn unavailable instead of showing a state nobody has checked for a long time.
+        """
+        if not self.can_write:
+            return None
+        previous = self.data.routes if self.data else None
+        if previous is not None and not self._routes_force and self._polls % ROUTES_POLLS:
+            return previous
+        self._routes_force = False
+        try:
+            found = self.client.get_routes()
+        except (*_FETCH_ERRORS, requests.RequestException, TypeError) as err:
+            _LOGGER.debug("Static routes unavailable: %s", err)
+            self._routes_failed += 1
+            return previous if self._routes_failed < ROUTES_FAILED_READS else None
+        self._routes_failed = 0
+        self._note_routes(found)
+        return found
+
+    def _note_routes(self, found: list[dict[str, Any]]) -> None:
+        """Count the reads that miss a route seen before; two in a row make it gone."""
+        networks = {route["network"] for route in found}
+        for network in networks:
+            self._routes_missing[network] = 0
+        for network in list(self._routes_missing):
+            if network in networks:
+                continue
+            self._routes_missing[network] += 1
+            if self._routes_missing[network] >= ROUTES_GONE_READS:
+                del self._routes_missing[network]
+                self.routes_gone.add(network)
+
     def _fetch_vpn(self) -> list[VpnConnection] | None:
         """The WireGuard connections; what was known stays if the box does not answer.
 
@@ -294,6 +339,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         tuple[dict, dict] | None,
         bool | None,
         list[VpnConnection] | None,
+        list[dict[str, Any]] | None,
     ]:
         hosts = self.client.get_hosts()
         try:
@@ -313,16 +359,19 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         internet = self._fetch_internet()
         guest = self._fetch_guest_wifi()
         vpn = self._fetch_vpn()
+        routes = self._fetch_routes()
         self._fetch_firmware()
         self._fetch_dhcp_pool()
         self._fetch_reservations([h for h in hosts if h.ip and not h.guest])
         self._polls += 1
-        return hosts, mesh, internet, guest, vpn
+        return hosts, mesh, internet, guest, vpn, routes
 
     async def _async_update_data(self) -> NetworkData:
         started = time.monotonic()
         try:
-            hosts, mesh, wan, guest, vpn = await self.hass.async_add_executor_job(self._fetch)
+            hosts, mesh, wan, guest, vpn, routes = await self.hass.async_add_executor_job(
+                self._fetch
+            )
         except (FritzAuthorizationError, FritzSecurityError) as err:
             raise ConfigEntryAuthFailed(str(err)) from err
         except _FETCH_ERRORS as err:
@@ -355,6 +404,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             guest_wifi=self._apply_guest_override(guest),
             firmware=self._firmware,
             vpn=vpn,
+            routes=routes,
             dhcp_pool=self._dhcp_pool,
         )
 
@@ -817,6 +867,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         now = [route for route in routes if route["network"] == network]
         if not now or any(route["enabled"] != enabled for route in now):
             raise HomeAssistantError(translation_domain=DOMAIN, translation_key="route_not_changed")
+        self._store_routes(routes)
         return routes
 
     async def async_add_route(
@@ -860,6 +911,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         now = next((r for r in routes if r["network"] == str(target)), None)
         if now is None or not now["enabled"]:
             raise HomeAssistantError(translation_domain=DOMAIN, translation_key="route_not_changed")
+        self._store_routes(routes)
         return routes
 
     async def async_delete_route(self, network: str) -> list[dict[str, Any]]:
@@ -884,7 +936,19 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             ) from err
         if any(route["network"] == network for route in routes):
             raise HomeAssistantError(translation_domain=DOMAIN, translation_key="route_not_changed")
+        # deleted here on purpose: the entity goes at once, not after two more reads
+        self._routes_missing.pop(network, None)
+        self.routes_gone.add(network)
+        self._store_routes(routes)
         return routes
+
+    @callback
+    def _store_routes(self, routes: list[dict[str, Any]]) -> None:
+        """Show routes read back after a change to the entities, and count the read."""
+        self._routes_failed = 0
+        self._note_routes(routes)
+        if self.data is not None:
+            self.async_set_updated_data(replace(self.data, routes=routes))
 
     async def async_wake_on_lan(self, host: Host) -> None:
         await self.hass.async_add_executor_job(self.client.wake_on_lan, host.mac)

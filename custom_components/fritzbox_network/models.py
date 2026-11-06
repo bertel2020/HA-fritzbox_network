@@ -284,6 +284,9 @@ class NetworkData:
     vpn: list[VpnConnection] | None = None
     # first and last address of the range the DHCP server hands out, as numbers
     dhcp_pool: tuple[int, int] | None = None
+    # the static routes of the box as ``FritzNetworkClient.get_routes`` lists them; None where
+    # they are not read (no right to change settings) or the box does not tell them
+    routes: list[dict[str, Any]] | None = None
 
 
 def _text(item: ET.Element, tag: str) -> str | None:

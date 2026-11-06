@@ -140,6 +140,8 @@ The box also has sensors for its **internet connection** once it reports one: th
 
 The box device also has three diagnostic, off by default: **Last update** (the last successful poll), **Failed polls** (how many polls in a row failed) and **Mesh status** (whether the mesh topology came with the last poll). They stay available while the box cannot be reached.
 
+**Static routes.** With the right "FRITZ!Box settings", each static IPv4 route of the box (Home network > Network > Network settings > IPv4 routes) has a switch "Route <network>", for example `10.8.0.0/24`. It is on while the route is switched on and has the attributes `network`, `gateway`, `gateway_device`, `gateway_online`, `interface` and `metric`. The box lists only the routes entered by hand, not those it sets up itself. The routes are not read with every poll but every 10th (about every 5 minutes at 30 seconds) and at once after each switch, add or delete in the panel or by the switch; what someone changes in the box therefore shows up with a delay of up to 5 minutes. A new route gets its switch at the next read. A switch whose route the box no longer lists in two reads in a row is removed; until then it is unavailable. If three reads in a row fail, the switches turn unavailable. Switching reads the routes back and reports an error if the box did not take the change. Adding and deleting are done in the panel under Address space > Routes.
+
 ### Actions
 
 `set_name` and `wake_on_lan` need the right "FRITZ!Box settings" and take a device, an entity or an area as the target. `capture` needs access to the web interface of the box (it is tested with the right "FRITZ!Box settings") and takes a device as the target only if the recording is to be narrowed to it.
