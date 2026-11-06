@@ -83,6 +83,7 @@ class FakeClient:
         self.fail_actions = False
         self.guest_wifi: bool | None = False
         self.ports: list[dict] = []
+        self.routes: list[dict] = []
         self.firmware: dict = {"NewUpgradeAvailable": False}
         self.vpn: dict | None = None
         self.vpn_ignores = False
@@ -179,6 +180,9 @@ class FakeClient:
 
     def get_port_mappings(self) -> list[dict]:
         return [dict(p) for p in self.ports]
+
+    def get_routes(self) -> list[dict]:
+        return [dict(r) for r in self.routes]
 
     def get_firmware(self) -> dict:
         return dict(self.firmware)

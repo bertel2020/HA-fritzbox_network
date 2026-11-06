@@ -1335,6 +1335,7 @@ test("the capture list names the Wi-Fi access points after their band and offers
 });
 
 const vpnPage = await import(`${base}panel-vpn.js`);
+const routesPage = await import(`${base}panel-routes.js`);
 
 const vpnData = {
   vpn: [
@@ -1389,6 +1390,44 @@ test("the VPN page offers the switch only with the right to write and for connec
   const off = vpnPage.renderVpn({ ...data, vpn: [{ ...data.vpn[0], enabled: false, connected: false, editable: true }] }, { t, now: 0, canWrite: true });
   assert.match(off, /data-on="1">Einschalten/);
   assert.match(vpnPage.renderVpn(data, { t, now: 0, canWrite: true, busy: new Set(["a"]) }), /data-key="a" data-on="0" disabled/);
+});
+
+const routeRows = {
+  entries: [
+    { network: "10.8.0.0/24", gateway: "192.0.2.5", interface: "LanHostConfigManagement1", metric: 0, enabled: true, device_id: "aabbccddee01", device_name: "Pi <b>", gateway_online: true },
+    { network: "192.168.2.0/24", gateway: "192.0.2.20", interface: "LanHostConfigManagement1", metric: 10, enabled: true, device_id: "aabbccddee02", device_name: "Keller", gateway_online: false },
+    { network: "172.16.0.0/16", gateway: "192.0.2.99", interface: null, metric: 20, enabled: false, device_id: null, device_name: null, gateway_online: null },
+  ],
+};
+
+test("the routes page is a page of the address tab, reached by #/routes", () => {
+  assert.deepEqual(shared.routeFromHash("#/routes"), { tab: "routes", device: null });
+  assert.match(panel.renderNav({ tab: "routes", data: {} }, t, 0), /data-tab="addresses" aria-selected="true"/);
+  const tabs = panel.renderAddressTabs("routes", t);
+  assert.match(tabs, /data-tab="routes" aria-selected="true"[^>]*>Routen/);
+  assert.match(tabs, /data-tab="addresses" aria-selected="false"/);
+});
+
+test("the routes page counts the routes and warns where the gateway is offline", () => {
+  const m = routesPage.routesModel(routeRows.entries);
+  assert.deepEqual(m.routes.map((r) => r.state), ["on", "down", "off"]);
+  assert.equal(m.on, 2);
+  assert.equal(m.down.length, 1);
+  const html = routesPage.renderRoutes(routeRows, { t, subTabs: "<i>tabs</i>" });
+  assert.match(html, /^<i>tabs<\/i>/);
+  assert.match(html, /Keller ist offline\. Der Verkehr an 192\.168\.2\.0\/24 geht ins Leere/);
+  assert.match(html, /href="#\/device\/aabbccddee01">Pi &lt;b&gt;<\/a>/);
+  assert.match(html, /172\.16\.0\.0\/16[\s\S]*192\.0\.2\.99[\s\S]*Metrik 20/);
+  assert.equal((html.match(/chip bad/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /Pi <b>/);
+  // read only: nothing to switch yet
+  assert.doesNotMatch(html, /data-act=/);
+});
+
+test("the routes page says so where the box tells nothing, has no route or is still loading", () => {
+  assert.match(routesPage.renderRoutes("failed", { t }), /nicht genannt/);
+  assert.match(routesPage.renderRoutes({ entries: [] }, { t }), /keine statischen Routen/);
+  assert.match(routesPage.renderRoutes(null, { t }), new RegExp(t.loading));
 });
 
 test("a repeater the box no longer lists is a hint and a finding of the radio check", () => {

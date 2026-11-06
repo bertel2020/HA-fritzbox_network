@@ -14,6 +14,7 @@ from __future__ import annotations
 import contextlib
 import hashlib
 import http.client
+import ipaddress
 import json
 import logging
 import re
@@ -78,6 +79,10 @@ RIGHT_ADMIN = "BoxAdmin"
 
 # the most port forwardings read: the box lists a few dozen at the most
 MAX_PORT_MAPPINGS = 128
+
+# the most static routes read: the table of the box is a short list entered by hand
+MAX_ROUTES = 128
+ROUTES_SERVICE = "Layer3Forwarding1"
 
 # seconds for connecting and for each read, also of the direct list downloads
 REQUEST_TIMEOUT = 10
@@ -560,6 +565,50 @@ class FritzNetworkClient:
                         "client": result.get("NewInternalClient") or None,
                         "enabled": bool(result.get("NewEnabled")),
                         "lease": result.get("NewLeaseDuration") or 0,
+                    }
+                )
+        return entries
+
+    def get_routes(self) -> list[dict[str, Any]]:
+        """The static IPv4 routes of the box, the table of Home network > Network settings.
+
+        The box lists only those entered by hand, not the routes it sets up itself (home network,
+        internet, VPN). Its ``NewType`` ("Host" even for a network) and ``NewStatus`` ("Enabled"
+        even for a switched-off route) say nothing, so they are not passed on; what counts is the
+        mask and ``NewEnable``. A route is named by destination, mask and source, which the later
+        switching needs, so the source comes along.
+        """
+        entries: list[dict[str, Any]] = []
+        with self._lock:
+            count = self._connection.call_action(ROUTES_SERVICE, "GetForwardNumberOfEntries").get(
+                "NewForwardNumberOfEntries"
+            )
+            limit = min(count, MAX_ROUTES) if isinstance(count, int) else MAX_ROUTES
+            for index in range(limit):
+                try:
+                    row = self._connection.call_action(
+                        ROUTES_SERVICE, "GetGenericForwardingEntry", NewForwardingIndex=index
+                    )
+                except (FritzArrayIndexError, FritzActionError):
+                    break  # past the last entry the box answers with an error
+                destination = row.get("NewDestIPAddress") or ""
+                mask = row.get("NewDestSubnetMask") or ""
+                try:
+                    network = str(ipaddress.IPv4Network(f"{destination}/{mask}", strict=False))
+                except ValueError:
+                    network = f"{destination}/{mask}"
+                gateway = row.get("NewGatewayIPAddress") or None
+                entries.append(
+                    {
+                        "network": network,
+                        "destination": destination,
+                        "mask": mask,
+                        "source": row.get("NewSourceIPAddress") or "0.0.0.0",
+                        "source_mask": row.get("NewSourceSubnetMask") or "0.0.0.0",
+                        "gateway": None if gateway in (None, "0.0.0.0") else gateway,
+                        "interface": row.get("NewInterface") or None,
+                        "metric": row.get("NewForwardingMetric") or 0,
+                        "enabled": bool(row.get("NewEnable")),
                     }
                 )
         return entries

@@ -493,6 +493,47 @@ async def test_the_ports_are_only_read_on_demand(hass, fake_client, entry):
     assert reads == []
 
 
+async def test_the_routes_come_with_the_device_their_gateway_is(
+    hass, hass_ws_client, fake_client, entry
+):
+    online = next(h for h in fake_client.hosts if h.ip and h.active)
+    row = {
+        "destination": "10.8.0.0",
+        "mask": "255.255.255.0",
+        "source": "0.0.0.0",
+        "source_mask": "0.0.0.0",
+        "interface": "LanHostConfigManagement1",
+        "metric": 0,
+        "enabled": True,
+    }
+    fake_client.routes = [
+        {**row, "network": "10.8.0.0/24", "gateway": online.ip},
+        {**row, "network": "172.16.0.0/16", "gateway": "192.0.2.250"},
+        {**row, "network": "10.9.0.0/24", "gateway": None},
+    ]
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id(
+        {"type": "fritzbox_network/routes/list", "entry_id": entry.entry_id}
+    )
+    result = (await client.receive_json())["result"]["entries"]
+
+    assert result[0]["device_name"] == online.name and result[0]["gateway_online"] is True
+    assert result[0]["device_id"] == online.mac.replace(":", "")
+    # a gateway the box does not list stays a bare address, one without any has no device
+    assert result[1]["device_id"] is None and result[1]["gateway_online"] is None
+    assert result[2]["device_name"] is None and result[2]["gateway"] is None
+
+
+async def test_the_routes_are_only_read_on_demand(hass, fake_client, entry):
+    reads = []
+    fake_client.get_routes = lambda: reads.append(1) or []
+    coordinator = await _setup(hass, entry)
+    await _poll(hass, coordinator)
+    assert reads == []
+
+
 async def test_the_diagnostics_have_the_connection_without_its_addresses(hass, fake_client, entry):
     coordinator = await _setup(hass, entry)
     fake_client.internet_fast["GetStatusInfo"]["NewUptime"] = 20

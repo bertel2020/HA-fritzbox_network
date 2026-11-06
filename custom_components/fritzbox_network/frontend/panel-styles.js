@@ -494,6 +494,15 @@ export const PANEL_CSS = `
   .vpnrow:first-child { border-top: 0; }
   .vpnrow .i { width: 20px; height: 20px; color: var(--muted); }
   .vpnrow.up .i { color: var(--ok); }
+  .routerow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .routerow:first-child { border-top: 0; }
+  .routerow .i { width: 20px; height: 20px; color: var(--muted); }
+  .routerow.on .i { color: var(--ok); }
+  .routerow.down .i { color: var(--bad); }
+  .routerow.off .routenet { opacity: .6; }
+  .routenet { flex: 1; min-width: 0; }
+  .routenet b { display: block; font-weight: 500; }
+  .routenet small { color: var(--muted); }
   .vpnswitch { flex: none; }
   .vpnname { flex: 1; min-width: 0; }
   .vpnname b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

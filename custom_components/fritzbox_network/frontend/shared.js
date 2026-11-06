@@ -342,6 +342,7 @@ export function routeFromHash(hash) {
   if (device) return { tab: "net", device };
   if (hash === "#/internet") return { tab: "internet", device: null };
   if (hash === "#/addresses") return { tab: "addresses", device: null };
+  if (hash === "#/routes") return { tab: "routes", device: null };
   if (hash === "#/vpn") return { tab: "vpn", device: null };
   if (hash === "#/diagnose") return { tab: "diagnose", device: null };
   if (hash === "#/cleanup") return { tab: "cleanup", device: null };

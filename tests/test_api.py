@@ -361,6 +361,64 @@ def test_the_port_mappings_are_read_until_the_box_runs_out():
     assert entries[1]["description"] is None and entries[1]["enabled"] is False
 
 
+def test_the_routes_are_read_as_networks_and_say_nothing_of_type_or_status():
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    client._fc = MagicMock()
+    rows = [
+        {
+            "NewEnable": False,
+            "NewStatus": "Enabled",
+            "NewType": "Host",
+            "NewDestIPAddress": "10.8.0.0",
+            "NewDestSubnetMask": "255.255.255.0",
+            "NewSourceIPAddress": "0.0.0.0",
+            "NewSourceSubnetMask": "0.0.0.0",
+            "NewGatewayIPAddress": "192.0.2.5",
+            "NewInterface": "LanHostConfigManagement1",
+            "NewForwardingMetric": 0,
+        },
+        {
+            "NewEnable": True,
+            "NewDestIPAddress": "172.16.3.4",
+            "NewDestSubnetMask": "255.255.0.0",
+            "NewGatewayIPAddress": "0.0.0.0",
+            "NewForwardingMetric": 20,
+        },
+    ]
+
+    def call(service, action, **args):
+        if action == "GetForwardNumberOfEntries":
+            return {"NewForwardNumberOfEntries": 2}
+        return rows[args["NewForwardingIndex"]]
+
+    client._fc.call_action.side_effect = call
+    routes = client.get_routes()
+
+    assert [r["network"] for r in routes] == ["10.8.0.0/24", "172.16.0.0/16"]
+    assert [r["enabled"] for r in routes] == [False, True]
+    assert routes[0]["gateway"] == "192.0.2.5" and routes[1]["gateway"] is None
+    assert routes[0]["source"] == "0.0.0.0" and routes[0]["source_mask"] == "0.0.0.0"
+    assert routes[1]["metric"] == 20 and routes[0]["interface"] == "LanHostConfigManagement1"
+    assert "status" not in routes[0] and "type" not in routes[0]
+
+
+def test_the_routes_stop_where_the_box_runs_out_and_keep_an_odd_mask_readable():
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    client._fc = MagicMock()
+
+    def call(service, action, **args):
+        if action == "GetForwardNumberOfEntries":
+            return {"NewForwardNumberOfEntries": 5}  # more than it lists
+        if args["NewForwardingIndex"] > 0:
+            raise FritzArrayIndexError("713")
+        return {"NewDestIPAddress": "10.0.0.0", "NewDestSubnetMask": "bad", "NewEnable": True}
+
+    client._fc.call_action.side_effect = call
+    routes = client.get_routes()
+
+    assert len(routes) == 1 and routes[0]["network"] == "10.0.0.0/bad"
+
+
 def _internet_client(answers: dict[str, dict]) -> tuple[FritzNetworkClient, list[str]]:
     """A box that answers the actions named in ``answers`` and refuses all others."""
     client = FritzNetworkClient("192.168.178.1", None, "user", "secret")

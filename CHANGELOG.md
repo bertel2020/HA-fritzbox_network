@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
+## Unveröffentlicht
+
+### Neu
+
+- Seitenpanel, Adressraum: Neue Seite **Routen** (Adresse `#/routes`, Umschalter oben auf der Adressseite) mit den statischen IPv4-Routen der Box: Ziel-Netz, Gateway mit dem Gerät aus der Liste, Metrik und Zustand (aktiv, aus, Gateway offline) samt Hinweis, wenn das Gateway einer eingeschalteten Route offline ist. Nur Ansicht. Die Box nennt nur die von Hand eingetragenen Routen, nicht die, die sie selbst anlegt. Gelesen wird beim Öffnen der Seite; an einer FRITZ!Box 7590 AX (FRITZ!OS 8.25) geprüft.
+
 ## 1.2.0 – 2026-11-05
 
 ### Neu

@@ -30,6 +30,7 @@ import {
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet } from "./panel-internet.js";
 import { renderVpn } from "./panel-vpn.js";
+import { renderRoutes } from "./panel-routes.js";
 import { captureDefaults, defaultInterface, renderCapture } from "./panel-capture.js";
 import { renderConnection } from "./panel-check.js";
 import { renderLog } from "./panel-log.js";
@@ -121,6 +122,8 @@ const ICON_URL = new URL("./brand/icon.png", import.meta.url).href;
 
 // the two pages behind the "Devices" tab: which devices the integration takes in, and the clean-up
 export const DEVICE_PAGES = ["filter", "cleanup"];
+/** The pages of the "Address space" tab: the address space itself and the static routes. */
+export const ADDRESS_PAGES = ["addresses", "routes"];
 
 /** The switch between the pages of the "Devices" tab, drawn at the top of each of them. */
 export function renderSubTabs(active, t) {
@@ -129,9 +132,16 @@ export function renderSubTabs(active, t) {
   ).join("")}</div>`;
 }
 
+/** The switch between the pages of the "Address space" tab, drawn at the top of each of them. */
+export function renderAddressTabs(active, t) {
+  return `<div class="seg subtabs" role="tablist" aria-label="${escapeHtml(t.tabs.addresses)}">${ADDRESS_PAGES.map(
+    (id) => `<button role="tab" data-tab="${id}" aria-selected="${id === active}" aria-pressed="${id === active}">${escapeHtml(t.tabs[id])}</button>`
+  ).join("")}</div>`;
+}
+
 export function renderNav(state, t, stale) {
   const line = state.data?.internet;
-  const selected = (id) => state.tab === id || (id === "devices" && DEVICE_PAGES.includes(state.tab));
+  const selected = (id) => state.tab === id || (id === "devices" && DEVICE_PAGES.includes(state.tab)) || (id === "addresses" && ADDRESS_PAGES.includes(state.tab));
   const tab = (id, extra = "", label = "") =>
     `<button role="tab" data-tab="${id}" aria-selected="${selected(id)}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${escapeHtml(t.tabs[id])}${extra}</button>`;
   const dot = line ? `<i class="dot ${line.connected === false ? "" : "on"}" aria-hidden="true"></i>` : "";
@@ -158,6 +168,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       picked: new Set(),
       filterPage: null,
       ports: null,
+      routes: null,
       capture: null,
       captureForm: captureDefaults(null),
       captureSummary: null,
@@ -397,6 +408,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._loadLog();
     }
     else if (this._state.tab === "addresses") this._loadAddresses();
+    else if (this._state.tab === "routes") this._loadRoutes();
   }
 
   _ws(type, extra = {}) {
@@ -444,6 +456,22 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._state.ports = "failed";
     }
     this._update();
+  }
+
+  /** The routes are read when their page opens, not with every update. */
+  async _loadRoutes() {
+    this._state.routes = null;
+    this._update();
+    try {
+      this._state.routes = await this._ws("routes/list");
+    } catch {
+      this._state.routes = "failed";
+    }
+    this._update();
+  }
+
+  _renderRoutes() {
+    this._set("routes-view", renderRoutes(this._state.routes, { t: this._t, subTabs: renderAddressTabs("routes", this._t) }));
   }
 
   /** The recordings are read when the internet page opens and while one runs. */
@@ -634,6 +662,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._state.picked = new Set();
     this._state.filterPage = null;
     this._state.ports = null;
+    this._state.routes = null;
     this._update();
     if (await this._subscribe()) this._enterTab();
   }
@@ -741,6 +770,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div id="vpn-view" hidden></div>
           <div id="diagnose-view" hidden></div>
           <div id="addresses-view" hidden></div>
+          <div id="routes-view" hidden></div>
           <div class="col" id="cleanup-view" hidden>
             ${renderSubTabs("cleanup", t)}
             <div class="phead"><h1>${t.cleanup.title}</h1><p class="lead">${t.cleanup.lead}</p></div>
@@ -835,6 +865,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     root.querySelector("#vpn-view").hidden = !ready || tab !== "vpn";
     root.querySelector("#diagnose-view").hidden = !ready || tab !== "diagnose";
     root.querySelector("#addresses-view").hidden = !ready || tab !== "addresses";
+    root.querySelector("#routes-view").hidden = !ready || tab !== "routes";
     root.querySelector("#cleanup-view").hidden = !ready || tab !== "cleanup";
     root.querySelector("#filter-view").hidden = !ready || tab !== "filter";
     root.querySelector("#live-chip").hidden = !ready;
@@ -849,6 +880,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (tab === "vpn") return this._renderVpn();
     if (tab === "diagnose") return this._renderDiagnose();
     if (tab === "addresses") return this._renderAddresses();
+    if (tab === "routes") return this._renderRoutes();
     if (tab === "cleanup") return this._renderCleanup();
     if (tab === "filter") return this._renderFilter();
     if (onDevice) return this._renderDetail();
@@ -982,6 +1014,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       "addresses-view",
       renderAddresses({
         t: this._t,
+        subTabs: renderAddressTabs("addresses", this._t),
         language: this._hass?.language,
         now: Date.now(),
         addr: this._state.addr,

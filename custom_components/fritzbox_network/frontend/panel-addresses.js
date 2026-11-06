@@ -703,7 +703,7 @@ function zonesCard(m, t, language) {
 export function renderAddresses(ctx) {
   const { t, addr, clients, nodes } = ctx;
   const a = t.addr;
-  const back = `<div class="phead"><div class="pheadrow"><h1 id="dtitle" tabindex="-1">${escapeHtml(a.title)}</h1>
+  const back = `${ctx.subTabs ?? ""}<div class="phead"><div class="pheadrow"><h1 id="dtitle" tabindex="-1">${escapeHtml(a.title)}</h1>
     ${addr.status === "ready" ? `<div class="btn-row tight"><button class="btn" data-aentry="new" data-k="entry-open" aria-haspopup="dialog"><span aria-hidden="true">+</span> ${escapeHtml(a.entries.open)}</button>${groupsButton(addr.own ?? emptyOwn(), t)}<button class="btn" data-aexport="scroll" data-k="x-scroll">${escapeHtml(a.export.open)}</button></div>` : ""}</div><p class="lead">${escapeHtml(a.lead)}</p></div>`;
   if (addr.status === "loading") return `${back}<div class="card"><div class="empty"><span>${escapeHtml(t.loading)}</span></div></div>`;
   if (addr.status === "failed") return `${back}<div class="card"><div class="empty"><b>${escapeHtml(a.failed)}</b></div></div>`;

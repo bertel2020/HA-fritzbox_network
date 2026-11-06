@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Routen – Mockup</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#f4f6f9, #0f1216);
+    --surface: light-dark(#fff, #1b1f24);
+    --soft: light-dark(#f6f8fb, #232830);
+    --line: light-dark(#e3e7ee, #2e343d);
+    --text: light-dark(#1b1f24, #e6e9ed);
+    --muted: light-dark(#5d6672, #9aa4b1);
+    --accent: light-dark(#2b6cb0, #6aa7e8);
+    --accent-soft: light-dark(#e6f0fb, #1d3350);
+    --ok: light-dark(#2e7d4f, #7fd0a0);
+    --ok-soft: light-dark(#e5f5ec, #1a3326);
+    --warn: light-dark(#9a5b00, #f0c070);
+    --warn-soft: light-dark(#fff1d6, #3a2c10);
+    --bad: light-dark(#a1261b, #f2a29a);
+    --bad-soft: light-dark(#fdecea, #3d1c19);
+    --radius: 18px;
+    --shadow: 0 1px 2px rgb(16 24 40 / 12%), 0 6px 18px -10px rgb(16 24 40 / 25%);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 Roboto, "Noto Sans", system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+  button, input, select { font: inherit; color: inherit; }
+  button { background: none; border: 0; cursor: pointer; padding: 0; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; min-width: 0; }
+  h1 { font-size: 24px; font-weight: 500; margin: 2px 0 4px; letter-spacing: -.01em; }
+  h2 { font-size: 15px; font-weight: 500; margin: 0 0 10px; }
+  .lead, .muted { color: var(--muted); margin: 0; }
+  .label { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { padding: 0 14px; min-height: 36px; font-weight: 500; color: var(--muted); border-left: 1px solid var(--line); }
+  .seg button:first-child { border-left: 0; }
+  .seg button[aria-selected="true"] { background: var(--accent); color: #fff; }
+  .top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; box-shadow: var(--shadow); }
+  .tile b { display: block; font-size: 22px; font-weight: 500; line-height: 1.25; }
+  .tile small { color: var(--muted); font-size: 12px; }
+  .hints { display: grid; gap: 8px; }
+  .hint { display: flex; gap: 10px; padding: 10px 12px; border-radius: 12px; font-size: 13px; }
+  .hint.warn { background: var(--warn-soft); color: var(--warn); }
+  .hint.info { background: var(--accent-soft); color: var(--accent); }
+  .hint.bad { background: var(--bad-soft); color: var(--bad); }
+  .layout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; }
+  @media (max-width: 920px) { .layout { grid-template-columns: minmax(0, 1fr); } }
+  .head { display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .btn { min-height: 36px; padding: 0 14px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface); font-weight: 500; }
+  .btn.p { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn.d { color: var(--bad); }
+  .btn[disabled] { opacity: .5; cursor: default; }
+  ul { list-style: none; margin: 0; padding: 0; }
+  .route { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.2fr) auto auto; gap: 4px 14px; align-items: center; padding: 11px 8px; border-top: 1px solid var(--line); border-radius: 10px; cursor: pointer; }
+  .route:first-child { border-top: 0; }
+  .route:hover { background: var(--soft); }
+  .route[aria-current="true"] { background: var(--accent-soft); }
+  .route b { font-weight: 500; display: block; }
+  .route small { color: var(--muted); font-size: 12px; display: block; }
+  .route.off b, .route.off small { opacity: .6; }
+  @media (max-width: 640px) { .route { grid-template-columns: 1fr auto; } .route > :nth-child(2) { grid-column: 1 / -1; order: 3; } }
+  .chip { display: inline-block; padding: 1px 10px; border-radius: 10px; font-size: 12px; font-weight: 500; background: var(--soft); color: var(--muted); white-space: nowrap; }
+  .chip.ok { background: var(--ok-soft); color: var(--ok); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); }
+  .switch { position: relative; width: 42px; height: 24px; border-radius: 12px; background: var(--line); transition: background .15s; flex: none; }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgb(0 0 0 / 30%); }
+  .switch[aria-checked="true"] { background: var(--ok); }
+  .switch[aria-checked="true"]::after { transform: translateX(18px); }
+  .switch[disabled] { opacity: .4; cursor: not-allowed; }
+  .sep { margin: 16px 0 4px; }
+  /* schema */
+  .schema { display: grid; gap: 0; justify-items: center; margin: 12px 0; }
+  .node { border: 1px solid var(--line); background: var(--soft); border-radius: 12px; padding: 8px 14px; text-align: center; min-width: 190px; }
+  .node b { display: block; font-weight: 500; }
+  .node small { color: var(--muted); font-size: 12px; }
+  .node.me { border-color: var(--accent); background: var(--accent-soft); }
+  .node.gw { border-color: var(--ok); }
+  .node.gw.down { border-color: var(--bad); background: var(--bad-soft); }
+  .node.dst { border-style: dashed; }
+  .link { width: 2px; height: 22px; background: var(--line); position: relative; }
+  .link span { position: absolute; left: 10px; top: 2px; font-size: 11px; color: var(--muted); white-space: nowrap; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 12px 0 0; }
+  dt { color: var(--muted); } dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+  .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  /* dialog */
+  dialog { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); color: var(--text); padding: 20px; width: min(480px, calc(100vw - 32px)); box-shadow: var(--shadow); }
+  dialog::backdrop { background: rgb(0 0 0 / 45%); }
+  label { display: grid; gap: 4px; margin-top: 12px; font-weight: 500; }
+  label small { font-weight: 400; color: var(--muted); }
+  input, select { min-height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 0 10px; }
+  input.err { border-color: var(--bad); }
+  .msg { min-height: 20px; font-size: 13px; margin-top: 10px; }
+  .msg.bad { color: var(--bad); } .msg.warn { color: var(--warn); } .msg.ok { color: var(--ok); }
+  .note { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div>
+      <div class="seg" role="tablist" aria-label="Seiten">
+        <button role="tab" aria-selected="false">Netz</button>
+        <button role="tab" aria-selected="false">Internet</button>
+        <button role="tab" aria-selected="false">VPN</button>
+        <button role="tab" aria-selected="true">Adressen</button>
+        <button role="tab" aria-selected="false">Diagnose</button>
+        <button role="tab" aria-selected="false">Geräte</button>
+      </div>
+      <h1>Routen</h1>
+      <p class="lead">Wohin die Box Verkehr für andere Netze schickt: zum Beispiel zu einem zweiten Router oder zu einem VPN-Gateway im Heimnetz.</p>
+    </div>
+    <div class="seg" aria-label="Unterseite"><button aria-selected="false">Adressraum</button><button aria-selected="false">Feste Adressen</button><button aria-selected="true" role="tab">Routen</button></div>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+  <div class="hints" id="hints"></div>
+
+  <div class="layout">
+    <section class="card">
+      <div class="head">
+        <h2>Statische Routen der Box</h2>
+        <button class="btn p" id="add">Route anlegen</button>
+      </div>
+      <span class="label">Eigene Routen</span>
+      <ul id="own"></ul>
+      <p class="note" style="margin-top:14px">Das sind die Routen aus Heimnetz › Netzwerk › Netzwerkeinstellungen › IPv4-Routen. Routen für das Heimnetz, das Internet und VPN legt die Box selbst an und nennt sie nicht.</p>
+    </section>
+
+    <aside class="card" id="detail"></aside>
+  </div>
+
+  <p class="note">Mockup mit Beispieldaten. Schalten und Anlegen sind nur hier simuliert; die Prüfungen im Dialog entsprechen dem Plan (Abschnitt 4).</p>
+</main>
+
+<dialog id="dlg">
+  <form method="dialog" id="form" novalidate>
+    <h2>Route anlegen</h2>
+    <label>Ziel-Netz <small>in der Schreibweise Adresse/Länge, zum Beispiel 10.9.0.0/24</small>
+      <input id="f-net" class="mono" autocomplete="off" placeholder="10.9.0.0/24"></label>
+    <label>Gateway <small>ein Gerät im Heimnetz, das den Verkehr weiterleitet</small>
+      <select id="f-gw"></select></label>
+    <label>Metrik <small>kleiner gewinnt, wenn mehrere Routen zum Ziel passen</small>
+      <input id="f-metric" type="number" min="0" max="65535" value="10"></label>
+    <div class="msg" id="msg" role="status"></div>
+    <div class="actions">
+      <button class="btn p" id="save" value="ok" type="button">Anlegen</button>
+      <button class="btn" value="cancel">Abbrechen</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+  const LAN = { net: "192.168.178.0/24", box: "192.168.178.1", ha: "192.168.178.10" };
+  const devices = [
+    { ip: "192.168.178.5", name: "Raspberry Pi (WireGuard)", online: true, fixed: true },
+    { ip: "192.168.178.20", name: "Zweiter Router Keller", online: false, fixed: true },
+    { ip: "192.168.178.31", name: "Mini-PC", online: true, fixed: false },
+  ];
+  let routes = [
+    { id: 1, net: "10.8.0.0/24", gw: "192.168.178.5", iface: "LAN", metric: 10, enabled: true, kind: "user", note: "WireGuard-Tunnel des Raspberry Pi" },
+    { id: 2, net: "192.168.2.0/24", gw: "192.168.178.20", iface: "LAN", metric: 10, enabled: true, kind: "user", note: "Netz im Keller" },
+    { id: 3, net: "172.16.0.0/16", gw: "192.168.178.5", iface: "LAN", metric: 20, enabled: false, kind: "user", note: "Büro (nur bei Bedarf)" },
+  ];
+  let selected = 1, nextId = 4;
+  const $ = (s) => document.querySelector(s);
+  const dev = (ip) => devices.find((d) => d.ip === ip);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  function state(r) {
+    if (!r.enabled) return ["aus", ""];
+    const d = dev(r.gw);
+    if (r.kind === "user" && d && !d.online) return ["Gateway offline", "bad"];
+    return ["aktiv", "ok"];
+  }
+
+  function render() {
+    const own = routes.filter((r) => r.kind === "user");
+    const bad = own.filter((r) => state(r)[1] === "bad");
+    $("#tiles").innerHTML = [
+      [own.length, "eigene Routen"],
+      [own.filter((r) => r.enabled).length, "davon eingeschaltet"],
+      [bad.length, "mit Gateway offline"],
+    ].map(([v, l]) => `<div class="tile"><b>${v}</b><small>${l}</small></div>`).join("");
+
+    const hints = [];
+    bad.forEach((r) => hints.push(`<div class="hint warn"><span>⚠</span><span><b>${esc(dev(r.gw).name)}</b> ist offline. Der Verkehr an <span class="mono">${esc(r.net)}</span> geht ins Leere, bis es wieder da ist.</span></div>`));
+    own.filter((r) => dev(r.gw) && !dev(r.gw).fixed).forEach((r) => hints.push(`<div class="hint info"><span>ⓘ</span><span><b>${esc(dev(r.gw).name)}</b> hat keine feste Adresse. Ändert sie sich, stimmt die Route nicht mehr. <u>Feste Adresse vergeben</u></span></div>`));
+    $("#hints").innerHTML = hints.join("");
+
+    const row = (r) => {
+      const [txt, tone] = state(r), d = dev(r.gw), user = r.kind === "user";
+      return `<li class="route ${r.enabled ? "" : "off"} " data-id="${r.id}" aria-current="${r.id === selected}">
+        <div><b class="mono">${esc(r.net)}</b><small>${esc(r.note ?? (user ? "" : "von der Box"))}</small></div>
+        <div><b>${esc(d ? d.name : r.gw)}</b><small class="mono">${esc(d ? r.gw : "")}${d ? " · " : ""}${esc(r.iface)} · Metrik ${r.metric}</small></div>
+        <span class="chip ${tone}">${txt}</span>
+        <button class="switch" role="switch" aria-checked="${r.enabled}" aria-label="Route ${esc(r.net)}" ${user ? "" : "disabled"} data-sw="${r.id}"></button>
+      </li>`;
+    };
+    $("#own").innerHTML = own.length ? own.map(row).join("") : `<li class="muted" style="padding:12px 8px">Keine eigenen Routen.</li>`;
+    detail();
+  }
+
+  function detail() {
+    const r = routes.find((x) => x.id === selected);
+    if (!r) { $("#detail").innerHTML = `<p class="muted">Wählen Sie eine Route.</p>`; return; }
+    const d = dev(r.gw), [txt, tone] = state(r), user = r.kind === "user";
+    $("#detail").innerHTML = `
+      <span class="label">Weg des Verkehrs</span>
+      <div class="schema">
+        <div class="node me"><b>Heimnetz</b><small>${LAN.net}</small></div>
+        <div class="link"><span>${r.enabled ? "an die Box" : "—"}</span></div>
+        <div class="node"><b>FRITZ!Box</b><small class="mono">${LAN.box}</small></div>
+        <div class="link"><span>${r.enabled ? "Route" : "ausgeschaltet"}</span></div>
+        <div class="node gw ${tone === "bad" ? "down" : ""}"><b>${esc(d ? d.name : r.gw)}</b><small class="mono">${esc(d ? r.gw : r.iface)}</small></div>
+        <div class="link"><span>weiter</span></div>
+        <div class="node dst"><b>${esc(r.net)}</b><small>Ziel-Netz</small></div>
+      </div>
+      <dl>
+        <dt>Zustand</dt><dd><span class="chip ${tone}">${txt}</span></dd>
+        <dt>Gateway</dt><dd class="mono">${esc(r.gw)}</dd>
+        <dt>Schnittstelle</dt><dd>${esc(r.iface)}</dd>
+        <dt>Metrik</dt><dd>${r.metric}</dd>
+        <dt>Herkunft</dt><dd>${user ? "eigene Route" : "von der Box"}</dd>
+      </dl>
+      <div class="actions">
+        ${user ? `<button class="btn" data-sw="${r.id}">${r.enabled ? "Ausschalten" : "Einschalten"}</button><button class="btn d" data-del="${r.id}">Löschen</button>` : `<span class="note">Diese Route gehört der Box und lässt sich hier nicht ändern.</span>`}
+      </div>`;
+  }
+
+  document.addEventListener("click", (e) => {
+    const sw = e.target.closest("[data-sw]"), del = e.target.closest("[data-del]"), row = e.target.closest(".route");
+    if (sw) { const r = routes.find((x) => x.id == sw.dataset.sw); r.enabled = !r.enabled; render(); return; }
+    if (del) {
+      const r = routes.find((x) => x.id == del.dataset.del);
+      if (confirm(`Route ${r.net} über ${r.gw} löschen?\nDer Verkehr an dieses Netz geht danach nicht mehr über das Gateway.`)) { routes = routes.filter((x) => x !== r); selected = null; render(); }
+      return;
+    }
+    if (row) { selected = Number(row.dataset.id); render(); }
+  });
+
+  /* dialog and the checks of the plan, section 4 */
+  const ip2n = (s) => s.split(".").reduce((a, o) => a * 256 + Number(o), 0);
+  const valid = (s) => /^(\d{1,3})(\.\d{1,3}){3}$/.test(s) && s.split(".").every((o) => Number(o) <= 255);
+  const inside = (ip, net) => { const [a, l] = net.split("/"), m = l === "0" ? 0 : (0xffffffff << (32 - l)) >>> 0; return ((ip2n(ip) & m) >>> 0) === ((ip2n(a) & m) >>> 0); };
+
+  function check() {
+    const net = $("#f-net").value.trim(), gw = $("#f-gw").value, m = net.match(/^([\d.]+)\/(\d{1,2})$/);
+    $("#f-net").classList.remove("err");
+    if (!net) return ["", ""];
+    if (!m || !valid(m[1]) || Number(m[2]) > 32) return ["bad", "Das ist kein Netz in der Form Adresse/Länge."];
+    if (m[2] === "0") return ["bad", "Eine Route für alles (0.0.0.0/0) ist nicht erlaubt: Sie würde das Internet umlenken."];
+    if (inside(m[1], LAN.net) || inside(LAN.net.split("/")[0], net)) return ["bad", `Das Ziel überschneidet sich mit dem Heimnetz ${LAN.net}. Der Verkehr bliebe im Heimnetz.`];
+    if (routes.some((r) => r.net === net && r.gw === gw)) return ["bad", "Diese Route gibt es schon."];
+    if ([LAN.box, LAN.ha].includes(gw)) return ["bad", "Das Gateway darf nicht die Box oder Home Assistant sein."];
+    const d = dev(gw);
+    if (d && !d.online) return ["warn", `${d.name} ist offline; die Route würde ins Leere zeigen.`];
+    if (d && !d.fixed) return ["warn", `${d.name} hat keine feste Adresse; ändert sie sich, stimmt die Route nicht mehr.`];
+    return ["ok", `Verkehr an ${net} geht künftig über ${gw}.`];
+  }
+  function paint() { const [tone, text] = check(); $("#msg").className = "msg " + tone; $("#msg").textContent = text; $("#f-net").classList.toggle("err", tone === "bad" && $("#f-net").value); $("#save").disabled = tone === "bad" || !$("#f-net").value; }
+
+  $("#add").onclick = () => {
+    $("#f-gw").innerHTML = devices.map((d) => `<option value="${d.ip}">${esc(d.name)} · ${d.ip}${d.online ? "" : " (offline)"}</option>`).join("");
+    $("#f-net").value = ""; paint(); $("#dlg").showModal();
+  };
+  ["#f-net", "#f-gw"].forEach((s) => $(s).addEventListener("input", paint));
+  $("#save").onclick = () => {
+    const [tone] = check(); if (tone === "bad") return;
+    routes.splice(routes.filter((r) => r.kind === "user").length, 0, { id: nextId, net: $("#f-net").value.trim(), gw: $("#f-gw").value, iface: "LAN", metric: Number($("#f-metric").value) || 10, enabled: true, kind: "user" });
+    selected = nextId++; $("#dlg").close(); render();
+  };
+  render();
+</script>
+</body>
+</html>

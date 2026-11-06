@@ -2,6 +2,12 @@
 
 All notable changes to this integration are recorded here.
 
+## Unreleased
+
+### New
+
+- Side panel, address space: New **Routes** page (address `#/routes`, switch at the top of the address page) with the static IPv4 routes of the box: destination network, gateway with the device from the list, metric and state (on, off, gateway offline), with a hint where the gateway of a switched-on route is offline. View only. The box lists only the routes entered by hand, not those it sets up itself. Read when the page opens; checked on a FRITZ!Box 7590 AX (FRITZ!OS 8.25).
+
 ## 1.2.0 – 2026-11-05
 
 ### New
