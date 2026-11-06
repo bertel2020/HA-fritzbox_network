@@ -10,6 +10,10 @@ All notable changes to this integration are recorded here.
 - Side panel, routes: Next to the list there is now a **Way of the traffic** card for the selected route: home network, box, gateway and destination network as a sketch (red where the gateway is offline; grey and dashed for a switched-off route) with state, gateway, interface and metric. It also says whether the gateway has a fixed address and warns if not (if the address changes, the route no longer fits). Routes are switched with a toggle; deleting is in the card.
 - Routes as entities: Each static route of the box is a switch "Route <network>" (attributes: network, gateway, device and state of the gateway, interface, metric) for dashboards, scenes and automations. The routes are read every 10 polls (about every 5 minutes) and at once after each change by the integration; new routes get their switch at the next read, switches of deleted routes go after two reads, or at once where the route is deleted in the panel. Only with the right "FRITZ!Box settings".
 
+### Changed
+
+- Side panel, Internet: The **Port forwardings** card is redesigned: tiles at the top (open to the internet, closed, devices) and filters (All, Open, Closed, IPv6, UPnP) with counts, below them the forwardings grouped by device (name as a link, address, online or offline). Each forwarding is one row with state (open, closed, partly open), name, chips for IPv4, IPv6 and UPnP, protocol and port; the same forwarding for IPv4 and IPv6 is one row. Open ones come first, closed ones are pale.
+
 ### Fixed
 
 - Side panel, Internet: The **Port forwardings** card listed only the forwardings opened by UPnP. TR-064 does not know the ones set by hand in the box, so a box with forwardings set up showed "No ports are open to the internet". They are now read from the page "Port forwardings" of the web interface, also those for IPv6 and port ranges; an entry says whether it is for IPv6 or opened by UPnP. Where the box cannot deliver the page, the card says so instead of claiming that no ports are open.

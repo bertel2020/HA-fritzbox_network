@@ -168,6 +168,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       picked: new Set(),
       filterPage: null,
       ports: null,
+      portsFilter: "all",
       routes: null,
       routesSel: null,
       routesFixed: {},
@@ -1070,6 +1071,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         ports: this._state.ports,
         traffic: this._state.traffic,
         trafficRange: this._state.trafficRange,
+        portsFilter: this._state.portsFilter,
         clients: this._state.data?.clients ?? [],
       })
     );
@@ -1888,6 +1890,9 @@ class FritzboxNetworkPanel extends HTMLElement {
       return;
     } else if (ds.act === "vpn-switch") {
       return this._switchVpn(ds.key, ds.on === "1");
+    } else if (ds.act === "ports-filter") {
+      state.portsFilter = ds.f;
+      return this._renderInternet();
     } else if (ds.act === "route-pick") {
       state.routesSel = ds.network;
       return this._renderRoutes();

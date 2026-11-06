@@ -548,6 +548,7 @@ async def test_the_ports_set_by_hand_come_with_the_ones_opened_by_upnp_without_d
         ("Game", "upnp", "ipv4"),
     ]
     assert result["entries"][0]["device_name"] == host.name
+    assert result["entries"][0]["device_online"] is host.active
     assert "mac" not in result["entries"][0]
     assert result["entries"][1]["device_id"] == host.mac.replace(":", "")
 

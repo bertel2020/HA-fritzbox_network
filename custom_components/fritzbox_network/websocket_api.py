@@ -620,6 +620,7 @@ async def ws_ports(
         host = by_mac.get(entry.pop("mac", None)) or by_ip.get(entry["client"])
         entry["device_id"] = mac_id(host.mac) if host else None
         entry["device_name"] = host.name if host else None
+        entry["device_online"] = bool(host.active) if host else None
     connection.send_result(msg["id"], {"entries": entries, "manual_known": manual is not None})
 
 

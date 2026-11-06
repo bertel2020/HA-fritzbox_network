@@ -706,23 +706,86 @@ test("a new firmware is a hint only when it differs from the installed one", () 
   assert.equal(hintsModule.renderHints(data("8.25", null), t), "");
 });
 
-test("the internet page lists the port forwardings, and says when there are none or they cannot be read", () => {
+const portsPage = await import(`${base}panel-ports.js`);
+
+const forwarding = (over) => ({ uid: null, description: "Web", protocol: "TCP", external_port: 443, external_port_end: null, internal_port: 443, internal_port_end: null, client: "192.0.2.10", family: "ipv4", enabled: true, lease: 0, source: "manual", device_id: "000000000001", device_name: "NAS", device_online: true, ...over });
+
+test("the internet page lists the port forwardings by device, and says when there are none or they cannot be read", () => {
   const t = texts.panelTexts("en");
   const page = (ports) => internetPage.renderInternet(internet, { t, language: "en", now: Date.now(), canWrite: true, ports });
   const entries = [
-    { description: "Web", protocol: "TCP", external_port: 443, internal_port: 8443, client: "192.0.2.10", device_id: "000000000001", device_name: "NAS", enabled: true, lease: 0 },
-    { description: null, protocol: "UDP", external_port: 5000, internal_port: 5000, client: "192.0.2.250", device_id: null, device_name: null, enabled: false, lease: 3600 },
+    forwarding({ internal_port: 8443 }),
+    forwarding({ description: null, protocol: "UDP", external_port: 5000, internal_port: 5000, client: "192.0.2.250", device_id: null, device_name: null, device_online: null, enabled: false, lease: 3600, source: "upnp" }),
   ];
-  const html = page({ entries });
-  assert.match(html, /TCP 443 → <button class="linklike" data-dev="000000000001">NAS<\/button>:8443/);
-  assert.match(html, /UDP 5000 → 192\.0\.2\.250:5000/);
+  const html = page({ entries, manual_known: true });
+  assert.match(html, /<button class="linklike" data-dev="000000000001">NAS<\/button>/);
+  assert.match(html, /<span class="mono">443<\/span><span class="arrow" aria-hidden="true">→<\/span><span class="mono">8443<\/span>/);
   assert.match(html, /Without a name/);
-  assert.match(html, /off · ends after 1 h 0 min/);
-  assert.match(page({ entries: [] }), /No ports are open to the internet/);
+  assert.match(html, /UPnP · ends after 1 h 0 min/);
+  // a device the box does not list is shown by its address, without the online chip
+  assert.match(html, /<b>192\.0\.2\.250<\/b>/);
+  assert.match(html, /class="chip open"><i class="dot warn" aria-hidden="true"><\/i>open/);
+  assert.match(page({ entries: [], manual_known: true }), /No ports are open to the internet/);
   assert.match(page("failed"), /did not tell its port forwardings/);
   assert.match(page(null), /Loading/);
   // a hostile description is escaped
-  assert.doesNotMatch(page({ entries: [{ ...entries[0], description: "<b>x</b>" }] }), /<b>x<\/b>/);
+  assert.doesNotMatch(page({ entries: [{ ...entries[0], description: "<b>x</b>" }], manual_known: true }), /<b>x<\/b>/);
+});
+
+test("IPv4 and IPv6 of one forwarding are one row, open only where both are on", () => {
+  const rows = portsPage.mergePortRules([
+    forwarding({ description: "Tracker", protocol: "UDP", external_port: 5027, internal_port: 5027 }),
+    forwarding({ description: "Tracker", protocol: "UDP", external_port: 5027, internal_port: 5027, client: "2001:db8::1", family: "ipv6" }),
+    forwarding({ description: "Server", external_port: 27015, external_port_end: 27030, internal_port: 27000, internal_port_end: 27015 }),
+    forwarding({ description: "Server", external_port: 27015, external_port_end: 27030, internal_port: 27000, internal_port_end: 27015, family: "ipv6", enabled: false }),
+    forwarding({ description: "VPN", external_port: 1194, internal_port: 1194, enabled: false }),
+    forwarding({ description: "Other", external_port: 80, internal_port: 80, device_id: "000000000002", device_name: "Pi" }),
+  ]);
+  assert.deepEqual(rows.map((r) => [r.description, r.families.map((f) => f.family).join("+"), r.state]), [
+    ["Tracker", "ipv4+ipv6", "open"],
+    ["Server", "ipv4+ipv6", "part"],
+    ["VPN", "ipv4", "closed"],
+    ["Other", "ipv4", "open"],
+  ]);
+  // two rules of one family that say the same stay two rows
+  assert.equal(portsPage.mergePortRules([forwarding({}), forwarding({})]).length, 2);
+});
+
+test("the port forwardings are counted, grouped by device with the open ones first, and filtered", () => {
+  const entries = [
+    forwarding({ description: "VPN", external_port: 1194, internal_port: 1194, enabled: false }),
+    forwarding({ description: "Web", source: "manual" }),
+    forwarding({ description: "Game", external_port: 3074, internal_port: 3074, device_id: "000000000002", device_name: "Console", client: "192.0.2.60", source: "upnp", lease: 600 }),
+    forwarding({ description: "Game", external_port: 3074, internal_port: 3074, device_id: "000000000002", device_name: "Console", client: "2001:db8::2", family: "ipv6", source: "upnp", lease: 600 }),
+  ];
+  const all = portsPage.portsModel(entries);
+  assert.deepEqual([all.open, all.closed, all.devices], [2, 1, 2]);
+  assert.deepEqual(all.counts, { all: 3, open: 2, closed: 1, ipv6: 1, upnp: 1 });
+  assert.deepEqual(all.groups.map((g) => [g.name, g.rows.map((r) => r.description)]), [["NAS", ["Web", "VPN"]], ["Console", ["Game"]]]);
+  // the address of a group is the IPv4 one, not that of IPv6
+  assert.equal(all.groups[1].address, "192.0.2.60");
+  assert.deepEqual(portsPage.portsModel(entries, "closed").groups.map((g) => g.name), ["NAS"]);
+  assert.deepEqual(portsPage.portsModel(entries, "upnp").groups.map((g) => g.name), ["Console"]);
+  assert.deepEqual(portsPage.portsModel(entries, "ipv6").groups.map((g) => g.name), ["Console"]);
+});
+
+test("the port forwardings card shows tiles and filters, and what the box did not tell", () => {
+  const t = texts.panelTexts("de");
+  const entries = [forwarding({ description: "Games", external_port: 27015, external_port_end: 27030, internal_port: 27000, internal_port_end: 27015 }), forwarding({ description: "VPN", external_port: 1194, internal_port: 1194, enabled: false })];
+  const html = portsPage.renderPorts({ entries, manual_known: true }, { t, filter: "all" });
+  assert.match(html, /class="pftile open"><b>1<\/b><small>offen aus dem Internet/);
+  assert.match(html, /<span class="mono">27015–27030<\/span><span class="arrow" aria-hidden="true">→<\/span><span class="mono">27000–27015<\/span>/);
+  assert.match(html, /<span class="mono">1194<\/span><small>von außen und am Gerät/);
+  assert.match(html, /data-act="ports-filter" data-f="open" data-k="pf-open" aria-pressed="false">Offen<em>1<\/em>/);
+  assert.match(html, /data-f="all"[^>]*aria-pressed="true"/);
+  assert.match(portsPage.renderPorts({ entries, manual_known: true }, { t, filter: "ipv6" }), /Keine Freigabe passt zum Filter/);
+  assert.doesNotMatch(html, /nicht genannt/);
+  const gap = portsPage.renderPorts({ entries, manual_known: false }, { t, filter: "all" });
+  assert.match(gap, /class="pfnote warn">Die Box hat die von Hand gesetzten Freigaben nicht genannt, nur die per UPnP/);
+  assert.match(portsPage.renderPorts({ entries: [], manual_known: false }, { t }), /Kein Gerät hat per UPnP einen Port geöffnet\. Die Box hat die von Hand gesetzten nicht genannt/);
+  assert.match(portsPage.renderPorts({ entries: [], manual_known: true }, { t }), /Es sind keine Ports zum Internet offen/);
+  // an unknown filter counts as "all"
+  assert.match(portsPage.renderPorts({ entries, manual_known: true }, { t, filter: "nope" }), /data-f="all"[^>]*aria-pressed="true"/);
 });
 
 const table = await import(`${base}panel-table.js`);
@@ -1399,21 +1462,6 @@ const routeRows = {
     { network: "172.16.0.0/16", gateway: "192.0.2.99", interface: null, metric: 20, enabled: false, device_id: null, device_name: null, gateway_online: null },
   ],
 };
-
-test("the port forwardings show IPv6, UPnP, ranges and what the box did not tell", () => {
-  const entry = { description: "Games", protocol: "TCP", external_port: 27015, external_port_end: 27030, internal_port: 27000, internal_port_end: 27015, client: "192.0.2.41", family: "ipv4", enabled: true, lease: 0, source: "manual" };
-  const html = internetPage.renderInternet(internet, { t, language: "de", now: 0, ports: { entries: [entry, { ...entry, description: "Web", external_port: 443, external_port_end: null, internal_port: 443, internal_port_end: null, family: "ipv6", source: "upnp", enabled: false }], manual_known: true } });
-  assert.match(html, /TCP 27015–27030 → 192\.0\.2\.41:27000–27015/);
-  assert.match(html, /TCP 443 → 192\.0\.2\.41:443/);
-  assert.match(html, /IPv6 · per UPnP geöffnet · aus/);
-  assert.doesNotMatch(html, /nicht genannt/);
-  const gap = internetPage.renderInternet(internet, { t, language: "de", now: 0, ports: { entries: [entry], manual_known: false } });
-  assert.match(gap, /die von Hand gesetzten Freigaben nicht genannt, nur die per UPnP/);
-  const none = internetPage.renderInternet(internet, { t, language: "de", now: 0, ports: { entries: [], manual_known: false } });
-  assert.match(none, /Kein Gerät hat per UPnP einen Port geöffnet\. Die Box hat die von Hand gesetzten nicht genannt/);
-  const empty = internetPage.renderInternet(internet, { t, language: "de", now: 0, ports: { entries: [], manual_known: true } });
-  assert.match(empty, /Es sind keine Ports zum Internet offen/);
-});
 
 test("the routes page is a page of the address tab, reached by #/routes", () => {
   assert.deepEqual(shared.routeFromHash("#/routes"), { tab: "routes", device: null });

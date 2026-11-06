@@ -10,6 +10,10 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Seitenpanel, Routen: Rechts neben der Liste steht jetzt eine Karte **Weg des Verkehrs** für die gewählte Route: Heimnetz, Box, Gateway und Ziel-Netz als Skizze (rot, wenn das Gateway offline ist; grau und gestrichelt bei einer ausgeschalteten Route) mit Zustand, Gateway, Schnittstelle und Metrik. Sie sagt auch, ob das Gateway eine feste Adresse hat und warnt, wenn nicht (ändert sich die Adresse, stimmt die Route nicht mehr). Die Routen schalten mit einem Umschalter; Löschen steht in der Karte.
 - Routen als Entitäten: Jede statische Route der Box ist ein Schalter „Route <Netz>“ (Attribute: Netz, Gateway, Gerät und Zustand des Gateways, Schnittstelle, Metrik) für Dashboards, Szenen und Automationen. Die Routen werden alle 10 Abrufe gelesen (etwa alle 5 Minuten) und sofort nach jeder Änderung durch die Integration; neue Routen bekommen ihren Schalter beim nächsten Lesen, Schalter gelöschter Routen verschwinden nach zwei Lesungen oder sofort, wenn die Route im Panel gelöscht wird. Nur mit dem Recht „FRITZ!Box Einstellungen“.
 
+### Geändert
+
+- Seitenpanel, Internet: Die Karte **Portfreigaben** ist neu gestaltet: oben Kacheln (offen aus dem Internet, zu, Geräte) und Filter (Alle, Offen, Zu, IPv6, UPnP) mit Anzahl, darunter die Freigaben nach Gerät gruppiert (Name als Link, Adresse, online oder offline). Jede Freigabe ist eine Zeile mit Status (offen, zu, teils offen), Name, Chips für IPv4, IPv6 und UPnP, Protokoll und Port; dieselbe Freigabe für IPv4 und IPv6 ist eine Zeile. Offene stehen zuerst, geschlossene sind blass.
+
 ### Behoben
 
 - Seitenpanel, Internet: Die Karte **Portfreigaben** zeigte nur die per UPnP geöffneten Freigaben. Die von Hand in der Box gesetzten kennt TR-064 nicht, deshalb stand bei einer Box mit eingerichteten Freigaben „Es sind keine Ports zum Internet offen“. Sie werden jetzt aus der Seite „Portfreigaben“ der Weboberfläche gelesen, auch die für IPv6 und Portbereiche; ein Eintrag nennt, ob er für IPv6 oder per UPnP geöffnet ist. Kann die Box die Seite nicht liefern, sagt die Karte das, statt „keine Ports offen“ zu behaupten.
