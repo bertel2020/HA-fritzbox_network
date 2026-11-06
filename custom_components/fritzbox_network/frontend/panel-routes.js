@@ -108,6 +108,13 @@ function switchOf(route, ctx) {
     : "";
 }
 
+/** The delete button of a route, with the right to write only. */
+function deleteOf(route, ctx) {
+  if (!ctx.canWrite) return "";
+  const busy = ctx.busy?.has(route.network);
+  return `<button class="btn del" data-act="route-delete" data-network="${escapeHtml(route.network)}"${busy ? " disabled" : ""}>${escapeHtml(ctx.t.routesPage.delete.ok)}</button>`;
+}
+
 function row(route, ctx) {
   const { t } = ctx;
   const v = t.routesPage;
@@ -117,7 +124,7 @@ function row(route, ctx) {
   return `<li class="routerow ${route.state}" aria-current="${route.network === ctx.sel}">
     <span class="i" aria-hidden="true">${ic("network")}</span>
     <button class="routepick routenet" data-act="route-pick" data-network="${escapeHtml(route.network)}"><b class="mono">${escapeHtml(route.network)}</b><small>${escapeHtml(gatewayName(route, t))} · ${facts}</small></button>
-    <span class="chip ${tone}">${escapeHtml(v.state[route.state])}</span>${switchOf(route, ctx)}</li>`;
+    <span class="chip ${tone}">${escapeHtml(v.state[route.state])}</span>${switchOf(route, ctx)}${deleteOf(route, ctx)}</li>`;
 }
 
 /** What the box says of the gateway's address: the reservation as read from it, or null while unknown. */
@@ -126,49 +133,45 @@ function fixedOf(route, ctx) {
   return entry?.value ?? null;
 }
 
-/** The way the traffic takes, as four boxes, and what is known of the selected route. */
+/** The interface the box gives every route it makes itself: only another one is worth a line. */
+const USUAL_INTERFACE = "LanHostConfigManagement1";
+
+/** The way the traffic takes, as four small boxes, and what is known of the selected route. */
 function detail(route, ctx) {
   const { t } = ctx;
   const d = t.routesPage.detail;
-  const v = t.routesPage;
   const on = route.enabled;
   const down = route.state === "down";
+  const known = Boolean(route.device_id);
   const reservation = fixedOf(route, ctx);
-  const link = (text) => `<div class="rlink ${on ? "" : "off"}"><span>${escapeHtml(text)}</span></div>`;
-  const name = escapeHtml(gatewayName(route, t));
-  const gateway = route.device_id ? `<a href="#/device/${escapeHtml(route.device_id)}">${name}</a>` : name;
-  const fixedChip = !route.device_id
-    ? `<span class="muted">${escapeHtml(d.fixedUnknown)}</span>`
-    : reservation
-      ? `<span class="chip ${reservation.fixed ? "ok" : "warn"}">${escapeHtml(reservation.fixed ? d.yes : d.no)}</span>`
-      : `<span class="muted">${escapeHtml(d.fixedUnknown)}</span>`;
-  const hint =
-    route.device_id && reservation && !reservation.fixed
-      ? `<p class="ahint info"><span class="hbody">${escapeHtml(fill(d.notFixed, { name: gatewayName(route, t) }))} <a href="#/addresses">${escapeHtml(d.fixLink)}</a></span></p>`
-      : "";
-  const source = route.source && route.source !== "0.0.0.0" ? `<dt>${escapeHtml(d.source)}</dt><dd class="mono">${escapeHtml(route.source)}/${escapeHtml(route.source_mask)}</dd>` : "";
-  const busy = ctx.busy?.has(route.network);
-  const actions = ctx.canWrite
-    ? `<div class="routeactions"><span class="muted">${escapeHtml(on ? d.enabled : d.disabled)}</span>${switchOf(route, ctx)}<button class="btn del" data-act="route-delete" data-network="${escapeHtml(route.network)}"${busy ? " disabled" : ""}>${escapeHtml(v.delete.ok)}</button></div>`
+  const link = (text = "") => `<div class="rlink ${on ? "" : "off"}">${text ? `<span>${escapeHtml(text)}</span>` : ""}</div>`;
+  // a gateway that is no device of the list is shown by its address, once
+  const title = route.device_name ?? route.gateway ?? t.routesPage.noGateway;
+  const sub = known ? route.gateway : route.gateway ? d.unknownDevice : "";
+  const gatewayRow = known
+    ? `<dt>${escapeHtml(d.gateway)}</dt><dd><a href="#/device/${escapeHtml(route.device_id)}">${escapeHtml(title)}</a><br><span class="muted mono">${escapeHtml(route.gateway ?? "")}</span></dd>`
+    : `<dt>${escapeHtml(d.gateway)}</dt><dd><span class="mono">${escapeHtml(route.gateway ?? t.routesPage.noGateway)}</span>${route.gateway ? `<br><span class="muted">${escapeHtml(d.unknownDevice)}</span>` : ""}</dd>`;
+  const fixedRow = known
+    ? `<dt>${escapeHtml(d.fixed)}</dt><dd>${reservation ? `<span class="chip ${reservation.fixed ? "ok" : "warn"}">${escapeHtml(reservation.fixed ? d.yes : d.no)}</span>` : `<span class="muted">${escapeHtml(d.fixedUnknown)}</span>`}</dd>`
     : "";
+  const hint =
+    known && reservation && !reservation.fixed
+      ? `<p class="ahint info"><span class="hbody">${escapeHtml(fill(d.notFixed, { name: title }))} <a href="#/addresses">${escapeHtml(d.fixLink)}</a></span></p>`
+      : "";
+  const iface = route.interface && route.interface !== USUAL_INTERFACE ? `<dt>${escapeHtml(d.iface)}</dt><dd class="mono">${escapeHtml(route.interface)}</dd>` : "";
+  const source = route.source && route.source !== "0.0.0.0" ? `<dt>${escapeHtml(d.source)}</dt><dd class="mono">${escapeHtml(route.source)}/${escapeHtml(route.source_mask)}</dd>` : "";
   const home = ctx.home;
   return `<span class="label">${escapeHtml(d.title)}</span>
     <div class="rschema">
-      <div class="rnode me"><b>${escapeHtml(d.home)}</b><small class="mono">${escapeHtml(home?.network ?? "")}</small></div>
-      ${link(on ? d.toBox : "—")}
+      <div class="rnode"><b>${escapeHtml(d.home)}</b><small class="mono">${escapeHtml(home?.network ?? "")}</small></div>
+      ${link()}
       <div class="rnode"><b>${escapeHtml(d.box)}</b><small class="mono">${escapeHtml(home?.box ?? "")}</small></div>
-      ${link(on ? fill(d.viaRoute, { n: route.metric }) : d.off)}
-      <div class="rnode gw ${!on ? "off" : down ? "down" : ""}"><b>${name}</b><small class="mono">${escapeHtml(route.gateway ?? "")}</small></div>
-      ${link(d.onward)}
+      ${link(on ? d.route : d.off)}
+      <div class="rnode gw ${!on ? "off" : down ? "down" : ""}"><b>${escapeHtml(title)}</b><small${known ? ' class="mono"' : ""}>${escapeHtml(sub)}</small></div>
+      ${link()}
       <div class="rnode dst"><b class="mono">${escapeHtml(route.network)}</b><small>${escapeHtml(d.target)}</small></div>
     </div>${hint}
-    <dl>
-      <dt>${escapeHtml(d.state)}</dt><dd><span class="chip ${{ on: "ok", off: "", down: "bad" }[route.state]}">${escapeHtml(v.state[route.state])}</span></dd>
-      <dt>${escapeHtml(d.gateway)}</dt><dd>${route.device_id ? gateway : escapeHtml(d.noDevice)}</dd>
-      <dt>${escapeHtml(d.fixed)}</dt><dd>${fixedChip}</dd>
-      <dt>${escapeHtml(d.iface)}</dt><dd class="mono">${escapeHtml(route.interface ?? "")}</dd>
-      <dt>${escapeHtml(d.metric)}</dt><dd>${route.metric}</dd>${source}
-    </dl>${actions}`;
+    <dl>${gatewayRow}${fixedRow}<dt>${escapeHtml(d.metric)}</dt><dd>${route.metric}</dd>${iface}${source}</dl>`;
 }
 
 /** The page; a message where the box tells no routes. */

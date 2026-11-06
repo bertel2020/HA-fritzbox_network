@@ -1444,9 +1444,9 @@ test("the routes page switches a route by its network, only with the right to wr
   const rw = routesPage.renderRoutes(routeRows, { t, canWrite: true });
   assert.match(rw, /role="switch" aria-checked="true" aria-label="Route zu 10\.8\.0\.0\/24 eingeschaltet" title="Ausschalten" data-act="route-switch" data-network="10\.8\.0\.0\/24" data-on="0"/);
   assert.match(rw, /aria-checked="false"[^>]*data-network="172\.16\.0\.0\/16" data-on="1"/);
-  // one switch in each row and one in the detail of the selected route; deleting only in the detail
-  assert.equal((rw.match(/data-act="route-switch"/g) ?? []).length, 4);
-  assert.equal((rw.match(/data-act="route-delete"/g) ?? []).length, 1);
+  // a switch and a delete button in each row, none in the detail
+  assert.equal((rw.match(/data-act="route-switch"/g) ?? []).length, 3);
+  assert.equal((rw.match(/data-act="route-delete"/g) ?? []).length, 3);
   assert.match(routesPage.renderRoutes(routeRows, { t, canWrite: true, busy: new Set(["10.8.0.0/24"]) }), /data-network="10\.8\.0\.0\/24" data-on="0" disabled>/);
 });
 
@@ -1517,17 +1517,32 @@ test("the detail of a route shows the way of the traffic for the selected route"
   // the first route is selected where the selection names none; here it is the second
   assert.match(html, /<li class="routerow down" aria-current="true">/);
   assert.equal((html.match(/aria-current="true"/g) ?? []).length, 1);
-  assert.match(html, /class="rnode me"><b>Heimnetz<\/b><small class="mono">192\.168\.178\.0\/24/);
+  assert.match(html, /class="rnode"><b>Heimnetz<\/b><small class="mono">192\.168\.178\.0\/24/);
   assert.match(html, /class="rnode"><b>FRITZ!Box<\/b><small class="mono">192\.168\.178\.1/);
   assert.match(html, /class="rnode gw down"><b>Keller<\/b>/); // the gateway is offline
   assert.match(html, /class="rnode dst"><b class="mono">192\.168\.2\.0\/24<\/b>/);
-  assert.match(html, /route-delete" data-network="192\.168\.2\.0\/24"/);
+  assert.match(html, /<button class="btn del" data-act="route-delete" data-network="192\.168\.2\.0\/24">Löschen/);
   const first = routesPage.renderRoutes(withHome, { t, canWrite: true, clients: [] });
   assert.match(first, /class="rnode gw "><b>Pi &lt;b&gt;<\/b>/);
   // a switched-off route draws a dashed gateway and grey links
   const off = routesPage.renderRoutes(withHome, { t, canWrite: true, clients: [], sel: "172.16.0.0/16" });
-  assert.match(off, /class="rnode gw off"><b>192\.0\.2\.99<\/b>/);
-  assert.match(off, /class="rlink off"><span>ausgeschaltet/);
+  assert.match(off, /class="rnode gw off"><b>192\.0\.2\.99<\/b><small>kein bekanntes Gerät<\/small>/);
+  assert.match(off, /class="rlink off"><span>aus<\/span>/);
+});
+
+test("a gateway that is no device of the list is shown by its address once, and without the rows that need a device", () => {
+  const withHome = { ...routeRows, home: HOME };
+  const html = routesPage.renderRoutes(withHome, { t, canWrite: true, clients: [], sel: "172.16.0.0/16" });
+  const detail = html.slice(html.indexOf('class="card sec routedetail"'));
+  // the address in the box and in the row, not twice in each
+  assert.equal((detail.match(/192\.0\.2\.99/g) ?? []).length, 2);
+  assert.match(detail, /Gateway<\/dt><dd><span class="mono">192\.0\.2\.99<\/span><br><span class="muted">kein bekanntes Gerät<\/span>/);
+  assert.doesNotMatch(detail, /Feste Adresse/);
+  // the usual interface is no news, another one is
+  assert.doesNotMatch(detail, /Schnittstelle/);
+  const other = { ...withHome, entries: withHome.entries.map((e) => ({ ...e, interface: "Other1" })) };
+  assert.match(routesPage.renderRoutes(other, { t, canWrite: true, clients: [] }), /Schnittstelle<\/dt><dd class="mono">Other1/);
+  assert.doesNotMatch(html, /Eingeschaltet|Ausgeschaltet/); // the switch says it
 });
 
 test("the detail warns where the gateway has no fixed address and says nothing where that is not known", () => {
@@ -1538,6 +1553,7 @@ test("the detail warns where the gateway has no fixed address and says nothing w
   const warn = page({ "aa:bb:cc:dd:ee:01": { at: 1, value: { fixed: false, editable: true } } });
   assert.match(warn, /Pi &lt;b&gt; hat keine feste Adresse\. Ändert sie sich, stimmt die Route nicht mehr\. <a href="#\/addresses">Feste Adresse vergeben/);
   assert.match(warn, /Feste Adresse<\/dt><dd><span class="chip warn">nein/);
+  assert.doesNotMatch(warn, /Zustand|LanHostConfigManagement1/); // nothing the list does not say already
   const fine = page({ "aa:bb:cc:dd:ee:01": { at: 1, value: { fixed: true, editable: true } } });
   assert.doesNotMatch(fine, /hat keine feste Adresse/);
   assert.match(fine, /Feste Adresse<\/dt><dd><span class="chip ok">ja/);

@@ -509,26 +509,22 @@ export const PANEL_CSS = `
   .routerow[aria-current="true"] { background: var(--accent-soft); }
   .routelayout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; margin-top: 16px; }
   @container app (max-width: 900px) { .routelayout { grid-template-columns: minmax(0, 1fr); } }
-  .routedetail { position: sticky; top: 76px; }
-  @container app (max-width: 900px) { .routedetail { position: static; } }
+  .routelayout > .card + .card { margin-top: 0; }
   .routedetail dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 12px 0 0; }
   .routedetail dt { color: var(--muted); }
   .routedetail dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
   .routedetail .ahint { margin: 8px 0 0; }
-  .rschema { display: grid; justify-items: center; margin: 12px 0; }
-  .rnode { border: 1px solid var(--line); background: var(--soft); border-radius: 12px; padding: 8px 14px; text-align: center; min-width: 200px; max-width: 100%; }
+  .rschema { display: grid; justify-items: center; margin: 10px 0 12px; }
+  .rnode { border: 1px solid var(--line); background: var(--soft); border-radius: 10px; padding: 5px 12px; text-align: center; min-width: 190px; max-width: 100%; line-height: 1.3; }
   .rnode b { display: block; font-weight: 500; overflow-wrap: anywhere; }
   .rnode small { color: var(--muted); font-size: 12px; }
-  .rnode.me { border-color: var(--accent); background: var(--accent-soft); }
   .rnode.gw { border-color: var(--ok); }
   .rnode.gw.down { border-color: var(--bad); background: var(--bad-soft); }
-  .rnode.gw.off { border-style: dashed; border-color: var(--line); opacity: .7; }
-  .rnode.dst { border-style: dashed; }
-  .rlink { width: 2px; height: 24px; background: var(--ok); position: relative; }
+  .rnode.gw.off { border-style: dashed; opacity: .65; }
+  .rnode.dst { background: transparent; border-style: dashed; }
+  .rlink { width: 2px; height: 14px; background: var(--ok); position: relative; }
   .rlink.off { background: var(--line); }
-  .rlink span { position: absolute; left: 10px; top: 3px; font-size: 11px; color: var(--muted); white-space: nowrap; }
-  .routeactions { display: flex; align-items: center; gap: 10px; margin-top: 16px; }
-  .routeactions .muted { flex: 1; }
+  .rlink span { position: absolute; left: 10px; top: 0; font-size: 11px; color: var(--muted); white-space: nowrap; line-height: 14px; }
   #routes-view > * + * { margin-top: 16px; }
   .routenet b { display: block; font-weight: 500; }
   .routenet small { color: var(--muted); }
