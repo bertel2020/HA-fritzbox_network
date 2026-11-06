@@ -824,8 +824,9 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
     ) -> list[dict[str, Any]]:
         """Add a static route after the checks of ``validate_route``; returns the routes read back.
 
-        The new route is switched on, as the web interface of the box does it, and the box takes it
-        without an answer that says so: if it is not in the list afterwards, the action failed.
+        The box makes a new route switched off (read on FRITZ!OS 8.25), so it is switched on
+        afterwards. It answers without saying whether it took the route: if the route is not in the
+        list, switched on, afterwards, the action failed.
         """
         try:
             info = await self.hass.async_add_executor_job(self.client.get_network)

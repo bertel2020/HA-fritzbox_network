@@ -236,10 +236,9 @@ async def test_the_panel_adds_a_route_and_gets_the_routes_read_back(
     assert [r["network"] for r in reply["result"]["entries"]][-1] == "10.9.0.0/24"
 
 
-async def test_a_route_the_box_makes_but_leaves_off_is_switched_on(
+async def test_a_route_the_box_makes_switched_off_is_switched_on(
     hass, hass_ws_client, fake_client, entry, routes
 ):
-    fake_client.routes_new_enabled = False
     await _setup(hass, entry)
     client = await hass_ws_client(hass)
 

@@ -85,7 +85,7 @@ class FakeClient:
         self.ports: list[dict] = []
         self.routes: list[dict] = []
         self.routes_ignore = False
-        self.routes_new_enabled = True
+        self.routes_new_enabled = False  # as the real box: a new route starts switched off
         self.firmware: dict = {"NewUpgradeAvailable": False}
         self.vpn: dict | None = None
         self.vpn_ignores = False
