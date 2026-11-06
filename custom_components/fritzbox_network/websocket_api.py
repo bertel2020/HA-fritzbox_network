@@ -645,6 +645,7 @@ def _routes_with_devices(coordinator: Any, entries: list[dict[str, Any]]) -> lis
     for entry in entries:
         host = hosts.get(entry["gateway"]) if entry["gateway"] else None
         entry["device_id"] = mac_id(host.mac) if host else None
+        entry["device_mac"] = host.mac if host else None
         entry["device_name"] = host.name if host else None
         entry["gateway_online"] = bool(host.active) if host else None
     return entries

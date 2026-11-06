@@ -521,6 +521,7 @@ async def test_the_routes_come_with_the_device_their_gateway_is(
 
     assert result[0]["device_name"] == online.name and result[0]["gateway_online"] is True
     assert result[0]["device_id"] == online.mac.replace(":", "")
+    assert result[0]["device_mac"] == online.mac and result[1]["device_mac"] is None
     # a gateway the box does not list stays a bare address, one without any has no device
     assert result[1]["device_id"] is None and result[1]["gateway_online"] is None
     assert result[2]["device_name"] is None and result[2]["gateway"] is None

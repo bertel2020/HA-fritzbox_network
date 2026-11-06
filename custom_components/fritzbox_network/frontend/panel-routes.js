@@ -99,28 +99,76 @@ function gatewayName(route, t) {
   return route.gateway ?? t.routesPage.noGateway;
 }
 
+/** The switch of a route, with the state the box reported. */
+function switchOf(route, ctx) {
+  const v = ctx.t.routesPage;
+  const busy = ctx.busy?.has(route.network);
+  return ctx.canWrite
+    ? `<button class="switch" role="switch" aria-checked="${route.enabled}" aria-label="${escapeHtml(fill(v.switchLabel, { net: route.network }))}" title="${escapeHtml(route.enabled ? v.turnOff : v.turnOn)}" data-act="route-switch" data-network="${escapeHtml(route.network)}" data-on="${route.enabled ? "0" : "1"}"${busy ? " disabled" : ""}></button>`
+    : "";
+}
+
 function row(route, ctx) {
   const { t } = ctx;
   const v = t.routesPage;
   const tone = { on: "ok", off: "", down: "bad" }[route.state];
+  // the address only where the name is not already the address
+  const facts = [route.device_name ? route.gateway : null, fill(v.metric, { n: route.metric })].filter(Boolean).map(escapeHtml).join(" · ");
+  return `<li class="routerow ${route.state}" aria-current="${route.network === ctx.sel}">
+    <span class="i" aria-hidden="true">${ic("network")}</span>
+    <button class="routepick routenet" data-act="route-pick" data-network="${escapeHtml(route.network)}"><b class="mono">${escapeHtml(route.network)}</b><small>${escapeHtml(gatewayName(route, t))} · ${facts}</small></button>
+    <span class="chip ${tone}">${escapeHtml(v.state[route.state])}</span>${switchOf(route, ctx)}</li>`;
+}
+
+/** What the box says of the gateway's address: the reservation as read from it, or null while unknown. */
+function fixedOf(route, ctx) {
+  const entry = route.device_mac ? ctx.fixed?.[route.device_mac] : null;
+  return entry?.value ?? null;
+}
+
+/** The way the traffic takes, as four boxes, and what is known of the selected route. */
+function detail(route, ctx) {
+  const { t } = ctx;
+  const d = t.routesPage.detail;
+  const v = t.routesPage;
+  const on = route.enabled;
+  const down = route.state === "down";
+  const reservation = fixedOf(route, ctx);
+  const link = (text) => `<div class="rlink ${on ? "" : "off"}"><span>${escapeHtml(text)}</span></div>`;
   const name = escapeHtml(gatewayName(route, t));
   const gateway = route.device_id ? `<a href="#/device/${escapeHtml(route.device_id)}">${name}</a>` : name;
-  // the address only where the name is not already the address
-  const facts = [route.device_name ? route.gateway : null, route.interface, fill(v.metric, { n: route.metric })]
-    .filter(Boolean)
-    .map(escapeHtml)
-    .join(" · ");
+  const fixedChip = !route.device_id
+    ? `<span class="muted">${escapeHtml(d.fixedUnknown)}</span>`
+    : reservation
+      ? `<span class="chip ${reservation.fixed ? "ok" : "warn"}">${escapeHtml(reservation.fixed ? d.yes : d.no)}</span>`
+      : `<span class="muted">${escapeHtml(d.fixedUnknown)}</span>`;
+  const hint =
+    route.device_id && reservation && !reservation.fixed
+      ? `<p class="ahint info"><span class="hbody">${escapeHtml(fill(d.notFixed, { name: gatewayName(route, t) }))} <a href="#/addresses">${escapeHtml(d.fixLink)}</a></span></p>`
+      : "";
+  const source = route.source && route.source !== "0.0.0.0" ? `<dt>${escapeHtml(d.source)}</dt><dd class="mono">${escapeHtml(route.source)}/${escapeHtml(route.source_mask)}</dd>` : "";
   const busy = ctx.busy?.has(route.network);
-  const control = ctx.canWrite
-    ? `<button class="btn vpnswitch" data-act="route-switch" data-network="${escapeHtml(route.network)}" data-on="${route.enabled ? "0" : "1"}"${busy ? " disabled" : ""}>${escapeHtml(route.enabled ? v.turnOff : v.turnOn)}</button>`
+  const actions = ctx.canWrite
+    ? `<div class="routeactions"><span class="muted">${escapeHtml(on ? d.enabled : d.disabled)}</span>${switchOf(route, ctx)}<button class="btn del" data-act="route-delete" data-network="${escapeHtml(route.network)}"${busy ? " disabled" : ""}>${escapeHtml(v.delete.ok)}</button></div>`
     : "";
-  const remove = ctx.canWrite
-    ? `<button class="btn del vpnswitch" data-act="route-delete" data-network="${escapeHtml(route.network)}"${busy ? " disabled" : ""}>${escapeHtml(v.delete.ok)}</button>`
-    : "";
-  return `<li class="routerow ${route.state}">
-    <span class="i" aria-hidden="true">${ic("network")}</span>
-    <div class="routenet"><b class="mono">${escapeHtml(route.network)}</b><small>${gateway} · ${facts}</small></div>
-    <span class="chip ${tone}">${escapeHtml(v.state[route.state])}</span>${control}${remove}</li>`;
+  const home = ctx.home;
+  return `<span class="label">${escapeHtml(d.title)}</span>
+    <div class="rschema">
+      <div class="rnode me"><b>${escapeHtml(d.home)}</b><small class="mono">${escapeHtml(home?.network ?? "")}</small></div>
+      ${link(on ? d.toBox : "—")}
+      <div class="rnode"><b>${escapeHtml(d.box)}</b><small class="mono">${escapeHtml(home?.box ?? "")}</small></div>
+      ${link(on ? fill(d.viaRoute, { n: route.metric }) : d.off)}
+      <div class="rnode gw ${!on ? "off" : down ? "down" : ""}"><b>${name}</b><small class="mono">${escapeHtml(route.gateway ?? "")}</small></div>
+      ${link(d.onward)}
+      <div class="rnode dst"><b class="mono">${escapeHtml(route.network)}</b><small>${escapeHtml(d.target)}</small></div>
+    </div>${hint}
+    <dl>
+      <dt>${escapeHtml(d.state)}</dt><dd><span class="chip ${{ on: "ok", off: "", down: "bad" }[route.state]}">${escapeHtml(v.state[route.state])}</span></dd>
+      <dt>${escapeHtml(d.gateway)}</dt><dd>${route.device_id ? gateway : escapeHtml(d.noDevice)}</dd>
+      <dt>${escapeHtml(d.fixed)}</dt><dd>${fixedChip}</dd>
+      <dt>${escapeHtml(d.iface)}</dt><dd class="mono">${escapeHtml(route.interface ?? "")}</dd>
+      <dt>${escapeHtml(d.metric)}</dt><dd>${route.metric}</dd>${source}
+    </dl>${actions}`;
 }
 
 /** The page; a message where the box tells no routes. */
@@ -152,7 +200,12 @@ export function renderRoutes(routes, ctx) {
         .map((r) => `<div class="ahint warn"><span class="hbody">${escapeHtml(fill(v.downHint, { name: gatewayName(r, t), net: r.network }))}</span></div>`)
         .join("")}</div>`
     : "";
+  const selected = m.routes.find((r) => r.network === ctx.sel) ?? m.routes[0];
+  const c = { ...ctx, sel: selected.network, home: routes.home };
   return `${head}${newForm}${noHome}<div class="vpntiles">${tiles}</div>${hints}
-    <section class="card sec"><span class="label">${escapeHtml(v.listTitle)}</span><ul class="vpnlist">${m.routes.map((r) => row(r, ctx)).join("")}</ul></section>
+    <div class="routelayout">
+      <section class="card sec"><span class="label">${escapeHtml(v.listTitle)}</span><ul class="vpnlist">${m.routes.map((r) => row(r, c)).join("")}</ul></section>
+      <aside class="card sec routedetail" aria-live="polite">${detail(selected, c)}</aside>
+    </div>
     <p class="hint">${escapeHtml(v.hint)}</p>`;
 }

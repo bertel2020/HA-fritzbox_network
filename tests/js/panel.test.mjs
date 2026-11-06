@@ -1420,16 +1420,19 @@ test("the routes page counts the routes and warns where the gateway is offline",
   assert.match(html, /172\.16\.0\.0\/16[\s\S]*192\.0\.2\.99[\s\S]*Metrik 20/);
   assert.equal((html.match(/chip bad/g) ?? []).length, 1);
   assert.doesNotMatch(html, /Pi <b>/);
-  // without the right to write there is nothing to switch
-  assert.doesNotMatch(html, /data-act=/);
+  // without the right to write there is nothing to switch or delete, only to select
+  assert.doesNotMatch(html, /route-switch|route-delete/);
+  assert.equal((html.match(/data-act="route-pick"/g) ?? []).length, 3);
 });
 
 test("the routes page switches a route by its network, only with the right to write", () => {
   const rw = routesPage.renderRoutes(routeRows, { t, canWrite: true });
-  assert.match(rw, /data-act="route-switch" data-network="10\.8\.0\.0\/24" data-on="0">Ausschalten/);
-  assert.match(rw, /data-act="route-switch" data-network="172\.16\.0\.0\/16" data-on="1">Einschalten/);
-  assert.equal((rw.match(/data-act="route-switch"/g) ?? []).length, 3);
-  assert.match(routesPage.renderRoutes(routeRows, { t, canWrite: true, busy: new Set(["10.8.0.0/24"]) }), /data-on="0" disabled>/);
+  assert.match(rw, /role="switch" aria-checked="true" aria-label="Route zu 10\.8\.0\.0\/24 eingeschaltet" title="Ausschalten" data-act="route-switch" data-network="10\.8\.0\.0\/24" data-on="0"/);
+  assert.match(rw, /aria-checked="false"[^>]*data-network="172\.16\.0\.0\/16" data-on="1"/);
+  // one switch in each row and one in the detail of the selected route; deleting only in the detail
+  assert.equal((rw.match(/data-act="route-switch"/g) ?? []).length, 4);
+  assert.equal((rw.match(/data-act="route-delete"/g) ?? []).length, 1);
+  assert.match(routesPage.renderRoutes(routeRows, { t, canWrite: true, busy: new Set(["10.8.0.0/24"]) }), /data-network="10\.8\.0\.0\/24" data-on="0" disabled>/);
 });
 
 const HOME = { network: "192.168.178.0/24", box: "192.168.178.1" };
@@ -1491,6 +1494,44 @@ test("the form shows the check while the user types and blocks the button for a 
   assert.match(empty, /data-act="route-add" disabled/);
   const busy = routesPage.renderRoutes(withHome, { ...ctx, adding: true, draft: { network: "10.9.0.0/24", gateway: "192.168.178.5", metric: "10" } });
   assert.match(busy, /data-act="route-add" disabled/);
+});
+
+test("the detail of a route shows the way of the traffic for the selected route", () => {
+  const withHome = { ...routeRows, home: HOME };
+  const html = routesPage.renderRoutes(withHome, { t, canWrite: true, clients: [], sel: "192.168.2.0/24" });
+  // the first route is selected where the selection names none; here it is the second
+  assert.match(html, /<li class="routerow down" aria-current="true">/);
+  assert.equal((html.match(/aria-current="true"/g) ?? []).length, 1);
+  assert.match(html, /class="rnode me"><b>Heimnetz<\/b><small class="mono">192\.168\.178\.0\/24/);
+  assert.match(html, /class="rnode"><b>FRITZ!Box<\/b><small class="mono">192\.168\.178\.1/);
+  assert.match(html, /class="rnode gw down"><b>Keller<\/b>/); // the gateway is offline
+  assert.match(html, /class="rnode dst"><b class="mono">192\.168\.2\.0\/24<\/b>/);
+  assert.match(html, /route-delete" data-network="192\.168\.2\.0\/24"/);
+  const first = routesPage.renderRoutes(withHome, { t, canWrite: true, clients: [] });
+  assert.match(first, /class="rnode gw "><b>Pi &lt;b&gt;<\/b>/);
+  // a switched-off route draws a dashed gateway and grey links
+  const off = routesPage.renderRoutes(withHome, { t, canWrite: true, clients: [], sel: "172.16.0.0/16" });
+  assert.match(off, /class="rnode gw off"><b>192\.0\.2\.99<\/b>/);
+  assert.match(off, /class="rlink off"><span>ausgeschaltet/);
+});
+
+test("the detail warns where the gateway has no fixed address and says nothing where that is not known", () => {
+  const withHome = { ...routeRows, home: HOME };
+  const entries = withHome.entries.map((e, i) => ({ ...e, device_mac: i === 0 ? "aa:bb:cc:dd:ee:01" : null }));
+  const ctx = { t, canWrite: true, clients: [], sel: "10.8.0.0/24" };
+  const page = (fixed) => routesPage.renderRoutes({ ...withHome, entries }, { ...ctx, fixed });
+  const warn = page({ "aa:bb:cc:dd:ee:01": { at: 1, value: { fixed: false, editable: true } } });
+  assert.match(warn, /Pi &lt;b&gt; hat keine feste Adresse\. Ändert sie sich, stimmt die Route nicht mehr\. <a href="#\/addresses">Feste Adresse vergeben/);
+  assert.match(warn, /Feste Adresse<\/dt><dd><span class="chip warn">nein/);
+  const fine = page({ "aa:bb:cc:dd:ee:01": { at: 1, value: { fixed: true, editable: true } } });
+  assert.doesNotMatch(fine, /hat keine feste Adresse/);
+  assert.match(fine, /Feste Adresse<\/dt><dd><span class="chip ok">ja/);
+  // not read yet, or the box did not tell: unknown, no warning
+  for (const fixed of [{}, { "aa:bb:cc:dd:ee:01": { pending: true, at: 0, value: null } }, { "aa:bb:cc:dd:ee:01": { at: 1, value: null } }]) {
+    const html = page(fixed);
+    assert.doesNotMatch(html, /hat keine feste Adresse/);
+    assert.match(html, /Feste Adresse<\/dt><dd><span class="muted">unbekannt/);
+  }
 });
 
 test("the routes page says so where the box tells nothing, has no route or is still loading", () => {

@@ -169,6 +169,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       filterPage: null,
       ports: null,
       routes: null,
+      routesSel: null,
+      routesFixed: {},
       capture: null,
       captureForm: captureDefaults(null),
       captureSummary: null,
@@ -483,8 +485,31 @@ class FritzboxNetworkPanel extends HTMLElement {
         draft: state.routesDraft,
         adding: state.routesAdding,
         clients: state.data?.clients ?? [],
+        sel: state.routesSel,
+        fixed: state.routesFixed,
       })
     );
+    this._ensureRouteFixed();
+  }
+
+  /** Whether the gateway of the selected route has a fixed address: asked once per device, kept for ten minutes. */
+  async _ensureRouteFixed() {
+    const state = this._state;
+    const routes = state.routes?.entries;
+    if (!Array.isArray(routes) || !routes.length) return;
+    const route = routes.find((r) => r.network === state.routesSel) ?? routes[0];
+    const mac = route.device_mac;
+    if (!mac) return;
+    const known = state.routesFixed[mac];
+    if (known && (known.pending || Date.now() - known.at < 600000)) return;
+    state.routesFixed[mac] = { pending: true, at: 0, value: null };
+    try {
+      const { reservation } = await this._ws("device/ip", { mac });
+      state.routesFixed[mac] = { at: Date.now(), value: reservation ?? null };
+    } catch {
+      state.routesFixed[mac] = { at: Date.now(), value: null };
+    }
+    if (state.tab === "routes") this._renderRoutes();
   }
 
   /** The form of a new route: the fields are drawn again at every key, the focus stays where it was. */
@@ -1863,6 +1888,9 @@ class FritzboxNetworkPanel extends HTMLElement {
       return;
     } else if (ds.act === "vpn-switch") {
       return this._switchVpn(ds.key, ds.on === "1");
+    } else if (ds.act === "route-pick") {
+      state.routesSel = ds.network;
+      return this._renderRoutes();
     } else if (ds.act === "route-new") {
       state.routesDraft = { network: "", gateway: "", metric: "10" };
       this._renderRoutes();
