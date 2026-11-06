@@ -47,6 +47,14 @@ Die Integration arbeitet lokal mit der FRITZ!Box (TR-064) und baut keine Interne
 | --- | --- |
 | ![Funk-Karte](screenshots/radio-light.png) | ![Geräte-Karte](screenshots/devices-light.png) |
 
+| VPN-Karte | Routen-Karte |
+| --- | --- |
+| ![VPN-Karte](screenshots/vpncard-light.png) | ![Routen-Karte](screenshots/routescard-light.png) |
+
+| VPN-Seite | Routen-Seite |
+| --- | --- |
+| ![VPN-Seite](screenshots/vpn-light.png) | ![Routen-Seite](screenshots/routes-light.png) |
+
 <details>
 <summary>Dunkles Design</summary>
 
@@ -64,8 +72,8 @@ Die Integration arbeitet lokal mit der FRITZ!Box (TR-064) und baut keine Interne
 - **Anwesenheit**: Device Tracker mit einstellbarer Wartezeit, bevor ein Gerät als abwesend gilt.
 - **Verbindungsdaten pro Gerät**: IP-Adresse, LAN oder WLAN, Access Point, „Online seit“ und „Zuletzt online“. Optional (standardmäßig aus): Signalstärke, Link-Rate (Download/Upload), WLAN-Band, Netzwerkname und ein Gastnetz-Hinweis.
 - **Aktionen**: Internetzugang pro Gerät sperren und freigeben, Wake on LAN.
-- **Seitenpanel** (nur Administratoren): Das ganze Netz in der Seitenleiste, als Liste oder Netzkarte, mit Statusfiltern, Suche, Gruppierung nach Access Point, Funkdaten, einer Detailseite pro Gerät mit Verbindungsweg und allen Aktionen, Gruppen über Labels, einer Internet-Seite (Verbindung, Auslastung, DSL-Leitungsqualität), dem Aufräumen langer Offline-Geräte in einem Zug und dem Gerätefilter mit Vorschau.
-- **Dashboard-Karten**: Die Topologie-Karte (Geräte nach Access Point auf einen Blick, ein Tipp öffnet das Seitenpanel), eine Funk-Karte (Kanal, Auslastung und Rauschen pro Funkmodul) eine Geräte-Karte (ausgewählte Geräte mit Internet sperren und freigeben), eine VPN-Karte (WireGuard-Verbindungen mit Schalter) und eine Routen-Karte (statische Routen mit Gateway und Schalter).
+- **Seitenpanel** (nur Administratoren): Das ganze Netz in der Seitenleiste, als Liste oder Netzkarte, mit Statusfiltern, Suche, Gruppierung nach Access Point, Funkdaten, einer Detailseite pro Gerät mit Verbindungsweg und allen Aktionen, Gruppen über Labels, einer Internet-Seite (Verbindung, Auslastung, DSL-Leitungsqualität, Portfreigaben), einer VPN-Seite (WireGuard-Verbindungen ein- und ausschalten), den statischen Routen der Box (ansehen, schalten, anlegen, löschen), dem Aufräumen langer Offline-Geräte in einem Zug und dem Gerätefilter mit Vorschau.
+- **Dashboard-Karten**: Die Topologie-Karte (Geräte nach Access Point auf einen Blick, ein Tipp öffnet das Seitenpanel), eine Funk-Karte (Kanal, Auslastung und Rauschen pro Funkmodul), eine Geräte-Karte (ausgewählte Geräte mit Internet sperren und freigeben), eine VPN-Karte (WireGuard-Verbindungen mit Schalter) und eine Routen-Karte (statische Routen mit Gateway und Schalter).
 - **Mesh**: Die FRITZ!Box und ihre Repeater sind eigene Geräte mit Modell, Firmware und der Anzahl der verbundenen Geräte.
 - **Aufgeräumt**: Offline-Geräte lassen sich von Hand löschen und bleiben ausgeblendet. Dazu Filter für Gastnetz, private MAC-Adressen und einzelne Geräte, und eine Option, für Offline-Geräte keine Geräte anzulegen.
 - **Schonend**: Pro Abfrage nur zwei Anfragen an die FRITZ!Box (Geräteliste und Mesh), nie eine pro Gerät.

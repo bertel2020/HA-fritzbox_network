@@ -16,7 +16,7 @@ The integration works locally with the FRITZ!Box and makes no connections to the
 - [Entities](#entities)
 - [Names and entity ids](#names-and-entity-ids)
 - [Deleting and hiding devices](#deleting-and-hiding-devices)
-- [Topology card](#topology-card) with the [Wi-Fi card](#wi-fi-card) and the [devices card](#devices-card)
+- [Topology card](#topology-card) with the [Wi-Fi card](#wi-fi-card), the [devices card](#devices-card), the [VPN card](#vpn-card) and the [routes card](#routes-card)
 - [Side panel](#side-panel)
 - [Blueprints](#blueprints)
 - [Next to the core integration](#next-to-the-core-integration)

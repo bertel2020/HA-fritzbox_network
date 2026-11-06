@@ -47,6 +47,14 @@ The integration works locally with the FRITZ!Box (TR-064) and makes no connectio
 | --- | --- |
 | ![Wi-Fi card](screenshots-en/radio-light.png) | ![Devices card](screenshots-en/devices-light.png) |
 
+| VPN card | Routes card |
+| --- | --- |
+| ![VPN card](screenshots-en/vpncard-light.png) | ![Routes card](screenshots-en/routescard-light.png) |
+
+| VPN page | Routes page |
+| --- | --- |
+| ![VPN page](screenshots-en/vpn-light.png) | ![Routes page](screenshots-en/routes-light.png) |
+
 <details>
 <summary>Dark theme</summary>
 
@@ -64,7 +72,7 @@ The integration works locally with the FRITZ!Box (TR-064) and makes no connectio
 - **Presence**: Device tracker with an adjustable wait before a device counts as away.
 - **Connection data per device**: IP address, LAN or Wi-Fi, access point, "online since" and "last online". Optional (off by default): signal strength, link rate (download/upload), Wi-Fi band, network name and a guest network flag.
 - **Actions**: Block and allow the internet access per device, Wake on LAN.
-- **Side panel** (administrators only): The whole network in the sidebar, as a list or a network map, with status filters, search, grouping by access point, radio data, a detail page per device with its connection path and all actions, groups through labels, an internet page (connection, load, DSL line quality), bulk clean-up of long-offline devices and the device filter with a preview.
+- **Side panel** (administrators only): The whole network in the sidebar, as a list or a network map, with status filters, search, grouping by access point, radio data, a detail page per device with its connection path and all actions, groups through labels, an internet page (connection, load, DSL line quality, port forwardings), a VPN page (switch WireGuard connections on and off), the static routes of the box (view, switch, add, delete), bulk clean-up of long-offline devices and the device filter with a preview.
 - **Dashboard cards**: The topology card (devices by access point at a glance, a tap opens the side panel), a Wi-Fi card (channel, load and noise per radio) a devices card (chosen devices with block/allow internet), a VPN card (WireGuard connections with a switch) and a routes card (static routes with gateway and a switch).
 - **Mesh**: The FRITZ!Box and its repeaters are devices of their own with model, firmware and the number of connected devices.
 - **Tidy**: Offline devices can be deleted by hand and stay hidden. Plus filters for the guest network, private MAC addresses and single devices, and an option not to create devices for offline hosts.

@@ -16,7 +16,7 @@ Die Integration arbeitet lokal mit der FRITZ!Box und baut keine Internetverbindu
 - [Entitäten](#entitäten)
 - [Namen und Entity-IDs](#namen-und-entity-ids)
 - [Geräte löschen und ausblenden](#geräte-löschen-und-ausblenden)
-- [Topologie-Karte](#topologie-karte) mit [Funk-Karte](#funk-karte) und [Geräte-Karte](#geräte-karte)
+- [Topologie-Karte](#topologie-karte) mit [Funk-Karte](#funk-karte), [Geräte-Karte](#geräte-karte), [VPN-Karte](#vpn-karte) und [Routen-Karte](#routen-karte)
 - [Seitenpanel](#seitenpanel)
 - [Blueprints](#blueprints)
 - [Zusammen mit der Core-Integration](#zusammen-mit-der-core-integration)
