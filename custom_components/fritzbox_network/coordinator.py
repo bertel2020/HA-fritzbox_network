@@ -145,6 +145,9 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         # id -> name of the access profiles of the box, read now and then
         self.filter_profiles: dict[str, str] = {}
         self._polls = 0
+        # The first poll reads only what the devices and the internet card need, so the setup is
+        # not held up by the web interface of the box; a second poll right after it reads the rest.
+        self._lean = True
         # polls in a row that gave no WireGuard list although there had been one
         self._vpn_empty = 0
         # the static routes: failed reads in a row, reads in a row that missed a route that was
@@ -341,6 +344,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         list[VpnConnection] | None,
         list[dict[str, Any]] | None,
     ]:
+        lean = self._lean
         hosts = self.client.get_hosts()
         try:
             mesh = self.client.get_mesh()
@@ -358,12 +362,18 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 _LOGGER.debug("Access profiles unavailable: %s", err)
         internet = self._fetch_internet()
         guest = self._fetch_guest_wifi()
-        vpn = self._fetch_vpn()
-        routes = self._fetch_routes()
-        self._fetch_firmware()
-        self._fetch_dhcp_pool()
-        self._fetch_reservations([h for h in hosts if h.ip and not h.guest])
-        self._polls += 1
+        if lean:
+            # the VPN, the routes, the firmware, the DHCP range and the fixed addresses wait for the
+            # poll that follows; it counts as the first, so everything that is due then is read
+            vpn, routes = self.data.vpn if self.data else None, None
+            self._lean = False
+        else:
+            vpn = self._fetch_vpn()
+            routes = self._fetch_routes()
+            self._fetch_firmware()
+            self._fetch_dhcp_pool()
+            self._fetch_reservations([h for h in hosts if h.ip and not h.guest])
+            self._polls += 1
         return hosts, mesh, internet, guest, vpn, routes
 
     async def _async_update_data(self) -> NetworkData:

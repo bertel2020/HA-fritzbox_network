@@ -149,6 +149,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
     entry.async_on_unload(lambda: async_remove_mesh_issue(hass, entry))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_ensure_panel(hass)
+    # the first poll left out what the web interface of the box tells; read it now, not 30 s later
+    entry.async_create_task(hass, coordinator.async_refresh(), "fritzbox_network_second_poll")
     _setup_stale_check(hass, entry)
     return True
 
