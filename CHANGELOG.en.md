@@ -2,12 +2,12 @@
 
 All notable changes to this integration are recorded here.
 
-## Unreleased
+## 1.3.0 – 2026-11-06
 
 ### New
 
 - Side panel, address space: New **Routes** page (address `#/routes`, switch at the top of the address page) with the static IPv4 routes of the box: destination network, gateway with the device from the list, metric and state (on, off, gateway offline), with a hint where the gateway of a switched-on route is offline. Each route can be switched on and off in the panel (the box is asked afterwards whether it took), and the action `fritzbox_network.set_route` (destination network, on/off) does it from automations. New routes can be added in the panel (destination network, gateway from the device list, metric) and deleted (with a confirmation). The input is checked while typing and again on the server: `0.0.0.0/0`, a destination that overlaps the home network or contains the box, a gateway outside the home network, the box as gateway, a gateway inside the destination and a network that already has a route are refused; for a gateway that is offline the form only warns. After adding and deleting, the integration reads the routes back and reports an error if the box did not take the change. Changing a route means deleting and adding it again. The box lists only the routes entered by hand, not those it sets up itself. Read when the page opens; checked on a FRITZ!Box 7590 AX (FRITZ!OS 8.25).
-- Side panel, routes: Next to the list there is now a **Way of the traffic** card for the selected route: home network, box, gateway and destination network as a sketch (red where the gateway is offline; grey and dashed for a switched-off route) with state, gateway, interface and metric. It also says whether the gateway has a fixed address and warns if not (if the address changes, the route no longer fits). Routes are switched with a toggle; deleting is in the card.
+- Side panel, routes: Next to the list there is now a **Way of the traffic** card for the selected route: home network, box, gateway and destination network as a sketch (red where the gateway is offline; grey and dashed for a switched-off route) with state, gateway, interface and metric. It also says whether the gateway has a fixed address and warns if not (if the address changes, the route no longer fits). Routes are switched with a toggle; deleting is in each row of the list.
 - Routes as entities: Each static route of the box is a switch "Route <network>" (attributes: network, gateway, device and state of the gateway, interface, metric) for dashboards, scenes and automations. The routes are read every 10 polls (about every 5 minutes) and at once after each change by the integration; new routes get their switch at the next read, switches of deleted routes go after two reads, or at once where the route is deleted in the panel. Only with the right "FRITZ!Box settings".
 
 ### Changed
