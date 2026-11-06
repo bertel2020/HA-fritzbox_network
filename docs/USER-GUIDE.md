@@ -136,11 +136,11 @@ If the box has a guest network, there is a **Guest Wi-Fi** switch on the device 
 
 The box also has sensors for its **internet connection** once it reports one: the connection state (binary sensor "Internet connection") and the **throughput** for download and upload in Mbit/s, both on by default so the history in Home Assistant is there from the start. The throughput is worked out from the byte counters of the box between two updates. Off by default are the connection time, the external IPv4 address and, on DSL, line rate, noise margin, attenuation and FEC and CRC errors, each for download and upload. They let you build automations ("the address changed", "noise margin below 8 dB") and look at the course over days. They cost no extra request, the values come from the read behind the internet page.
 
-**WireGuard (VPN).** If the box has WireGuard connections, each one gets a binary sensor "VPN <name>": on while the tunnel stands, with the attributes `kind` (`device` or `site` for a link between two networks), `enabled`, `connected_since` and `remote_network`. A new connection set up on the box appears by itself. Besides the binary sensor, each connection has a **status** sensor (connected, on but not connected, off) and a **connected since** sensor; a diagnostic **identifier** sensor (the place of the connection in the box's list) is off until you enable it. The entities know a connection by its **name**: the box numbers its connections by place, so deleting one moves the others up, and the name keeps each entity on its own connection. If you rename a connection on the box, you get a new entity and the old one stays unavailable (remove it by hand); if two connections have the same name, the identifier is added to the key. The side panel then has a **VPN** tab (`#/vpn`) with the connections, their state (connected, on but not connected, off) and the devices that come into the home network by VPN. The data comes from the web interface of the box, so it needs the same account as the other web reads. The box tells no data volume and no last contact for a tunnel; for the traffic, record the WireGuard interface on the Diagnosis page. The private key and the pre-shared keys that the same page of the box carries are never read. Each connection also has a switch "VPN <name> enabled" (and the VPN tab a button), if the account may change settings. Switching off ends the tunnel; the integration reads the connection back and reports an error if the box did not take the change.
+**WireGuard (VPN).** If the box has WireGuard connections, each one gets a binary sensor "VPN <name>": on while the tunnel stands, with the attributes `kind` (`device` or `site` for a link between two networks), `enabled`, `connected_since` and `remote_network`. A new connection set up on the box appears by itself. Besides the binary sensor, each connection has a **status** sensor (connected, on but not connected, off) and a **connected since** sensor; a diagnostic **identifier** sensor (the place of the connection in the box's list) is off until you enable it. The entities know a connection by its **name**: the box numbers its connections by place, so deleting one moves the others up, and the name keeps each entity on its own connection. If you rename a connection on the box, you get a new entity and the old one stays unavailable (remove it by hand); if two connections have the same name, the identifier is added to the key. The dashboard shows the same with switches in the [VPN card](#vpn-card), and the side panel then has a **VPN** tab (`#/vpn`) with the connections, their state (connected, on but not connected, off) and the devices that come into the home network by VPN. The data comes from the web interface of the box, so it needs the same account as the other web reads. The box tells no data volume and no last contact for a tunnel; for the traffic, record the WireGuard interface on the Diagnosis page. The private key and the pre-shared keys that the same page of the box carries are never read. Each connection also has a switch "VPN <name> enabled" (and the VPN tab a button), if the account may change settings. Switching off ends the tunnel; the integration reads the connection back and reports an error if the box did not take the change.
 
 The box device also has three diagnostic, off by default: **Last update** (the last successful poll), **Failed polls** (how many polls in a row failed) and **Mesh status** (whether the mesh topology came with the last poll). They stay available while the box cannot be reached.
 
-**Static routes.** With the right "FRITZ!Box settings", each static IPv4 route of the box (Home network > Network > Network settings > IPv4 routes) has a switch "Route <network>", for example `10.8.0.0/24`. It is on while the route is switched on and has the attributes `network`, `gateway`, `gateway_device`, `gateway_online`, `interface` and `metric`. The box lists only the routes entered by hand, not those it sets up itself. The routes are not read with every poll but every 10th (about every 5 minutes at 30 seconds) and at once after each switch, add or delete in the panel or by the switch; what someone changes in the box therefore shows up with a delay of up to 5 minutes. A new route gets its switch at the next read. A switch whose route the box no longer lists in two reads in a row is removed; until then it is unavailable. If three reads in a row fail, the switches turn unavailable. Switching reads the routes back and reports an error if the box did not take the change. Adding and deleting are done in the panel under Address space > Routes.
+**Static routes.** With the right "FRITZ!Box settings", each static IPv4 route of the box (Home network > Network > Network settings > IPv4 routes) has a switch "Route <network>", for example `10.8.0.0/24`. It is on while the route is switched on and has the attributes `network`, `gateway`, `gateway_device`, `gateway_online`, `interface` and `metric`. The box lists only the routes entered by hand, not those it sets up itself. The routes are not read with every poll but every 10th (about every 5 minutes at 30 seconds) and at once after each switch, add or delete in the panel or by the switch; what someone changes in the box therefore shows up with a delay of up to 5 minutes. A new route gets its switch at the next read. A switch whose route the box no longer lists in two reads in a row is removed; until then it is unavailable. If three reads in a row fail, the switches turn unavailable. Switching reads the routes back and reports an error if the box did not take the change. Adding and deleting are done in the panel under Address space > Routes; the [routes card](#routes-card) shows the routes on the dashboard and switches them.
 
 ### Actions
 
@@ -187,7 +187,7 @@ When a filter in the options excludes a device, its device and entities are remo
 
 ## Topology card
 
-The integration ships a dashboard card that shows at a glance who hangs on which access point: the box and every repeater as a group, the devices below with an online dot, Wi-Fi or LAN and signal. Online devices come first. Search, filters, details and actions live in the [side panel](#side-panel): a tap on a device opens its page there, a tap on the heading opens the overview.
+The integration ships five dashboard cards, the topology card and four more: [Wi-Fi](#wi-fi-card), [devices](#devices-card), [VPN](#vpn-card) and [routes](#routes-card). The topology card shows at a glance who hangs on which access point: the box and every repeater as a group, the devices below with an online dot, Wi-Fi or LAN and signal. Online devices come first. Search, filters, details and actions live in the [side panel](#side-panel): a tap on a device opens its page there, a tap on the heading opens the overview.
 
 Add it in the dashboard editor under **Add card → FRITZ!Box Network topology**, or in YAML:
 
@@ -212,6 +212,8 @@ The card needs an administrator account because it shows MAC and IP addresses. I
 
 ### Wi-Fi card
 
+<p align="center"><img src="../screenshots-en/radio-light.png" alt="Wi-Fi card" width="45%"></p>
+
 The Wi-Fi card shows, per access point and band, the channel, the load as a bar (in the warning color from 70 %), the noise and the number of devices that are online on that band right now. It shows which radio is overloaded or sits on a noisy channel. The data come from the mesh topology of the box; you do not have to enable the radio sensors.
 
 ```yaml
@@ -228,6 +230,8 @@ type: custom:fritzbox-network-radio-card
 The box does not report load and noise for every band; missing values stay empty. Without a mesh topology the card says that the box reports no radio data.
 
 ### Devices card
+
+<p align="center"><img src="../screenshots-en/devices-light.png" alt="Devices card" width="45%"></p>
 
 The devices card shows chosen devices with status, access point, link rate and signal, and the actions **block or allow internet**, priority and Wake on LAN. With two or more devices that have an internet switch there is one more button that blocks them all at once (when all may go online) or allows them (otherwise the blocked ones). The actions are the same switches and buttons as on the device and need the same "FRITZ!Box settings" permission; an action only shows when its entity exists and is enabled.
 
@@ -251,6 +255,8 @@ A tap on the name opens the device. All cards need an administrator account like
 
 ### VPN card
 
+<p align="center"><img src="../screenshots-en/vpncard-light.png" alt="VPN card" width="45%"></p>
+
 The VPN card shows the WireGuard connections of the box, split into devices and links between sites, with state (Connected, Ready, Off), duration and a switch for each connection. Below are the devices that are in the home network from outside. The switch only shows for connections that can be changed and needs the "FRITZ!Box settings" permission. Switching off ends the tunnel.
 
 ```yaml
@@ -266,6 +272,8 @@ title: VPN
 | `only_active` | Hide connections that are switched off (default `false`) |
 
 ### Routes card
+
+<p align="center"><img src="../screenshots-en/routescard-light.png" alt="Routes card" width="45%"></p>
 
 The routes card shows the static routes of the box as "target → gateway" with the device of the gateway, its state, the metric and a switch for each route. If an enabled route points to a gateway that is offline, a notice shows at the top. The routes are read from the box once when the card is shown. Adding and deleting stay in the side panel; a link leads there.
 

@@ -136,11 +136,11 @@ Besitzt die Box ein Gastnetz, gibt es einen Schalter **Gast-WLAN** am Gerät der
 
 Die Box hat außerdem Sensoren für ihre **Internetverbindung**, sobald sie diese meldet: den Verbindungsstatus (Binärsensor „Internetverbindung“) und den **Durchsatz** für Download und Upload in Mbit/s, beide standardmäßig an, damit der Verlauf in Home Assistant von Anfang an da ist. Der Durchsatz wird aus den Byte-Zählern der Box zwischen zwei Abfragen berechnet. Standardmäßig aus sind die Verbindungszeit, die externe IPv4-Adresse und bei DSL Leitungsrate, Störabstand, Dämpfung sowie FEC- und CRC-Fehler, je für Download und Upload. Damit lassen sich Automationen bauen („IP hat sich geändert“, „Störabstand unter 8 dB“) und Verläufe über Tage ansehen. Sie kosten keine zusätzliche Anfrage, die Werte kommen aus der Abfrage der Internet-Seite.
 
-**WireGuard (VPN).** Hat die Box WireGuard-Verbindungen, bekommt jede einen Binärsensor „VPN <Name>“: an, solange der Tunnel steht, mit den Attributen `kind` (`device` oder `site` für eine Kopplung zweier Netze), `enabled`, `connected_since` und `remote_network`. Eine neu auf der Box angelegte Verbindung erscheint von selbst. Neben dem Binärsensor hat jede Verbindung einen **Status**-Sensor (verbunden, ein aber nicht verbunden, aus) und einen Sensor **verbunden seit**; ein Diagnose-Sensor **Kennung** (die Stelle der Verbindung in der Liste der Box) ist aus, bis du ihn einschaltest. Die Entitäten kennen eine Verbindung an ihrem **Namen**: Die Box nummeriert ihre Verbindungen nach der Stelle in der Liste, ein Löschen schiebt die übrigen nach oben, und der Name hält jede Entität bei ihrer Verbindung. Benennst du eine Verbindung auf der Box um, entsteht eine neue Entität und die alte bleibt nicht verfügbar (von Hand entfernen); heißen zwei Verbindungen gleich, kommt die Kennung zum Schlüssel dazu. Im Seitenpanel gibt es dann den Reiter **VPN** (`#/vpn`) mit den Verbindungen, ihrem Zustand (verbunden, ein aber nicht verbunden, aus) und den Geräten, die per VPN ins Heimnetz kommen. Die Daten kommen aus der Oberfläche der Box, sie braucht dasselbe Konto wie die anderen Lesezugriffe darauf. Datenmenge und letzten Kontakt je Tunnel nennt die Box nicht; für den Verkehr nimm auf der Diagnose-Seite die WireGuard-Schnittstelle auf. Der private Schlüssel und die Pre-Shared-Keys, die dieselbe Seite der Box enthält, werden nie gelesen. Jede Verbindung hat außerdem einen Schalter „VPN <Name> aktiviert“ (und der VPN-Reiter eine Schaltfläche), sofern das Konto Einstellungen ändern darf. Ausschalten beendet den Tunnel; die Integration liest die Verbindung zurück und meldet einen Fehler, wenn die Box die Änderung nicht übernommen hat.
+**WireGuard (VPN).** Hat die Box WireGuard-Verbindungen, bekommt jede einen Binärsensor „VPN <Name>“: an, solange der Tunnel steht, mit den Attributen `kind` (`device` oder `site` für eine Kopplung zweier Netze), `enabled`, `connected_since` und `remote_network`. Eine neu auf der Box angelegte Verbindung erscheint von selbst. Neben dem Binärsensor hat jede Verbindung einen **Status**-Sensor (verbunden, ein aber nicht verbunden, aus) und einen Sensor **verbunden seit**; ein Diagnose-Sensor **Kennung** (die Stelle der Verbindung in der Liste der Box) ist aus, bis du ihn einschaltest. Die Entitäten kennen eine Verbindung an ihrem **Namen**: Die Box nummeriert ihre Verbindungen nach der Stelle in der Liste, ein Löschen schiebt die übrigen nach oben, und der Name hält jede Entität bei ihrer Verbindung. Benennst du eine Verbindung auf der Box um, entsteht eine neue Entität und die alte bleibt nicht verfügbar (von Hand entfernen); heißen zwei Verbindungen gleich, kommt die Kennung zum Schlüssel dazu. Auf dem Dashboard zeigt die [VPN-Karte](#vpn-karte) dasselbe mit Schaltern. Im Seitenpanel gibt es dann den Reiter **VPN** (`#/vpn`) mit den Verbindungen, ihrem Zustand (verbunden, ein aber nicht verbunden, aus) und den Geräten, die per VPN ins Heimnetz kommen. Die Daten kommen aus der Oberfläche der Box, sie braucht dasselbe Konto wie die anderen Lesezugriffe darauf. Datenmenge und letzten Kontakt je Tunnel nennt die Box nicht; für den Verkehr nimm auf der Diagnose-Seite die WireGuard-Schnittstelle auf. Der private Schlüssel und die Pre-Shared-Keys, die dieselbe Seite der Box enthält, werden nie gelesen. Jede Verbindung hat außerdem einen Schalter „VPN <Name> aktiviert“ (und der VPN-Reiter eine Schaltfläche), sofern das Konto Einstellungen ändern darf. Ausschalten beendet den Tunnel; die Integration liest die Verbindung zurück und meldet einen Fehler, wenn die Box die Änderung nicht übernommen hat.
 
 Das Gerät der FRITZ!Box hat außerdem drei Diagnose-Sensoren, standardmäßig aus: **Letzte Aktualisierung** (die letzte erfolgreiche Abfrage), **Fehlgeschlagene Abfragen** (wie viele Abfragen in Folge scheiterten) und **Mesh-Status** (ob die Mesh-Topologie bei der letzten Abfrage mitkam). Sie bleiben verfügbar, auch wenn die Box nicht erreichbar ist.
 
-**Statische Routen.** Mit dem Recht „FRITZ!Box Einstellungen“ hat jede statische IPv4-Route der Box (Heimnetz › Netzwerk › Netzwerkeinstellungen › IPv4-Routen) einen Schalter „Route <Netz>“, zum Beispiel `10.8.0.0/24`. Er ist an, solange die Route eingeschaltet ist, und hat die Attribute `network`, `gateway`, `gateway_device`, `gateway_online`, `interface` und `metric`. Die Box nennt nur die von Hand eingetragenen Routen, nicht die, die sie selbst anlegt. Die Routen werden nicht bei jedem Abruf gelesen, sondern alle 10 (bei 30 Sekunden also etwa alle 5 Minuten) und sofort nach jedem Schalten, Anlegen oder Löschen im Panel oder durch den Schalter; was jemand in der Box ändert, erscheint also mit bis zu 5 Minuten Verzögerung. Eine neue Route bekommt beim nächsten Lesen ihren Schalter. Ein Schalter, dessen Route die Box in zwei Lesungen hintereinander nicht mehr nennt, wird entfernt; in der Zwischenzeit ist er nicht verfügbar. Misslingen drei Lesungen hintereinander, werden die Schalter nicht verfügbar. Das Schalten liest die Routen zurück und meldet einen Fehler, wenn die Box die Änderung nicht übernommen hat. Anlegen und Löschen geht im Panel unter Adressraum › Routen.
+**Statische Routen.** Mit dem Recht „FRITZ!Box Einstellungen“ hat jede statische IPv4-Route der Box (Heimnetz › Netzwerk › Netzwerkeinstellungen › IPv4-Routen) einen Schalter „Route <Netz>“, zum Beispiel `10.8.0.0/24`. Er ist an, solange die Route eingeschaltet ist, und hat die Attribute `network`, `gateway`, `gateway_device`, `gateway_online`, `interface` und `metric`. Die Box nennt nur die von Hand eingetragenen Routen, nicht die, die sie selbst anlegt. Die Routen werden nicht bei jedem Abruf gelesen, sondern alle 10 (bei 30 Sekunden also etwa alle 5 Minuten) und sofort nach jedem Schalten, Anlegen oder Löschen im Panel oder durch den Schalter; was jemand in der Box ändert, erscheint also mit bis zu 5 Minuten Verzögerung. Eine neue Route bekommt beim nächsten Lesen ihren Schalter. Ein Schalter, dessen Route die Box in zwei Lesungen hintereinander nicht mehr nennt, wird entfernt; in der Zwischenzeit ist er nicht verfügbar. Misslingen drei Lesungen hintereinander, werden die Schalter nicht verfügbar. Das Schalten liest die Routen zurück und meldet einen Fehler, wenn die Box die Änderung nicht übernommen hat. Anlegen und Löschen geht im Panel unter Adressraum › Routen; die [Routen-Karte](#routen-karte) zeigt die Routen auf dem Dashboard und schaltet sie.
 
 ### Aktionen
 
@@ -187,7 +187,7 @@ Schließt ein Filter in den Optionen ein Gerät aus, werden dessen Gerät und En
 
 ## Topologie-Karte
 
-Mit der Integration kommt eine Dashboard-Karte, die auf einen Blick zeigt, wer an welchem Access Point hängt: die Box und jeder Repeater als Gruppe, darunter die Geräte mit Online-Punkt, WLAN oder LAN und Signal. Geräte, die online sind, stehen oben. Suche, Filter, Details und Aktionen gibt es im [Seitenpanel](#seitenpanel): Ein Tipp auf ein Gerät öffnet dessen Seite dort, ein Tipp auf die Überschrift die Übersicht.
+Mit der Integration kommen fünf Dashboard-Karten, die Topologie-Karte und vier weitere: [Funk](#funk-karte), [Geräte](#geräte-karte), [VPN](#vpn-karte) und [Routen](#routen-karte). Die Topologie-Karte zeigt auf einen Blick, wer an welchem Access Point hängt: die Box und jeder Repeater als Gruppe, darunter die Geräte mit Online-Punkt, WLAN oder LAN und Signal. Geräte, die online sind, stehen oben. Suche, Filter, Details und Aktionen gibt es im [Seitenpanel](#seitenpanel): Ein Tipp auf ein Gerät öffnet dessen Seite dort, ein Tipp auf die Überschrift die Übersicht.
 
 Füge sie im Dashboard-Editor unter **Karte hinzufügen → FRITZ!Box Network topology** hinzu, oder per YAML:
 
@@ -212,6 +212,8 @@ Die Karte braucht ein Administratorkonto, weil sie MAC- und IP-Adressen zeigt. S
 
 ### Funk-Karte
 
+<p align="center"><img src="../screenshots/radio-light.png" alt="Funk-Karte" width="45%"></p>
+
 Die Funk-Karte zeigt pro Access Point und Band den Kanal, die Auslastung als Balken (ab 70 % in Warnfarbe), das Rauschen und die Zahl der Geräte, die gerade online auf diesem Band sind. Damit siehst du, welches Funkmodul überlastet ist oder auf einem lauten Kanal sitzt. Die Daten kommen aus der Mesh-Topologie der Box; die Funk-Sensoren musst du dafür nicht aktivieren.
 
 ```yaml
@@ -228,6 +230,8 @@ type: custom:fritzbox-network-radio-card
 Die Box meldet nicht für jedes Band Auslastung und Rauschen; fehlende Werte bleiben leer. Ohne Mesh-Topologie zeigt die Karte „Die Box meldet keine Funkdaten.“
 
 ### Geräte-Karte
+
+<p align="center"><img src="../screenshots/devices-light.png" alt="Geräte-Karte" width="45%"></p>
 
 Die Geräte-Karte zeigt ausgewählte Geräte mit Status, Access Point, Link-Rate und Signal und den Aktionen **Internet sperren oder freigeben**, Priorisierung und Wake on LAN. Bei zwei oder mehr Geräten mit Internetschalter kommt ein Knopf dazu, der alle auf einmal sperrt (wenn alle online dürfen) oder freigibt (sonst die gesperrten). Die Aktionen sind dieselben Schalter und Buttons wie am Gerät und brauchen dasselbe Recht „FRITZ!Box Einstellungen“; eine Aktion erscheint nur, wenn ihre Entität existiert und aktiviert ist.
 
@@ -251,6 +255,8 @@ Ein Tipp auf den Namen öffnet das Gerät. Alle Karten brauchen wie die Topologi
 
 ### VPN-Karte
 
+<p align="center"><img src="../screenshots/vpncard-light.png" alt="VPN-Karte" width="45%"></p>
+
 Die VPN-Karte zeigt die WireGuard-Verbindungen der Box, getrennt nach Geräten und Standortverbindungen, mit Zustand (Verbunden, Bereit, Aus), Dauer und einem Schalter je Verbindung. Darunter stehen die Geräte, die von außen im Heimnetz sind. Der Schalter erscheint nur bei Verbindungen, die sich ändern lassen, und braucht das Recht „FRITZ!Box Einstellungen“. Ausschalten beendet den Tunnel.
 
 ```yaml
@@ -266,6 +272,8 @@ title: VPN
 | `only_active` | Ausgeschaltete Verbindungen ausblenden (Standard `false`) |
 
 ### Routen-Karte
+
+<p align="center"><img src="../screenshots/routescard-light.png" alt="Routen-Karte" width="45%"></p>
 
 Die Routen-Karte zeigt die statischen Routen der Box als „Ziel → Gateway“ mit dem Gerät des Gateways, seinem Zustand, der Metrik und einem Schalter je Route. Zeigt eine eingeschaltete Route auf ein Gateway, das offline ist, steht oben ein Hinweis. Die Routen werden beim Anzeigen einmal von der Box gelesen. Anlegen und Löschen bleiben im Seitenpanel; ein Link führt dorthin.
 
