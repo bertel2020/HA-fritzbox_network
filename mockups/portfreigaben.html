@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portfreigaben – Mockup</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#f4f6f9, #0f1216);
+    --surface: light-dark(#fff, #1b1f24);
+    --soft: light-dark(#f6f8fb, #232830);
+    --line: light-dark(#e3e7ee, #2e343d);
+    --text: light-dark(#1b1f24, #e6e9ed);
+    --muted: light-dark(#5d6672, #9aa4b1);
+    --accent: light-dark(#2b6cb0, #6aa7e8);
+    --accent-soft: light-dark(#e6f0fb, #1d3350);
+    --ok: light-dark(#2e7d4f, #7fd0a0);
+    --ok-soft: light-dark(#e5f5ec, #1a3326);
+    --warn: light-dark(#9a5b00, #f0c070);
+    --warn-soft: light-dark(#fff1d6, #3a2c10);
+    --radius: 18px;
+    --shadow: 0 1px 2px rgb(16 24 40 / 12%), 0 6px 18px -10px rgb(16 24 40 / 25%);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 Roboto, "Noto Sans", system-ui, sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 16px; display: grid; gap: 16px; }
+  button, select { font: inherit; color: inherit; }
+  button { background: none; border: 0; cursor: pointer; padding: 0; }
+  a, .link { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; min-width: 0; }
+  .label { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .muted { color: var(--muted); }
+  .bar { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; padding: 10px 14px; border-radius: 14px; background: var(--soft); border: 1px dashed var(--line); }
+  .bar select { min-height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 0 10px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { padding: 0 14px; min-height: 34px; font-weight: 500; color: var(--muted); border-left: 1px solid var(--line); white-space: nowrap; }
+  .seg button:first-child { border-left: 0; }
+  .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+  .chip { display: inline-flex; align-items: center; gap: 5px; min-height: 22px; padding: 0 9px; border-radius: 11px; font-size: 12px; font-weight: 500; background: var(--soft); color: var(--muted); white-space: nowrap; }
+  .chip.open { background: var(--warn-soft); color: var(--warn); }
+  .chip.part { background: var(--accent-soft); color: var(--accent); }
+  .chip.info { background: var(--accent-soft); color: var(--accent); }
+  .chip.proto { background: transparent; border: 1px solid var(--line); color: var(--text); font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; min-height: 22px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; flex: none; }
+  .dot.on { background: var(--ok); }
+  .dot.warn { background: var(--warn); }
+
+  /* ---------- the proposal ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 14px 0; }
+  .tile { background: var(--soft); border-radius: 14px; padding: 10px 14px; }
+  .tile b { display: block; font-size: 22px; font-weight: 500; line-height: 1.25; }
+  .tile small { color: var(--muted); font-size: 12px; }
+  .tile.open b { color: var(--warn); }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .fchip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; }
+  .fchip em { font-style: normal; color: var(--muted); }
+  .fchip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
+  .dev { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+  .dev + .dev { margin-top: 12px; }
+  .devhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--soft); }
+  .devhead svg { width: 20px; height: 20px; color: var(--muted); flex: none; }
+  .devhead b { font-weight: 500; }
+  .devhead .sp { flex: 1; }
+  .cols, .rule { display: grid; grid-template-columns: 84px minmax(0, 1fr) 64px minmax(190px, auto); gap: 4px 16px; align-items: center; padding: 10px 14px; }
+  .cols { padding-top: 8px; padding-bottom: 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
+  .rule + .rule { border-top: 1px solid var(--line); }
+  .rule.closed .name, .rule.closed .ports { opacity: .55; }
+  .name { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+  .name b { font-weight: 500; }
+  .ports { text-align: right; white-space: nowrap; }
+  .ports .arrow { color: var(--muted); padding: 0 4px; }
+  .ports small { display: block; color: var(--muted); font-size: 11.5px; }
+  @media (max-width: 720px) {
+    .cols { display: none; }
+    .rule { grid-template-columns: auto minmax(0, 1fr); }
+    .rule .proto { grid-column: 2; }
+    .rule .ports { grid-column: 1 / -1; text-align: left; }
+  }
+  .note { display: flex; gap: 10px; padding: 10px 12px; border-radius: 12px; font-size: 13px; background: var(--soft); color: var(--muted); margin-top: 14px; }
+  .note.warn { background: var(--warn-soft); color: var(--warn); }
+  .empty { padding: 28px 12px; text-align: center; color: var(--muted); }
+  .empty b { color: var(--text); font-weight: 500; display: block; margin-bottom: 4px; }
+
+  /* ---------- the current one ---------- */
+  .now ul { list-style: none; margin: 0; padding: 0; font-size: 13px; }
+  .now li { display: grid; grid-template-columns: 1fr auto; gap: 0 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+  .now li:first-child { border-top: 0; }
+  .now li.off { opacity: .6; }
+  .now .pdesc { font-weight: 500; }
+  .now .pmap { color: var(--muted); text-align: right; }
+  .now small { grid-column: 1 / -1; color: var(--muted); }
+  .now p { margin: 12px 0 0; color: var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <div class="bar">
+    <span class="muted">Mockup der Karte „Portfreigaben“ (Internet-Seite). Nur Ansicht, wie bisher. Daten angelehnt an Ihre Box.</span>
+    <span style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+      <label class="muted" for="ex">Beispiel</label>
+      <select id="ex">
+        <option value="mine">Ihre Box (4 Regeln)</option>
+        <option value="many">Viele (Bereich, UPnP)</option>
+        <option value="none">Keine Freigaben</option>
+        <option value="upnp">Web-Seite nicht lesbar</option>
+      </select>
+      <span class="seg" role="group" aria-label="Ansicht">
+        <button id="v-new" aria-pressed="true">Vorschlag</button>
+        <button id="v-now" aria-pressed="false">Jetzt</button>
+      </span>
+    </span>
+  </div>
+  <section class="card" id="card"></section>
+</main>
+
+<script>
+  const ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>';
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+  // one rule as the box lists it (family: ipv4 / ipv6, source: manual / upnp)
+  const R = (device, ip, online, app, protocol, ext, extEnd, int, intEnd, family, enabled, source = "manual", lease = 0) =>
+    ({ device, ip, online, app, protocol, ext, extEnd, int, intEnd, family, enabled, source, lease });
+  const DATA = {
+    mine: { manualKnown: true, rules: [
+      R("NAS", "192.168.178.40", true, "OpenVPN", "UDP", 1194, null, 1194, null, "ipv4", false),
+      R("NAS", "192.168.178.40", true, "WireGuard", "UDP", 51820, null, 51820, null, "ipv4", false),
+      R("tracker", "192.168.178.41", true, "Tracker_5027", "UDP", 5027, null, 5027, null, "ipv4", true),
+      R("tracker", "192.168.178.41", true, "Tracker_5027", "UDP", 5027, null, 5027, null, "ipv6", true),
+    ] },
+    many: { manualKnown: true, rules: [
+      R("NAS", "192.168.178.40", true, "OpenVPN", "UDP", 1194, null, 1194, null, "ipv4", false),
+      R("NAS", "192.168.178.40", true, "WireGuard", "UDP", 51820, null, 51820, null, "ipv4", false),
+      R("tracker", "192.168.178.41", true, "Tracker_5027", "UDP", 5027, null, 5027, null, "ipv4", true),
+      R("tracker", "192.168.178.41", true, "Tracker_5027", "UDP", 5027, null, 5027, null, "ipv6", true),
+      R("Gaming-PC", "192.168.178.52", false, "Server", "TCP", 27015, 27030, 27000, 27015, "ipv4", true),
+      R("Gaming-PC", "192.168.178.52", false, "Server", "TCP", 27015, 27030, 27000, 27015, "ipv6", false),
+      R("Spielkonsole", "192.168.178.60", true, "", "UDP", 3074, null, 3074, null, "ipv4", true, "upnp", 600),
+      R("Webserver", "192.168.178.70", true, "HTTPS", "TCP", 443, null, 8443, null, "ipv4", true),
+    ] },
+    none: { manualKnown: true, rules: [] },
+    upnp: { manualKnown: false, rules: [
+      R("Spielkonsole", "192.168.178.60", true, "", "UDP", 3074, null, 3074, null, "ipv4", true, "upnp", 600),
+    ] },
+  };
+  let key = "mine", view = "new", filter = "all";
+
+  const portText = (a, b) => (b ? `${a}–${b}` : String(a));
+  const lease = (s) => (s >= 3600 ? `${Math.round(s / 3600)} h` : `${Math.round(s / 60)} min`);
+
+  /** Rules of both families that say the same thing become one row: "IPv4 · IPv6". */
+  function merge(rules) {
+    const rows = [];
+    for (const r of rules) {
+      const id = [r.device, r.app, r.protocol, r.ext, r.extEnd, r.int, r.intEnd, r.source].join("|");
+      const hit = rows.find((x) => x.id === id);
+      if (hit) { hit.families.push({ family: r.family, enabled: r.enabled }); }
+      else rows.push({ ...r, id, families: [{ family: r.family, enabled: r.enabled }] });
+    }
+    for (const row of rows) {
+      const on = row.families.filter((f) => f.enabled).length;
+      row.state = on === 0 ? "closed" : on === row.families.length ? "open" : "part";
+      row.isV6 = row.families.some((f) => f.family === "ipv6");
+    }
+    return rows;
+  }
+
+  const matches = (row) => filter === "all" || (filter === "open" && row.state !== "closed") || (filter === "closed" && row.state === "closed")
+    || (filter === "ipv6" && row.isV6) || (filter === "upnp" && row.source === "upnp");
+
+  function ruleRow(r) {
+    const state = { open: `<span class="chip open"><i class="dot warn"></i>offen</span>`, closed: `<span class="chip"><i class="dot"></i>zu</span>`, part: `<span class="chip part"><i class="dot warn"></i>teils offen</span>` }[r.state];
+    const fam = r.families.map((f) => `<span class="chip info" title="${f.enabled ? "offen" : "zu"}" style="${f.enabled ? "" : "opacity:.55"}">${f.family === "ipv6" ? "IPv6" : "IPv4"}</span>`).join("");
+    const same = r.ext === r.int && r.extEnd === r.intEnd;
+    const ports = same
+      ? `<span class="mono">${portText(r.ext, r.extEnd)}</span><small>von außen und am Gerät</small>`
+      : `<span class="mono">${portText(r.ext, r.extEnd)}</span><span class="arrow">→</span><span class="mono">${portText(r.int, r.intEnd)}</span><small>außen → am Gerät</small>`;
+    const name = r.app ? `<b>${esc(r.app)}</b>` : `<b class="muted">Ohne Namen</b>`;
+    const extra = [r.source === "upnp" ? `<span class="chip">UPnP · endet in ${lease(r.lease)}</span>` : ""].join("");
+    return `<div class="rule ${r.state === "closed" ? "closed" : ""}">
+      <div>${state}</div>
+      <div class="name">${name}${fam}${extra}</div>
+      <div class="proto"><span class="chip proto">${r.protocol}</span></div>
+      <div class="ports">${ports}</div></div>`;
+  }
+
+  function renderNew(d) {
+    const rows = merge(d.rules);
+    const open = rows.filter((r) => r.state !== "closed").length;
+    const devices = [...new Set(rows.map((r) => r.device))].length;
+    const counts = { all: rows.length, open, closed: rows.length - open, ipv6: rows.filter((r) => r.isV6).length, upnp: rows.filter((r) => r.source === "upnp").length };
+    const label = { all: "Alle", open: "Offen", closed: "Zu", ipv6: "IPv6", upnp: "UPnP" };
+    const shown = rows.filter(matches);
+    const groups = [...new Set(shown.map((r) => r.device))].map((name) => {
+      const list = shown.filter((r) => r.device === name).sort((a, b) => (a.state === "closed") - (b.state === "closed"));
+      const first = list[0];
+      return `<div class="dev">
+        <div class="devhead">${ICON}<b><span class="link">${esc(name)}</span></b><span class="mono muted">${esc(first.ip)}</span>
+          <span class="sp"></span><span class="chip"><i class="dot ${first.online ? "on" : ""}"></i>${first.online ? "online" : "offline"}</span></div>
+        <div class="cols"><span>Status</span><span>Freigabe</span><span>Protokoll</span><span style="text-align:right">Port</span></div>
+        ${list.map(ruleRow).join("")}</div>`;
+    }).join("");
+    let body;
+    if (!rows.length) body = `<div class="empty"><b>${d.manualKnown ? "Es sind keine Ports zum Internet offen." : "Kein Gerät hat per UPnP einen Port geöffnet."}</b>${d.manualKnown ? "" : "Die Box hat die von Hand gesetzten nicht genannt: Sieh unter Internet › Freigaben in der Box nach."}</div>`;
+    else body = `${groups || `<div class="empty"><b>Keine Freigabe passt zum Filter.</b></div>`}`;
+    const gap = !d.manualKnown && rows.length ? `<div class="note warn"><span>⚠</span><span>Die Box hat die von Hand gesetzten Freigaben nicht genannt, nur die per UPnP geöffneten. Sieh unter Internet › Freigaben in der Box nach.</span></div>` : "";
+    const tiles = rows.length ? `<div class="tiles">
+        <div class="tile ${open ? "open" : ""}"><b>${open}</b><small>offen aus dem Internet</small></div>
+        <div class="tile"><b>${rows.length - open}</b><small>zu</small></div>
+        <div class="tile"><b>${devices}</b><small>${devices === 1 ? "Gerät" : "Geräte"}</small></div></div>` : "";
+    const filters = rows.length ? `<div class="filters" role="group" aria-label="Filter">${Object.keys(label).map((k) => `<button class="fchip" data-f="${k}" aria-pressed="${filter === k}">${label[k]}<em>${counts[k]}</em></button>`).join("")}</div>` : "";
+    return `<span class="label">Portfreigaben</span>${tiles}${gap}${filters}${body}
+      <div class="note"><span>ⓘ</span><span>Eine offene Freigabe lässt Verkehr aus dem Internet direkt an das Gerät. Nur zur Ansicht: Schließen oder ändern geht in der Box. Schau dir Einträge an, die du nicht kennst.</span></div>`;
+  }
+
+  function renderNow(d) {
+    const li = d.rules.map((r) => {
+      const notes = [r.family === "ipv6" ? "IPv6" : "", r.source === "upnp" ? "per UPnP geöffnet" : "", r.enabled ? "" : "aus"].filter(Boolean).join(" · ");
+      return `<li class="${r.enabled ? "" : "off"}"><span class="pdesc">${esc(r.app || "Ohne Namen")}</span><span class="pmap">${r.protocol} ${portText(r.ext, r.extEnd)} → <u>${esc(r.device)}</u>:${portText(r.int, r.intEnd)}</span>${notes ? `<small>${notes}</small>` : ""}</li>`;
+    }).join("");
+    return `<div class="now"><span class="label">Portfreigaben</span>${li ? `<ul>${li}</ul>` : `<p>Es sind keine Ports zum Internet offen.</p>`}
+      <p>Jeder Eintrag lässt etwas aus dem Internet an ein Gerät. Von Hand in der Box gesetzt (aus ihrer Weboberfläche gelesen) oder von einem Gerät selbst geöffnet (UPnP). Hier nur zur Ansicht: Schließen oder ändern geht in der Box. Schau dir Einträge an, die du nicht kennst.</p></div>`;
+  }
+
+  function draw() {
+    const d = DATA[key];
+    document.getElementById("card").innerHTML = view === "new" ? renderNew(d) : renderNow(d);
+    document.getElementById("v-new").setAttribute("aria-pressed", String(view === "new"));
+    document.getElementById("v-now").setAttribute("aria-pressed", String(view === "now"));
+  }
+  document.addEventListener("click", (e) => {
+    const f = e.target.closest("[data-f]");
+    if (f) { filter = f.dataset.f; draw(); return; }
+    if (e.target.id === "v-new") { view = "new"; draw(); }
+    if (e.target.id === "v-now") { view = "now"; draw(); }
+  });
+  document.getElementById("ex").addEventListener("change", (e) => { key = e.target.value; filter = "all"; draw(); });
+  draw();
+</script>
+</body>
+</html>
