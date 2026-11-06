@@ -309,6 +309,36 @@
     },
     "route_not_changed": {
       "message": "The box did not switch the route."
+    },
+    "route_invalid_network": {
+      "message": "That is not a network address. Use the form 10.8.0.0/24, with the network address in front of the slash."
+    },
+    "route_all_traffic": {
+      "message": "A route for everything (0.0.0.0/0) is not allowed: it would redirect the internet."
+    },
+    "route_overlaps_home": {
+      "message": "The destination overlaps the home network or contains the box. The traffic would stay in the home network."
+    },
+    "route_invalid_gateway": {
+      "message": "The gateway is not an IPv4 address."
+    },
+    "route_gateway_outside": {
+      "message": "The gateway must be a device in the home network."
+    },
+    "route_gateway_is_box": {
+      "message": "The gateway must not be the box itself."
+    },
+    "route_gateway_in_target": {
+      "message": "The gateway must not be inside the destination network."
+    },
+    "route_invalid_metric": {
+      "message": "The metric must be a whole number from 0 to 65535."
+    },
+    "route_duplicate": {
+      "message": "The box already has a route to this network. Delete it first or switch it."
+    },
+    "route_home_unknown": {
+      "message": "The box does not tell its home network, so the route cannot be checked."
     }
   },
   "issues": {

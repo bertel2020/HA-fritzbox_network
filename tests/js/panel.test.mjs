@@ -1432,6 +1432,67 @@ test("the routes page switches a route by its network, only with the right to wr
   assert.match(routesPage.renderRoutes(routeRows, { t, canWrite: true, busy: new Set(["10.8.0.0/24"]) }), /data-on="0" disabled>/);
 });
 
+const HOME = { network: "192.168.178.0/24", box: "192.168.178.1" };
+
+test("the form of a new route keeps the rules of the server", () => {
+  const cases = [
+    ["10.9.0.0/24", "192.168.178.5", "10", "ok"],
+    ["10.9.0.7", "192.168.178.5", "0", "ok"],
+    ["abc", "192.168.178.5", "10", "invalid_network"],
+    ["10.9.0.1/24", "192.168.178.5", "10", "invalid_network"],
+    ["127.0.0.0/8", "192.168.178.5", "10", "invalid_network"],
+    ["224.0.0.0/4", "192.168.178.5", "10", "invalid_network"],
+    ["0.0.0.0/0", "192.168.178.5", "10", "all_traffic"],
+    ["192.168.178.0/25", "192.168.178.5", "10", "overlaps_home"],
+    ["192.168.0.0/16", "192.168.178.5", "10", "overlaps_home"],
+    ["10.9.0.0/24", "nope", "10", "invalid_gateway"],
+    ["10.9.0.0/24", "10.1.1.1", "10", "gateway_outside"],
+    ["10.9.0.0/24", "192.168.178.1", "10", "gateway_is_box"],
+    ["172.16.0.0/16", "192.168.178.5", "10", "duplicate"],
+    ["10.9.0.0/24", "192.168.178.5", "-1", "invalid_metric"],
+    ["10.9.0.0/24", "192.168.178.5", "70000", "invalid_metric"],
+    ["10.9.0.0/24", "192.168.178.5", "", "invalid_metric"],
+  ];
+  for (const [network, gateway, metric, code] of cases) {
+    assert.equal(routesPage.checkRoute({ network, gateway, metric }, routeRows.entries, HOME)?.code, code, `${network} via ${gateway} metric ${metric}`);
+  }
+  // nothing to say while the form is empty, and nothing to check without the home network
+  assert.equal(routesPage.checkRoute({ network: "", gateway: "", metric: "10" }, [], HOME), null);
+  assert.equal(routesPage.checkRoute({ network: "10.9.0.0/24", gateway: "192.168.178.5", metric: "10" }, [], null).code, "home_unknown");
+  const offline = routesPage.checkRoute({ network: "10.9.0.0/24", gateway: "192.168.178.20", metric: "10" }, [], HOME, [{ ip: "192.168.178.20", name: "Keller", online: false }]);
+  assert.deepEqual([offline.tone, offline.code, offline.name], ["warn", "offline", "Keller"]);
+});
+
+test("the routes page offers adding and deleting only with the right to write and a known home network", () => {
+  const withHome = { ...routeRows, home: HOME };
+  const rw = routesPage.renderRoutes(withHome, { t, canWrite: true, clients: [] });
+  assert.match(rw, /data-act="route-new"/);
+  assert.match(rw, /data-act="route-delete" data-network="10\.8\.0\.0\/24"/);
+  const ro = routesPage.renderRoutes(withHome, { t, canWrite: false, clients: [] });
+  assert.doesNotMatch(ro, /route-new|route-delete/);
+  // without the home network nothing can be checked: no form, and the page says why
+  const blind = routesPage.renderRoutes(routeRows, { t, canWrite: true, clients: [] });
+  assert.doesNotMatch(blind, /route-new/);
+  assert.match(blind, /nennt ihr Heimnetz nicht/);
+});
+
+test("the form shows the check while the user types and blocks the button for a refused route", () => {
+  const withHome = { ...routeRows, home: HOME };
+  const ctx = { t, canWrite: true, clients: [{ ip: "192.168.178.5", name: "Pi <b>", online: true }] };
+  const refused = routesPage.renderRoutes(withHome, { ...ctx, draft: { network: "0.0.0.0/0", gateway: "192.168.178.5", metric: "10" } });
+  assert.match(refused, /class="routemsg bad"[^>]*>Eine Route für alles/);
+  assert.match(refused, /data-act="route-add" disabled/);
+  assert.doesNotMatch(refused, /data-act="route-new"/); // the form is open: no second button
+  const fine = routesPage.renderRoutes(withHome, { ...ctx, draft: { network: "10.9.0.0/24", gateway: "192.168.178.5", metric: "10" } });
+  assert.match(fine, /class="routemsg ok"[^>]*>Verkehr an 10\.9\.0\.0\/24 geht künftig über 192\.168\.178\.5/);
+  assert.match(fine, /data-act="route-add">Anlegen/);
+  assert.match(fine, /<option value="192\.168\.178\.5">Pi &lt;b&gt;<\/option>/);
+  const empty = routesPage.renderRoutes(withHome, { ...ctx, draft: { network: "", gateway: "", metric: "10" } });
+  assert.match(empty, /data-act="route-add" disabled/);
+  const busy = routesPage.renderRoutes(withHome, { ...ctx, adding: true, draft: { network: "10.9.0.0/24", gateway: "192.168.178.5", metric: "10" } });
+  assert.match(busy, /data-act="route-add" disabled/);
+});
+
 test("the routes page says so where the box tells nothing, has no route or is still loading", () => {
   assert.match(routesPage.renderRoutes("failed", { t }), /nicht genannt/);
   assert.match(routesPage.renderRoutes({ entries: [] }, { t }), /keine statischen Routen/);

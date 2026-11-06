@@ -83,6 +83,10 @@ MAX_PORT_MAPPINGS = 128
 # the most static routes read: the table of the box is a short list entered by hand
 MAX_ROUTES = 128
 ROUTES_SERVICE = "Layer3Forwarding1"
+# what the box itself writes into the entries it makes for the routes entered in its web interface
+# (read on FRITZ!OS 8.25, also for routes to a whole network); a new route gets the same
+ROUTE_TYPE = "Host"
+ROUTE_INTERFACE = "LanHostConfigManagement1"
 
 # seconds for connecting and for each read, also of the direct list downloads
 REQUEST_TIMEOUT = 10
@@ -628,6 +632,44 @@ class FritzNetworkClient:
                 NewSourceIPAddress=route["source"],
                 NewSourceSubnetMask=route["source_mask"],
                 NewEnable=enabled,
+            )
+
+    def add_route(
+        self,
+        network: ipaddress.IPv4Network,
+        gateway: ipaddress.IPv4Address,
+        metric: int,
+        interface: str = ROUTE_INTERFACE,
+    ) -> None:
+        """Add a static route (checked by ``routes.validate_route``) in the form the box writes.
+
+        The source stays empty (0.0.0.0/0.0.0.0): the route holds for every sender. The box answers
+        with nothing, so the caller reads the routes back.
+        """
+        with self._lock:
+            self._connection.call_action(
+                ROUTES_SERVICE,
+                "AddForwardingEntry",
+                NewType=ROUTE_TYPE,
+                NewDestIPAddress=str(network.network_address),
+                NewDestSubnetMask=str(network.netmask),
+                NewSourceIPAddress="0.0.0.0",
+                NewSourceSubnetMask="0.0.0.0",
+                NewGatewayIPAddress=str(gateway),
+                NewInterface=interface,
+                NewForwardingMetric=metric,
+            )
+
+    def delete_route(self, route: dict[str, Any]) -> None:
+        """Delete a static route; ``route`` is one of ``get_routes()``."""
+        with self._lock:
+            self._connection.call_action(
+                ROUTES_SERVICE,
+                "DeleteForwardingEntry",
+                NewDestIPAddress=route["destination"],
+                NewDestSubnetMask=route["mask"],
+                NewSourceIPAddress=route["source"],
+                NewSourceSubnetMask=route["source_mask"],
             )
 
     def _guest_wifi_service(self) -> str | None:

@@ -85,6 +85,7 @@ class FakeClient:
         self.ports: list[dict] = []
         self.routes: list[dict] = []
         self.routes_ignore = False
+        self.routes_new_enabled = True
         self.firmware: dict = {"NewUpgradeAvailable": False}
         self.vpn: dict | None = None
         self.vpn_ignores = False
@@ -198,6 +199,34 @@ class FakeClient:
                 route["source"],
             ):
                 entry["enabled"] = enabled
+
+    def add_route(self, network, gateway, metric, interface="LanHostConfigManagement1") -> None:
+        self.calls.append(("route-add", str(network), str(gateway), metric, interface))
+        if self.fail_actions:
+            raise FritzActionError("refused")
+        if self.routes_ignore:
+            return
+        self.routes.append(
+            {
+                "network": str(network),
+                "destination": str(network.network_address),
+                "mask": str(network.netmask),
+                "source": "0.0.0.0",
+                "source_mask": "0.0.0.0",
+                "gateway": str(gateway),
+                "interface": interface,
+                "metric": metric,
+                "enabled": self.routes_new_enabled,
+            }
+        )
+
+    def delete_route(self, route: dict) -> None:
+        self.calls.append(("route-delete", route["network"]))
+        if self.fail_actions:
+            raise FritzActionError("refused")
+        if self.routes_ignore:
+            return
+        self.routes = [r for r in self.routes if r["network"] != route["network"]]
 
     def get_firmware(self) -> dict:
         return dict(self.firmware)

@@ -503,6 +503,12 @@ export const PANEL_CSS = `
   .routenet { flex: 1; min-width: 0; }
   .routenet b { display: block; font-weight: 500; }
   .routenet small { color: var(--muted); }
+  .btn.del { color: var(--bad); }
+  .routemsg { min-height: 20px; margin: 12px 0 0; font-size: 13px; }
+  .routemsg.bad { color: var(--bad); }
+  .routemsg.warn { color: var(--warn); }
+  .routemsg.ok { color: var(--ok); }
+  .routeform .afield small { font-size: 12px; }
   .vpnswitch { flex: none; }
   .vpnname { flex: 1; min-width: 0; }
   .vpnname b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

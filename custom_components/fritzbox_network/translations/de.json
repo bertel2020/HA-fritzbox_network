@@ -309,6 +309,36 @@
     },
     "route_not_changed": {
       "message": "Die Box hat die Route nicht umgeschaltet."
+    },
+    "route_invalid_network": {
+      "message": "Das ist keine Netzadresse. Schreibe sie in der Form 10.8.0.0/24, mit der Netzadresse vor dem Schrägstrich."
+    },
+    "route_all_traffic": {
+      "message": "Eine Route für alles (0.0.0.0/0) ist nicht erlaubt: Sie würde das Internet umlenken."
+    },
+    "route_overlaps_home": {
+      "message": "Das Ziel überschneidet sich mit dem Heimnetz oder enthält die Box. Der Verkehr bliebe im Heimnetz."
+    },
+    "route_invalid_gateway": {
+      "message": "Das Gateway ist keine IPv4-Adresse."
+    },
+    "route_gateway_outside": {
+      "message": "Das Gateway muss ein Gerät im Heimnetz sein."
+    },
+    "route_gateway_is_box": {
+      "message": "Das Gateway darf nicht die Box selbst sein."
+    },
+    "route_gateway_in_target": {
+      "message": "Das Gateway darf nicht im Ziel-Netz liegen."
+    },
+    "route_invalid_metric": {
+      "message": "Die Metrik muss eine ganze Zahl von 0 bis 65535 sein."
+    },
+    "route_duplicate": {
+      "message": "Die Box hat schon eine Route zu diesem Netz. Lösche sie zuerst oder schalte sie."
+    },
+    "route_home_unknown": {
+      "message": "Die Box nennt ihr Heimnetz nicht, deshalb lässt sich die Route nicht prüfen."
     }
   },
   "issues": {

@@ -30,7 +30,7 @@ from homeassistant.util import dt as dt_util
 import requests
 
 from .addresses import AddressNotes
-from .api import FritzNetworkClient
+from .api import ROUTE_INTERFACE, FritzNetworkClient
 from .const import (
     BACKOFF_AFTER_FAILURES,
     CONF_ADOPT_NAMES,
@@ -83,6 +83,7 @@ from .models import (
     parse_internet,
     parse_vpn,
 )
+from .routes import RouteRefused, home_network, validate_route
 from .vendor import vendor_of
 
 _LOGGER = logging.getLogger(__name__)
@@ -815,6 +816,72 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             ) from err
         now = [route for route in routes if route["network"] == network]
         if not now or any(route["enabled"] != enabled for route in now):
+            raise HomeAssistantError(translation_domain=DOMAIN, translation_key="route_not_changed")
+        return routes
+
+    async def async_add_route(
+        self, network: str, gateway: str, metric: int
+    ) -> list[dict[str, Any]]:
+        """Add a static route after the checks of ``validate_route``; returns the routes read back.
+
+        The new route is switched on, as the web interface of the box does it, and the box takes it
+        without an answer that says so: if it is not in the list afterwards, the action failed.
+        """
+        try:
+            info = await self.hass.async_add_executor_job(self.client.get_network)
+            home = home_network(info)
+            if home is None:
+                raise HomeAssistantError(
+                    translation_domain=DOMAIN, translation_key="route_home_unknown"
+                )
+            routes = await self.hass.async_add_executor_job(self.client.get_routes)
+            try:
+                target, via = validate_route(network, gateway, metric, routes, home)
+            except RouteRefused as err:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN, translation_key=f"route_{err.code}"
+                ) from err
+            interface = next((r["interface"] for r in routes if r["interface"]), ROUTE_INTERFACE)
+            await self.hass.async_add_executor_job(
+                self.client.add_route, target, via, metric, interface
+            )
+            routes = await self.hass.async_add_executor_job(self.client.get_routes)
+            added = next((r for r in routes if r["network"] == str(target)), None)
+            if added is not None and not added["enabled"]:
+                await self.hass.async_add_executor_job(self.client.set_route_enabled, added, True)
+                routes = await self.hass.async_add_executor_job(self.client.get_routes)
+        except _FETCH_ERRORS as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+        now = next((r for r in routes if r["network"] == str(target)), None)
+        if now is None or not now["enabled"]:
+            raise HomeAssistantError(translation_domain=DOMAIN, translation_key="route_not_changed")
+        return routes
+
+    async def async_delete_route(self, network: str) -> list[dict[str, Any]]:
+        """Delete a static route by its network; returns the routes read back."""
+        try:
+            routes = await self.hass.async_add_executor_job(self.client.get_routes)
+            matches = [route for route in routes if route["network"] == network]
+            if not matches:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="route_unknown",
+                    translation_placeholders={"network": network},
+                )
+            for route in matches:
+                await self.hass.async_add_executor_job(self.client.delete_route, route)
+            routes = await self.hass.async_add_executor_job(self.client.get_routes)
+        except _FETCH_ERRORS as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+        if any(route["network"] == network for route in routes):
             raise HomeAssistantError(translation_domain=DOMAIN, translation_key="route_not_changed")
         return routes
 

@@ -58,6 +58,7 @@ from .filters import FILTER_OPTIONS, select_hosts
 from .latency import INTERVAL, STEPS
 from .models import MeshNode, MeshTopology, check_address_range, is_private_mac, mac_id
 from .repairs import async_update_stale_issue, last_online
+from .routes import home_network
 
 COMMAND = f"{DOMAIN}/subscribe_topology"
 ENTRIES_COMMAND = f"{DOMAIN}/entries"
@@ -71,6 +72,8 @@ DEVICE_ACTION_COMMAND = f"{DOMAIN}/device/action"
 PORTS_COMMAND = f"{DOMAIN}/ports/list"
 ROUTES_COMMAND = f"{DOMAIN}/routes/list"
 ROUTE_SWITCH_COMMAND = f"{DOMAIN}/routes/switch"
+ROUTE_ADD_COMMAND = f"{DOMAIN}/routes/add"
+ROUTE_DELETE_COMMAND = f"{DOMAIN}/routes/delete"
 IP_COMMAND = f"{DOMAIN}/device/ip"
 ADDRESS_OVERVIEW_COMMAND = f"{DOMAIN}/address/overview"
 ADDRESS_FIXED_COMMAND = f"{DOMAIN}/address/fixed"
@@ -621,10 +624,19 @@ async def ws_routes(
     _, coordinator = found
     try:
         entries = await hass.async_add_executor_job(coordinator.client.get_routes)
+        info = await hass.async_add_executor_job(coordinator.client.get_network)
     except FritzConnectionException as err:
         connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
         return
-    connection.send_result(msg["id"], {"entries": _routes_with_devices(coordinator, entries)})
+    connection.send_result(
+        msg["id"], {"entries": _routes_with_devices(coordinator, entries), "home": _home(info)}
+    )
+
+
+def _home(info: dict[str, Any] | None) -> dict[str, str] | None:
+    """The home network and the address of the box in it, for the checks the panel shows."""
+    home = home_network(info)
+    return {"network": str(home[0]), "box": str(home[1])} if home else None
 
 
 def _routes_with_devices(coordinator: Any, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -662,6 +674,66 @@ async def ws_route_switch(
         return
     try:
         entries = await coordinator.async_set_route(msg["network"], msg["enabled"])
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    connection.send_result(msg["id"], {"entries": _routes_with_devices(coordinator, entries)})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): ROUTE_ADD_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("network"): str,
+        vol.Required("gateway"): str,
+        vol.Required("metric"): vol.All(int, vol.Range(min=0, max=65535)),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_route_add(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Add a static route to the box, after the checks that keep it from cutting the box off."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    coordinator = found[1]
+    if not coordinator.can_write:
+        connection.send_error(
+            msg["id"], websocket_api.ERR_UNAUTHORIZED, "No right to change settings"
+        )
+        return
+    try:
+        entries = await coordinator.async_add_route(msg["network"], msg["gateway"], msg["metric"])
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    connection.send_result(msg["id"], {"entries": _routes_with_devices(coordinator, entries)})
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): ROUTE_DELETE_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("network"): str,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_route_delete(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Delete a static route of the box."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    coordinator = found[1]
+    if not coordinator.can_write:
+        connection.send_error(
+            msg["id"], websocket_api.ERR_UNAUTHORIZED, "No right to change settings"
+        )
+        return
+    try:
+        entries = await coordinator.async_delete_route(msg["network"])
     except HomeAssistantError as err:
         connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
         return
@@ -1319,6 +1391,8 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_ports)
     websocket_api.async_register_command(hass, ws_routes)
     websocket_api.async_register_command(hass, ws_route_switch)
+    websocket_api.async_register_command(hass, ws_route_add)
+    websocket_api.async_register_command(hass, ws_route_delete)
     websocket_api.async_register_command(hass, ws_device_ip)
     websocket_api.async_register_command(hass, ws_address_overview)
     websocket_api.async_register_command(hass, ws_address_fixed)

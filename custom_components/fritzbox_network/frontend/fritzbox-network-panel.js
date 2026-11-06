@@ -461,6 +461,7 @@ class FritzboxNetworkPanel extends HTMLElement {
   /** The routes are read when their page opens, not with every update. */
   async _loadRoutes() {
     this._state.routes = null;
+    this._state.routesDraft = null;
     this._update();
     try {
       this._state.routes = await this._ws("routes/list");
@@ -479,8 +480,65 @@ class FritzboxNetworkPanel extends HTMLElement {
         subTabs: renderAddressTabs("routes", this._t),
         canWrite: Boolean(state.data?.can_write),
         busy: state.routesBusy,
+        draft: state.routesDraft,
+        adding: state.routesAdding,
+        clients: state.data?.clients ?? [],
       })
     );
+  }
+
+  /** The form of a new route: the fields are drawn again at every key, the focus stays where it was. */
+  _onRouteInput(el) {
+    const state = this._state;
+    const key = { "r-net": "network", "r-gw": "gateway", "r-metric": "metric" }[el.id];
+    state.routesDraft = { ...state.routesDraft, [key]: el.value };
+    this._renderRoutes();
+    const box = this.shadowRoot.querySelector(`#${el.id}`);
+    box?.focus({ preventScroll: true });
+    box?.setSelectionRange?.(el.value.length, el.value.length);
+  }
+
+  async _addRoute() {
+    const state = this._state;
+    const draft = state.routesDraft;
+    if (!draft || state.routesAdding) return;
+    const net = draft.network.trim();
+    state.routesAdding = true;
+    this._renderRoutes();
+    try {
+      state.routes = await this._ws("routes/add", { network: net, gateway: draft.gateway.trim(), metric: Number(draft.metric) });
+      state.routesDraft = null;
+      showToast(this.shadowRoot, fill(this._t.routesPage.toastAdded, { name: net }));
+    } catch (err) {
+      showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
+    } finally {
+      state.routesAdding = false;
+      this._renderRoutes();
+    }
+  }
+
+  async _deleteRoute(network) {
+    const state = this._state;
+    const text = this._t.routesPage;
+    const route = state.routes?.entries?.find((r) => r.network === network);
+    const ok = await openDialog(this.shadowRoot, this._t, {
+      title: text.delete.title,
+      body: fill(text.delete.body, { net: network, gateway: route?.gateway ?? "" }),
+      ok: text.delete.ok,
+      danger: true,
+    });
+    if (!ok) return;
+    state.routesBusy = new Set([...(state.routesBusy ?? []), network]);
+    this._renderRoutes();
+    try {
+      state.routes = await this._ws("routes/delete", { network });
+      showToast(this.shadowRoot, fill(text.toastDeleted, { name: network }));
+    } catch (err) {
+      showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
+    } finally {
+      state.routesBusy = new Set([...state.routesBusy].filter((id) => id !== network));
+      this._renderRoutes();
+    }
   }
 
   /** Switches a route; the button waits until the box shows it in the new state. */
@@ -690,6 +748,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._state.filterPage = null;
     this._state.ports = null;
     this._state.routes = null;
+    this._state.routesDraft = null;
     this._update();
     if (await this._subscribe()) this._enterTab();
   }
@@ -1689,6 +1748,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._onGroupInput(el);
     } else if (el.id === "a-en" || el.id === "a-er" || el.id === "a-eno") {
       this._onEntryInput(el);
+    } else if (el.id === "r-net" || el.id === "r-gw" || el.id === "r-metric") {
+      this._onRouteInput(el);
     } else if (el.id === "c-search") {
       this._state.cleanupQuery = el.value;
       this._renderCleanup();
@@ -1802,6 +1863,18 @@ class FritzboxNetworkPanel extends HTMLElement {
       return;
     } else if (ds.act === "vpn-switch") {
       return this._switchVpn(ds.key, ds.on === "1");
+    } else if (ds.act === "route-new") {
+      state.routesDraft = { network: "", gateway: "", metric: "10" };
+      this._renderRoutes();
+      this.shadowRoot.querySelector("#r-net")?.focus();
+      return;
+    } else if (ds.act === "route-cancel") {
+      state.routesDraft = null;
+      return this._renderRoutes();
+    } else if (ds.act === "route-add") {
+      return this._addRoute();
+    } else if (ds.act === "route-delete") {
+      return this._deleteRoute(ds.network);
     } else if (ds.act === "route-switch") {
       return this._switchRoute(ds.network, ds.on === "1");
     } else if (ds.act === "latency-switch") {
