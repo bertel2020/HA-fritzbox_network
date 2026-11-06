@@ -15,8 +15,8 @@ are removed from it; still look through the file before you share it.
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
-.venv/bin/ruff check custom_components tests tools
-.venv/bin/ruff format --check custom_components tests tools
+.venv/bin/ruff check custom_components tests
+.venv/bin/ruff format --check custom_components tests
 .venv/bin/pytest
 node --test tests/js/*.test.mjs   # the logic of the cards and the panel, needs Node.js
 ```
