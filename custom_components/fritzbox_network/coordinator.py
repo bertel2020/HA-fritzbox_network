@@ -18,7 +18,11 @@ from fritzconnection.core.exceptions import (
 )
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    HomeAssistantError,
+    ServiceValidationError,
+)
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -780,6 +784,39 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             self.async_set_updated_data(replace(self.data, vpn=found))
         if now is None or now.active != enabled:
             raise HomeAssistantError(translation_domain=DOMAIN, translation_key="vpn_not_changed")
+
+    async def async_set_route(self, network: str, enabled: bool) -> list[dict[str, Any]]:
+        """Switch a static route by its network ("10.8.0.0/24"); returns the routes read back.
+
+        The box takes the switch without an answer that says so, so the routes are read again: if
+        the route is not in the state asked for, the action failed. Routes that share a network
+        and differ only in their source switch together.
+        """
+        try:
+            routes = await self.hass.async_add_executor_job(self.client.get_routes)
+            matches = [route for route in routes if route["network"] == network]
+            if not matches:
+                raise ServiceValidationError(
+                    translation_domain=DOMAIN,
+                    translation_key="route_unknown",
+                    translation_placeholders={"network": network},
+                )
+            for route in matches:
+                if route["enabled"] != enabled:
+                    await self.hass.async_add_executor_job(
+                        self.client.set_route_enabled, route, enabled
+                    )
+            routes = await self.hass.async_add_executor_job(self.client.get_routes)
+        except _FETCH_ERRORS as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+        now = [route for route in routes if route["network"] == network]
+        if not now or any(route["enabled"] != enabled for route in now):
+            raise HomeAssistantError(translation_domain=DOMAIN, translation_key="route_not_changed")
+        return routes
 
     async def async_wake_on_lan(self, host: Host) -> None:
         await self.hass.async_add_executor_job(self.client.wake_on_lan, host.mac)

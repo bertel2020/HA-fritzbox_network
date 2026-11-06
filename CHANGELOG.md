@@ -6,7 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
-- Seitenpanel, Adressraum: Neue Seite **Routen** (Adresse `#/routes`, Umschalter oben auf der Adressseite) mit den statischen IPv4-Routen der Box: Ziel-Netz, Gateway mit dem Gerät aus der Liste, Metrik und Zustand (aktiv, aus, Gateway offline) samt Hinweis, wenn das Gateway einer eingeschalteten Route offline ist. Nur Ansicht. Die Box nennt nur die von Hand eingetragenen Routen, nicht die, die sie selbst anlegt. Gelesen wird beim Öffnen der Seite; an einer FRITZ!Box 7590 AX (FRITZ!OS 8.25) geprüft.
+- Seitenpanel, Adressraum: Neue Seite **Routen** (Adresse `#/routes`, Umschalter oben auf der Adressseite) mit den statischen IPv4-Routen der Box: Ziel-Netz, Gateway mit dem Gerät aus der Liste, Metrik und Zustand (aktiv, aus, Gateway offline) samt Hinweis, wenn das Gateway einer eingeschalteten Route offline ist. Jede Route lässt sich im Panel ein- und ausschalten (die Box wird danach gefragt, ob es geklappt hat), dazu gibt es die Aktion `fritzbox_network.set_route` (Ziel-Netz, an/aus) für Automationen. Anlegen und Löschen bleiben in der Box. Die Box nennt nur die von Hand eingetragenen Routen, nicht die, die sie selbst anlegt. Gelesen wird beim Öffnen der Seite; an einer FRITZ!Box 7590 AX (FRITZ!OS 8.25) geprüft.
 
 ## 1.2.0 – 2026-11-05
 

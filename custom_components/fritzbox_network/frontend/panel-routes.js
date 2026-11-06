@@ -1,4 +1,4 @@
-/** The routes page: the static IPv4 routes of the box, with the device each one leads to. Read only. */
+/** The routes page: the static IPv4 routes of the box, with the device each one leads to and a switch for each. */
 
 import { escapeHtml } from "./shared.js";
 import { ic } from "./icons.js";
@@ -25,7 +25,8 @@ function gatewayName(route, t) {
   return route.gateway ?? t.routesPage.noGateway;
 }
 
-function row(route, t) {
+function row(route, ctx) {
+  const { t } = ctx;
   const v = t.routesPage;
   const tone = { on: "ok", off: "", down: "bad" }[route.state];
   const name = escapeHtml(gatewayName(route, t));
@@ -35,10 +36,14 @@ function row(route, t) {
     .filter(Boolean)
     .map(escapeHtml)
     .join(" · ");
+  const busy = ctx.busy?.has(route.network);
+  const control = ctx.canWrite
+    ? `<button class="btn vpnswitch" data-act="route-switch" data-network="${escapeHtml(route.network)}" data-on="${route.enabled ? "0" : "1"}"${busy ? " disabled" : ""}>${escapeHtml(route.enabled ? v.turnOff : v.turnOn)}</button>`
+    : "";
   return `<li class="routerow ${route.state}">
     <span class="i" aria-hidden="true">${ic("network")}</span>
     <div class="routenet"><b class="mono">${escapeHtml(route.network)}</b><small>${gateway} · ${facts}</small></div>
-    <span class="chip ${tone}">${escapeHtml(v.state[route.state])}</span></li>`;
+    <span class="chip ${tone}">${escapeHtml(v.state[route.state])}</span>${control}</li>`;
 }
 
 /** The page; a message where the box tells no routes. */
@@ -67,6 +72,6 @@ export function renderRoutes(routes, ctx) {
         .join("")}</div>`
     : "";
   return `${head}<div class="vpntiles">${tiles}</div>${hints}
-    <section class="card sec"><span class="label">${escapeHtml(v.listTitle)}</span><ul class="vpnlist">${m.routes.map((r) => row(r, t)).join("")}</ul></section>
+    <section class="card sec"><span class="label">${escapeHtml(v.listTitle)}</span><ul class="vpnlist">${m.routes.map((r) => row(r, ctx)).join("")}</ul></section>
     <p class="hint">${escapeHtml(v.hint)}</p>`;
 }

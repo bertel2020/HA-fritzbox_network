@@ -84,6 +84,7 @@ class FakeClient:
         self.guest_wifi: bool | None = False
         self.ports: list[dict] = []
         self.routes: list[dict] = []
+        self.routes_ignore = False
         self.firmware: dict = {"NewUpgradeAvailable": False}
         self.vpn: dict | None = None
         self.vpn_ignores = False
@@ -183,6 +184,20 @@ class FakeClient:
 
     def get_routes(self) -> list[dict]:
         return [dict(r) for r in self.routes]
+
+    def set_route_enabled(self, route: dict, enabled: bool) -> None:
+        self.calls.append(("route", route["destination"], route["mask"], enabled))
+        if self.fail_actions:
+            raise FritzActionError("refused")
+        if self.routes_ignore:
+            return
+        for entry in self.routes:
+            if (entry["destination"], entry["mask"], entry["source"]) == (
+                route["destination"],
+                route["mask"],
+                route["source"],
+            ):
+                entry["enabled"] = enabled
 
     def get_firmware(self) -> dict:
         return dict(self.firmware)

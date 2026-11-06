@@ -303,6 +303,12 @@
     },
     "vpn_not_changed": {
       "message": "The box did not switch the VPN connection."
+    },
+    "route_unknown": {
+      "message": "The box has no static route to {network}."
+    },
+    "route_not_changed": {
+      "message": "The box did not switch the route."
     }
   },
   "issues": {
@@ -376,6 +382,20 @@
     "remove_unavailable_vpn": {
       "name": "Remove unavailable VPN entities",
       "description": "Removes the entities of WireGuard connections that no longer exist on the box, for example after one was deleted or renamed. Does nothing while the box tells no list of connections."
+    },
+    "set_route": {
+      "name": "Switch route",
+      "description": "Switches a static IPv4 route of the box on or off, for example the route to a second router only while someone is home. The panel lists the routes under Address space > Routes.",
+      "fields": {
+        "network": {
+          "name": "Network",
+          "description": "Destination network of the route as the panel shows it, for example 10.8.0.0/24"
+        },
+        "enabled": {
+          "name": "On",
+          "description": "Whether the route is switched on"
+        }
+      }
     }
   }
 }

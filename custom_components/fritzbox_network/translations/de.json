@@ -303,6 +303,12 @@
     },
     "vpn_not_changed": {
       "message": "Die Box hat die VPN-Verbindung nicht umgeschaltet."
+    },
+    "route_unknown": {
+      "message": "Die Box hat keine statische Route zu {network}."
+    },
+    "route_not_changed": {
+      "message": "Die Box hat die Route nicht umgeschaltet."
     }
   },
   "issues": {
@@ -376,6 +382,20 @@
     "remove_unavailable_vpn": {
       "name": "Nicht verfügbare VPN-Entitäten entfernen",
       "description": "Entfernt die Entitäten von WireGuard-Verbindungen, die es auf der Box nicht mehr gibt, etwa nach dem Löschen oder Umbenennen. Tut nichts, solange die Box keine Liste der Verbindungen nennt."
+    },
+    "set_route": {
+      "name": "Route schalten",
+      "description": "Schaltet eine statische IPv4-Route der Box ein oder aus, zum Beispiel die Route zu einem zweiten Router nur, solange jemand zu Hause ist. Das Panel listet die Routen unter Adressraum > Routen.",
+      "fields": {
+        "network": {
+          "name": "Netz",
+          "description": "Ziel-Netz der Route, wie es das Panel zeigt, zum Beispiel 10.8.0.0/24"
+        },
+        "enabled": {
+          "name": "An",
+          "description": "Ob die Route eingeschaltet ist"
+        }
+      }
     }
   }
 }

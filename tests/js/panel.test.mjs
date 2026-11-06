@@ -1420,8 +1420,16 @@ test("the routes page counts the routes and warns where the gateway is offline",
   assert.match(html, /172\.16\.0\.0\/16[\s\S]*192\.0\.2\.99[\s\S]*Metrik 20/);
   assert.equal((html.match(/chip bad/g) ?? []).length, 1);
   assert.doesNotMatch(html, /Pi <b>/);
-  // read only: nothing to switch yet
+  // without the right to write there is nothing to switch
   assert.doesNotMatch(html, /data-act=/);
+});
+
+test("the routes page switches a route by its network, only with the right to write", () => {
+  const rw = routesPage.renderRoutes(routeRows, { t, canWrite: true });
+  assert.match(rw, /data-act="route-switch" data-network="10\.8\.0\.0\/24" data-on="0">Ausschalten/);
+  assert.match(rw, /data-act="route-switch" data-network="172\.16\.0\.0\/16" data-on="1">Einschalten/);
+  assert.equal((rw.match(/data-act="route-switch"/g) ?? []).length, 3);
+  assert.match(routesPage.renderRoutes(routeRows, { t, canWrite: true, busy: new Set(["10.8.0.0/24"]) }), /data-on="0" disabled>/);
 });
 
 test("the routes page says so where the box tells nothing, has no route or is still loading", () => {

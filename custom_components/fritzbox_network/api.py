@@ -613,6 +613,23 @@ class FritzNetworkClient:
                 )
         return entries
 
+    def set_route_enabled(self, route: dict[str, Any], enabled: bool) -> None:
+        """Switch a static route on or off; ``route`` is one of ``get_routes()``.
+
+        The box names a route by destination, mask and source. It answers the switch with nothing,
+        so the caller reads the routes back to see whether it took.
+        """
+        with self._lock:
+            self._connection.call_action(
+                ROUTES_SERVICE,
+                "SetForwardingEntryEnable",
+                NewDestIPAddress=route["destination"],
+                NewDestSubnetMask=route["mask"],
+                NewSourceIPAddress=route["source"],
+                NewSourceSubnetMask=route["source_mask"],
+                NewEnable=enabled,
+            )
+
     def _guest_wifi_service(self) -> str | None:
         """The service of the guest Wi-Fi: the one whose access point type says "guest"."""
         if not self._guest_searched:

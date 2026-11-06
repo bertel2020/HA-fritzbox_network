@@ -148,6 +148,7 @@ Das Gerät der FRITZ!Box hat außerdem drei Diagnose-Sensoren, standardmäßig a
 |--------|-------------|
 | `fritzbox_network.set_name` | Benennt das Gerät in der FRITZ!Box selbst um (`name`). Der Name in Home Assistant folgt, wenn Namen übernommen werden; Entity-IDs ändern sich nie. Abgelehnt bei Geräten, deren Namen die Box nicht ändern lässt. |
 | `fritzbox_network.wake_on_lan` | Sendet das Wake-on-LAN-Signal der Box an das Gerät, ohne den (standardmäßig deaktivierten) Button. |
+| `fritzbox_network.set_route` | Schaltet eine statische IPv4-Route der Box ein oder aus (`network`, zum Beispiel `10.8.0.0/24`, und `enabled`). Braucht das Recht „FRITZ!Box Einstellungen“ und keinen Zielbereich; die Box wird danach gefragt, ob die Route den Zustand hat, und die Aktion meldet einen Fehler, wenn nicht. Die Routen zeigt das Panel unter Adressraum › Routen; angelegt und gelöscht werden sie in der Box. |
 | `fritzbox_network.capture` | Startet einen Paketmitschnitt im Hintergrund: `interface` (Name der Schnittstelle in der Box, vorbelegt `1-lan`; die Liste zeigt das Panel unter Diagnose), `duration` in Sekunden (5 bis 600) und `size` in MB. Mit einem Gerät als Ziel bleibt nur dessen Verkehr. Meldet einen Fehler, wenn schon ein Mitschnitt läuft. Die Datei erscheint im Panel unter Diagnose. |
 | `fritzbox_network.remove_unavailable_vpn` | Entfernt die Entitäten von WireGuard-Verbindungen, die es auf der Box nicht mehr gibt (gelöschte oder umbenannte). Tut nichts, solange die Box keine Liste der Verbindungen nennt. |
 

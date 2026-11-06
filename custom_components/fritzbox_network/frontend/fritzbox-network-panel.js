@@ -471,7 +471,34 @@ class FritzboxNetworkPanel extends HTMLElement {
   }
 
   _renderRoutes() {
-    this._set("routes-view", renderRoutes(this._state.routes, { t: this._t, subTabs: renderAddressTabs("routes", this._t) }));
+    const state = this._state;
+    this._set(
+      "routes-view",
+      renderRoutes(state.routes, {
+        t: this._t,
+        subTabs: renderAddressTabs("routes", this._t),
+        canWrite: Boolean(state.data?.can_write),
+        busy: state.routesBusy,
+      })
+    );
+  }
+
+  /** Switches a route; the button waits until the box shows it in the new state. */
+  async _switchRoute(network, enabled) {
+    const state = this._state;
+    state.routesBusy = new Set([...(state.routesBusy ?? []), network]);
+    this._renderRoutes();
+    const text = this._t.routesPage;
+    try {
+      const result = await this._ws("routes/switch", { network, enabled });
+      state.routes = result;
+      showToast(this.shadowRoot, fill(enabled ? text.toastOn : text.toastOff, { name: network }));
+    } catch (err) {
+      showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
+    } finally {
+      state.routesBusy = new Set([...state.routesBusy].filter((id) => id !== network));
+      this._renderRoutes();
+    }
   }
 
   /** The recordings are read when the internet page opens and while one runs. */
@@ -1775,6 +1802,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       return;
     } else if (ds.act === "vpn-switch") {
       return this._switchVpn(ds.key, ds.on === "1");
+    } else if (ds.act === "route-switch") {
+      return this._switchRoute(ds.network, ds.on === "1");
     } else if (ds.act === "latency-switch") {
       return this._switchLatency(ds.on === "1");
     } else if (ds.act === "check-run") {

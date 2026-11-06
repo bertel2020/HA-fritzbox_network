@@ -14,6 +14,18 @@ wake_on_lan:
     entity:
       integration: fritzbox_network
 
+set_route:
+  fields:
+    network:
+      required: true
+      example: 10.8.0.0/24
+      selector:
+        text:
+    enabled:
+      required: true
+      selector:
+        boolean:
+
 capture:
   target:
     entity:

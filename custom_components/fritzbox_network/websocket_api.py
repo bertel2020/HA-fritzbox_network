@@ -70,6 +70,7 @@ VPN_SWITCH_COMMAND = f"{DOMAIN}/vpn/switch"
 DEVICE_ACTION_COMMAND = f"{DOMAIN}/device/action"
 PORTS_COMMAND = f"{DOMAIN}/ports/list"
 ROUTES_COMMAND = f"{DOMAIN}/routes/list"
+ROUTE_SWITCH_COMMAND = f"{DOMAIN}/routes/switch"
 IP_COMMAND = f"{DOMAIN}/device/ip"
 ADDRESS_OVERVIEW_COMMAND = f"{DOMAIN}/address/overview"
 ADDRESS_FIXED_COMMAND = f"{DOMAIN}/address/fixed"
@@ -623,13 +624,48 @@ async def ws_routes(
     except FritzConnectionException as err:
         connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
         return
+    connection.send_result(msg["id"], {"entries": _routes_with_devices(coordinator, entries)})
+
+
+def _routes_with_devices(coordinator: Any, entries: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """The routes, each with the device its gateway is and whether that device is online."""
     hosts = {h.ip: h for h in coordinator.data.hosts.values() if h.ip}
     for entry in entries:
         host = hosts.get(entry["gateway"]) if entry["gateway"] else None
         entry["device_id"] = mac_id(host.mac) if host else None
         entry["device_name"] = host.name if host else None
         entry["gateway_online"] = bool(host.active) if host else None
-    connection.send_result(msg["id"], {"entries": entries})
+    return entries
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): ROUTE_SWITCH_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("network"): str,
+        vol.Required("enabled"): bool,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_route_switch(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Switch a static route of the box; the answer is the routes as the box then lists them."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    coordinator = found[1]
+    if not coordinator.can_write:
+        connection.send_error(
+            msg["id"], websocket_api.ERR_UNAUTHORIZED, "No right to change settings"
+        )
+        return
+    try:
+        entries = await coordinator.async_set_route(msg["network"], msg["enabled"])
+    except HomeAssistantError as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    connection.send_result(msg["id"], {"entries": _routes_with_devices(coordinator, entries)})
 
 
 @websocket_api.websocket_command(
@@ -1282,6 +1318,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_unhide_devices)
     websocket_api.async_register_command(hass, ws_ports)
     websocket_api.async_register_command(hass, ws_routes)
+    websocket_api.async_register_command(hass, ws_route_switch)
     websocket_api.async_register_command(hass, ws_device_ip)
     websocket_api.async_register_command(hass, ws_address_overview)
     websocket_api.async_register_command(hass, ws_address_fixed)

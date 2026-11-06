@@ -1,4 +1,4 @@
-"""Actions: rename a device in the box, wake a device up, record traffic, tidy up VPN entities."""
+"""Actions: rename or wake a device, switch a route, record traffic, tidy up VPN entities."""
 
 from __future__ import annotations
 
@@ -33,12 +33,17 @@ from .const import (
 from .coordinator import FritzNetworkCoordinator
 from .models import Host
 
+NETWORK_RE = r"^\d{1,3}(\.\d{1,3}){3}/\d{1,2}$"
+
 SERVICE_SET_NAME = "set_name"
 SERVICE_WAKE_ON_LAN = "wake_on_lan"
 SERVICE_CAPTURE = "capture"
 SERVICE_REMOVE_VPN = "remove_unavailable_vpn"
+SERVICE_SET_ROUTE = "set_route"
 
 ATTR_NAME = "name"
+ATTR_NETWORK = "network"
+ATTR_ENABLED = "enabled"
 
 SET_NAME_SCHEMA = vol.Schema(
     {
@@ -47,6 +52,13 @@ SET_NAME_SCHEMA = vol.Schema(
     }
 )
 WAKE_ON_LAN_SCHEMA = vol.Schema({**cv.TARGET_FIELDS})
+SET_ROUTE_SCHEMA = vol.Schema(
+    {
+        # the network as the panel names it, "10.8.0.0/24"
+        vol.Required(ATTR_NETWORK): vol.All(cv.string, vol.Strip, vol.Match(NETWORK_RE)),
+        vol.Required(ATTR_ENABLED): cv.boolean,
+    }
+)
 CAPTURE_SCHEMA = vol.Schema(
     {
         vol.Optional("interface", default="1-lan"): vol.Match(INTERFACE_RE),
@@ -109,6 +121,25 @@ async def _async_wake_on_lan(call: ServiceCall) -> None:
     for coordinator, host in await _async_targets(call.hass, call):
         _require_rights(coordinator)
         await _async_failing(coordinator.async_wake_on_lan(host))
+
+
+async def _async_set_route(call: ServiceCall) -> None:
+    """Switch a static route of the box on or off, found by its network."""
+    unknown = None
+    for config_entry in call.hass.config_entries.async_loaded_entries(DOMAIN):
+        coordinator = config_entry.runtime_data
+        _require_rights(coordinator)
+        try:
+            await coordinator.async_set_route(call.data[ATTR_NETWORK], call.data[ATTR_ENABLED])
+        except ServiceValidationError as err:
+            if err.translation_key != "route_unknown":
+                raise
+            unknown = err  # another box may have the route
+        else:
+            return
+    if unknown is not None:
+        raise unknown
+    raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_target")
 
 
 async def _async_capture(call: ServiceCall) -> None:
@@ -196,6 +227,7 @@ def async_register(hass: HomeAssistant) -> None:
         DOMAIN, SERVICE_WAKE_ON_LAN, _async_wake_on_lan, WAKE_ON_LAN_SCHEMA
     )
     hass.services.async_register(DOMAIN, SERVICE_CAPTURE, _async_capture, CAPTURE_SCHEMA)
+    hass.services.async_register(DOMAIN, SERVICE_SET_ROUTE, _async_set_route, SET_ROUTE_SCHEMA)
     hass.services.async_register(
         DOMAIN, SERVICE_REMOVE_VPN, _async_remove_unavailable_vpn, vol.Schema({})
     )
