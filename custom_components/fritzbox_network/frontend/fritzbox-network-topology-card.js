@@ -1,4 +1,4 @@
-/* FRITZ!Box Network cards: the topology of the network, its Wi-Fi radios and chosen devices. */
+/* FRITZ!Box Network cards: the topology of the network, its Wi-Fi radios, chosen devices, the VPN connections and the routes. */
 
 import {
   WEAK_LINK_RATIO,
@@ -9,12 +9,15 @@ import {
   groupTopology,
   signalBars,
   rateText,
+  formatDuration,
   radioRows,
   devicesFor,
   bulkPlan,
   signalHtml,
   linkIcon,
 } from "./shared.js";
+import { vpnModel } from "./panel-vpn.js";
+import { routesModel } from "./panel-routes.js";
 
 const INTEGRATION = "fritzbox_network";
 const PANEL_PATH = "/fritzbox-network";
@@ -35,6 +38,33 @@ const TEXT = {
     radioTitle: "Wi-Fi",
     deviceTitle: "Devices",
     noRadios: "The box reports no radio data.",
+    vpnTitle: "VPN",
+    routesTitle: "Routes",
+    vpnNoData: "The box does not tell its VPN connections.",
+    vpnNone: "No WireGuard connection set up.",
+    vpnConnected: "{up} of {n} connected",
+    vpnDevices: "Devices",
+    vpnSites: "Links between sites",
+    vpnState: { up: "Connected", idle: "Ready", off: "Off" },
+    vpnIdle: "on, not dialled in",
+    vpnOffLine: "switched off",
+    vpnSince: "for {time}",
+    vpnRemote: "From outside in the home network: {n}",
+    units: { d: "d", h: "h", m: "min" },
+    routesNone: "No static routes.",
+    routesCount: "{n} routes · {on} on",
+    routesDown: "{n} without gateway",
+    routesDownLine: "{gateway} is offline: the route to {net} leads nowhere.",
+    routesOff: "switched off",
+    routesUnknownGateway: "gateway unknown",
+    routeOnline: "online",
+    routeOffline: "offline",
+    metric: "metric {n}",
+    switchOn: "Switch on {name}",
+    switchOff: "Switch off {name}",
+    switchFailed: "Could not switch: {error}",
+    openVpn: "Open VPN in the panel",
+    openRoutes: "Add and delete in the panel →",
     noDevices: "Pick devices in the card editor.",
     unknownDevice: "Unknown device",
     noise: "Noise {n} dBm",
@@ -63,6 +93,8 @@ const TEXT = {
       label_help: "Also shows every device of this group, not only the ones named above.",
       hide_noise: "Hide the noise",
       hide_clients: "Hide the number of devices",
+      show_remote: "Show devices dialled in from outside",
+      only_active: "Hide connections that are switched off",
     },
   },
   de: {
@@ -80,6 +112,33 @@ const TEXT = {
     radioTitle: "WLAN",
     deviceTitle: "Geräte",
     noRadios: "Die Box meldet keine Funkdaten.",
+    vpnTitle: "VPN",
+    routesTitle: "Routen",
+    vpnNoData: "Die Box nennt ihre VPN-Verbindungen nicht.",
+    vpnNone: "Keine WireGuard-Verbindung eingerichtet.",
+    vpnConnected: "{up} von {n} verbunden",
+    vpnDevices: "Geräte",
+    vpnSites: "Standortverbindungen",
+    vpnState: { up: "Verbunden", idle: "Bereit", off: "Aus" },
+    vpnIdle: "an, nicht eingewählt",
+    vpnOffLine: "ausgeschaltet",
+    vpnSince: "seit {time}",
+    vpnRemote: "Von außen im Heimnetz: {n}",
+    units: { d: "Tg.", h: "Std.", m: "Min." },
+    routesNone: "Keine statischen Routen.",
+    routesCount: "{n} Routen · {on} an",
+    routesDown: "{n} ohne Gateway",
+    routesDownLine: "{gateway} ist offline: die Route zu {net} führt ins Leere.",
+    routesOff: "ausgeschaltet",
+    routesUnknownGateway: "Gateway unbekannt",
+    routeOnline: "online",
+    routeOffline: "offline",
+    metric: "Metrik {n}",
+    switchOn: "{name} einschalten",
+    switchOff: "{name} ausschalten",
+    switchFailed: "Schalten fehlgeschlagen: {error}",
+    openVpn: "VPN im Panel öffnen",
+    openRoutes: "Anlegen und löschen im Panel →",
     noDevices: "Wähle Geräte im Karteneditor.",
     unknownDevice: "Unbekanntes Gerät",
     noise: "Rauschen {n} dBm",
@@ -108,6 +167,8 @@ const TEXT = {
       label_help: "Zeigt zusätzlich jedes Gerät dieser Gruppe, nicht nur die oben genannten.",
       hide_noise: "Rauschen ausblenden",
       hide_clients: "Anzahl der Geräte ausblenden",
+      show_remote: "Von außen eingewählte Geräte zeigen",
+      only_active: "Ausgeschaltete Verbindungen ausblenden",
     },
   },
 };
@@ -171,6 +232,24 @@ function normalizeDeviceConfig(config = {}) {
     hide_signal: Boolean(config.hide_signal),
   };
 }
+
+function normalizeVpnConfig(config = {}) {
+  return {
+    title: config.title || undefined,
+    entry_id: config.entry_id || undefined,
+    show_remote: config.show_remote !== false,
+    only_active: Boolean(config.only_active),
+  };
+}
+
+function normalizeRoutesConfig(config = {}) {
+  return {
+    title: config.title || undefined,
+    entry_id: config.entry_id || undefined,
+  };
+}
+
+const fillText = (text, values) => text.replace(/\{(\w+)\}/g, (_, key) => String(values[key] ?? ""));
 
 const SHARED_CSS = `
   :host { display: block; container-type: inline-size; }
@@ -281,8 +360,9 @@ class FritzboxNetworkCardBase extends HTMLElement {
   }
 
   /** Leaves the dashboard for the side panel, on the page of a device when one is given. */
-  _openPanel(deviceId) {
-    globalThis.history.pushState(null, "", `${PANEL_PATH}${deviceId ? `#/device/${deviceId}` : ""}`);
+  _openPanel(deviceId, page) {
+    const hash = deviceId ? `#/device/${deviceId}` : page ? `#/${page}` : "";
+    globalThis.history.pushState(null, "", `${PANEL_PATH}${hash}`);
     globalThis.dispatchEvent(new CustomEvent("location-changed"));
   }
 
@@ -754,6 +834,315 @@ class FritzboxNetworkDeviceCard extends FritzboxNetworkCardBase {
   }
 }
 
+const SWITCH_CSS = `
+  .sum { padding: 0 16px 8px; font-size: 13px; color: var(--secondary-text-color); display: flex; flex-wrap: wrap; gap: 4px 12px; }
+  .sum .warn { color: var(--warning-color, #ffa600); }
+  .group { padding: 8px 16px 0; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--secondary-text-color); }
+  .line { display: flex; align-items: center; gap: 10px; padding: 8px 16px; border-top: 1px solid var(--divider-color); }
+  .group + .line, .sum + .line { border-top: 0; }
+  .line.off .text { opacity: .55; }
+  .line .dot.info { background: var(--primary-color); }
+  .line .dot.warn { background: var(--warning-color, #ffa600); }
+  .text { flex: 1; min-width: 0; }
+  .text b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .text small { display: block; color: var(--secondary-text-color); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+  .switch { flex: none; width: 38px; height: 22px; border-radius: 11px; border: 0; padding: 0; position: relative; cursor: pointer;
+    background: var(--divider-color); }
+  .switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .3); transition: transform .15s; }
+  .switch[aria-checked="true"] { background: var(--primary-color); }
+  .switch[aria-checked="true"]::after { transform: translateX(16px); }
+  .switch:disabled { opacity: .5; cursor: default; }
+  .switch:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
+  .state { flex: none; font-size: 12px; color: var(--secondary-text-color); }
+  .alert { margin: 0 16px 8px; padding: 8px 12px; border-radius: 12px; font-size: 13px; color: var(--warning-color, #ffa600);
+    background: color-mix(in srgb, var(--warning-color, #ffa600) 15%, transparent); }
+  .remote { margin: 8px 16px 0; padding: 8px 12px; border-radius: 12px; font-size: 13px; background: var(--secondary-background-color); }
+  .remote small { color: var(--secondary-text-color); display: block; }
+  .foot { padding: 10px 16px 12px; font-size: 13px; }
+  .foot a { color: var(--primary-color); cursor: pointer; text-decoration: underline; }
+  @container (max-width: 400px) { .state { display: none; } }
+`;
+
+/** Base of the two cards with a switch in each row: the click handling and the call that switches. */
+class FritzboxNetworkSwitchCard extends FritzboxNetworkCardBase {
+  constructor() {
+    super();
+    this._busy = new Set();
+  }
+
+  getGridOptions() {
+    return { columns: 12, min_columns: 6, rows: "auto" };
+  }
+
+  _onData() {
+    this._render();
+  }
+
+  _onError() {
+    this._render();
+  }
+
+  _switchButton(id, on, label, allowed) {
+    const busy = this._busy.has(id);
+    return `<button class="switch" role="switch" aria-checked="${on}" aria-label="${escapeHtml(label)}" data-switch="${escapeHtml(id)}" data-on="${on ? "0" : "1"}"${busy || !allowed ? " disabled" : ""}></button>`;
+  }
+
+  _onClick(event) {
+    const target = event.target.closest?.("[data-switch]");
+    if (target) {
+      if (!target.disabled) this._switch(target.dataset.switch, target.dataset.on === "1");
+      return;
+    }
+    const link = event.target.closest?.("[data-page]");
+    if (link) this._openPanel(null, link.dataset.page);
+  }
+
+  _fail(err) {
+    this.dispatchEvent(
+      new CustomEvent("hass-notification", {
+        detail: { message: fillText(this._t.switchFailed, { error: err?.message ?? err }) },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+
+  _note(text) {
+    const list = this.shadowRoot?.querySelector(".list");
+    if (list) list.innerHTML = `<div class="note">${escapeHtml(text)}</div>`;
+  }
+}
+
+/** The WireGuard connections of the box with a switch, and the devices dialled in from outside. */
+class FritzboxNetworkVpnCard extends FritzboxNetworkSwitchCard {
+  constructor() {
+    super();
+    this._config = normalizeVpnConfig();
+  }
+
+  setConfig(config) {
+    const previous = this._config;
+    this._config = normalizeVpnConfig(config);
+    this._build();
+    if (this._config.entry_id !== previous.entry_id) this._resubscribe();
+  }
+
+  getCardSize() {
+    return 4;
+  }
+
+  static getStubConfig() {
+    return {};
+  }
+
+  static async getConfigForm() {
+    return editorForm([
+      { name: "title", selector: { text: {} } },
+      { name: "entry_id", selector: configEntry },
+      {
+        type: "grid",
+        name: "",
+        schema: [
+          { name: "show_remote", selector: { boolean: {} } },
+          { name: "only_active", selector: { boolean: {} } },
+        ],
+      },
+    ]);
+  }
+
+  _build() {
+    this.shadowRoot.innerHTML = `
+      <style>${SHARED_CSS}${SWITCH_CSS}</style>
+      <ha-card header="${escapeHtml(this._config.title ?? this._t.vpnTitle)}"><div class="list"></div></ha-card>`;
+    this._render();
+  }
+
+  async _switch(key, enabled) {
+    if (!this._hass || !this._data) return;
+    this._busy.add(key);
+    this._render();
+    try {
+      await this._hass.callWS({ type: `${INTEGRATION}/vpn/switch`, entry_id: this._data.entry_id, key, enabled });
+    } catch (err) {
+      this._fail(err);
+    } finally {
+      this._busy.delete(key);
+      this._render();
+    }
+  }
+
+  _line(c) {
+    const t = this._t;
+    const tone = { up: "on", idle: "info", off: "" }[c.state];
+    const facts = [];
+    if (c.state === "up" && c.since) {
+      facts.push(fillText(t.vpnSince, { time: formatDuration(Math.max(0, Date.now() / 1000 - c.since), t.units) }));
+    }
+    if (c.state === "idle") facts.push(t.vpnIdle);
+    if (c.state === "off") facts.push(t.vpnOffLine);
+    if (c.state === "up" && c.remote_net) facts.push(c.remote_net);
+    if (c.state === "up" && c.remote_endpoint) facts.push(c.remote_endpoint);
+    const label = fillText(c.enabled ? t.switchOff : t.switchOn, { name: c.name });
+    const control = c.editable ? this._switchButton(c.key, c.enabled, label, Boolean(this._data.can_write)) : "";
+    return `<div class="line${c.state === "off" ? " off" : ""}">
+      <span class="dot ${tone}"></span>
+      <div class="text"><b>${escapeHtml(c.name)}</b><small>${escapeHtml(facts.join(" · "))}</small></div>
+      <span class="state">${escapeHtml(t.vpnState[c.state])}</span>${control}</div>`;
+  }
+
+  _render() {
+    const t = this._t;
+    if (this._error || !this._data) return this._note(this._error ? t[this._error] : t.loading);
+    if (!Array.isArray(this._data.vpn)) return this._note(t.vpnNoData);
+    const m = vpnModel(this._data);
+    if (!m.connections.length) return this._note(t.vpnNone);
+    const keep = (c) => !this._config.only_active || c.enabled;
+    const group = (title, list) => {
+      const shown = list.filter(keep);
+      return shown.length ? `<div class="group">${escapeHtml(title)}</div>${shown.map((c) => this._line(c)).join("")}` : "";
+    };
+    const remote =
+      this._config.show_remote && m.remote.length
+        ? `<div class="remote"><b>${escapeHtml(fillText(t.vpnRemote, { n: m.remote.length }))}</b>
+            <small>${escapeHtml(m.remote.map((c) => `${c.name}${c.ip ? ` · ${c.ip}` : ""}`).join(", "))}</small></div>`
+        : "";
+    const list = this.shadowRoot?.querySelector(".list");
+    if (!list) return;
+    list.innerHTML = `<div class="sum"><span>${escapeHtml(fillText(t.vpnConnected, { up: m.up, n: m.connections.length }))}</span></div>
+      ${group(t.vpnDevices, m.devices)}${group(t.vpnSites, m.sites)}${remote}
+      <div class="foot"><a data-page="vpn" role="button" tabindex="0">${escapeHtml(t.openVpn)}</a></div>`;
+  }
+}
+
+/** The static routes of the box with a switch each; adding and deleting stay in the panel. */
+class FritzboxNetworkRoutesCard extends FritzboxNetworkSwitchCard {
+  constructor() {
+    super();
+    this._config = normalizeRoutesConfig();
+    this._routes = null;
+    this._loadedFor = null;
+  }
+
+  setConfig(config) {
+    const previous = this._config;
+    this._config = normalizeRoutesConfig(config);
+    this._build();
+    if (this._config.entry_id !== previous.entry_id) {
+      this._routes = null;
+      this._loadedFor = null;
+      this._resubscribe();
+    }
+  }
+
+  getCardSize() {
+    return 4;
+  }
+
+  static getStubConfig() {
+    return {};
+  }
+
+  static async getConfigForm() {
+    return editorForm([
+      { name: "title", selector: { text: {} } },
+      { name: "entry_id", selector: configEntry },
+    ]);
+  }
+
+  _build() {
+    this.shadowRoot.innerHTML = `
+      <style>${SHARED_CSS}${SWITCH_CSS}</style>
+      <ha-card header="${escapeHtml(this._config.title ?? this._t.routesTitle)}"><div class="list"></div></ha-card>`;
+    this._render();
+  }
+
+  /** The routes are read from the box once, when the first data tells which box it is. */
+  _onData() {
+    const id = this._data?.entry_id;
+    if (id && id !== this._loadedFor && this._hass) {
+      this._loadedFor = id;
+      this._hass
+        .callWS({ type: `${INTEGRATION}/routes/list`, entry_id: id })
+        .then((result) => {
+          this._routes = result.entries ?? [];
+          this._render();
+        })
+        .catch(() => {
+          this._routes = "failed";
+          this._render();
+        });
+    }
+    this._render();
+  }
+
+  async _switch(network, enabled) {
+    if (!this._hass || !this._data) return;
+    this._busy.add(network);
+    this._render();
+    try {
+      const result = await this._hass.callWS({
+        type: `${INTEGRATION}/routes/switch`,
+        entry_id: this._data.entry_id,
+        network,
+        enabled,
+      });
+      this._routes = result.entries ?? this._routes;
+    } catch (err) {
+      this._fail(err);
+    } finally {
+      this._busy.delete(network);
+      this._render();
+    }
+  }
+
+  _line(route) {
+    const t = this._t;
+    const tone = { on: "on", down: "warn", off: "" }[route.state];
+    const gateway = route.device_name
+      ? `<span>${escapeHtml(route.device_name)}</span>`
+      : `<span class="mono">${escapeHtml(route.gateway ?? "")}</span>`;
+    const facts = [];
+    if (route.state === "off") facts.push(t.routesOff);
+    if (route.device_name) facts.push(route.gateway);
+    if (route.gateway_online === true) facts.push(t.routeOnline);
+    if (route.gateway_online === false) facts.push(t.routeOffline);
+    if (route.gateway_online === null || route.gateway_online === undefined) facts.push(t.routesUnknownGateway);
+    if (route.metric !== undefined && route.metric !== null) facts.push(fillText(t.metric, { n: route.metric }));
+    const label = fillText(route.enabled ? t.switchOff : t.switchOn, { name: route.network });
+    return `<div class="line${route.state === "off" ? " off" : ""}">
+      <span class="dot ${tone}"></span>
+      <div class="text"><b><span class="mono">${escapeHtml(route.network)}</span> → ${gateway}</b><small>${escapeHtml(facts.join(" · "))}</small></div>
+      ${this._switchButton(route.network, route.enabled, label, Boolean(this._data.can_write))}</div>`;
+  }
+
+  _render() {
+    const t = this._t;
+    if (this._error || !this._data) return this._note(this._error ? t[this._error] : t.loading);
+    if (this._routes === "failed") return this._note(t.failed);
+    if (!this._routes) return this._note(t.loading);
+    if (!this._routes.length) {
+      const list = this.shadowRoot?.querySelector(".list");
+      if (list) {
+        list.innerHTML = `<div class="note">${escapeHtml(t.routesNone)}</div>
+          <div class="foot"><a data-page="routes" role="button" tabindex="0">${escapeHtml(t.openRoutes)}</a></div>`;
+      }
+      return;
+    }
+    const m = routesModel(this._routes);
+    const alerts = m.down
+      .map((r) => `<div class="alert">${escapeHtml(fillText(t.routesDownLine, { gateway: r.device_name ?? r.gateway, net: r.network }))}</div>`)
+      .join("");
+    const list = this.shadowRoot?.querySelector(".list");
+    if (!list) return;
+    const down = m.down.length ? `<span class="warn">${escapeHtml(fillText(t.routesDown, { n: m.down.length }))}</span>` : "";
+    list.innerHTML = `<div class="sum"><span>${escapeHtml(fillText(t.routesCount, { n: m.routes.length, on: m.on }))}</span>${down}</div>
+      ${alerts}${m.routes.map((r) => this._line(r)).join("")}
+      <div class="foot"><a data-page="routes" role="button" tabindex="0">${escapeHtml(t.openRoutes)}</a></div>`;
+  }
+}
+
 const CARDS = [
   {
     type: "fritzbox-network-topology-card",
@@ -773,6 +1162,18 @@ const CARDS = [
     name: "FRITZ!Box Network devices",
     description: "Chosen devices with their link, block or allow internet, and Wake on LAN.",
   },
+  {
+    type: "fritzbox-network-vpn-card",
+    element: FritzboxNetworkVpnCard,
+    name: "FRITZ!Box Network VPN",
+    description: "The WireGuard connections of the box with their state and a switch, and the devices dialled in.",
+  },
+  {
+    type: "fritzbox-network-routes-card",
+    element: FritzboxNetworkRoutesCard,
+    name: "FRITZ!Box Network routes",
+    description: "The static routes of the box with their gateway and a switch each.",
+  },
 ];
 
 if (typeof customElements !== "undefined") {
@@ -788,6 +1189,10 @@ export {
   normalizeConfig,
   normalizeRadioConfig,
   normalizeDeviceConfig,
+  normalizeVpnConfig,
+  normalizeRoutesConfig,
+  FritzboxNetworkVpnCard,
+  FritzboxNetworkRoutesCard,
   FritzboxNetworkTopologyCard,
   FritzboxNetworkRadioCard,
   FritzboxNetworkDeviceCard,

@@ -247,7 +247,36 @@ entities:
 | `entry_id` | Nur bei mehr als einer Box nötig |
 | `hide_rate`, `hide_signal` | Rate oder Signal ausblenden (Standard `false`) |
 
-Ein Tipp auf den Namen öffnet das Gerät. Beide Karten brauchen wie die Topologie-Karte ein Administratorkonto und laden sich selbst.
+Ein Tipp auf den Namen öffnet das Gerät. Alle Karten brauchen wie die Topologie-Karte ein Administratorkonto und laden sich selbst.
+
+### VPN-Karte
+
+Die VPN-Karte zeigt die WireGuard-Verbindungen der Box, getrennt nach Geräten und Standortverbindungen, mit Zustand (Verbunden, Bereit, Aus), Dauer und einem Schalter je Verbindung. Darunter stehen die Geräte, die von außen im Heimnetz sind. Der Schalter erscheint nur bei Verbindungen, die sich ändern lassen, und braucht das Recht „FRITZ!Box Einstellungen“. Ausschalten beendet den Tunnel.
+
+```yaml
+type: custom:fritzbox-network-vpn-card
+title: VPN
+```
+
+| Option | Bedeutung |
+|--------|-----------|
+| `title` | Überschrift der Karte |
+| `entry_id` | Nur bei mehr als einer Box nötig |
+| `show_remote` | Den Block „Von außen im Heimnetz“ zeigen (Standard `true`) |
+| `only_active` | Ausgeschaltete Verbindungen ausblenden (Standard `false`) |
+
+### Routen-Karte
+
+Die Routen-Karte zeigt die statischen Routen der Box als „Ziel → Gateway“ mit dem Gerät des Gateways, seinem Zustand, der Metrik und einem Schalter je Route. Zeigt eine eingeschaltete Route auf ein Gateway, das offline ist, steht oben ein Hinweis. Die Routen werden beim Anzeigen einmal von der Box gelesen. Anlegen und Löschen bleiben im Seitenpanel; ein Link führt dorthin.
+
+```yaml
+type: custom:fritzbox-network-routes-card
+```
+
+| Option | Bedeutung |
+|--------|-----------|
+| `title` | Überschrift der Karte |
+| `entry_id` | Nur bei mehr als einer Box nötig |
 
 ## Seitenpanel
 

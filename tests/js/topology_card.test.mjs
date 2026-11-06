@@ -422,3 +422,92 @@ test("the group of the devices card is read from the config", () => {
   assert.equal(card.normalizeDeviceConfig({ label: 5 }).label, "");
   assert.equal(card.normalizeDeviceConfig().label, "");
 });
+
+// ---- the VPN and the routes card ----
+
+/** A card without a browser: the shadow root is a stub that keeps the html it was given. */
+function bareCard(Class, config, hass, payload) {
+  const element = Object.create(Class.prototype);
+  const list = { innerHTML: "" };
+  element.shadowRoot = { querySelector: () => list, innerHTML: "" };
+  element._busy = new Set();
+  element._config = config;
+  element._hass = hass ?? { language: "en" };
+  element._data = payload;
+  return { element, list };
+}
+
+const vpnData = {
+  entry_id: "e1",
+  can_write: true,
+  clients: [{ mac: "09", name: "phone", ip: "192.0.2.9", online: true, vpn: true }],
+  vpn: [
+    { key: "a", name: "Phone", kind: "device", enabled: true, connected: true, since: 1, editable: true, remote_net: null, remote_endpoint: null },
+    { key: "b", name: "Tablet", kind: "device", enabled: false, connected: false, since: null, editable: true },
+    { key: "c", name: "House", kind: "site", enabled: true, connected: false, since: null, editable: false },
+  ],
+};
+
+test("the VPN card is registered and its options have defaults", () => {
+  assert.deepEqual(card.normalizeVpnConfig(), { title: undefined, entry_id: undefined, show_remote: true, only_active: false });
+  assert.equal(card.normalizeVpnConfig({ show_remote: false }).show_remote, false);
+  assert.deepEqual(card.normalizeRoutesConfig({ title: "R", entry_id: "x" }), { title: "R", entry_id: "x" });
+});
+
+test("the VPN card counts the connections, groups them and switches only the editable ones", () => {
+  const { element, list } = bareCard(card.FritzboxNetworkVpnCard, card.normalizeVpnConfig(), null, vpnData);
+  element._render();
+  assert.match(list.innerHTML, /1 of 3 connected/);
+  assert.match(list.innerHTML, /Links between sites/);
+  assert.match(list.innerHTML, /From outside in the home network: 1/);
+  assert.equal((list.innerHTML.match(/role="switch"/g) ?? []).length, 2); // "House" is not editable
+  assert.match(list.innerHTML, /data-switch="b" data-on="1"/); // the switched-off one is switched on
+});
+
+test("the VPN card hides what the options hide and cannot switch without the right to write", () => {
+  const config = card.normalizeVpnConfig({ show_remote: false, only_active: true });
+  const { element, list } = bareCard(card.FritzboxNetworkVpnCard, config, null, { ...vpnData, can_write: false });
+  element._render();
+  assert.doesNotMatch(list.innerHTML, /From outside/);
+  assert.doesNotMatch(list.innerHTML, /Tablet/);
+  assert.match(list.innerHTML, /role="switch"[^>]* disabled/);
+});
+
+test("the VPN card tells where the box has no VPN data", () => {
+  const none = bareCard(card.FritzboxNetworkVpnCard, card.normalizeVpnConfig(), null, { ...vpnData, vpn: [] });
+  none.element._render();
+  assert.match(none.list.innerHTML, /No WireGuard connection/);
+  const unknown = bareCard(card.FritzboxNetworkVpnCard, card.normalizeVpnConfig(), null, { ...vpnData, vpn: null });
+  unknown.element._render();
+  assert.match(unknown.list.innerHTML, /does not tell/);
+});
+
+test("the routes card warns about an enabled route whose gateway is offline", () => {
+  const { element, list } = bareCard(card.FritzboxNetworkRoutesCard, card.normalizeRoutesConfig(), null, { entry_id: "e1", can_write: true });
+  element._routes = [
+    { network: "10.0.0.0/16", gateway: "192.0.2.5", enabled: true, metric: 0, device_name: "Cellar", gateway_online: false },
+    { network: "10.1.0.0/16", gateway: "192.0.2.6", enabled: false, metric: 1, device_name: null, gateway_online: null },
+  ];
+  element._render();
+  assert.match(list.innerHTML, /1 without gateway/);
+  assert.match(list.innerHTML, /Cellar is offline: the route to 10.0.0.0\/16 leads nowhere/);
+  assert.match(list.innerHTML, /gateway unknown/);
+  assert.match(list.innerHTML, /2 routes · 1 on/);
+});
+
+test("the routes card switches through the websocket and takes the answer as the new list", async () => {
+  const calls = [];
+  const hass = {
+    language: "en",
+    callWS: async (message) => {
+      calls.push(message);
+      return { entries: [{ network: "10.0.0.0/16", gateway: "192.0.2.5", enabled: false, metric: 0 }] };
+    },
+  };
+  const { element, list } = bareCard(card.FritzboxNetworkRoutesCard, card.normalizeRoutesConfig(), hass, { entry_id: "e1", can_write: true });
+  element._routes = [{ network: "10.0.0.0/16", gateway: "192.0.2.5", enabled: true, metric: 0 }];
+  await element._switch("10.0.0.0/16", false);
+  assert.deepEqual(calls, [{ type: "fritzbox_network/routes/switch", entry_id: "e1", network: "10.0.0.0/16", enabled: false }]);
+  assert.match(list.innerHTML, /switched off/);
+  assert.equal(element._busy.size, 0);
+});

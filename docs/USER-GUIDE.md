@@ -247,7 +247,36 @@ entities:
 | `entry_id` | Only needed with more than one box |
 | `hide_rate`, `hide_signal` | Hide the rate or the signal (default `false`) |
 
-A tap on the name opens the device. Both cards need an administrator account like the topology card and load themselves.
+A tap on the name opens the device. All cards need an administrator account like the topology card and load themselves.
+
+### VPN card
+
+The VPN card shows the WireGuard connections of the box, split into devices and links between sites, with state (Connected, Ready, Off), duration and a switch for each connection. Below are the devices that are in the home network from outside. The switch only shows for connections that can be changed and needs the "FRITZ!Box settings" permission. Switching off ends the tunnel.
+
+```yaml
+type: custom:fritzbox-network-vpn-card
+title: VPN
+```
+
+| Option | Meaning |
+|--------|---------|
+| `title` | Heading of the card |
+| `entry_id` | Only needed with more than one box |
+| `show_remote` | Show the "From outside in the home network" block (default `true`) |
+| `only_active` | Hide connections that are switched off (default `false`) |
+
+### Routes card
+
+The routes card shows the static routes of the box as "target → gateway" with the device of the gateway, its state, the metric and a switch for each route. If an enabled route points to a gateway that is offline, a notice shows at the top. The routes are read from the box once when the card is shown. Adding and deleting stay in the side panel; a link leads there.
+
+```yaml
+type: custom:fritzbox-network-routes-card
+```
+
+| Option | Meaning |
+|--------|---------|
+| `title` | Heading of the card |
+| `entry_id` | Only needed with more than one box |
 
 ## Side panel
 

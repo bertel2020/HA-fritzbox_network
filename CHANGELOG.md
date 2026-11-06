@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
+## Unveröffentlicht
+
+### Neu
+
+- Dashboard: Zwei neue Karten. Die **VPN-Karte** (`custom:fritzbox-network-vpn-card`) zeigt die WireGuard-Verbindungen nach Geräten und Standortverbindungen mit Zustand, Dauer und einem Schalter je Verbindung, dazu die Geräte, die von außen im Heimnetz sind (Optionen `show_remote`, `only_active`). Die **Routen-Karte** (`custom:fritzbox-network-routes-card`) zeigt die statischen Routen als „Ziel → Gateway“ mit Zustand, Metrik und Schalter und warnt, wenn das Gateway einer eingeschalteten Route offline ist. Anlegen und Löschen bleiben im Seitenpanel, ein Link führt dorthin. Schalten braucht das Recht „FRITZ!Box Einstellungen“.
+
 ## 1.3.0 – 2026-11-06
 
 ### Neu
