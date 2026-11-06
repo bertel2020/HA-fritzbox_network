@@ -33,12 +33,10 @@ client fed with anonymised captures in `tests/fixtures/`; no FRITZ!Box is needed
 
 ## Real FRITZ!Box data
 
-`tools/spike.py` reads a real box without changing anything and is how the
-field names of the host list and the mesh data were checked. It takes the
-credentials from `FRITZ_HOST`, `FRITZ_USER`, `FRITZ_PASSWORD` (and optionally
-`FRITZ_TLS=1`) and writes to `spike_out/`, which is not part of the repository.
-If you add a fixture from your own box, anonymise it first: the script writes an
-anonymised copy next to the raw files, but look through it before you commit.
+The field names of the host list and the mesh data were checked against a real box
+with read-only probe scripts, which are not part of the repository.
+If you add a fixture from your own box, anonymise it first and look through it
+before you commit.
 A fixture must not contain real MAC or IP addresses, names or SSIDs.
 
 ## Pull requests
