@@ -1114,6 +1114,13 @@ test("the CSV has a byte order mark, semicolons and quotes where a cell needs th
   assert.ok(csv.startsWith("﻿Adresse;Gerät;Art;Status;Hersteller;MAC;Anbindung;Zuletzt online;Gruppe;Bereich;Notiz\r\n"));
   assert.match(csv, /192\.168\.79\.150;Wallbox;Fest;online;;M2;;;;DHCP-Bereich;"Garage; ""Wand"""\r\n/);
   assert.ok(csv.endsWith("\r\n"));
+  // texts from devices and users never become a formula in a spreadsheet
+  const evil = [{ ip: "=1+1", name: " @SUM(A1)", kindText: "-2", vendor: "+cmd|' /C calc'!A0", mac: "\t=x", note: "fine = text" }];
+  const cells = exporter.toCsv(evil, t, { mac: true }).split("\r\n")[1].split(";");
+  assert.deepEqual(
+    [cells[0], cells[1], cells[2], cells[4], cells[5], cells[10]],
+    ["'=1+1", "' @SUM(A1)", "'-2", "'+cmd|' /C calc'!A0", "'\t=x", "fine = text"]
+  );
   assert.doesNotMatch(exporter.toCsv(exporter.addressRows(m, own, t, {}), t, { mac: false }), /;MAC;|;M2;/);
 });
 

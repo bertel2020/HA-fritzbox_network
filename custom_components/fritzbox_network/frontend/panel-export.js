@@ -61,8 +61,13 @@ export function addressRows(m, own, t, { free = false } = {}) {
   return rows;
 }
 
+/**
+ * One cell. Names and notes come from devices and users: a spreadsheet would read a text that starts
+ * with = + - @ (after blanks, or with a tab or line break) as a formula, so an apostrophe goes in front.
+ */
 const csvCell = (value) => {
-  const text = String(value ?? "");
+  let text = String(value ?? "");
+  if (/^[\s]*[=+\-@]|^[\t\r]/.test(text)) text = `'${text}`;
   return /[;"\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
 };
 
