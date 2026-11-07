@@ -39,7 +39,6 @@ from .capture import (
 )
 from .connection_check import box_port, run_checks
 from .const import (
-    TRAFFIC_SUMMARY_DAYS,
     CONF_FILTER_DEVICES,
     CONF_FILTER_MODE,
     CONF_HIDDEN_MACS,
@@ -55,6 +54,7 @@ from .const import (
     KEY_INTERNET_ACCESS,
     KEY_PRIORITY,
     KEY_WAKE_ON_LAN,
+    TRAFFIC_SUMMARY_DAYS,
     options_reload_signal,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
@@ -959,7 +959,7 @@ def ws_history_traffic(
 def ws_vpn_history(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """The sessions and on-periods of every WireGuard tunnel for its chart, read when the page opens."""
+    """The sessions and on-periods of every WireGuard tunnel for its chart, read on opening."""
     if (found := _loaded_coordinator(hass, connection, msg)) is None:
         return
     coordinator = found[1]
@@ -1071,7 +1071,9 @@ async def ws_device_action(
     action, value = msg["action"], msg.get("value")
     if action in ("internet_access", "priority") and not host.ip:
         # the box addresses these by IPv4: without one it would act on address 0
-        connection.send_error(msg["id"], websocket_api.ERR_NOT_SUPPORTED, "The device has no IPv4 address")
+        connection.send_error(
+            msg["id"], websocket_api.ERR_NOT_SUPPORTED, "The device has no IPv4 address"
+        )
         return
     try:
         if action == "wake_on_lan":

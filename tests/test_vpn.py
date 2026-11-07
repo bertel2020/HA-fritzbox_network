@@ -118,7 +118,9 @@ async def test_the_chart_data_is_not_pushed_but_served_on_request(
     event = await client.receive_json()
     assert all("sessions" not in (c["stats"] or {}) for c in event["event"]["vpn"])
 
-    await client.send_json_auto_id({"type": "fritzbox_network/vpn/history", "entry_id": entry.entry_id})
+    await client.send_json_auto_id(
+        {"type": "fritzbox_network/vpn/history", "entry_id": entry.entry_id}
+    )
     result = (await client.receive_json())["result"]
     assert set(result) == {c["key"] for c in event["event"]["vpn"]}
     one = result["Holiday house"]

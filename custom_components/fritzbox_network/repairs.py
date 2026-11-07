@@ -220,7 +220,8 @@ class StaleDevicesFlow(RepairsFlow):
         if user_input is not None:
             # only what is still gone: a device that came back while the form was open stays
             still_stale = {host.mac for host, _ in stale}
-            hidden = set(entry.options.get(CONF_HIDDEN_MACS, [])) | (set(user_input["macs"]) & still_stale)
+            hidden = set(entry.options.get(CONF_HIDDEN_MACS, []))
+            hidden |= set(user_input["macs"]) & still_stale
             self.hass.config_entries.async_update_entry(
                 entry, options={**entry.options, CONF_HIDDEN_MACS: sorted(hidden)}
             )

@@ -271,7 +271,9 @@ async def test_the_options_offer_the_repeaters_of_the_mesh(hass, fake_client, en
     assert REPEATER in values
 
 
-async def test_a_repeater_with_a_guest_network_gets_its_switch_and_qr_code(hass, fake_client, entry):
+async def test_a_repeater_with_a_guest_network_gets_its_switch_and_qr_code(
+    hass, fake_client, entry
+):
     _with_repeater(fake_client)
     with patch.object(FakeRepeater, "__init__", _guest_init):
         await _setup(hass, entry)

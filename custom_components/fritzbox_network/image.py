@@ -11,8 +11,8 @@ from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import UpdateFailed
+from homeassistant.util import dt as dt_util
 import requests
 
 from .const import AREA_WIFI, DOMAIN, KEY_GUEST_WIFI_QR
@@ -38,7 +38,9 @@ async def async_setup_entry(
     if not coordinator.can_write:
         return
     if AREA_WIFI not in switch_areas(entry):
-        async_remove_entities(hass, entry, "image", lambda uid: uid.endswith(f"_{KEY_GUEST_WIFI_QR}"))
+        async_remove_entities(
+            hass, entry, "image", lambda uid: uid.endswith(f"_{KEY_GUEST_WIFI_QR}")
+        )
         return
     for repeater in coordinator.repeaters.values():
         _async_setup_repeater(hass, repeater, entry, async_add_entities)

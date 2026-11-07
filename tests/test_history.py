@@ -201,7 +201,7 @@ def test_many_vpn_sessions_are_joined_by_the_smallest_gap_not_cut_off():
     assert sessions[0][0] == int(start)
     assert sessions[-1][1] == int(clock - 3600 + 600)
     # the one long gap is the last to go: it still divides two sessions
-    gaps = [b[0] - a[1] for a, b in zip(sessions, sessions[1:])]
+    gaps = [b[0] - a[1] for a, b in zip(sessions, sessions[1:], strict=False)]
     assert max(gaps) > 80000
 
 

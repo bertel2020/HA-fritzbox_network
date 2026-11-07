@@ -213,13 +213,21 @@ class DeviceHistory:
         }
 
     def vpn_chart(self, key: str, now: float) -> dict[str, Any]:
-        """What the chart of a tunnel draws: its sessions and the periods it was on, up to a year back."""
+        """What the chart of a tunnel draws: its sessions and its periods on, up to a year."""
         horizon = now - _VPN_CHART_DAYS * _DAY
         sessions = self._vpn["sessions"].get(key) or []
         periods = self._vpn.get("enabled", {}).get(key) or []
         return {
-            "sessions": [[round(a), None if b is None else round(b)] for a, b in sessions if b is None or b > horizon],
-            "enabled_periods": [[round(a), None if b is None else round(b)] for a, b in periods if b is None or b > horizon],
+            "sessions": [
+                [round(a), None if b is None else round(b)]
+                for a, b in sessions
+                if b is None or b > horizon
+            ],
+            "enabled_periods": [
+                [round(a), None if b is None else round(b)]
+                for a, b in periods
+                if b is None or b > horizon
+            ],
             "tracked_since": round(self._vpn["since"]) if "since" in self._vpn else None,
         }
 
@@ -244,7 +252,7 @@ class DeviceHistory:
             self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
 
     def traffic_all(self, days: int | None = None) -> dict[str, dict[str, list[int]]]:
-        """The bytes of every device per day: {mac: {date: [received, sent]}}; days: only the last ones."""
+        """The bytes of every device per day: {mac: {date: [received, sent]}}; days: the last."""
         result: dict[str, dict[str, list[int]]] = {}
         for mac, entry in self._traffic.items():
             kept = entry.get("days") or {}
