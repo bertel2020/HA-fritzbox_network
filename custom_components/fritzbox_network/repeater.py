@@ -30,6 +30,7 @@ from .api import FritzNetworkClient
 from .const import (
     CONF_REPEATERS,
     CONF_USE_TLS,
+    CONF_VERIFY_TLS,
     DOMAIN,
     REPEATER_INTERVAL_SECONDS,
     WAN_OVERRIDE_SECONDS,
@@ -125,6 +126,7 @@ class RepeaterCoordinator(DataUpdateCoordinator[RepeaterData]):
             username=data[CONF_USERNAME],
             password=data[CONF_PASSWORD],
             use_tls=data.get(CONF_USE_TLS, False),
+            verify_tls=data.get(CONF_VERIFY_TLS, False),
         )
         client.connect()
         return client

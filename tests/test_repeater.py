@@ -21,7 +21,7 @@ class FakeRepeater:
 
     instances: list["FakeRepeater"] = []
 
-    def __init__(self, host, port, username, password, use_tls=False):
+    def __init__(self, host, port, username, password, use_tls=False, verify_tls=False):
         self.args = (host, port, username, password, use_tls)
         self.calls: list[tuple] = []
         self.uptime = 3 * 3600

@@ -5,6 +5,7 @@ from __future__ import annotations
 DOMAIN = "fritzbox_network"
 
 CONF_USE_TLS = "use_tls"
+CONF_VERIFY_TLS = "verify_tls"
 
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_REPEATERS = "repeaters"

@@ -168,12 +168,16 @@ class FritzNetworkClient:
         username: str,
         password: str,
         use_tls: bool = False,
+        verify_tls: bool = False,
     ) -> None:
         self._host = host
         self._port = port
         self._username = username
         self._password = password
         self._use_tls = use_tls
+        # the certificate of a box is self-signed unless the user gave it a trusted one: checking it
+        # is the user's choice, off by default
+        self._verify_tls = use_tls and verify_tls
         self._lock = threading.Lock()
         self._fc: FritzConnection | None = None
         # how long the box has run, as the last read of DeviceInfo1 said (the setup reads it)
@@ -201,6 +205,8 @@ class FritzNetworkClient:
                 timeout=REQUEST_TIMEOUT,
                 use_cache=True,
             )
+            # fritzconnection turns the check off for its session; every request follows this
+            self._fc.session.verify = self._verify_tls
 
     @property
     def _connection(self) -> FritzConnection:
@@ -256,7 +262,7 @@ class FritzNetworkClient:
             f"{self._web_base()}{path}",
             data=data,
             timeout=REQUEST_TIMEOUT,
-            verify=False,  # noqa: S501
+            verify=self._verify_tls,
         )
         response.raise_for_status()
         return response.text
@@ -266,7 +272,7 @@ class FritzNetworkClient:
         response = session.get(
             f"{self._web_base()}{path}",
             timeout=REQUEST_TIMEOUT,
-            verify=False,  # noqa: S501
+            verify=self._verify_tls,
         )
         response.raise_for_status()
         return response.text
@@ -313,7 +319,11 @@ class FritzNetworkClient:
             return http.client.HTTPSConnection(
                 self._host,
                 timeout=REQUEST_TIMEOUT,
-                context=ssl._create_unverified_context(),  # noqa: S323, SLF001
+                context=(
+                    ssl.create_default_context()
+                    if self._verify_tls
+                    else ssl._create_unverified_context()  # noqa: S323, SLF001
+                ),
             )
         return http.client.HTTPConnection(self._host, timeout=REQUEST_TIMEOUT)
 
@@ -647,7 +657,7 @@ class FritzNetworkClient:
                         "Referer": f"{base}/",
                     },
                     timeout=REQUEST_TIMEOUT,
-                    verify=False,  # noqa: S501
+                    verify=self._verify_tls,
                 )
                 if response.status_code in (401, 403) and not attempt:
                     self._web_sid = None

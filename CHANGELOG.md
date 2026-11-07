@@ -6,6 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Neue Option **Zertifikat der Box prüfen** (bei der Einrichtung und unter „Verbindung ändern“, standardmäßig aus, nur mit TLS). Ist sie an, prüfen die Verbindungen zur Box, zum Webinterface und zum Mitschnitt das Zertifikat. Das Zertifikat einer FRITZ!Box ist selbstsigniert, solange du ihr kein vertrauenswürdiges gegeben hast, und gilt nur für ihren Namen; schalte die Option daher nur ein, wenn die Box unter diesem Namen erreichbar ist.
 - VPN-Seite: Ein Tunnel, der sehr oft verbindet, verliert seinen ältesten Verlauf nicht mehr. Ab 500 Sitzungen werden die zwei mit dem kleinsten Abstand zusammengefasst, sodass der Verlauf weiter ein Jahr zurückreicht und nur die kürzesten Unterbrechungen als verbunden gezeichnet werden.
 - Panel: Lange graue Hinweise unter den Karten sind hinter einer kleinen Zeile „Hinweis“ eingeklappt (kurze bleiben stehen). Ein geöffneter Hinweis bleibt beim Neuzeichnen der Seite offen.
 - Panel: Knöpfe haben dieselbe Ecke wie Eingabefelder und Zeitraum-Umschalter (abgerundetes Rechteck, 10 px) statt einer Pille; runde Chips, Tags und Icon-Knöpfe behalten ihre runde Form.
@@ -29,6 +30,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Behoben
 
+- Die Erkennung (SSDP) übernimmt die Adresse einer bekannten Box nicht mehr, denn jedes Gerät im Netz kann die UDN (die öffentliche MAC) vortäuschen, und der nächste Login ginge an dieses Gerät. Eine neue Adresse trägst du unter „Verbindung ändern“ ein. Außerdem lehnt der Login am Webinterface eine Challenge mit ungewöhnlich vielen oder wenigen Runden ab.
 - Sicherheit: Die vier Verlaufsbefehle des Panels (`history/summary`, `history/device`, `history/traffic`, `vpn/history`) verlangen jetzt wie alle anderen einen Administrator.
 - Sicherheit: Die Aktionen (Name setzen, Wake on LAN, Route, Gast-WLAN-Passwort, Mitschnitt, VPN-Aufräumen) prüfen die Rolle des aufrufenden Benutzers; nur Administratoren dürfen sie ausführen. Aufrufe ohne Benutzer, etwa aus Automationen, bleiben erlaubt.
 - Beim Wechsel der FRITZ!Box im Panel bleibt nichts von der alten Box stehen, und verspätete Antworten der alten Box werden verworfen. Adressnotizen werden erst gesendet, wenn sie für die gewählte Box geladen sind.

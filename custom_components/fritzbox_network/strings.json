@@ -10,6 +10,7 @@
           "username": "User name",
           "password": "Password",
           "use_tls": "Use an encrypted connection (TLS)",
+          "verify_tls": "Check the certificate of the box",
           "port": "Port (optional, default depends on TLS)"
         }
       },
@@ -27,6 +28,7 @@
         "data": {
           "host": "Host name or IP address",
           "use_tls": "Use an encrypted connection (TLS)",
+          "verify_tls": "Check the certificate of the box",
           "port": "Port (optional, default depends on TLS)"
         }
       },
@@ -37,6 +39,7 @@
           "username": "User name",
           "password": "Password",
           "use_tls": "Use an encrypted connection (TLS)",
+          "verify_tls": "Check the certificate of the box",
           "port": "Port (optional, default depends on TLS)"
         }
       }

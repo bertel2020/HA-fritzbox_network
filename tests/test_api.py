@@ -896,3 +896,48 @@ def test_the_modified_tcpdump_header_of_the_box_is_accepted(tmp_path):
 
     assert reason in ("time", "stopped")
     assert path.read_bytes() == head
+
+
+def test_the_certificate_of_the_box_is_checked_only_when_asked_and_with_tls():
+    import ssl
+    from types import SimpleNamespace
+
+    from custom_components.fritzbox_network.api import FritzNetworkClient
+
+    seen = []
+
+    class Session:
+        verify = False
+
+        def get(self, url, **kwargs):
+            seen.append(kwargs.get("verify"))
+            return SimpleNamespace(text="", raise_for_status=lambda: None)
+
+    for use_tls, verify_tls, expected in (
+        (True, True, True),
+        (True, False, False),
+        (False, True, False),  # nothing to check on a plain connection
+    ):
+        seen.clear()
+        client = FritzNetworkClient("192.0.2.1", None, "u", "p", use_tls, verify_tls)
+        client._fc = SimpleNamespace(session=Session())  # noqa: SLF001
+        client._web_get("/x")  # noqa: SLF001
+        assert seen == [expected]
+
+    checked = FritzNetworkClient("192.0.2.1", None, "u", "p", True, True)
+    context = checked._new_connection()._context  # noqa: SLF001
+    assert context.verify_mode == ssl.CERT_REQUIRED
+    unchecked = FritzNetworkClient("192.0.2.1", None, "u", "p", True, False)
+    assert unchecked._new_connection()._context.verify_mode == ssl.CERT_NONE  # noqa: SLF001
+
+
+def test_connecting_sets_the_session_to_the_choice_about_the_certificate():
+    from unittest.mock import patch
+
+    from custom_components.fritzbox_network.api import FritzNetworkClient
+
+    for verify_tls in (True, False):
+        with patch("custom_components.fritzbox_network.api.FritzConnection") as connection:
+            client = FritzNetworkClient("192.0.2.1", None, "u", "p", True, verify_tls)
+            client.connect()
+            assert connection.return_value.session.verify is verify_tls

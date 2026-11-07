@@ -31,6 +31,7 @@ from .const import (
     CONF_HIDDEN_MACS,
     CONF_STALE_REPAIR,
     CONF_USE_TLS,
+    CONF_VERIFY_TLS,
     DEFAULT_STALE_REPAIR,
     DOMAIN,
     options_reload_signal,
@@ -94,6 +95,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
         username=entry.data[CONF_USERNAME],
         password=entry.data[CONF_PASSWORD],
         use_tls=entry.data.get(CONF_USE_TLS, False),
+        verify_tls=entry.data.get(CONF_VERIFY_TLS, False),
     )
 
     def _connect() -> tuple[str | None, bool]:

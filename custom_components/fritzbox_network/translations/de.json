@@ -10,6 +10,7 @@
           "username": "Benutzername",
           "password": "Kennwort",
           "use_tls": "Verschlüsselte Verbindung (TLS) verwenden",
+          "verify_tls": "Zertifikat der Box prüfen",
           "port": "Port (optional, Standard je nach TLS-Einstellung)"
         }
       },
@@ -27,6 +28,7 @@
         "data": {
           "host": "Hostname oder IP-Adresse",
           "use_tls": "Verschlüsselte Verbindung (TLS) verwenden",
+          "verify_tls": "Zertifikat der Box prüfen",
           "port": "Port (optional, Standard je nach TLS-Einstellung)"
         }
       },
@@ -37,6 +39,7 @@
           "username": "Benutzername",
           "password": "Passwort",
           "use_tls": "Verschlüsselte Verbindung (TLS) verwenden",
+          "verify_tls": "Zertifikat der Box prüfen",
           "port": "Port (optional, Standard hängt von TLS ab)"
         }
       }

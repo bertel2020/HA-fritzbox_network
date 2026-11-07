@@ -6,6 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- New option **Check the certificate of the box** (at setup and under "Change the connection", off by default, with TLS only). When on, the connections to the box, to its web interface and to the capture check the certificate. The certificate of a FRITZ!Box is self-signed until you give it a trusted one, and valid only for its name; turn the option on only if the box is reachable under that name.
 - VPN page: a tunnel that connects very often no longer loses its oldest history. Past 500 sessions the two with the smallest gap are joined, so the chart still reaches back a year and only the briefest breaks are drawn as connected.
 - Panel: long grey hints under the cards are folded behind a small "Note" line (short ones stay). An opened note stays open when the page is redrawn.
 - Panel: buttons have the same corner as input fields and range switches (rounded rectangle, 10 px) instead of a pill; round chips, tags and icon buttons keep their round shape.
@@ -29,6 +30,7 @@ All notable changes to this integration are recorded here.
 
 ### Fixed
 
+- Discovery (SSDP) no longer takes over the address of a known box, because any device of the network can fake the UDN (the public MAC) and the next login would go to it. Enter a new address under "Change the connection". The web login also refuses a challenge with an unusual number of rounds.
 - Security: the four history commands of the panel (`history/summary`, `history/device`, `history/traffic`, `vpn/history`) now require an administrator like all the others.
 - Security: the actions (set name, Wake on LAN, route, guest Wi-Fi password, capture, VPN clean-up) check the role of the calling user; only administrators may run them. Calls without a user, such as from automations, are still allowed.
 - Switching the FRITZ!Box in the panel leaves nothing of the old box behind, and late answers of the old box are dropped. Address notes are sent only once they are loaded for the chosen box.

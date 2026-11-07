@@ -43,6 +43,7 @@ from .const import (
     CONF_STALE_REPAIR,
     CONF_SWITCH_AREAS,
     CONF_USE_TLS,
+    CONF_VERIFY_TLS,
     CONF_WAKE_ON_LAN_WIFI,
     DEFAULT_ADOPT_NAMES,
     DEFAULT_CONSIDER_HOME,
@@ -74,6 +75,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
             selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
         ),
         vol.Optional(CONF_USE_TLS, default=False): bool,
+        vol.Optional(CONF_VERIFY_TLS, default=False): bool,
         vol.Optional(CONF_PORT): _PORT,
     }
 )
@@ -87,6 +89,7 @@ async def _validate_input(hass: HomeAssistant, data: Mapping[str, Any]) -> dict[
         username=data[CONF_USERNAME],
         password=data[CONF_PASSWORD],
         use_tls=data.get(CONF_USE_TLS, False),
+        verify_tls=data.get(CONF_VERIFY_TLS, False),
     )
 
     def _connect_and_check() -> dict[str, Any]:
@@ -108,6 +111,7 @@ STEP_CONFIRM_DATA_SCHEMA = vol.Schema(
             selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
         ),
         vol.Optional(CONF_USE_TLS, default=False): bool,
+        vol.Optional(CONF_VERIFY_TLS, default=False): bool,
         vol.Optional(CONF_PORT): _PORT,
     }
 )
@@ -284,6 +288,7 @@ class FritzNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
             {
                 vol.Required(CONF_HOST): str,
                 vol.Optional(CONF_USE_TLS): bool,
+                vol.Optional(CONF_VERIFY_TLS): bool,
                 vol.Optional(CONF_PORT): _PORT,
             }
         )
