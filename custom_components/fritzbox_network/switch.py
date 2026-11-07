@@ -21,6 +21,7 @@ from .const import (
     KEY_AUTO_WOL,
     KEY_GUEST_WIFI,
     KEY_INTERNET_ACCESS,
+    KEY_PORT_PREFIX,
     KEY_PRIORITY,
     KEY_ROUTE_SWITCH,
     KEY_VPN_SWITCH,
@@ -34,7 +35,7 @@ from .entity import (
     is_mesh_node,
     vpn_device_info,
 )
-from .models import Host, VpnConnection, WifiNetwork
+from .models import Host, PortRule, VpnConnection, WifiNetwork
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -75,6 +76,7 @@ async def async_setup_entry(
     )
     _async_setup_guest_wifi(entry, async_add_entities)
     _async_setup_wifi(entry, async_add_entities)
+    _async_setup_ports(entry, async_add_entities)
     _async_setup_vpn(entry, async_add_entities)
     _async_setup_routes(hass, entry, async_add_entities)
 
@@ -94,6 +96,26 @@ def _async_setup_wifi(
             return
         known.update(new)
         async_add_entities([FritzNetworkWifi(coordinator, key) for key in new])
+
+    _add()
+    entry.async_on_unload(coordinator.async_add_listener(_add))
+
+
+@callback
+def _async_setup_ports(
+    entry: FritzNetworkConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
+) -> None:
+    """A switch for each port forwarding of the box, off by default: it opens a port."""
+    coordinator = entry.runtime_data
+    known: set[str] = set()
+
+    @callback
+    def _add() -> None:
+        new = [key for key in coordinator.data.port_rules or () if key not in known]
+        if not new:
+            return
+        known.update(new)
+        async_add_entities([FritzNetworkPort(coordinator, key) for key in new])
 
     _add()
     entry.async_on_unload(coordinator.async_add_listener(_add))
@@ -325,6 +347,76 @@ class FritzNetworkWifi(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity)
     async def _set(self, value: bool) -> None:
         try:
             await self.coordinator.async_set_wifi(self._band, value)
+        except FritzConnectionException as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self._set(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._set(False)
+
+
+class FritzNetworkPort(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity):
+    """A port forwarding of the box, on or off.
+
+    Off by default, because switching one on opens a port to the internet: whoever turns the
+    entity on has decided that. The forwardings are read only while such a switch is on. A
+    forwarding a device opened by UPnP is in the list as well; the device may enter it again.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = "port"
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, key: str) -> None:
+        super().__init__(coordinator)
+        self._key = key
+        self._attr_unique_id = f"{coordinator.serial}_{KEY_PORT_PREFIX}{key}"
+        self.entity_id = f"switch.fritz_network_{KEY_PORT_PREFIX}{key}"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+        rule = self._rule
+        label = (rule.description if rule else None) or key
+        self._attr_translation_placeholders = {"name": label}
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        # an entity that is off costs no request: only this one asks for the values
+        self.async_on_remove(self.coordinator.async_want_port_rules())
+
+    @property
+    def _rule(self) -> PortRule | None:
+        return (self.coordinator.data.port_rules or {}).get(self._key)
+
+    @property
+    def available(self) -> bool:
+        return super().available and self._rule is not None
+
+    @property
+    def is_on(self) -> bool | None:
+        rule = self._rule
+        return rule.enabled if rule else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any] | None:
+        if (rule := self._rule) is None:
+            return None
+        return {
+            "protocol": rule.protocol,
+            "external_port": rule.external_port,
+            "internal_port": rule.internal_port,
+            "internal_client": rule.internal_client,
+            "lease_seconds": rule.lease,
+        }
+
+    async def _set(self, value: bool) -> None:
+        try:
+            await self.coordinator.async_set_port_rule(self._key, value)
         except FritzConnectionException as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,

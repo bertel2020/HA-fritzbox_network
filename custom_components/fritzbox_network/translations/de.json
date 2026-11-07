@@ -293,6 +293,9 @@
       },
       "wifi_6ghz": {
         "name": "WLAN 6 GHz ({ssid})"
+      },
+      "port": {
+        "name": "Portfreigabe {name}"
       }
     },
     "button": {

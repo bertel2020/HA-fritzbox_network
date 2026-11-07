@@ -10,7 +10,12 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.fritzbox_network.const import DOMAIN
-from custom_components.fritzbox_network.models import WifiNetwork, parse_hosts, parse_mesh
+from custom_components.fritzbox_network.models import (
+    PortRule,
+    WifiNetwork,
+    parse_hosts,
+    parse_mesh,
+)
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -95,6 +100,16 @@ class FakeClient:
             "5ghz": WifiNetwork(True, "Home", "02:00:00:00:00:a2", "ax"),
         }
         self.wifi_reads = 0
+        # the port forwardings by key, as the connection service lists them
+        self.port_rules = {
+            "udp_51820": PortRule(
+                "udp_51820", "Wireguard", "UDP", 51820, 51820, "192.0.2.10", "0.0.0.0", 0, False
+            ),
+            "tcp_5027": PortRule(
+                "tcp_5027", "Traccar", "TCP", 5027, 5027, "192.0.2.20", "0.0.0.0", 0, True
+            ),
+        }
+        self.port_reads = 0
         # whether the box passes status information over UPnP (None: it does not say)
         self.upnp: bool | None = True
         self.upnp_reads = 0
@@ -287,6 +302,16 @@ class FakeClient:
         self.calls.append(("reconnect",))
         if self.fail_actions:
             raise FritzActionError("refused")
+
+    def get_port_rules(self) -> dict:
+        self.port_reads += 1
+        return dict(self.port_rules)
+
+    def set_port_rule_enabled(self, key: str, enabled: bool) -> None:
+        self.calls.append(("port", key, enabled))
+        if self.fail_actions:
+            raise FritzActionError("refused")
+        # the box shows it with a delay: the next read still says the old value
 
     def get_upnp_enabled(self) -> bool | None:
         self.upnp_reads += 1

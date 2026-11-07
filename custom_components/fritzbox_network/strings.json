@@ -293,6 +293,9 @@
       },
       "wifi_6ghz": {
         "name": "Wi-Fi 6 GHz ({ssid})"
+      },
+      "port": {
+        "name": "Port forwarding {name}"
       }
     },
     "button": {

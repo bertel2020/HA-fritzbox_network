@@ -44,6 +44,7 @@ from .const import HOST_FILTER_SERVICE_PREFIX, HOSTS_SERVICE
 from .models import (
     Host,
     MeshTopology,
+    PortRule,
     WifiNetwork,
     parse_capture_interfaces,
     parse_device_log,
@@ -54,6 +55,7 @@ from .models import (
     parse_network,
     parse_port_rules,
     parse_rights,
+    port_rule_key,
 )
 from .wifi_qr import security_of, wifi_qr_png
 
@@ -117,6 +119,29 @@ def web_login_response(challenge: str, password: str) -> str:
     return f"{challenge}-{digest}"
 
 
+def _port_rule(row: dict[str, Any]) -> PortRule | None:
+    """A forwarding from the answer of the box; None if it is not one that can be entered again."""
+    try:
+        protocol = str(row["NewProtocol"])
+        external = int(row["NewExternalPort"])
+        internal = int(row["NewInternalPort"])
+        client = str(row["NewInternalClient"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    remote = str(row.get("NewRemoteHost") or "")
+    return PortRule(
+        key=port_rule_key(protocol, external, remote),
+        description=row.get("NewPortMappingDescription") or None,
+        protocol=protocol,
+        external_port=external,
+        internal_port=internal,
+        internal_client=client,
+        remote_host=remote,
+        lease=int(row.get("NewLeaseDuration") or 0),
+        enabled=bool(row.get("NewEnabled")),
+    )
+
+
 def _uptime_of(info: dict[str, Any]) -> int | None:
     value = info.get("NewUpTime")
     return int(value) if isinstance(value, (int, str)) and str(value).isdigit() else None
@@ -145,6 +170,8 @@ class FritzNetworkClient:
         # the WLANConfiguration services by network ("guest", "2_4ghz", "5ghz", "6ghz"): looked
         # for once, then known
         self._wifi_services: dict[str, str] | None = None
+        # the connection service that lists the port forwardings, found once
+        self._port_service_name: str | None = None
         # the session of the web interface, which the fixed addresses are read from
         self._web_sid: str | None = None
         self._web_uids: dict[str, str] = {}
@@ -650,6 +677,75 @@ class FritzNetworkClient:
                     }
                 )
         return entries
+
+    def _port_service(self) -> str | None:
+        """The connection service that lists the forwardings: PPP or IP, whichever answers.
+
+        Which one it is depends on the connection of the box (a DSL line with PPP, a cable or
+        fibre line with IP), so the first that knows the action is taken and then kept.
+        """
+        if self._port_service_name is None:
+            for service in ("WANPPPConnection1", "WANIPConn1"):
+                try:
+                    self._connection.call_action(service, "GetPortMappingNumberOfEntries")
+                except (FritzActionError, FritzServiceError, KeyError):
+                    continue
+                self._port_service_name = service
+                break
+        return self._port_service_name
+
+    def get_port_rules(self) -> dict[str, PortRule]:
+        """The port forwardings of the box by key, as the connection service lists them."""
+        rules: dict[str, PortRule] = {}
+        with self._lock:
+            if (service := self._port_service()) is None:
+                return rules
+            for index in range(MAX_PORT_MAPPINGS):
+                try:
+                    row = self._connection.call_action(
+                        service, "GetGenericPortMappingEntry", NewPortMappingIndex=index
+                    )
+                except (FritzArrayIndexError, FritzActionError):
+                    break  # past the last entry the box answers with an error
+                rule = _port_rule(row)
+                if rule is not None:
+                    rules[rule.key] = rule
+        return rules
+
+    def set_port_rule_enabled(self, key: str, enabled: bool) -> None:
+        """Switch a port forwarding on or off.
+
+        The box has no action for that: the forwarding is entered again with the same protocol and
+        external port, which replaces it, with the other state. The entry is read again first, so
+        what it forwards to is what the box has now and not what was read some polls ago.
+        """
+        with self._lock:
+            if (service := self._port_service()) is None:
+                raise FritzServiceError("The box lists no port forwardings")
+            for index in range(MAX_PORT_MAPPINGS):
+                try:
+                    row = self._connection.call_action(
+                        service, "GetGenericPortMappingEntry", NewPortMappingIndex=index
+                    )
+                except (FritzArrayIndexError, FritzActionError):
+                    break
+                rule = _port_rule(row)
+                if rule is None or rule.key != key:
+                    continue
+                self._connection.call_action(
+                    service,
+                    "AddPortMapping",
+                    NewRemoteHost=rule.remote_host,
+                    NewExternalPort=rule.external_port,
+                    NewProtocol=rule.protocol,
+                    NewInternalPort=rule.internal_port,
+                    NewInternalClient=rule.internal_client,
+                    NewEnabled="1" if enabled else "0",
+                    NewPortMappingDescription=rule.description or "",
+                    NewLeaseDuration=rule.lease,
+                )
+                return
+            raise FritzServiceError(f"The box has no port forwarding {key}")
 
     def get_routes(self) -> list[dict[str, Any]]:
         """The static IPv4 routes of the box, the table of Home network > Network settings.

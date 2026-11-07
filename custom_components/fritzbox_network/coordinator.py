@@ -81,6 +81,7 @@ from .models import (
     MeshNode,
     MeshTopology,
     NetworkData,
+    PortRule,
     VpnConnection,
     WifiNetwork,
     dhcp_pool_of,
@@ -184,6 +185,11 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._wifi: dict[str, WifiNetwork] | None = None
         self._wifi_overrides: dict[str, tuple[bool, float]] = {}
         self._wifi_force = False
+        # the port forwardings: read once to see what there is, then only while a switch is on
+        self._port_rules: dict[str, PortRule] | None = None
+        self._port_overrides: dict[str, tuple[bool, float]] = {}
+        self._port_demand = 0
+        self._port_stale = False
         # the firmware offer of the box, asked for now and then
         self._firmware: FirmwareInfo | None = None
         # the DHCP range of the box, asked for now and then
@@ -445,6 +451,56 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             return
         self._wifi = found or self._wifi
 
+    @callback
+    def async_want_port_rules(self) -> Callable[[], None]:
+        """A switch for a forwarding is on: the forwardings are read from the next poll on."""
+        self._port_demand += 1
+        self._port_stale = True
+
+        @callback
+        def _release() -> None:
+            self._port_demand -= 1
+
+        return _release
+
+    def _fetch_port_rules(self) -> None:
+        """The port forwardings: once to see what there is, then while a switch is on.
+
+        The read costs a request for each forwarding, so it is not made for switches that are
+        off (they are off by default). A switch just made is read at every poll until the box
+        shows it. Only with the right to change settings, which switching needs.
+        """
+        if not self.can_write:
+            return
+        first = self._port_rules is None
+        due = (
+            self._port_stale
+            or bool(self._port_overrides)
+            or (self._port_demand and self._polls % INTERNET_DETAIL_POLLS == 0)
+        )
+        if not first and not due:
+            return
+        try:
+            found = self.client.get_port_rules()
+        except (*_FETCH_ERRORS, TypeError) as err:
+            _LOGGER.debug("Port forwardings unavailable: %s", err)
+            return
+        self._port_stale = False
+        self._port_rules = found
+
+    def _apply_port_overrides(self) -> dict[str, PortRule] | None:
+        """The forwardings, with a switch just made shown until the box shows it too."""
+        if self._port_rules is None:
+            return None
+        shown = dict(self._port_rules)
+        for key, (value, deadline) in list(self._port_overrides.items()):
+            rule = shown.get(key)
+            if rule is None or rule.enabled == value or time.monotonic() > deadline:
+                del self._port_overrides[key]
+            else:
+                shown[key] = replace(rule, enabled=value)
+        return shown
+
     def _apply_wifi_overrides(self) -> dict[str, WifiNetwork] | None:
         """The networks, with a switch just made shown until the box shows it too."""
         if self._wifi is None:
@@ -506,6 +562,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             self._fetch_upnp()
             self._fetch_uptime()
             self._fetch_wifi()
+            self._fetch_port_rules()
             self._fetch_cpu_temperature()
             self._fetch_reservations([h for h in hosts if h.ip and not h.guest])
             self._polls += 1
@@ -548,6 +605,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             internet=self._update_internet(wan),
             guest_wifi=self._apply_guest_override(guest),
             wifi=self._apply_wifi_overrides(),
+            port_rules=self._apply_port_overrides(),
             firmware=self._firmware,
             vpn=vpn,
             routes=routes,
@@ -952,6 +1010,13 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._wifi_overrides[key] = (enabled, time.monotonic() + WAN_OVERRIDE_SECONDS)
         self._wifi_force = True
         self.async_set_updated_data(replace(self.data, wifi=self._apply_wifi_overrides()))
+
+    async def async_set_port_rule(self, key: str, enabled: bool) -> None:
+        """Switch a port forwarding, show it at once and read the box at the next poll."""
+        await self.hass.async_add_executor_job(self.client.set_port_rule_enabled, key, enabled)
+        self._port_overrides[key] = (enabled, time.monotonic() + WAN_OVERRIDE_SECONDS)
+        self._port_stale = True
+        self.async_set_updated_data(replace(self.data, port_rules=self._apply_port_overrides()))
 
     async def async_set_guest_wifi_password(self, password: str | None, length: int) -> str:
         """Set the guest Wi-Fi password and return it; the password is never logged."""

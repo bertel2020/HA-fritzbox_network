@@ -200,6 +200,12 @@
         "state": {
           "off": "mdi:wifi-off"
         }
+      },
+      "port": {
+        "default": "mdi:lan-connect",
+        "state": {
+          "off": "mdi:lan-disconnect"
+        }
       }
     },
     "button": {

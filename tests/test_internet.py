@@ -802,6 +802,96 @@ async def test_the_diagnostics_list_what_the_box_offers_without_a_request(hass, 
     assert fake_client.upnp_reads == reads
 
 
+async def _enable_ports(hass, entry):
+    await _setup(hass, entry)  # the switches are made once the box has told its forwardings
+    registry = er.async_get(hass)
+    for entity_id in ("switch.fritz_network_port_udp_51820", "switch.fritz_network_port_tcp_5027"):
+        registry.async_update_entity(entity_id, disabled_by=None)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    return entry.runtime_data
+
+
+async def test_each_port_forwarding_is_a_switch_that_is_off_by_default(hass, fake_client, entry):
+    await _setup(hass, entry)
+    registry = er.async_get(hass)
+
+    reg = registry.async_get("switch.fritz_network_port_udp_51820")
+    assert reg is not None and reg.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+    assert reg.unique_id == "SERIAL1_port_udp_51820"
+    assert registry.async_get("switch.fritz_network_port_tcp_5027") is not None
+    # read once to see what there is, then not for switches that are off
+    assert fake_client.port_reads == 1
+
+
+async def test_the_forwardings_are_read_only_while_a_switch_is_on(hass, fake_client, entry):
+    coordinator = await _enable_ports(hass, entry)
+    # a switch that is added asks for the values once, at the next poll
+    await _poll(hass, coordinator)
+    reads = fake_client.port_reads
+    # then now and then (every tenth poll), not at every poll
+    for _ in range(10):
+        await _poll(hass, coordinator)
+    assert fake_client.port_reads == reads + 1
+
+    state = hass.states.get("switch.fritz_network_port_tcp_5027")
+    assert state.state == "on"
+    assert state.attributes["internal_client"] == "192.0.2.20"
+    assert state.attributes["external_port"] == 5027
+    assert hass.states.get("switch.fritz_network_port_udp_51820").state == "off"
+
+
+async def test_a_port_switch_shows_the_change_at_once_and_the_box_decides_afterwards(
+    hass, fake_client, entry
+):
+    coordinator = await _enable_ports(hass, entry)
+    entity_id = "switch.fritz_network_port_udp_51820"
+
+    await hass.services.async_call("switch", "turn_on", {"entity_id": entity_id}, blocking=True)
+    assert ("port", "udp_51820", True) in fake_client.calls
+    assert hass.states.get(entity_id).state == "on"
+    # the box still says off: the switch keeps showing what was asked for, and reads every poll
+    reads = fake_client.port_reads
+    await _poll(hass, coordinator)
+    assert fake_client.port_reads == reads + 1
+    assert hass.states.get(entity_id).state == "on"
+    fake_client.port_rules["udp_51820"] = replace(fake_client.port_rules["udp_51820"], enabled=True)
+    await _poll(hass, coordinator)
+    assert hass.states.get(entity_id).state == "on"
+    reads = fake_client.port_reads
+    await _poll(hass, coordinator)
+    assert fake_client.port_reads == reads  # the box shows it: back to the tenth poll
+
+
+async def test_a_refused_port_switch_is_an_error(hass, fake_client, entry):
+    await _enable_ports(hass, entry)
+    fake_client.fail_actions = True
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(
+            "switch",
+            "turn_on",
+            {"entity_id": "switch.fritz_network_port_udp_51820"},
+            blocking=True,
+        )
+
+
+async def test_the_first_poll_does_not_read_the_forwardings(hass, fake_client, entry):
+    coordinator = FritzNetworkCoordinator(hass, entry, fake_client, "SERIAL1", True, "box", None)
+    await coordinator._async_update_data()
+    assert fake_client.port_reads == 0
+    await coordinator._async_update_data()
+    assert fake_client.port_reads == 1
+
+
+async def test_without_the_right_to_change_settings_the_forwardings_are_not_read(
+    hass, fake_client, entry
+):
+    fake_client.writable = False
+    await _setup(hass, entry)
+    assert fake_client.port_reads == 0
+    assert er.async_get(hass).async_get("switch.fritz_network_port_udp_51820") is None
+
+
 async def test_a_box_that_does_not_answer_about_firmware_has_no_update_entity(
     hass, fake_client, entry
 ):

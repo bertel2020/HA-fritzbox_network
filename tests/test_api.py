@@ -397,6 +397,94 @@ def test_a_box_without_a_guest_network_has_no_password_to_set():
         client.set_guest_wifi_password("whatever 123")
 
 
+def _port_client(rows, services=("WANPPPConnection1", "WANIPConn1"), fail_add=None):
+    """A box whose connection services list these forwardings (a list of dicts)."""
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    client._fc = MagicMock()
+
+    def call(service, action, **args):
+        if service not in services:
+            raise FritzServiceError("no such service")
+        if action == "GetPortMappingNumberOfEntries":
+            return {"NewPortMappingNumberOfEntries": len(rows)}
+        if action == "GetGenericPortMappingEntry":
+            if args["NewPortMappingIndex"] >= len(rows):
+                raise FritzArrayIndexError("713")
+            return rows[args["NewPortMappingIndex"]]
+        if action == "AddPortMapping":
+            if fail_add:
+                raise fail_add
+            return {}
+        raise AssertionError(action)
+
+    client._fc.call_action.side_effect = call
+    return client
+
+
+WIREGUARD = {
+    "NewRemoteHost": "0.0.0.0",
+    "NewExternalPort": 51820,
+    "NewProtocol": "UDP",
+    "NewInternalPort": 51820,
+    "NewInternalClient": "192.0.2.10",
+    "NewEnabled": False,
+    "NewPortMappingDescription": "Wireguard",
+    "NewLeaseDuration": 0,
+}
+
+
+def test_the_forwardings_come_from_the_connection_service_that_has_them():
+    # a DSL box: the PPP service lists them, the IP service does not know the action
+    client = _port_client([WIREGUARD], services=("WANPPPConnection1",))
+    rules = client.get_port_rules()
+    assert list(rules) == ["udp_51820"]
+    assert rules["udp_51820"].internal_client == "192.0.2.10"
+    assert rules["udp_51820"].enabled is False
+    assert all(c.args[0] == "WANPPPConnection1" for c in client._fc.call_action.call_args_list)
+
+    cable = _port_client([WIREGUARD], services=("WANIPConn1",))
+    assert list(cable.get_port_rules()) == ["udp_51820"]
+    assert _port_client([WIREGUARD], services=()).get_port_rules() == {}
+
+
+def test_switching_a_forwarding_enters_it_again_with_everything_else_unchanged():
+    client = _port_client([WIREGUARD])
+    client.set_port_rule_enabled("udp_51820", True)
+    add = next(c for c in client._fc.call_action.call_args_list if c.args[1] == "AddPortMapping")
+    assert add.args[0] == "WANPPPConnection1"
+    assert add.kwargs == {
+        "NewRemoteHost": "0.0.0.0",
+        "NewExternalPort": 51820,
+        "NewProtocol": "UDP",
+        "NewInternalPort": 51820,
+        "NewInternalClient": "192.0.2.10",
+        "NewEnabled": "1",
+        "NewPortMappingDescription": "Wireguard",
+        "NewLeaseDuration": 0,
+    }
+    client.set_port_rule_enabled("udp_51820", False)
+    adds = [c for c in client._fc.call_action.call_args_list if c.args[1] == "AddPortMapping"]
+    assert adds[-1].kwargs["NewEnabled"] == "0"
+
+
+def test_a_forwarding_that_is_gone_is_not_entered_again():
+    client = _port_client([WIREGUARD])
+    with pytest.raises(FritzServiceError):
+        client.set_port_rule_enabled("tcp_1", True)
+    assert not [c for c in client._fc.call_action.call_args_list if c.args[1] == "AddPortMapping"]
+
+
+def test_forwardings_with_the_same_port_on_other_remote_hosts_have_other_keys():
+    other = {**WIREGUARD, "NewRemoteHost": "203.0.113.5"}
+    rules = _port_client([WIREGUARD, other]).get_port_rules()
+    assert list(rules) == ["udp_51820", "udp_51820_203_0_113_5"]
+
+
+def test_a_row_the_box_gives_without_its_target_is_left_out():
+    broken = {k: v for k, v in WIREGUARD.items() if k != "NewInternalClient"}
+    assert _port_client([broken]).get_port_rules() == {}
+
+
 def _wifi_client(boxes: dict[str, tuple[str, str]], enabled: bool = True) -> FritzNetworkClient:
     """A box whose services have this (access point type, band), as X_AVM-DE_GetWLANExtInfo says."""
     client = FritzNetworkClient("192.168.178.1", None, "user", "secret")

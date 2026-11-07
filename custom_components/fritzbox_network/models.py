@@ -340,6 +340,27 @@ class WifiNetwork:
     standard: str | None
 
 
+@dataclass(frozen=True)
+class PortRule:
+    """A port forwarding of the box as the connection service lists it, to switch it on or off."""
+
+    key: str
+    description: str | None
+    protocol: str
+    external_port: int
+    internal_port: int
+    internal_client: str
+    remote_host: str
+    lease: int
+    enabled: bool
+
+
+def port_rule_key(protocol: str, external_port: int, remote_host: str = "") -> str:
+    """The name of a forwarding: protocol and external port, with the remote host if it has one."""
+    base = f"{protocol.lower()}_{external_port}"
+    return base if remote_host in ("", "0.0.0.0") else f"{base}_{remote_host.replace('.', '_')}"
+
+
 @dataclass
 class NetworkData:
     """Result of one poll."""
@@ -352,6 +373,8 @@ class NetworkData:
     # the other Wi-Fi networks by band ("2_4ghz", "5ghz", "6ghz"); None where they are not read
     # (no right to change settings) or not yet
     wifi: dict[str, WifiNetwork] | None = None
+    # the port forwardings by key, read while a switch for one is on; None where not read
+    port_rules: dict[str, PortRule] | None = None
     firmware: FirmwareInfo | None = None
     # the WireGuard connections; None where the box does not tell them
     vpn: list[VpnConnection] | None = None
