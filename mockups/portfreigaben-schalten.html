@@ -52,6 +52,7 @@
   .mockbar .ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .mockbar .ctl { min-width: 0; max-width: 100%; }
   .mockbar select { max-width: 100%; min-height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 0 10px; }
+  .subtabs { margin-bottom: 4px; }
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex-wrap: wrap; }
   .seg button { padding: 0 12px; min-height: 34px; font-weight: 500; color: var(--muted); border-left: 1px solid var(--line); white-space: nowrap; }
   .seg button:first-child { border-left: 0; }
@@ -252,9 +253,10 @@
   let state = "ok", filter = "all", openFam = new Set(), busy = new Set();
 
   function nav() {
-    const tabs = [["net", "Netzwerk"], ["internet", "Internet", '<i class="dot on" aria-hidden="true"></i>'], ["wlan", "WLAN"], ["vpn", "VPN"], ["addresses", "Adressraum"], ["box", "Box"], ["diagnose", "Diagnose"], ["devices", "Verwalten"]];
+    const tabs = [["net", "Netzwerk"], ["internet", "Internet", '<i class="dot on" aria-hidden="true"></i>'], ["box", "Box"], ["diagnose", "Diagnose"], ["devices", "Verwalten"]];
     $("#nav").innerHTML = tabs.map(([id, name, extra = ""]) => `<button role="tab" aria-selected="${id === "internet"}">${name}${extra}</button>`).join("");
   }
+  const subtabs = (label, items, active) => `<div class="seg subtabs" role="tablist" aria-label="${label}">${items.map((n) => `<button role="tab" aria-selected="${n === active}">${n}</button>`).join("")}</div>`;
   const portText = (a, b) => (b ? `${a}–${b}` : String(a));
 
   function merge(list) {
@@ -331,7 +333,7 @@
 
   function draw() {
     nav();
-    $("#main").innerHTML = `<div class="phead"><h1>Internet</h1><p class="lead">… Verbindung, Last, Datenvolumen, Leitung wie bisher …</p></div>${card()}`;
+    $("#main").innerHTML = `${subtabs("Internet", ["Verbindung", "VPN"], "Verbindung")}<div class="phead"><h1>Internet</h1><p class="lead">… Verbindung, Last, Datenvolumen, Leitung wie bisher …</p></div>${card()}`;
   }
 
   /* ---------- Dialog und Toast ---------- */

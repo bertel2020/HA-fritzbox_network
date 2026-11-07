@@ -52,6 +52,7 @@
   .mockbar .ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .mockbar .ctl { min-width: 0; max-width: 100%; }
   .mockbar select { max-width: 100%; min-height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 0 10px; }
+  .subtabs { margin-bottom: 4px; }
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex-wrap: wrap; }
   .seg button { padding: 0 12px; min-height: 34px; font-weight: 500; color: var(--muted); border-left: 1px solid var(--line); white-space: nowrap; }
   .seg button:first-child { border-left: 0; }
@@ -250,9 +251,11 @@
   const busy = new Set();
 
   function nav(active) {
-    const tabs = [["net", "Netzwerk"], ["internet", "Internet", '<i class="dot on" aria-hidden="true"></i>'], ["wlan", "WLAN", "", true], ["vpn", "VPN"], ["addresses", "Adressraum"], ["box", "Box", "", true], ["diagnose", "Diagnose"], ["devices", "Verwalten"]];
+    const tabs = [["net", "Netzwerk"], ["internet", "Internet", '<i class="dot on" aria-hidden="true"></i>'], ["box", "Box"], ["diagnose", "Diagnose"], ["devices", "Verwalten"]];
     $("#nav").innerHTML = tabs.map(([id, name, extra = "", isNew]) => `<button role="tab" class="${isNew ? "new" : ""}" aria-selected="${id === active}">${name}${extra}</button>`).join("");
   }
+
+  const subtabs = (label, items, active) => `<div class="seg subtabs" role="tablist" aria-label="${label}">${items.map((n) => `<button role="tab" aria-selected="${n === active}">${n}</button>`).join("")}</div>`;
 
   /* A pattern that looks like a QR code: three finder squares and a deterministic noise. Not scannable. */
   function fakeQr(seed) {
@@ -320,8 +323,8 @@
   }
 
   function renderPanel() {
-    nav("wlan");
-    const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">WLAN</h1><p class="lead">Die Funknetze der Box ein- und ausschalten, den Gastzugang teilen. Kanal, Auslastung und Rauschen je Access Point stehen weiter unter Netzwerk.</p></div>`;
+    nav("net");
+    const head = `${subtabs("Netzwerk", ["Geräte", "WLAN", "Adressraum", "Routen"], "WLAN")}<div class="phead"><h1 id="dtitle" tabindex="-1">WLAN</h1><p class="lead">Die Funknetze der Box ein- und ausschalten, den Gastzugang teilen. Kanal, Auslastung und Rauschen je Access Point stehen weiter unter Netzwerk › Geräte.</p></div>`;
     if (state === "error") { $("#main").innerHTML = head + `<section class="card"><div class="empty"><span style="color:var(--bad)">${I.alert}</span><b>Die Box hat die WLAN-Einstellungen nicht genannt.</b><span class="mono" style="font-size:12px">UPnPError 401: Invalid Action (WLANConfiguration3)</span><div class="btn-row"><button class="btn p">Erneut versuchen</button></div></div></section>`; return; }
     if (state === "nowlan") { $("#main").innerHTML = head + `<section class="card"><div class="empty">${I.wifi}<b>Diese Box nennt kein eigenes WLAN.</b><span>Das ist so, wenn sie als Mesh-Repeater oder IP-Client arbeitet oder kein WLAN hat. Die Funknetze stellt dann das Gerät ein, das die Mesh-Master-Rolle hat.</span></div></section>`; return; }
     $("#main").innerHTML = `${head}${netsCard()}${guestCard()}`;
@@ -329,7 +332,7 @@
 
   /* ---------- Dashboard-Karte ---------- */
   function renderDash() {
-    nav("wlan");
+    nav("net");
     $("#main").innerHTML = `<div class="phead"><h1>Dashboard-Karte</h1><p class="lead"><span class="mono">custom:fritzbox-network-guest-card</span>: der Gastzugang zum Teilen, etwa auf einem Tablet im Flur.</p></div>
     <div class="dash"><div>
       <div class="hcard">

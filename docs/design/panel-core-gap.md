@@ -14,19 +14,23 @@ Alle Mockups haben oben eine gestrichelte Leiste mit den Zuständen (Lädt, Fehl
 
 Heute: **Netzwerk · Internet · VPN · Adressraum (Adressraum | Routen) · Diagnose · Verwalten (Einbinden | Aufräumen)**.
 
-Vorschlag:
+Beschlossen (das Menü soll nicht voller werden; ein erster Vorschlag mit acht Reitern wurde verworfen):
 
-**Netzwerk · Internet · WLAN · VPN · Adressraum · Box · Diagnose · Verwalten (Einbinden | Aufräumen | Umsteigen)**
+**Netzwerk (Geräte | WLAN | Adressraum | Routen) · Internet (Verbindung | VPN) · Box · Diagnose · Verwalten (Einbinden | Aufräumen | Umsteigen)**
+
+Das sind **5 Reiter**, einer mehr als die 4 ohne VPN heute, aber einer weniger als mit VPN. Nur **Box** ist ein neuer Reiter. WLAN und Adressraum (mit den Routen) gehören zum Heimnetz und stehen unter Netzwerk, VPN als Weg von außen ins Heimnetz unter Internet. Die alten Adressen `#/addresses`, `#/routes` und `#/vpn` müssen nicht erhalten bleiben. Umsteigen erscheint nur, solange ein `fritz`-Eintrag existiert.
 
 | Teil | Ort | Warum |
 |---|---|---|
 | Neustart, CPU-Temperatur, Laufzeit, Leitung, Byte-Zähler | neuer Reiter **Box** | Es geht um das Gerät selbst, nicht um das Netz dahinter. Die Byte-Zähler beginnen mit jedem Neustart bei null; sie gehören deshalb neben „Läuft seit“. |
 | Neu verbinden | **Box** (Karte „Neu starten und neu verbinden“) und als kleiner Knopf im Kopf der Verbindung auf **Internet** | Beide Aktionen unterbrechen das Netz und haben dieselbe Rückfrage; nebeneinander sieht man den Unterschied. Auf der Internet-Seite bleibt der Knopf, weil man dort sieht, *ob* man ihn braucht. |
 | `is_linked` | Kachel „Leitung“ auf **Internet** und Zeile „Leitung (physisch)“ auf **Box** | Unterscheidet „Leitung tot“ von „Einwahl scheitert“; der Hinweis oben auf der Internet-Seite nutzt das. |
-| SSIDs schalten, Gastzugang, QR, Passwort | neuer Reiter **WLAN** | Häufigster Anlass, das Panel auf dem Handy zu öffnen („Gast will ins WLAN“). Ein eigener Reiter ist mit einem Tipp erreichbar. Kanal, Auslastung, Rauschen bleiben unter Netzwerk (sie gehören zum Access Point, nicht zum Funknetz). |
+| SSIDs schalten, Gastzugang, QR, Passwort | **Netzwerk › WLAN** | WLAN ist Teil des Heimnetzes. Zwei Tipps statt einem für „Gast will ins WLAN“ sind der Preis für ein kürzeres Menü. Kanal, Auslastung, Rauschen bleiben unter Netzwerk › Geräte (sie gehören zum Access Point, nicht zum Funknetz). |
 | Portfreigaben schalten | bestehende Karte auf **Internet** (`panel-ports.js`), ein Schalter je Zeile | Die Karte gibt es schon; ein eigener Ort würde sie verdoppeln. |
 | Rufumleitungen | Karte „Rufumleitungen“ unten auf **Box** | Telefonie bleibt sonst außen vor; ein Reiter „Telefon“ für drei Schalter wäre zu viel. Fehlt ganz, wenn die Box keine Telefonie hat. |
 | Umsteigen | Unterseite **Verwalten › Umsteigen** und Hinweisband über jeder Seite | Verwalten ist der Ort für „was die Integration aufnimmt und aufräumt“. Die Unterseite erscheint nur, solange ein `fritz`-Eintrag existiert. |
+
+Rufumleitungen: Das Backend deckt sie bewusst nicht ab (Telefonie bleibt außen vor), die Karte im Mockup `box.html` ist deshalb nur ein Gedankenspiel und wird nicht gebaut.
 
 Der Reiter **Box** bekommt einen Punkt (wie Internet), solange ein Neustart läuft oder die CPU auffällig warm ist. Die Reihenfolge stellt die Alltagsseiten nach vorn, die Wartung nach hinten.
 
@@ -35,7 +39,7 @@ Der Reiter **Box** bekommt einen Punkt (wie Internet), solange ein Neustart läu
 - **Box-Daten in den Kopf** (Laufzeit, Temperatur neben „vor 19 s“): Der Kopf wurde gerade entrümpelt (`mockups/kopf.html`); auf dem Handy ist kein Platz.
 - **Neustart in ein Menü im Kopf** (⋮ › Box neu starten): versteckt eine Aktion, die man im Notfall sucht; die Rückmeldung danach (Fortschritt, „wieder da nach 3:18“) braucht eine Seite.
 - **Neustart weiter auf der Internet-Seite**: Ein Neustart betrifft WLAN, Telefon und Repeater, nicht nur das Internet. Die Aktionen-Karte am Ende der Internet-Seite entfällt.
-- **WLAN als Unterseite von Netzwerk oder Box**: zwei Tipps statt einem für den häufigsten Fall; Netzwerk hat schon Liste | Netzkarte als Umschalter.
+- **WLAN, VPN und Adressraum als eigene Reiter** (ursprünglicher Vorschlag, 8 Reiter): zu voll, vor allem auf dem Handy. Stattdessen Unterreiter nach dem bestehenden Muster von Verwalten.
 - **Ein Reiter „Telefon“**: Umfang zu klein, Telefonie bleibt bewusst außen vor.
 - **Rufumleitungen unter Diagnose**: Diagnose misst und zeichnet auf, sie schaltet nichts.
 - **Portfreigaben als eigene Seite unter Adressraum**: die Karte steht schon auf Internet, Nutzer kennen sie dort.

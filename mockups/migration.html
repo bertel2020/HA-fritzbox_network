@@ -289,7 +289,7 @@
   let run = 0, timer = null;
 
   function nav(active) {
-    const tabs = [["net", "Netzwerk"], ["internet", "Internet", '<i class="dot on" aria-hidden="true"></i>'], ["wlan", "WLAN"], ["vpn", "VPN"], ["addresses", "Adressraum"], ["box", "Box"], ["diagnose", "Diagnose"], ["devices", "Verwalten"]];
+    const tabs = [["net", "Netzwerk"], ["internet", "Internet", '<i class="dot on" aria-hidden="true"></i>'], ["box", "Box"], ["diagnose", "Diagnose"], ["devices", "Verwalten"]];
     $("#nav").innerHTML = tabs.map(([id, name, extra = ""]) => `<button role="tab" aria-selected="${id === active}">${name}${extra}</button>`).join("");
   }
   const sub = `<div class="seg subtabs" role="tablist" aria-label="Verwalten"><button role="tab" aria-selected="false">Einbinden</button><button role="tab" aria-selected="false">Aufräumen</button><button role="tab" aria-selected="true">Umsteigen</button></div>`;
@@ -417,12 +417,14 @@
       <div class="banner" role="region" aria-label="Hinweis">${I.alert}
         <div><b>FRITZ!Box Tools fragt dieselbe Box ab.</b><span class="t">Die Core-Integration läuft parallel für 192.168.178.1: doppelte Last auf der Box und jedes Gerät zweimal in Home Assistant.</span></div>
         <div class="btn-row"><button class="btn p sm" data-goto="preview">Umsteigen …</button><button class="btn sm" data-act="later">Später</button></div></div>
-      <section class="card sec"><span class="label">Seite Netzwerk</span><p class="muted" style="margin:0">… Inhalt der Seite wie bisher …</p></section>
+      <div class="seg subtabs" role="tablist" aria-label="Netzwerk"><button role="tab" aria-selected="true">Geräte</button><button role="tab" aria-selected="false">WLAN</button><button role="tab" aria-selected="false">Adressraum</button><button role="tab" aria-selected="false">Routen</button></div>
+      <section class="card sec"><span class="label">Seite Netzwerk › Geräte</span><p class="muted" style="margin:0">… Inhalt der Seite wie bisher …</p></section>
       <div class="phead"><h1 style="font-size:18px">Weitere Varianten des Hinweises</h1></div>
       <div class="banner info" role="region" aria-label="Hinweis">${I.swap}<div><b>FRITZ!Box Tools ist noch eingerichtet.</b><span class="t">Das Gerätetracking dort ist aus, die Last ist klein. Umsteigen übernimmt die übrigen Entitäten.</span></div><div class="btn-row"><button class="btn sm" data-goto="preview">Ansehen</button><button class="btn sm" data-act="later">Ausblenden</button></div></div>
       <div class="banner ok" role="region" aria-label="Hinweis">${I.check}<div><b>Umstieg fertig. Entferne jetzt FRITZ!Box Tools.</b><span class="t">Bis dahin wird die Box doppelt abgefragt. Das Panel löscht nichts selbst.</span></div><div class="btn-row"><a class="btn p sm" href="#">${I.ext}FRITZ!Box Tools öffnen</a><button class="btn sm" data-act="later">Später</button></div></div>
       <ul class="notes">
         <li><b>Wo:</b> im Feld <span class="mono">#note</span> über jeder Seite, also auch dort, wo man gerade ist. „Später“ blendet ihn für 30 Tage in diesem Browser aus.</li>
+        <li><b>Der Reiter Umsteigen</b> unter Verwalten (neben Einbinden und Aufräumen) erscheint nur, solange es einen Core-Eintrag <span class="mono">fritz</span> gibt. Wer Core nie hatte, sieht ihn nie.</li>
         <li><b>Zusätzlich</b> legt das Backend ein Repair-Issue an (Einstellungen › Reparaturen), das auf diese Seite verlinkt; es verschwindet, sobald FRITZ!Box Tools weg oder deaktiviert ist.</li>
         <li><b>Erkennung:</b> ein geladener Eintrag der Domain <span class="mono">fritz</span> mit derselben Seriennummer oder demselben Host. Eine Box im Ferienhaus mit eigener Core-Einrichtung löst keinen Hinweis aus.</li>
       </ul>`;

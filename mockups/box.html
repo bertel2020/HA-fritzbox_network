@@ -52,6 +52,7 @@
   .mockbar .ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .mockbar .ctl { min-width: 0; max-width: 100%; }
   .mockbar select { max-width: 100%; min-height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 0 10px; }
+  .subtabs { margin-bottom: 4px; }
   .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex-wrap: wrap; }
   .seg button { padding: 0 12px; min-height: 34px; font-weight: 500; color: var(--muted); border-left: 1px solid var(--line); white-space: nowrap; }
   .seg button:first-child { border-left: 0; }
@@ -244,9 +245,11 @@
 
   /* ---------- Navigation ---------- */
   function nav(active) {
-    const tabs = [["net", "Netzwerk"], ["internet", "Internet", '<i class="dot on" aria-hidden="true"></i>'], ["wlan", "WLAN", "", true], ["vpn", "VPN"], ["addresses", "Adressraum"], ["box", "Box", reboot && reboot.phase !== "back" ? '<i class="dot warn" aria-hidden="true"></i>' : "", true], ["diagnose", "Diagnose"], ["devices", "Verwalten"]];
+    const tabs = [["net", "Netzwerk"], ["internet", "Internet", '<i class="dot on" aria-hidden="true"></i>'], ["box", "Box", reboot && reboot.phase !== "back" ? '<i class="dot warn" aria-hidden="true"></i>' : "", true], ["diagnose", "Diagnose"], ["devices", "Verwalten"]];
     $("#nav").innerHTML = tabs.map(([id, name, extra = "", isNew]) => `<button role="tab" class="${isNew ? "new" : ""}" aria-selected="${id === active}">${name}${extra}</button>`).join("");
   }
+
+  const subtabs = (label, items, active) => `<div class="seg subtabs" role="tablist" aria-label="${label}">${items.map((n) => `<button role="tab" aria-selected="${n === active}">${n}</button>`).join("")}</div>`;
 
   function spark(vals) {
     const min = Math.min(...vals) - 2, max = Math.max(...vals) + 2, w = 200, h = 30;
@@ -358,7 +361,7 @@
 
   function renderPanel() {
     nav("box");
-    const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">Box</h1><p class="lead">Die FRITZ!Box selbst: wie lange sie läuft, wie warm sie ist, ihr Anschluss, Neustart und Neuverbindung, die Rufumleitungen.</p></div>`;
+    const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">Box</h1><p class="lead">Die FRITZ!Box selbst: wie lange sie läuft, wie warm sie ist, ihr Anschluss, Neustart und Neuverbindung, die Rufumleitungen. Die WLAN-Netze stehen unter Netzwerk › WLAN.</p></div>`;
     if (state === "error") { $("#main").innerHTML = head + errorPage(); return; }
     $("#main").innerHTML = `${head}${hints()}${hero()}<div class="two">${actions()}${line()}</div>${phone()}`;
   }
@@ -366,7 +369,7 @@
   /* ---------- Internet-Seite: was dazukommt ---------- */
   function renderInet() {
     nav("internet");
-    $("#main").innerHTML = `<div class="phead"><h1>Internet</h1><p class="lead">Nur die Teile, die sich ändern. Der Rest der Seite bleibt wie heute.</p></div>
+    $("#main").innerHTML = `${subtabs("Internet", ["Verbindung", "VPN"], "Verbindung")}<div class="phead"><h1>Internet</h1><p class="lead">Nur die Teile, die sich ändern. Der Rest der Seite bleibt wie heute.</p></div>
     <section class="card sec">
       <div class="ihead"><span class="ico">${I.globe}</span><span class="who"><b>Verbindung</b><small>VDSL · seit 4 Tg. 7 Std.</small></span><span class="chip ok">Verbunden</span></div>
       <div class="tiles">
