@@ -40,7 +40,10 @@ import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice } from "./panel-device.js";
-import { openDialog, showToast } from "./panel-dialogs.js";
+import { openDialog, openPasswordDialog, showToast } from "./panel-dialogs.js";
+import { RESTART_POLL_MS, minSec, nextRestart, renderBoxPage, restarted } from "./panel-box.js";
+import { isLastNetwork, passwordRules, randomPassword, renderWlan } from "./panel-wlan.js";
+import { bannerHidden, hasCore, hideBanner, renderBanner, renderMigrate } from "./panel-migrate.js";
 import { pickedMacs, renderHidden, renderStale, staleList, visibleStale } from "./panel-cleanup.js";
 import { pickable, renderFilterControls, renderPicker, renderPickerHead, renderPreview } from "./panel-filter.js";
 
@@ -120,37 +123,61 @@ function scrollerOf(el) {
 // the logo of the integration, served next to the scripts
 const ICON_URL = new URL("./brand/icon.png", import.meta.url).href;
 
-// the two pages behind the "Devices" tab: which devices the integration takes in, and the clean-up
-export const DEVICE_PAGES = ["filter", "cleanup"];
-/** The pages of the "Address space" tab: the address space itself and the static routes. */
-export const ADDRESS_PAGES = ["addresses", "routes"];
+/**
+ * The tabs of the panel and the pages under each, in order. A tab with more than one page shows
+ * the switch between them at the top of each; the first page is the one a tab opens at first.
+ */
+export const TAB_GROUPS = {
+  net: ["net", "wlan", "addresses", "routes"],
+  internet: ["internet", "vpn"],
+  box: ["box"],
+  diagnose: ["diagnose"],
+  devices: ["filter", "cleanup", "migrate"],
+};
+export const TABS = Object.keys(TAB_GROUPS);
+// a page named like its tab is called differently in the switch: "Network" › "Devices"
+const SUB_LABELS = { net: "netDevices", internet: "connection" };
 
-/** The switch between the pages of the "Devices" tab, drawn at the top of each of them. */
-export function renderSubTabs(active, t) {
-  return `<div class="seg subtabs" role="tablist" aria-label="${escapeHtml(t.tabs.devices)}">${DEVICE_PAGES.map(
-    (id) => `<button role="tab" data-tab="${id}" aria-selected="${id === active}" aria-pressed="${id === active}">${escapeHtml(t.tabs[id])}</button>`
-  ).join("")}</div>`;
+/** The tab a page belongs to. */
+export function groupOf(page) {
+  return TABS.find((group) => TAB_GROUPS[group].includes(page)) ?? "net";
 }
 
-/** The switch between the pages of the "Address space" tab, drawn at the top of each of them. */
-export function renderAddressTabs(active, t) {
-  return `<div class="seg subtabs" role="tablist" aria-label="${escapeHtml(t.tabs.addresses)}">${ADDRESS_PAGES.map(
-    (id) => `<button role="tab" data-tab="${id}" aria-selected="${id === active}" aria-pressed="${id === active}">${escapeHtml(t.tabs[id])}</button>`
-  ).join("")}</div>`;
+/** The pages of a tab that are offered: VPN where the box tells its connections, switching over while FRITZ!Box Tools is set up. */
+export function pagesOf(group, state) {
+  return (TAB_GROUPS[group] ?? []).filter((page) => {
+    if (page === "vpn") return Array.isArray(state?.data?.vpn);
+    if (page === "migrate") return hasCore(state?.migrate);
+    return true;
+  });
 }
 
+/** The switch between the pages of the tab of the open page; nothing where the tab has only one. */
+export function renderSubTabs(active, t, state = {}) {
+  const group = groupOf(active);
+  const pages = pagesOf(group, state);
+  if (pages.length < 2) return "";
+  return `<div class="seg subtabs" role="tablist" aria-label="${escapeHtml(t.tabs[group])}">${pages
+    .map((id) => `<button role="tab" data-tab="${id}" aria-selected="${id === active}" aria-pressed="${id === active}">${escapeHtml(t.tabs[SUB_LABELS[id] ?? id])}</button>`)
+    .join("")}</div>`;
+}
+
+/**
+ * The five tabs. Internet carries a dot for the state of the line, Box one while it restarts,
+ * Manage the number of devices gone for long.
+ */
 export function renderNav(state, t, stale) {
   const line = state.data?.internet;
-  const selected = (id) => state.tab === id || (id === "devices" && DEVICE_PAGES.includes(state.tab)) || (id === "addresses" && ADDRESS_PAGES.includes(state.tab));
+  const open = groupOf(state.tab);
   const tab = (id, extra = "", label = "") =>
-    `<button role="tab" data-tab="${id}" aria-selected="${selected(id)}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${escapeHtml(t.tabs[id])}${extra}</button>`;
+    `<button role="tab" data-tab="${id}" aria-selected="${id === open}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${escapeHtml(t.tabs[id])}${extra}</button>`;
   const dot = line ? `<i class="dot ${line.connected === false ? "" : "on"}" aria-hidden="true"></i>` : "";
   const label = line ? `${t.tabs.internet}, ${line.connected === false ? t.inet.state.down : t.inet.state.up}` : "";
+  const restarting = state.boxRestart && state.boxRestart.phase !== "back";
   return [
     tab("net"),
     tab("internet", dot, label),
-    ...(Array.isArray(state.data?.vpn) ? [tab("vpn")] : []),
-    tab("addresses"),
+    tab("box", restarting ? `<i class="dot warn" aria-hidden="true"></i>` : "", restarting ? `${t.tabs.box}, ${t.boxPage.restarting}` : ""),
     tab("diagnose"),
     tab("devices", stale ? `<em>${stale}</em>` : ""),
   ].join("");
@@ -206,6 +233,20 @@ class FritzboxNetworkPanel extends HTMLElement {
       hl: null,
       // entities switched on in the registry, until Home Assistant shows their state
       enabling: new Set(),
+      // the page each tab showed last, opened again by the tab
+      lastPage: {},
+      box: null,
+      boxRestart: null,
+      boxReconnect: null,
+      wlan: null,
+      wlanError: "",
+      wlanBusy: new Set(),
+      // the guest password: only while the Wi-Fi page shows it, never stored anywhere
+      wlanSecret: null,
+      wlanReveal: false,
+      migrate: null,
+      migrateFilter: "all",
+      migrateHidden: false,
     };
     // the device page was opened from the list or the map: back is a step back in the history
     this._openedHere = false;
@@ -222,6 +263,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       const next = routeFromHash(globalThis.location.hash);
       const entered = next.tab !== state.tab;
       const was = state.sel;
+      if (entered && state.tab === "wlan") this._dropSecret();
       state.tab = next.tab;
       state.sel = next.device;
       state.menu = false;
@@ -286,6 +328,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._clock = setInterval(() => this._tick(), 5000);
     this._resize?.observe(this);
     if (this._hass && !this._started) this._start();
+    if (this._state.boxRestart?.phase === "down") this._pollRestart();
   }
 
   disconnectedCallback() {
@@ -294,6 +337,8 @@ class FritzboxNetworkPanel extends HTMLElement {
     clearTimeout(this._enableTimer);
     clearTimeout(this._captureTimer);
     clearTimeout(this._latencyTimer);
+    clearTimeout(this._restartTimer);
+    this._dropSecret();
     this._resize?.disconnect();
     this._stop();
   }
@@ -321,7 +366,10 @@ class FritzboxNetworkPanel extends HTMLElement {
       ? saved
       : this._entries[0].entry_id;
     this._renderBox();
-    if (await this._subscribe()) this._enterTab();
+    if (await this._subscribe()) {
+      this._enterTab();
+      if (this._state.tab !== "migrate") this._loadMigrate({ quiet: true });
+    }
   }
 
   /** Subscribes to the topology of the chosen box; quiet: a failure is the caller's to handle. */
@@ -412,6 +460,9 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     else if (this._state.tab === "addresses") this._loadAddresses();
     else if (this._state.tab === "routes") this._loadRoutes();
+    else if (this._state.tab === "box") this._loadBox();
+    else if (this._state.tab === "wlan") this._loadWlan();
+    else if (this._state.tab === "migrate") this._loadMigrate();
   }
 
   _ws(type, extra = {}) {
@@ -480,7 +531,6 @@ class FritzboxNetworkPanel extends HTMLElement {
       "routes-view",
       renderRoutes(state.routes, {
         t: this._t,
-        subTabs: renderAddressTabs("routes", this._t),
         canWrite: Boolean(state.data?.can_write),
         busy: state.routesBusy,
         draft: state.routesDraft,
@@ -775,8 +825,14 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._state.ports = null;
     this._state.routes = null;
     this._state.routesDraft = null;
+    clearTimeout(this._restartTimer);
+    this._dropSecret();
+    Object.assign(this._state, { box: null, boxRestart: null, boxReconnect: null, wlan: null, wlanBusy: new Set(), migrate: null, migrateFilter: "all", migrateHidden: false });
     this._update();
-    if (await this._subscribe()) this._enterTab();
+    if (await this._subscribe()) {
+      this._enterTab();
+      if (this._state.tab !== "migrate") this._loadMigrate({ quiet: true });
+    }
   }
 
   _onHass() {
@@ -858,7 +914,9 @@ class FritzboxNetworkPanel extends HTMLElement {
         </header>
         <div id="lookmenuhost"></div>
         <main>
+          <div id="migbanner"></div>
           <div id="note"></div>
+          <div id="subtabs"></div>
           <div id="net-view" hidden>
             <div id="hints"></div>
             <div class="card toolbar">
@@ -883,8 +941,10 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div id="diagnose-view" hidden></div>
           <div id="addresses-view" hidden></div>
           <div id="routes-view" hidden></div>
+          <div id="box-view" hidden></div>
+          <div id="wlan-view" hidden></div>
+          <div id="migrate-view" hidden></div>
           <div class="col" id="cleanup-view" hidden>
-            ${renderSubTabs("cleanup", t)}
             <div class="phead"><h1>${t.cleanup.title}</h1><p class="lead">${t.cleanup.lead}</p></div>
             <section class="card pad">
               <div class="range"><span id="days-head">${t.cleanup.since}</span><div id="days-seg"></div></div>
@@ -894,7 +954,6 @@ class FritzboxNetworkPanel extends HTMLElement {
             <section class="card pad" id="hidden"></section>
           </div>
           <div class="col" id="filter-view" hidden>
-            ${renderSubTabs("filter", t)}
             <div class="phead"><h1>${t.filter.title}</h1><p class="lead">${t.filter.lead}</p></div>
             <div id="f-controls"></div>
             <section class="card pad" id="f-picker-wrap" hidden>
@@ -969,20 +1028,18 @@ class FritzboxNetworkPanel extends HTMLElement {
     const netView = root.querySelector("#net-view");
     if (!netView) return;
     const tab = state.tab;
-    if (DEVICE_PAGES.includes(tab)) state.devicesPage = tab;
+    state.lastPage[groupOf(tab)] = tab;
     const onDevice = tab === "net" && Boolean(state.sel);
     netView.hidden = !ready || tab !== "net" || onDevice;
     root.querySelector("#device-view").hidden = !ready || !onDevice;
-    root.querySelector("#internet-view").hidden = !ready || tab !== "internet";
-    root.querySelector("#vpn-view").hidden = !ready || tab !== "vpn";
-    root.querySelector("#diagnose-view").hidden = !ready || tab !== "diagnose";
-    root.querySelector("#addresses-view").hidden = !ready || tab !== "addresses";
-    root.querySelector("#routes-view").hidden = !ready || tab !== "routes";
-    root.querySelector("#cleanup-view").hidden = !ready || tab !== "cleanup";
-    root.querySelector("#filter-view").hidden = !ready || tab !== "filter";
+    for (const page of ["internet", "vpn", "box", "diagnose", "wlan", "addresses", "routes", "cleanup", "filter", "migrate"]) {
+      root.querySelector(`#${page}-view`).hidden = !ready || tab !== page;
+    }
     root.querySelector("#live-chip").hidden = !ready;
     const stale = ready ? panelCounts(state.data, Date.now(), state.threshold).stale : 0;
     this._set("nav", ready ? renderNav(state, t, stale) : "");
+    this._set("subtabs", ready && !onDevice ? renderSubTabs(tab, t, state) : "");
+    this._set("migbanner", ready ? renderBanner(state.migrate, { t, hidden: state.migrateHidden, tab }) : "");
     if (!ready) return;
     const now = Date.now();
     const master = (state.data.nodes ?? []).find((n) => n.role === "master");
@@ -993,6 +1050,9 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (tab === "diagnose") return this._renderDiagnose();
     if (tab === "addresses") return this._renderAddresses();
     if (tab === "routes") return this._renderRoutes();
+    if (tab === "box") return this._renderBoxPage();
+    if (tab === "wlan") return this._renderWlan();
+    if (tab === "migrate") return this._renderMigrate();
     if (tab === "cleanup") return this._renderCleanup();
     if (tab === "filter") return this._renderFilter();
     if (onDevice) return this._renderDetail();
@@ -1127,7 +1187,6 @@ class FritzboxNetworkPanel extends HTMLElement {
       "addresses-view",
       renderAddresses({
         t: this._t,
-        subTabs: renderAddressTabs("addresses", this._t),
         language: this._hass?.language,
         now: Date.now(),
         addr: this._state.addr,
@@ -1918,6 +1977,12 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._onCapture(ds);
     } else if (ds.act === "reconnect" || ds.act === "reboot") {
       return this._interrupt(ds.act);
+    } else if (ds.act?.startsWith("box-")) {
+      return this._onBoxClick(ds.act);
+    } else if (ds.act?.startsWith("wlan-")) {
+      return this._onWlanClick(ds);
+    } else if (ds.act?.startsWith("mig-")) {
+      return this._onMigrateClick(ds);
     } else if (ds.act === "back") {
       this._leaveDevice();
       return;
@@ -1938,8 +2003,12 @@ class FritzboxNetworkPanel extends HTMLElement {
     } else if (ds.act === "logbook" || ds.act === "history") {
       return this._navigate(`/${ds.act}?entity_id=${encodeURIComponent(this._selected()?.entity_id ?? "")}`);
     } else if (ds.tab) {
-      // the "Devices" tab opens the page of it that was open last
-      const page = ds.tab === "devices" ? (state.devicesPage ?? "filter") : ds.tab;
+      // a tab opens the page of it that was open last, a switch of pages the page itself
+      let page = ds.tab;
+      if (target.closest("#nav")) {
+        const offered = pagesOf(ds.tab, state);
+        page = offered.includes(state.lastPage[ds.tab]) ? state.lastPage[ds.tab] : (offered[0] ?? ds.tab);
+      }
       globalThis.location.hash = page === "net" ? "#/" : `#/${page}`;
       return;
     } else if (ds.act === "pick-all") {
@@ -1978,19 +2047,290 @@ class FritzboxNetworkPanel extends HTMLElement {
   /** An action that interrupts the network: it asks first and says what the box answered. */
   async _interrupt(kind) {
     const t = this._t;
-    const a = t.inet.actions;
+    const state = this._state;
+    const a = t.boxPage.actions;
     const ok = await openDialog(this.shadowRoot, t, {
       title: a[`${kind}Title`],
       body: a[`${kind}Body`],
+      list: kind === "reboot" ? a.rebootList : null,
       ok: a[`${kind}Ok`],
       danger: true,
     });
     if (!ok) return;
+    const before = state.data?.internet?.external_ipv4 ?? null;
     try {
       await this._ws(kind === "reconnect" ? "internet/reconnect" : "box/reboot");
+      if (kind === "reconnect") state.boxReconnect = { before, at: Date.now() };
+      else {
+        state.boxReconnect = null;
+        state.boxRestart = { phase: "down", requestedAt: Date.now(), unreachableAt: null, backAt: null };
+        this._pollRestart();
+      }
       showToast(this.shadowRoot, a[kind === "reconnect" ? "toastReconnect" : "toastReboot"]);
+      this._update();
     } catch (err) {
       showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
+    }
+  }
+
+  /** What box/info tells about the box; while it restarts the questions of the restart keep it fresh. */
+  async _loadBox() {
+    const state = this._state;
+    if (state.boxRestart?.phase === "down") return;
+    if (state.box === "failed") state.box = null;
+    this._update();
+    try {
+      state.box = await this._ws("box/info");
+    } catch {
+      state.box = "failed";
+    }
+    this._update();
+  }
+
+  _renderBoxPage() {
+    const state = this._state;
+    this._set(
+      "box-view",
+      renderBoxPage(state.box, {
+        t: this._t,
+        language: this._hass?.language,
+        now: Date.now(),
+        internet: state.data?.internet ?? null,
+        restart: state.boxRestart,
+        reconnect: state.boxReconnect,
+      })
+    );
+  }
+
+  /** During a restart: asks the box every few seconds until it answers as restarted, or gives up after ten minutes. */
+  _pollRestart() {
+    clearTimeout(this._restartTimer);
+    this._restartTimer = setTimeout(async () => {
+      const state = this._state;
+      const restart = state.boxRestart;
+      if (restart?.phase !== "down") return;
+      let info = null;
+      try {
+        info = await this._ws("box/info");
+      } catch {
+        info = null;
+      }
+      if (state.boxRestart !== restart) return; // another box was chosen or the band was hidden meanwhile
+      const next = nextRestart(restart, info, Date.now());
+      state.boxRestart = next;
+      if (info) state.box = info;
+      if (next.phase === "back") showToast(this.shadowRoot, fill(this._t.boxPage.restart.back, { time: minSec(next.backAt - next.requestedAt) }));
+      this._update();
+      if (next.phase === "down") this._pollRestart();
+    }, RESTART_POLL_MS);
+  }
+
+  async _onBoxClick(act) {
+    const state = this._state;
+    if (act === "box-retry") {
+      state.box = null;
+      return this._loadBox();
+    }
+    if (act === "box-restart-clear") state.boxRestart = null;
+    else if (act === "box-reconnect-clear") state.boxReconnect = null;
+    else if (act === "box-check" && state.boxRestart) {
+      const restart = state.boxRestart;
+      let info = null;
+      try {
+        info = await this._ws("box/info");
+      } catch {
+        info = null;
+      }
+      if (info && restarted(info, restart, Date.now())) {
+        state.box = info;
+        state.boxRestart = { ...restart, phase: "back", backAt: Date.now() };
+        showToast(this.shadowRoot, fill(this._t.boxPage.restart.back, { time: minSec(state.boxRestart.backAt - restart.requestedAt) }));
+      } else showToast(this.shadowRoot, this._t.boxPage.restart.late);
+    }
+    this._update();
+    this.shadowRoot.querySelector("#dtitle")?.focus({ preventScroll: true });
+  }
+
+  /** The radio networks of the box, read when the page opens. */
+  async _loadWlan() {
+    const state = this._state;
+    state.wlanError = "";
+    if (state.wlan === "failed") state.wlan = null;
+    this._update();
+    try {
+      state.wlan = await this._ws("wlan/list");
+    } catch (err) {
+      state.wlan = "failed";
+      state.wlanError = err?.message ?? "";
+    }
+    this._update();
+  }
+
+  _renderWlan() {
+    const state = this._state;
+    this._set("wlan-view", renderWlan(state.wlan, { t: this._t, busy: state.wlanBusy, secret: state.wlanSecret, reveal: state.wlanReveal, error: state.wlanError }));
+  }
+
+  /** Forgets the guest password and draws the page without it, so that it is not kept in the page either. */
+  _dropSecret() {
+    clearTimeout(this._secretTimer);
+    const state = this._state;
+    if (state.wlanSecret === null && !state.wlanReveal) return;
+    state.wlanSecret = null;
+    state.wlanReveal = false;
+    this._renderWlan();
+  }
+
+  /** Switches a network or the guest access; switching a main network off asks first, the last one says what is lost. */
+  async _switchWlan(key, enabled) {
+    const t = this._t;
+    const w = t.wlan;
+    const state = this._state;
+    const wlan = state.wlan;
+    if (!wlan || typeof wlan !== "object") return;
+    const net = key === "guest" ? wlan.guest : (wlan.networks ?? []).find((n) => n.key === key);
+    if (!net) return;
+    const ssid = net.ssid || (key === "guest" ? w.guest.name : w.noName);
+    const name = key === "guest" ? ssid : `${ssid} (${fill(w.band, { band: net.band })})`;
+    if (!enabled && key !== "guest") {
+      const last = isLastNetwork(wlan, key);
+      const ok = await openDialog(this.shadowRoot, t, {
+        title: fill(w.offTitle, { ssid, band: net.band }),
+        body: last ? w.offLastBody : w.offBody,
+        list: last ? w.offLast : null,
+        ok: w.offOk,
+        danger: true,
+      });
+      if (!ok) return;
+    }
+    state.wlanBusy = new Set([...state.wlanBusy, key]);
+    this._renderWlan();
+    try {
+      state.wlan = await this._ws("wlan/switch", { key, enabled });
+      if (key === "guest" && !enabled) this._dropSecret();
+      showToast(this.shadowRoot, fill(enabled ? w.toastOn : w.toastOff, { name }));
+    } catch (err) {
+      showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
+    } finally {
+      state.wlanBusy = new Set([...state.wlanBusy].filter((k) => k !== key));
+      this._renderWlan();
+      // the switch was locked while the box switched: the focus goes back to it
+      const active = this.shadowRoot.activeElement;
+      if (!active || active === this) this.shadowRoot.querySelector(`[data-k="wl-${CSS.escape(key)}"]`)?.focus({ preventScroll: true });
+    }
+  }
+
+  /** The guest password with its QR code, on request only, and forgotten after five minutes at the latest. */
+  async _loadSecret() {
+    const state = this._state;
+    state.wlanSecret = "loading";
+    this._renderWlan();
+    try {
+      const secret = await this._ws("wlan/guest/secret");
+      if (state.wlanSecret !== "loading" || state.tab !== "wlan") return;
+      state.wlanSecret = secret;
+      state.wlanReveal = false;
+      clearTimeout(this._secretTimer);
+      this._secretTimer = setTimeout(() => this._dropSecret(), 300000);
+    } catch (err) {
+      if (state.wlanSecret === "loading") state.wlanSecret = null;
+      const text = err?.code === "unauthorized" ? this._t.wlan.guest.qrLocked : fill(this._t.toastFailed, { error: err?.message ?? err });
+      showToast(this.shadowRoot, text);
+    }
+    this._renderWlan();
+    this.shadowRoot.querySelector('[data-k="wlan-reveal"], [data-k="wlan-hideqr"], [data-k="wlan-qr"]')?.focus({ preventScroll: true });
+  }
+
+  async _onWlanClick(ds) {
+    const state = this._state;
+    const act = ds.act;
+    if (act === "wlan-retry") return this._loadWlan();
+    if (act === "wlan-switch") return this._switchWlan(ds.key, ds.on === "1");
+    if (act === "wlan-qr") return this._loadSecret();
+    if (act === "wlan-hideqr") {
+      this._dropSecret();
+      this.shadowRoot.querySelector('[data-k="wlan-qr"]')?.focus({ preventScroll: true });
+      return;
+    }
+    if (act === "wlan-reveal") {
+      if (!state.wlanSecret?.password) return;
+      state.wlanReveal = !state.wlanReveal;
+      return this._renderWlan();
+    }
+    if (act === "wlan-copy") {
+      const password = state.wlanSecret?.password;
+      if (!password) return;
+      try {
+        await globalThis.navigator.clipboard.writeText(password);
+        showToast(this.shadowRoot, this._t.wlan.guest.copied);
+      } catch (err) {
+        showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
+      }
+      return;
+    }
+    if (act === "wlan-pw") return this._changeGuestPassword();
+  }
+
+  /** The dialog for a new guest password; the password goes to the box and is forgotten right after. */
+  async _changeGuestPassword() {
+    const t = this._t;
+    const p = t.wlan.pw;
+    const ssid = this._state.wlan?.guest?.ssid || t.wlan.guest.name;
+    const ok = await openPasswordDialog(this.shadowRoot, t, {
+      title: p.title,
+      lead: fill(p.lead, { ssid }),
+      warn: p.kick,
+      rules: passwordRules,
+      generate: () => randomPassword(),
+      submit: async (password) => {
+        await this._ws("wlan/guest/password", { password });
+      },
+    });
+    if (!ok) return;
+    // the old QR code no longer works
+    this._dropSecret();
+    showToast(this.shadowRoot, p.done);
+  }
+
+  /** Whether FRITZ!Box Tools is set up for this box, and what switching over would take over; only reads. */
+  async _loadMigrate({ quiet = false } = {}) {
+    const state = this._state;
+    if (!quiet) {
+      state.migrate = null;
+      this._update();
+    }
+    try {
+      state.migrate = await this._ws("migrate/scan");
+    } catch {
+      // a failure on the way is no reason for a note; on the page it says so
+      state.migrate = quiet ? null : "failed";
+    }
+    state.migrateHidden = hasCore(state.migrate) && bannerHidden(state.migrate.core.entry_id);
+    this._update();
+  }
+
+  _renderMigrate() {
+    this._set("migrate-view", renderMigrate(this._state.migrate, { t: this._t, filter: this._state.migrateFilter }));
+  }
+
+  _onMigrateClick(ds) {
+    const state = this._state;
+    if (ds.act === "mig-open") {
+      globalThis.location.hash = "#/migrate";
+      return;
+    }
+    if (ds.act === "mig-later") {
+      if (hasCore(state.migrate)) hideBanner(state.migrate.core.entry_id);
+      state.migrateHidden = true;
+      showToast(this.shadowRoot, this._t.migrate.banner.toastLater);
+      this._update();
+      this.shadowRoot.querySelector("#dtitle, #q")?.focus({ preventScroll: true });
+      return;
+    }
+    if (ds.act === "mig-rescan") return this._loadMigrate();
+    if (ds.act === "mig-filter") {
+      state.migrateFilter = ds.f;
+      this._renderMigrate();
     }
   }
 

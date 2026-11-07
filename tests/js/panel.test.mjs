@@ -665,15 +665,15 @@ test("the access type is named in the language of the page, an unknown one as th
   assert.doesNotMatch(html, /Leitungsqualität/);
 });
 
-test("the internet page offers to reconnect and restart, and says why it cannot", () => {
+test("the internet page offers to reconnect, points to the box page for a restart, and says why it cannot", () => {
   const t = texts.panelTexts("en");
   const page = (canWrite) => internetPage.renderInternet(internet, { t, language: "en", now: Date.now(), canWrite });
   const allowed = page(true);
   assert.match(allowed, /data-act="reconnect" data-k="reconnect">Reconnect/);
-  assert.match(allowed, /data-act="reboot"[^>]*>Restart the box/);
-  assert.doesNotMatch(allowed, /data-act="reboot"[^>]*disabled/);
+  assert.doesNotMatch(allowed, /data-act="reboot"/);
+  assert.match(allowed, /<a href="#\/box">Restarting the box is on the Box page/);
   const refused = page(false);
-  assert.match(refused, /data-act="reboot"[^>]*disabled/);
+  assert.match(refused, /data-act="reconnect"[^>]*disabled/);
   assert.match(refused, /may not change settings/);
 });
 
@@ -1085,7 +1085,7 @@ test("the pool card is only offered to someone who may write, and warns before i
 test("all pages are tabs, the internet tab carries the state of the line and clean-up its count", () => {
   const html = panel.renderNav({ tab: "internet", data: { internet: { connected: false } } }, t, 3);
   const labels = [...html.matchAll(/<button[^>]*>([^<]+)/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ["Netzwerk", "Internet", "Adressraum", "Diagnose", "Verwalten"]);
+  assert.deepEqual(labels, ["Netzwerk", "Internet", "Box", "Diagnose", "Verwalten"]);
   assert.match(html, /data-tab="internet" aria-selected="true" aria-label="Internet, Getrennt"/);
   assert.match(html, /<i class="dot " aria-hidden="true"><\/i>/);
   assert.match(html, /Verwalten<em>3<\/em>/);
@@ -1265,7 +1265,7 @@ test("the devices tab is selected on both of its pages, and each page has the sw
   const switchBar = panel.renderSubTabs("cleanup", t);
   assert.match(switchBar, /data-tab="filter" aria-selected="false" aria-pressed="false">Einbinden/);
   assert.match(switchBar, /data-tab="cleanup" aria-selected="true" aria-pressed="true">Aufräumen/);
-  assert.deepEqual(panel.DEVICE_PAGES, ["filter", "cleanup"]);
+  assert.deepEqual(panel.TAB_GROUPS.devices, ["filter", "cleanup", "migrate"]);
 });
 
 const radioPage = await import(`${base}panel-radio.js`);
@@ -1412,9 +1412,11 @@ const vpnData = {
   ],
 };
 
-test("the VPN tab appears only where the box tells its connections", () => {
-  assert.match(panel.renderNav({ tab: "net", data: vpnData }, t, 0), /data-tab="vpn"[^>]*>VPN/);
-  assert.doesNotMatch(panel.renderNav({ tab: "net", data: { vpn: null } }, t, 0), /data-tab="vpn"/);
+test("the VPN page is a page of the internet tab, offered only where the box tells its connections", () => {
+  assert.doesNotMatch(panel.renderNav({ tab: "net", data: vpnData }, t, 0), /data-tab="vpn"/);
+  assert.match(panel.renderNav({ tab: "vpn", data: vpnData }, t, 0), /data-tab="internet" aria-selected="true"/);
+  assert.match(panel.renderSubTabs("internet", t, { data: vpnData }), /data-tab="vpn"[^>]*>VPN/);
+  assert.equal(panel.renderSubTabs("internet", t, { data: { vpn: null } }), "");
   assert.deepEqual(shared.routeFromHash("#/vpn"), { tab: "vpn", device: null });
 });
 
@@ -1463,10 +1465,10 @@ const routeRows = {
   ],
 };
 
-test("the routes page is a page of the address tab, reached by #/routes", () => {
+test("the routes page is a page of the network tab, reached by #/routes", () => {
   assert.deepEqual(shared.routeFromHash("#/routes"), { tab: "routes", device: null });
-  assert.match(panel.renderNav({ tab: "routes", data: {} }, t, 0), /data-tab="addresses" aria-selected="true"/);
-  const tabs = panel.renderAddressTabs("routes", t);
+  assert.match(panel.renderNav({ tab: "routes", data: {} }, t, 0), /data-tab="net" aria-selected="true"/);
+  const tabs = panel.renderSubTabs("routes", t, { data: {} });
   assert.match(tabs, /data-tab="routes" aria-selected="true"[^>]*>Routen/);
   assert.match(tabs, /data-tab="addresses" aria-selected="false"/);
 });

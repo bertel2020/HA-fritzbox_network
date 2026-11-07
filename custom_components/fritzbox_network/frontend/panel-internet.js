@@ -391,15 +391,14 @@ function hintsHtml(internet, t, now) {
 
 /** One port forwarding as a line: "TCP 443 → Living room TV:8443", the device a link to its page. */
 
-/** The two actions that interrupt the network; without the right to change settings they say why they are off. */
+/** A new dial-in; without the right to change settings it says why it is off. Restarting is on the box page. */
 function actions(canWrite, t) {
   const a = t.inet.actions;
   const off = canWrite ? "" : " disabled";
   return `<section class="card sec"><span class="label">${escapeHtml(a.title)}</span>
     <div class="btn-row tight">
-      <button class="btn" data-act="reconnect" data-k="reconnect"${off}>${escapeHtml(a.reconnect)}</button>
-      <button class="btn dp" data-act="reboot" data-k="reboot"${off}>${escapeHtml(a.reboot)}</button></div>
-    <p class="hint">${escapeHtml(canWrite ? a.hint : a.noRights)}</p></section>`;
+      <button class="btn" data-act="reconnect" data-k="reconnect"${off}>${escapeHtml(a.reconnect)}</button></div>
+    <p class="hint">${escapeHtml(canWrite ? a.hint : a.noRights)} <a href="#/box">${escapeHtml(a.rebootLink)}</a></p></section>`;
 }
 
 /** The whole page. Without data from the box it says so and offers the way back. */
