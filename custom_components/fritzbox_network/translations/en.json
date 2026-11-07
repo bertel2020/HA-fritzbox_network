@@ -242,6 +242,9 @@
       },
       "box_uptime": {
         "name": "Last restart"
+      },
+      "cpu_temperature": {
+        "name": "CPU temperature"
       }
     },
     "select": {

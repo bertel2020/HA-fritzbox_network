@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 from collections import deque
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import datetime, timedelta
 import logging
@@ -149,6 +150,12 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         # (the uptime is read now and then, and each read is a little different)
         self.box_boot: datetime | None = None
         self._uptime_stale = False
+        # the CPU temperature: whether the box has the sensor (None = not asked yet), the last
+        # value, and how many entities want it; it is read only while one does
+        self.cpu_supported: bool | None = None
+        self.cpu_temperature: int | None = None
+        self._cpu_demand = 0
+        self._cpu_stale = False
         self._note_uptime(getattr(client, "uptime", None))
         # The first poll reads only what the devices and the internet card need, so the setup is
         # not held up by the web interface of the box; a second poll right after it reads the rest.
@@ -253,6 +260,45 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             _LOGGER.debug("Uptime unavailable: %s", err)
             return
         self._uptime_stale = False
+
+    @callback
+    def async_want_cpu_temperature(self) -> Callable[[], None]:
+        """An entity wants the temperature: it is read from the next poll on, until it is gone."""
+        self._cpu_demand += 1
+        self._cpu_stale = True
+
+        @callback
+        def _release() -> None:
+            self._cpu_demand -= 1
+
+        return _release
+
+    def _fetch_cpu_temperature(self) -> None:
+        """The CPU temperature, if the box has the sensor and an entity wants it.
+
+        Asked once to see whether the sensor is there, then at every ``INTERNET_DETAIL_POLLS``-th
+        poll while an entity is on (a web request each). A box that says it has none is not asked
+        again until the next setup; a read that fails is tried again.
+        """
+        if self.cpu_supported is False:
+            return
+        probing = self.cpu_supported is None
+        if not probing and not (
+            self._cpu_demand and (self._cpu_stale or self._polls % INTERNET_DETAIL_POLLS == 0)
+        ):
+            return
+        try:
+            value = self.client.get_cpu_temperature()
+        except (*_FETCH_ERRORS, requests.RequestException, PermissionError, TypeError) as err:
+            _LOGGER.debug("CPU temperature unavailable: %s", err)
+            return
+        self._cpu_stale = False
+        if value is None:
+            if probing:
+                self.cpu_supported = False
+            return
+        self.cpu_supported = True
+        self.cpu_temperature = value
 
     def _fetch_dhcp_pool(self) -> None:
         """The DHCP range, now and then; what was known stays if the box does not answer."""
@@ -405,6 +451,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             self._fetch_firmware()
             self._fetch_dhcp_pool()
             self._fetch_uptime()
+            self._fetch_cpu_temperature()
             self._fetch_reservations([h for h in hosts if h.ip and not h.guest])
             self._polls += 1
         return hosts, mesh, internet, guest, vpn, routes

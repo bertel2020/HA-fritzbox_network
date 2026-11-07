@@ -85,7 +85,9 @@ async def test_actions_need_the_right_to_change_settings(hass, fake_client, entr
                 {**data, "device_id": _device_id(hass, entry, WLAN)},
                 blocking=True,
             )
-    assert fake_client.calls == []
+    # reads of the poll are no action: nothing was written
+    reads = {("cpu_temperature",), ("read_uptime",)}
+    assert [call for call in fake_client.calls if call not in reads] == []
 
 
 async def test_wake_on_lan_by_device(hass, fake_client, entry):

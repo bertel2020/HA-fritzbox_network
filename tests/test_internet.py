@@ -10,6 +10,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import async_capture_events
 
 from custom_components.fritzbox_network import coordinator as coordinator_module
+from custom_components.fritzbox_network.coordinator import FritzNetworkCoordinator
 from custom_components.fritzbox_network.diagnostics import async_get_config_entry_diagnostics
 from custom_components.fritzbox_network.models import parse_firmware, parse_internet, spectrum
 
@@ -616,6 +617,66 @@ async def test_a_box_that_does_not_tell_its_uptime_has_no_such_sensor(hass, fake
     fake_client.uptime = None
     await _setup(hass, entry)
     assert er.async_get(hass).async_get("sensor.fritz_network_box_uptime") is None
+
+
+async def test_the_cpu_temperature_is_asked_once_and_read_only_while_the_sensor_is_on(
+    hass, fake_client, entry
+):
+    coordinator = await _setup(hass, entry)
+    registry = er.async_get(hass)
+    reg = registry.async_get("sensor.fritz_network_cpu_temperature")
+    assert reg is not None and reg.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+    assert coordinator.cpu_supported is True
+    # asked once to see that the box has the sensor, not again while nothing wants the value
+    assert fake_client.calls.count(("cpu_temperature",)) == 1
+    for _ in range(12):
+        await _poll(hass, coordinator)
+    assert fake_client.calls.count(("cpu_temperature",)) == 1
+
+    registry.async_update_entity(reg.entity_id, disabled_by=None)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator = entry.runtime_data
+    fake_client.cpu_temperature = 68
+    await _poll(hass, coordinator)
+
+    assert hass.states.get("sensor.fritz_network_cpu_temperature").state == "68"
+    # now and then, not at every poll
+    reads = fake_client.calls.count(("cpu_temperature",))
+    await _poll(hass, coordinator)
+    assert fake_client.calls.count(("cpu_temperature",)) == reads
+
+
+async def test_a_box_without_the_sensor_is_not_asked_again_and_has_no_entity(
+    hass, fake_client, entry
+):
+    fake_client.cpu_temperature = None
+    coordinator = await _setup(hass, entry)
+    for _ in range(12):
+        await _poll(hass, coordinator)
+
+    assert coordinator.cpu_supported is False
+    assert fake_client.calls.count(("cpu_temperature",)) == 1
+    assert er.async_get(hass).async_get("sensor.fritz_network_cpu_temperature") is None
+
+
+async def test_a_failed_read_of_the_temperature_is_tried_again(hass, fake_client, entry):
+    fake_client.cpu_error = True
+    coordinator = await _setup(hass, entry)
+    assert coordinator.cpu_supported is None
+    assert er.async_get(hass).async_get("sensor.fritz_network_cpu_temperature") is None
+
+    fake_client.cpu_error = False
+    await _poll(hass, coordinator)
+    assert coordinator.cpu_supported is True
+
+
+async def test_the_first_poll_does_not_ask_for_the_temperature(hass, fake_client, entry):
+    coordinator = FritzNetworkCoordinator(hass, entry, fake_client, "SERIAL1", True, "box", None)
+    await coordinator._async_update_data()
+    assert ("cpu_temperature",) not in fake_client.calls
+    await coordinator._async_update_data()
+    assert ("cpu_temperature",) in fake_client.calls
 
 
 async def test_a_box_that_does_not_answer_about_firmware_has_no_update_entity(

@@ -72,6 +72,9 @@ class FakeClient:
     serial_number = "SERIAL1"
     # how long the box has run, as the setup read it; read_uptime asks again
     uptime: int | None = 3 * 3600
+    # the CPU temperature the web interface tells (None: the box has no sensor)
+    cpu_temperature: int | None = 72
+    cpu_error = False
 
     def __init__(self) -> None:
         self.hosts = parse_hosts((FIXTURES / "hosts.xml").read_text())
@@ -251,6 +254,12 @@ class FakeClient:
         self.calls.append(("reconnect",))
         if self.fail_actions:
             raise FritzActionError("refused")
+
+    def get_cpu_temperature(self) -> int | None:
+        self.calls.append(("cpu_temperature",))
+        if self.cpu_error:
+            raise OSError("no answer")
+        return self.cpu_temperature
 
     def read_uptime(self) -> int | None:
         self.calls.append(("read_uptime",))

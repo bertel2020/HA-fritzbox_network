@@ -150,6 +150,9 @@
       },
       "box_uptime": {
         "default": "mdi:restart"
+      },
+      "cpu_temperature": {
+        "default": "mdi:cpu-64-bit"
       }
     },
     "switch": {

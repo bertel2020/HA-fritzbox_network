@@ -21,6 +21,7 @@ from homeassistant.const import (
     EntityCategory,
     UnitOfDataRate,
     UnitOfInformation,
+    UnitOfTemperature,
     UnitOfTime,
 )
 from homeassistant.core import HomeAssistant, callback
@@ -38,6 +39,7 @@ from .const import (
     KEY_BOX_UPTIME,
     KEY_CLIENTS,
     KEY_CONNECTION_TYPE,
+    KEY_CPU_TEMPERATURE,
     KEY_DEVICES_OFFLINE,
     KEY_DEVICES_ONLINE,
     KEY_DEVICES_TOTAL,
@@ -195,6 +197,7 @@ async def async_setup_entry(
     _async_remove_vpn_status(hass, entry)
     _async_setup_vpn(coordinator, entry, async_add_entities)
     _async_setup_dhcp_pool(coordinator, entry, async_add_entities)
+    _async_setup_cpu_temperature(coordinator, entry, async_add_entities)
 
 
 @callback
@@ -223,6 +226,27 @@ def _async_setup_dhcp_pool(
             return
         added = True
         async_add_entities([FritzNetworkDhcpPool(coordinator)])
+
+    _add()
+    entry.async_on_unload(coordinator.async_add_listener(_add))
+
+
+@callback
+def _async_setup_cpu_temperature(
+    coordinator: FritzNetworkCoordinator,
+    entry: FritzNetworkConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    """The CPU temperature, once the box has shown that it has the sensor."""
+    added = False
+
+    @callback
+    def _add() -> None:
+        nonlocal added
+        if added or not coordinator.cpu_supported:
+            return
+        added = True
+        async_add_entities([FritzNetworkCpuTemperature(coordinator)])
 
     _add()
     entry.async_on_unload(coordinator.async_add_listener(_add))
@@ -959,6 +983,32 @@ class FritzNetworkBoxUptime(_BoxDiagnostic):
     @property
     def native_value(self) -> datetime | None:
         return self.coordinator.box_boot
+
+
+class FritzNetworkCpuTemperature(_BoxSensor):
+    """The temperature of the CPU of the box; off by default, and read only while it is on."""
+
+    _attr_device_class = SensorDeviceClass.TEMPERATURE
+    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: FritzNetworkCoordinator) -> None:
+        super().__init__(coordinator, KEY_CPU_TEMPERATURE)
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        # an entity that is off costs no request: only this one asks for the value
+        self.async_on_remove(self.coordinator.async_want_cpu_temperature())
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.coordinator.cpu_temperature is not None
+
+    @property
+    def native_value(self) -> int | None:
+        return self.coordinator.cpu_temperature
 
 
 class FritzNetworkFailedPolls(_BoxDiagnostic):

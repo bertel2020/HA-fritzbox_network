@@ -519,6 +519,32 @@ class FritzNetworkClient:
             except (FritzActionError, FritzServiceError, FritzAuthorizationError, KeyError):
                 return {}
 
+    def get_cpu_temperature(self) -> int | None:
+        """The CPU temperature in degrees Celsius from the web interface; None where it has none.
+
+        ``query.lua`` is not a public interface. It answers with the last values, the newest
+        first. A box without the sensor answers without the value, with an empty list or 0; a
+        session the box dropped looks the same, so it is renewed once before that is believed.
+        """
+        with self._lock:
+            for attempt in (0, 1):
+                sid = self._web_sid or self._web_login()
+                try:
+                    data = json.loads(
+                        self._web_get(f"/query.lua?sid={sid}&CPUTEMP=cpu:status/StatTemperature")
+                    )
+                except (requests.RequestException, ValueError):
+                    self._web_sid = None
+                    if attempt:
+                        raise
+                    continue
+                values = data.get("CPUTEMP") if isinstance(data, dict) else None
+                if values is not None:
+                    first = str(values).split(",")[0].strip()
+                    return int(first) if first.isdigit() and int(first) > 0 else None
+                self._web_sid = None
+        return None
+
     def install_firmware(self) -> None:
         """Start the installation of the firmware the box offers; the box restarts by itself."""
         with self._lock:
