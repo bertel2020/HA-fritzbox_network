@@ -21,6 +21,7 @@ from .const import (
     AREA_PORTS,
     AREA_ROUTES,
     AREA_VPN,
+    AREA_WIFI,
     DOMAIN,
     KEY_AUTO_WOL,
     KEY_GUEST_WIFI,
@@ -74,6 +75,14 @@ async def async_setup_entry(
         async_remove_entities(
             hass, entry, "switch", lambda uid: uid.endswith(tuple(f"_{k}" for k in client_keys))
         )
+    if AREA_WIFI not in areas:
+        # the networks of the box and of the repeaters, the guest network among them
+        async_remove_entities(
+            hass,
+            entry,
+            "switch",
+            lambda uid: f"_{KEY_WIFI_PREFIX}" in uid or uid.endswith(f"_{KEY_GUEST_WIFI}"),
+        )
     async_remove_node_client_entities(
         hass, entry, "switch", (KEY_INTERNET_ACCESS, KEY_PRIORITY, KEY_AUTO_WOL)
     )
@@ -96,12 +105,14 @@ async def async_setup_entry(
             ]
         ),
     )
-    _async_setup_guest_wifi(entry, async_add_entities)
-    _async_setup_wifi(entry, async_add_entities)
+    if AREA_WIFI in areas:
+        _async_setup_guest_wifi(entry, async_add_entities)
+        _async_setup_wifi(entry, async_add_entities)
     if AREA_PORTS in areas:
         _async_setup_ports(entry, async_add_entities)
-    for repeater in entry.runtime_data.repeaters.values():
-        _async_setup_repeater_wifi(repeater, entry, async_add_entities)
+    if AREA_WIFI in areas:
+        for repeater in entry.runtime_data.repeaters.values():
+            _async_setup_repeater_wifi(repeater, entry, async_add_entities)
     if AREA_VPN in areas:
         _async_setup_vpn(entry, async_add_entities)
     if AREA_ROUTES in areas:

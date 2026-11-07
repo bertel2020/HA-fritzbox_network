@@ -15,9 +15,9 @@ from homeassistant.util import dt as dt_util
 from homeassistant.helpers.update_coordinator import UpdateFailed
 import requests
 
-from .const import DOMAIN, KEY_GUEST_WIFI_QR
+from .const import AREA_WIFI, DOMAIN, KEY_GUEST_WIFI_QR
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
-from .entity import FritzNetworkRepeaterEntity
+from .entity import FritzNetworkRepeaterEntity, async_remove_entities, switch_areas
 from .repeater import RepeaterCoordinator
 
 _LOGGER = logging.getLogger(__name__)
@@ -36,6 +36,9 @@ async def async_setup_entry(
     """The image, for a box that has a guest network and a user who may read its password."""
     coordinator = entry.runtime_data
     if not coordinator.can_write:
+        return
+    if AREA_WIFI not in switch_areas(entry):
+        async_remove_entities(hass, entry, "image", lambda uid: uid.endswith(f"_{KEY_GUEST_WIFI_QR}"))
         return
     for repeater in coordinator.repeaters.values():
         _async_setup_repeater(hass, repeater, entry, async_add_entities)

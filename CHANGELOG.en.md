@@ -7,7 +7,7 @@ All notable changes to this integration are recorded here.
 ### New
 
 - Repeaters you chose to control now also have a **Guest Wi-Fi** switch and the image **Guest Wi-Fi QR code** (off by default), as long as the repeater reports a guest network.
-- Options: under **Create switches for** you choose the areas that get switches: devices (internet access, priority, Wake on LAN), port forwardings, WireGuard connections, static routes. All are on by default. An area turned off removes its switches.
+- Options: under **Create switches for** you choose the areas that get switches: devices (internet access, priority, Wake on LAN), Wi-Fi networks (box, repeaters, guest network and QR code), port forwardings, WireGuard connections, static routes. All are on by default. An area turned off removes its switches.
 
 ## 1.4.0 – 2026-11-06
 

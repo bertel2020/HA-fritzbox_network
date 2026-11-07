@@ -1161,3 +1161,21 @@ async def test_an_area_turned_off_in_the_options_has_no_switches_and_loses_the_o
 
     assert registry.async_get("switch.fritz_network_port_udp_51820") is None
     assert registry.async_get("switch.fritz_network_port_tcp_5027") is None
+
+
+async def test_the_wifi_area_turned_off_removes_the_wifi_and_guest_switches(
+    hass, fake_client, entry
+):
+    await _enable_ports(hass, entry)
+    assert hass.states.get("switch.fritz_network_guest_wifi") is not None
+    assert hass.states.get("switch.fritz_network_wifi_2_4ghz") is not None
+
+    hass.config_entries.async_update_entry(
+        entry, options={"switch_areas": ["clients", "ports", "vpn", "routes"]}
+    )
+    await hass.async_block_till_done()
+
+    registry = er.async_get(hass)
+    assert registry.async_get("switch.fritz_network_guest_wifi") is None
+    assert registry.async_get("switch.fritz_network_wifi_2_4ghz") is None
+    assert registry.async_get("switch.fritz_network_port_udp_51820") is not None
