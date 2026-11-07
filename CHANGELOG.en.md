@@ -6,6 +6,8 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Internet page: the **Connection** card is tidier. Download and upload sit in two tiles, the three details (external IPv4, IPv6 prefix, last error) are equally wide with a copy button for the addresses, the status has a dot, and the DNS servers are listed in a column each for IPv4 and IPv6, with a copy button per server.
+- Buttons now sit at the **right** of their card (rows of buttons and the buttons of the DHCP range form), as in the dialogs.
 - Wi-Fi page: the **Guest access** card is calmer again. The switch sits at the right edge like in the box networks card, the line under the name says security and the number of devices, the device buttons appear only when there are devices, "QR code" turns into "Hide QR code" in the same row as "Change password", and the hint is one short line.
 - Device page: the **signal chart** is coloured by strength (green from -60 dBm, yellow from -70, orange from -80, red below) on a fixed scale of -90 to -50 dBm, so the colour means the same at any time.
 - Telephony page: the **phone book** is closed by default (a tap on the heading opens it). Open, it has filters (All, VIP, With calls), letter headings, the number of calls and the last call per contact, and a **New contact** button that also asks for the number.

@@ -2073,6 +2073,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._runCheck();
     } else if (ds.act?.startsWith("cap-")) {
       return this._onCapture(ds);
+    } else if (ds.act === "copy-value") {
+      return this._copyValue(ds.value);
     } else if (ds.act === "reconnect" || ds.act === "reboot") {
       return this._interrupt(ds.act);
     } else if (ds.act?.startsWith("box-")) {
@@ -2369,6 +2371,17 @@ class FritzboxNetworkPanel extends HTMLElement {
       return;
     }
     if (act === "wlan-pw") return this._changeGuestPassword();
+  }
+
+  /** Puts a value (an address) on the clipboard and says so. */
+  async _copyValue(value) {
+    if (!value) return;
+    try {
+      await globalThis.navigator.clipboard.writeText(value);
+      showToast(this.shadowRoot, fill(this._t.inet.copied, { value }));
+    } catch (err) {
+      showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
+    }
   }
 
   /** The dialog for a new guest password; the password goes to the box and is forgotten right after. */

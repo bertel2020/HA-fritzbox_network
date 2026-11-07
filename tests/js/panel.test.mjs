@@ -624,7 +624,7 @@ test("the line quality shows the spectrum only when the box gave one", () => {
   assert.match(html, /Signal to noise over the frequency/);
   assert.equal((html.match(/<figure class="spec s[du]">/g) ?? []).length, 2);
   // a gap draws no bar: two of four bars of the download, both of the upload
-  assert.equal((html.match(/<rect /g) ?? []).length, 4);
+  assert.equal((html.replace(/<button class="copybtn".*?<\/button>/g, "").match(/<rect /g) ?? []).length, 4);
   assert.doesNotMatch(internetPage.renderInternet(internet, ctx), /Signal to noise over the frequency/);
   assert.doesNotMatch(
     internetPage.renderInternet({ ...internet, dsl: { ...internet.dsl, spectrum_down: [0, 0], spectrum_up: [] } }, ctx),

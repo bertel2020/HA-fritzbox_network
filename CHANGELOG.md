@@ -6,6 +6,8 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Internetseite: Die Karte **Verbindung** ist aufgeräumt. Download und Upload stehen in zwei Kacheln, die drei Angaben (externe IPv4, IPv6-Präfix, letzter Fehler) sind gleich breit mit Kopierknopf für die Adressen, der Status hat einen Punkt, und die DNS-Server stehen in je einer Spalte für IPv4 und IPv6, mit Kopierknopf je Server.
+- Schaltflächen sitzen jetzt **rechtsbündig** in ihrer Karte (Reihen von Knöpfen und die Knöpfe des DHCP-Bereich-Formulars), wie in den Dialogen.
 - WLAN-Seite: Die Karte **Gastzugang** ist noch ruhiger. Der Schalter sitzt wie bei den Funknetzen der Box rechts außen, die Zeile unter dem Namen nennt Verschlüsselung und Zahl der Geräte, die Geräte-Knöpfe erscheinen nur, wenn es Geräte gibt, „QR-Code“ wird in derselben Reihe wie „Passwort ändern“ zu „QR-Code ausblenden“, und der Hinweis ist eine kurze Zeile.
 - Geräteseite: Der **Signalverlauf** ist nach Stärke eingefärbt (grün ab -60 dBm, gelb ab -70, orange ab -80, darunter rot) auf einer festen Skala von -90 bis -50 dBm, damit die Farbe zu jeder Zeit dasselbe bedeutet.
 - Telefonseite: Das **Telefonbuch** ist standardmäßig eingeklappt (ein Tipp auf die Überschrift öffnet es). Geöffnet hat es Filter (Alle, VIP, Mit Anrufen), Buchstaben-Überschriften, je Kontakt die Zahl der Anrufe und den letzten Anruf sowie den Knopf **Neuer Kontakt**, der auch nach der Nummer fragt.

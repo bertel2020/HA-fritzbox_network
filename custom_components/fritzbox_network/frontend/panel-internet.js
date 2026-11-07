@@ -46,8 +46,8 @@ function pairRate(down, up, language) {
   return `${number(down)} / ${number(up)} Mbit/s`;
 }
 
-function tile(label, value, small = "") {
-  return `<div class="tile"><span class="label">${escapeHtml(label)}</span><b>${escapeHtml(value)}</b>${small ? `<small>${escapeHtml(small)}</small>` : ""}</div>`;
+function tile(label, value, small = "", { copy = null, tone = "" } = {}) {
+  return `<div class="tile${tone ? ` ${tone}` : ""}"><span class="label">${escapeHtml(label)}</span><b>${escapeHtml(value)}</b>${small ? `<small>${escapeHtml(small)}</small>` : ""}${copy ? copyButton(copy.value, copy.t) : ""}</div>`;
 }
 
 function gauge(kind, label, rate, max, language, t) {
@@ -281,11 +281,21 @@ function volumeCard(ctx) {
     <p class="hint">${escapeHtml(i.topHint)}</p></section>`;
 }
 
-/** The DNS servers of the box as a tile under the connection: the IPv4 ones left, the IPv6 ones right. */
+/** A button that copies a value to the clipboard. */
+function copyButton(value, t) {
+  return `<button class="copybtn" data-act="copy-value" data-value="${escapeHtml(value)}" title="${escapeHtml(t.inet.copy)}" aria-label="${escapeHtml(t.inet.copy)}">${ic("copy")}</button>`;
+}
+
+/** The DNS servers of the box as a tile under the connection, in one column per protocol. */
 function dnsTile(servers, t) {
   if (!servers?.length) return "";
-  const items = servers.map((server) => `<li><code>${escapeHtml(server)}</code></li>`).join("");
-  return `<div class="tile dnstile"><span class="tlabel">${escapeHtml(t.inet.dns)}</span><ul class="dnslist">${items}</ul><small>${escapeHtml(t.inet.dnsNote)}</small></div>`;
+  const column = (title, list) =>
+    list.length
+      ? `<div class="dnscol"><span class="dnsh">${escapeHtml(title)}</span>${list.map((server) => `<div class="dnsrow"><code>${escapeHtml(server)}</code>${copyButton(server, t)}</div>`).join("")}</div>`
+      : "";
+  const v6 = servers.filter((server) => server.includes(":"));
+  const v4 = servers.filter((server) => !server.includes(":"));
+  return `<div class="tile dnstile"><span class="tlabel">${escapeHtml(t.inet.dns)} <small>· ${escapeHtml(t.inet.dnsNote)}</small></span><div class="dnscols">${column(t.inet.dnsV4, v4)}${column(t.inet.dnsV6, v6)}</div></div>`;
 }
 
 const SAME_DIAL_MS = 10 * 60 * 1000;
@@ -421,13 +431,13 @@ export function renderInternet(internet, ctx) {
     <section class="card sec hero">
       <div class="ihead"><span class="ico">${ic("globe")}</span>
         <span class="who"><b>${escapeHtml(i.connection)}</b><small>${escapeHtml(sub)}</small></span>
-        <span class="stat ${up ? "ok" : "warn"}">${escapeHtml(up ? i.state.up : i.state.down)}</span></div>
+        <span class="stat ${up ? "ok" : "warn"}"><i class="sdot" aria-hidden="true"></i>${escapeHtml(up ? i.state.up : i.state.down)}</span></div>
       <div class="live"><div class="dn"><span class="gl">↓ ${escapeHtml(i.down)}</span><b>${escapeHtml(formatRate(rate?.down ?? null, language))}</b></div>
         <div class="upl"><span class="gl">↑ ${escapeHtml(i.up)}</span><b>${escapeHtml(formatRate(rate?.up ?? null, language))}</b></div></div>
       <div class="tiles">
-        ${tile(i.ipv4, internet.external_ipv4 ?? "–")}
-        ${tile(i.ipv6, prefix)}
-        ${tile(i.lastError, internet.last_error && internet.last_error !== "ERROR_NONE" ? internet.last_error : i.noError)}
+        ${tile(i.ipv4, internet.external_ipv4 ?? "–", "", { copy: internet.external_ipv4 ? { value: internet.external_ipv4, t } : null })}
+        ${tile(i.ipv6, prefix, "", { copy: internet.ipv6_prefix ? { value: prefix, t } : null })}
+        ${tile(i.lastError, internet.last_error && internet.last_error !== "ERROR_NONE" ? internet.last_error : i.noError, "", { tone: internet.last_error && internet.last_error !== "ERROR_NONE" ? "bad" : "ok" })}
       </div>
       ${dnsTile(internet.dns, t)}</section>
     <div class="icols">
