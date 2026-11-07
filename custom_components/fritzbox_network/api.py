@@ -55,6 +55,7 @@ from .models import (
     parse_port_rules,
     parse_rights,
 )
+from .wifi_qr import security_of, wifi_qr_png
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -791,6 +792,23 @@ class FritzNetworkClient:
             if (service := self._find_wifi_services().get(key)) is None or key == "guest":
                 raise FritzServiceError(f"The box has no Wi-Fi network {key}")
             self._connection.call_action(service, "SetEnable", NewEnable=enabled)
+
+    def get_guest_wifi_qr(self) -> bytes | None:
+        """The PNG of the QR code for the guest Wi-Fi; None where the box has no guest network.
+
+        Two reads: the network name and type, and the password of a network that has one. The
+        image holds the password: whoever may look at it can join the network.
+        """
+        with self._lock:
+            if (service := self._guest_wifi_service()) is None:
+                return None
+            info = self._connection.call_action(service, "GetInfo")
+            security = security_of(info.get("NewBeaconType"))
+            password = None
+            if security != "nopass":
+                keys = self._connection.call_action(service, "GetSecurityKeys")
+                password = keys.get("NewKeyPassphrase") or None
+        return wifi_qr_png(info.get("NewSSID") or "", password, security)
 
     def set_guest_wifi_password(self, password: str | None = None, length: int = 12) -> str:
         """Set the password of the guest Wi-Fi, a random one of ``length`` if none is given.

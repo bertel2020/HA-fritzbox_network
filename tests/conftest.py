@@ -75,6 +75,8 @@ class FakeClient:
     # the CPU temperature the web interface tells (None: the box has no sensor)
     cpu_temperature: int | None = 72
     cpu_error = False
+    # the picture of the guest QR code (not a real PNG: the entity passes the bytes on)
+    qr = b"\x89PNG-1"
 
     def __init__(self) -> None:
         self.hosts = parse_hosts((FIXTURES / "hosts.xml").read_text())
@@ -255,6 +257,12 @@ class FakeClient:
         if self.fail_actions:
             raise FritzActionError("refused")
         # the box shows it with a delay, like the guest network: the next read says the old value
+
+    def get_guest_wifi_qr(self) -> bytes | None:
+        self.calls.append(("guest_qr",))
+        if self.fail_actions:
+            raise FritzActionError("refused")
+        return None if self.guest_wifi is None else self.qr
 
     def set_guest_wifi_password(self, password: str | None = None, length: int = 12) -> str:
         self.calls.append(("guest_password", password, length))

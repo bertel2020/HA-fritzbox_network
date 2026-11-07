@@ -316,6 +316,11 @@
       "firmware": {
         "name": "Firmware"
       }
+    },
+    "image": {
+      "guest_wifi_qr": {
+        "name": "Guest Wi-Fi QR code"
+      }
     }
   },
   "exceptions": {

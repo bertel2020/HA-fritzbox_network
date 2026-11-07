@@ -249,6 +249,11 @@
       "access_profile": {
         "default": "mdi:shield-account-outline"
       }
+    },
+    "image": {
+      "guest_wifi_qr": {
+        "default": "mdi:qrcode"
+      }
     }
   }
 }
