@@ -316,3 +316,20 @@ Nur wenn Stufe 1 an Größe oder fehlenden Daten scheitert. Name nach dem Muster
 | `fritzbox_phone/subscribe` | Änderungen als Ereignisse statt ganzer Attribute |
 
 Diese Befehle gehören in `fritzbox_phone` und werden dort getestet; FRITZ!Box Netzwerk bleibt ohne Telefonie-Code. Das Panel nutzt sie, wenn vorhanden (Erkennung über einen Testaufruf von `fritzbox_phone/info`, `unknown_command` → Stufe 1).
+
+## 11. Stand nach dem Bau von Stufe 1 (2026-11-07)
+
+Umgesetzt in `frontend/phone-model.js` (Auslesen, Erkennung, Statistik), `frontend/panel-phone.js` (Oberfläche) und `tests/js/phone.test.mjs`. Gelesen werden nur Entitäten von `fritzbox_phone`; aufgerufen werden dessen Aktionen und `auth/sign_path` für Aufnahmen. Am Python-Teil und an `fritzbox_phone` wurde nichts geändert.
+
+Entscheidungen zu den offenen Fragen:
+- Der Datenschutzmodus wird wie in der Karte mitgemacht (Punkte, nach Tipp 15 s sichtbar); das Banner für laufende Anrufe und die Tageszahlen bleiben sichtbar.
+- Die Statistik nennt das Datum des ältesten Eintrags und sagt, wenn 7 Tage, 30 Tage und „Alles“ dasselbe zeigen.
+- „Ins Telefonbuch“ sendet immer `phonebook_id: 0` und sagt im Dialog, dass der Kontakt ins erste Telefonbuch kommt.
+- Es gibt keine Sperrliste; „Gesperrt“ markiert nur Nummern, die in dieser Sitzung gesperrt wurden. Abbrechen (`hangup`) erscheint nur nach einem Wählen von dieser Seite.
+- Aufnahmen laufen über `auth/sign_path`, der signierte Link wird 50 Minuten wiederverwendet.
+
+Was in `fritzbox_phone` fehlt oder abweicht (für eine spätere Stufe 2):
+- `phonebook_id` je Telefonbuch und `tam_index` am Anrufbeantworter-Schalter; bis dahin wird der Schalter über den Namen zugeordnet, nur wenn es genau einen gibt.
+- `call_list_days` und `call_list_max` als Attribute, damit die Texte das echte Fenster nennen können.
+- Anrufe tragen kein `vip`; die Seite nimmt VIP aus den Kontakten des Telefonbuchs.
+

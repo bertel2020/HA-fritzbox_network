@@ -8,6 +8,7 @@ import {
   nearestStep,
   pagerFor,
   isBlocked,
+  pageHash,
   panelCounts,
   plotText,
   routeFromHash,
@@ -40,7 +41,9 @@ import { addressRows, fileName, printSheet, toCsv, toJson } from "./panel-export
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice } from "./panel-device.js";
-import { openDialog, openPasswordDialog, showToast } from "./panel-dialogs.js";
+import { openDialog, openFormDialog, openPasswordDialog, showToast } from "./panel-dialogs.js";
+import { dialSuggestions, lookupBody, mmss, renderPhone } from "./panel-phone.js";
+import { PHONE_DOMAIN, REVEAL_MS, SIGN_EXPIRES_S, SIGN_REUSE_MS, dialable, readPhone } from "./phone-model.js";
 import { RESTART_POLL_MS, minSec, nextRestart, renderBoxPage, restarted } from "./panel-box.js";
 import { isLastNetwork, passwordRules, randomPassword, renderWlan } from "./panel-wlan.js";
 import { bannerHidden, hasCore, hideBanner, renderBanner, renderMigrate } from "./panel-migrate.js";
@@ -106,6 +109,29 @@ function rememberView(view) {
   }
 }
 
+/** What the phone page remembers while the panel is open: filters, open rows, the player; nothing is stored. */
+function phoneUi() {
+  return {
+    view: "list",
+    filter: "all",
+    query: "",
+    period: "7",
+    tables: { bars: false, heat: false },
+    book: null,
+    bookQuery: "",
+    expanded: new Set(),
+    revealed: new Set(),
+    play: null,
+    dial: null,
+    blocked: new Set(),
+    busy: new Set(),
+    rights: "",
+    chosen: null,
+    // the last good state of each entity, shown while FRITZ!Box Telefon does not reach the box
+    cache: new Map(),
+  };
+}
+
 /** The element that scrolls the panel: the panel itself, an ancestor of it in Home Assistant, or the page. */
 function scrollerOf(el) {
   for (let node = el; node; node = node.parentElement ?? node.getRootNode?.().host ?? null) {
@@ -130,13 +156,13 @@ const ICON_URL = new URL("./brand/icon.png", import.meta.url).href;
 export const TAB_GROUPS = {
   net: ["net", "wlan", "addresses", "routes"],
   internet: ["internet", "vpn"],
-  box: ["box"],
+  box: ["box", "phone"],
   diagnose: ["diagnose"],
   devices: ["filter", "cleanup", "migrate"],
 };
 export const TABS = Object.keys(TAB_GROUPS);
 // a page named like its tab is called differently in the switch: "Network" › "Devices"
-const SUB_LABELS = { net: "netDevices", internet: "connection" };
+const SUB_LABELS = { net: "netDevices", internet: "connection", box: "boxOverview" };
 
 /** The tab a page belongs to. */
 export function groupOf(page) {
@@ -148,6 +174,7 @@ export function pagesOf(group, state) {
   return (TAB_GROUPS[group] ?? []).filter((page) => {
     if (page === "vpn") return Array.isArray(state?.data?.vpn);
     if (page === "migrate") return hasCore(state?.migrate);
+    if (page === "phone") return Boolean(state?.phoneFound);
     return true;
   });
 }
@@ -158,7 +185,10 @@ export function renderSubTabs(active, t, state = {}) {
   const pages = pagesOf(group, state);
   if (pages.length < 2) return "";
   return `<div class="seg subtabs" role="tablist" aria-label="${escapeHtml(t.tabs[group])}">${pages
-    .map((id) => `<button role="tab" data-tab="${id}" aria-selected="${id === active}" aria-pressed="${id === active}">${escapeHtml(t.tabs[SUB_LABELS[id] ?? id])}</button>`)
+    .map((id) => {
+      const unread = id === "phone" && state.phoneUnread > 0 ? ` <span class="chip info sub-badge">${state.phoneUnread}<span class="sr"> ${escapeHtml(fill(t.phone.unread, { n: "" }).trim())}</span></span>` : "";
+      return `<button role="tab" data-tab="${id}" aria-selected="${id === active}" aria-pressed="${id === active}">${escapeHtml(t.tabs[SUB_LABELS[id] ?? id])}${unread}</button>`;
+    })
     .join("")}</div>`;
 }
 
@@ -174,10 +204,13 @@ export function renderNav(state, t, stale) {
   const dot = line ? `<i class="dot ${line.connected === false ? "" : "on"}" aria-hidden="true"></i>` : "";
   const label = line ? `${t.tabs.internet}, ${line.connected === false ? t.inet.state.down : t.inet.state.up}` : "";
   const restarting = state.boxRestart && state.boxRestart.phase !== "back";
+  // a dot on the box while it restarts, or while a phone rings (from FRITZ!Box Telefon)
+  const ringing = Boolean(state.phoneRinging);
+  const boxNote = [restarting ? t.boxPage.restarting : "", ringing ? t.phone.ringingTab : ""].filter(Boolean).join(", ");
   return [
     tab("net"),
     tab("internet", dot, label),
-    tab("box", restarting ? `<i class="dot warn" aria-hidden="true"></i>` : "", restarting ? `${t.tabs.box}, ${t.boxPage.restarting}` : ""),
+    tab("box", restarting || ringing ? `<i class="dot warn" aria-hidden="true"></i>` : "", boxNote ? `${t.tabs.box}, ${boxNote}` : ""),
     tab("diagnose"),
     tab("devices", stale ? `<em>${stale}</em>` : ""),
   ].join("");
@@ -247,6 +280,11 @@ class FritzboxNetworkPanel extends HTMLElement {
       migrate: null,
       migrateFilter: "all",
       migrateHidden: false,
+      // the phone page: what FRITZ!Box Telefon is there for, and what the page shows of it
+      phoneFound: false,
+      phoneUnread: 0,
+      phoneRinging: false,
+      phone: phoneUi(),
     };
     // the device page was opened from the list or the map: back is a step back in the history
     this._openedHere = false;
@@ -264,6 +302,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       const entered = next.tab !== state.tab;
       const was = state.sel;
       if (entered && state.tab === "wlan") this._dropSecret();
+      if (entered && state.tab === "phone") this._phoneStop();
       state.tab = next.tab;
       state.sel = next.device;
       state.menu = false;
@@ -273,7 +312,10 @@ class FritzboxNetworkPanel extends HTMLElement {
       if (state.sel && state.sel !== was) this._showDevicePage();
       else if (!state.sel && was) this._backToList(was);
     };
-    this._resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => this._drawLinks());
+    this._resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => {
+      this._drawLinks();
+      this._phoneResized();
+    });
     this.shadowRoot.addEventListener("click", (event) => this._onClick(event));
     this.shadowRoot.addEventListener("input", (event) => this._onInput(event));
     this.shadowRoot.addEventListener("change", (event) => this._onChange(event));
@@ -287,6 +329,8 @@ class FritzboxNetworkPanel extends HTMLElement {
     });
     this.shadowRoot.addEventListener("pointermove", (event) => this._onPlot(event));
     this.shadowRoot.addEventListener("pointerleave", () => this._hidePlots());
+    this.shadowRoot.addEventListener("pointerover", (event) => this._phoneTip(event));
+    this.shadowRoot.addEventListener("focusin", (event) => this._phoneTip(event));
     this.shadowRoot.addEventListener("pointerout", (event) => {
       if (!event.relatedTarget?.closest?.(".plot")) this._hidePlots();
     });
@@ -294,6 +338,8 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   set hass(hass) {
     this._hass = hass;
+    const phoneBefore = this._phoneSignature();
+    const phoneChanged = this._readPhone();
     this._haDark = hass.themes?.darkMode;
     this._applyLook();
     const menu = this.shadowRoot.querySelector("ha-menu-button");
@@ -303,7 +349,12 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._build();
     }
     if (!this._started) this._start();
-    else this._onHass();
+    else {
+      this._onHass();
+      // the tab and its switch show whether FRITZ!Box Telefon is there, rings or has new messages
+      if (this._phoneSignature() !== phoneBefore) this._update();
+      else if (phoneChanged && this._state.tab === "phone") this._renderPhone();
+    }
   }
 
   /** The colours and the size of the type chosen, with light or dark as Home Assistant has it when that is chosen. */
@@ -339,6 +390,8 @@ class FritzboxNetworkPanel extends HTMLElement {
     clearTimeout(this._latencyTimer);
     clearTimeout(this._restartTimer);
     this._dropSecret();
+    this._phoneStop();
+    this._phoneClearTimers();
     this._resize?.disconnect();
     this._stop();
   }
@@ -828,6 +881,10 @@ class FritzboxNetworkPanel extends HTMLElement {
     clearTimeout(this._restartTimer);
     this._dropSecret();
     Object.assign(this._state, { box: null, boxRestart: null, boxReconnect: null, wlan: null, wlanBusy: new Set(), migrate: null, migrateFilter: "all", migrateHidden: false });
+    this._phoneStop();
+    this._phoneClearTimers();
+    this._state.phone = phoneUi();
+    this._readPhone();
     this._update();
     if (await this._subscribe()) {
       this._enterTab();
@@ -942,6 +999,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div id="addresses-view" hidden></div>
           <div id="routes-view" hidden></div>
           <div id="box-view" hidden></div>
+          <div id="phone-view" hidden></div>
           <div id="wlan-view" hidden></div>
           <div id="migrate-view" hidden></div>
           <div class="col" id="cleanup-view" hidden>
@@ -1027,12 +1085,19 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._set("lookmenuhost", renderLookMenu(this._look, t, state.look));
     const netView = root.querySelector("#net-view");
     if (!netView) return;
+    this._readPhone();
+    // without FRITZ!Box Telefon there is no phone page: its address leads to the box
+    if (state.tab === "phone" && !state.phoneFound && this._hass && Object.keys(this._hass.entities ?? {}).length) {
+      state.tab = "box";
+      globalThis.location?.replace?.(pageHash("box"));
+      this._enterTab();
+    }
     const tab = state.tab;
     state.lastPage[groupOf(tab)] = tab;
     const onDevice = tab === "net" && Boolean(state.sel);
     netView.hidden = !ready || tab !== "net" || onDevice;
     root.querySelector("#device-view").hidden = !ready || !onDevice;
-    for (const page of ["internet", "vpn", "box", "diagnose", "wlan", "addresses", "routes", "cleanup", "filter", "migrate"]) {
+    for (const page of ["internet", "vpn", "box", "phone", "diagnose", "wlan", "addresses", "routes", "cleanup", "filter", "migrate"]) {
       root.querySelector(`#${page}-view`).hidden = !ready || tab !== page;
     }
     root.querySelector("#live-chip").hidden = !ready;
@@ -1051,6 +1116,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (tab === "addresses") return this._renderAddresses();
     if (tab === "routes") return this._renderRoutes();
     if (tab === "box") return this._renderBoxPage();
+    if (tab === "phone") return this._renderPhone();
     if (tab === "wlan") return this._renderWlan();
     if (tab === "migrate") return this._renderMigrate();
     if (tab === "cleanup") return this._renderCleanup();
@@ -1722,6 +1788,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       }
     }
     if (event.key === "Escape") {
+      if (state.tab === "phone") this._phoneTip(null);
       if (state.look) {
         event.preventDefault();
         state.look = false;
@@ -1801,6 +1868,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       rememberPageSize(this._state.pageSize);
     } else if (el.id === "group") this._state.group = el.value;
     else if (el.id === "box") return this._switchBox(el.value);
+    else if (el.id === "ph-entry") return this._phoneChooseEntry(el.value);
     else if (el.matches("[data-profile]")) return this._deviceAction("filter_profile", el.value, this._t.toastProfile);
     else if (el.dataset.pick) {
       const picked = this._state.picked;
@@ -1836,6 +1904,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._onEntryInput(el);
     } else if (el.id === "r-net" || el.id === "r-gw" || el.id === "r-metric") {
       this._onRouteInput(el);
+    } else if (el.id === "ph-q" || el.id === "ph-bq" || el.id === "ph-seek") {
+      this._onPhoneInput(el);
     } else if (el.id === "c-search") {
       this._state.cleanupQuery = el.value;
       this._renderCleanup();
@@ -1983,6 +2053,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._onWlanClick(ds);
     } else if (ds.act?.startsWith("mig-")) {
       return this._onMigrateClick(ds);
+    } else if (ds.act?.startsWith("ph-")) {
+      return this._onPhoneClick(ds);
     } else if (ds.act === "back") {
       this._leaveDevice();
       return;
@@ -2009,7 +2081,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         const offered = pagesOf(ds.tab, state);
         page = offered.includes(state.lastPage[ds.tab]) ? state.lastPage[ds.tab] : (offered[0] ?? ds.tab);
       }
-      globalThis.location.hash = page === "net" ? "#/" : `#/${page}`;
+      globalThis.location.hash = pageHash(page);
       return;
     } else if (ds.act === "pick-all") {
       for (const d of visibleStale(state)) state.picked.add(d.mac);
@@ -2581,6 +2653,531 @@ class FritzboxNetworkPanel extends HTMLElement {
     } catch (err) {
       showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
     }
+  }
+
+  // ---------- the phone page (Box › Phone, from FRITZ!Box Telefon) ----------
+
+  /** What the tabs show of the phone: whether it is there, rings, has new messages. */
+  _phoneSignature() {
+    const state = this._state;
+    return `${state.phoneFound}|${state.phoneUnread}|${state.phoneRinging}`;
+  }
+
+  /**
+   * Reads the entities of FRITZ!Box Telefon into the model of the page; only when one of them,
+   * the registries or the chosen entry changed. Returns whether anything changed.
+   */
+  _readPhone() {
+    const hass = this._hass;
+    if (!hass) return false;
+    const ui = this._state.phone;
+    const key = [hass.entities, hass.devices, hass.config, this._entryId, ui.chosen];
+    const ids = this._phoneIds ?? [];
+    if (this._phoneKey && key.every((v, i) => v === this._phoneKey[i]) && ids.every((id, i) => hass.states?.[id] === this._phoneRefs[i])) return false;
+    const model = readPhone(hass, this._entryId, { chosen: ui.chosen, cache: ui.cache });
+    this._phone = model;
+    this._phoneKey = key;
+    this._phoneIds = model.entry ? Object.values(model.entry.entities).flat().filter(Boolean) : [];
+    this._phoneRefs = this._phoneIds.map((id) => hass.states?.[id]);
+    const state = this._state;
+    state.phoneFound = model.found;
+    state.phoneUnread = model.found ? model.unread : 0;
+    state.phoneRinging = Boolean(model.found && model.ringing);
+    return true;
+  }
+
+  _renderPhone() {
+    this._readPhone();
+    const view = this.shadowRoot.querySelector("#phone-view");
+    const width = view?.clientWidth || this._phoneWidth || 640;
+    this._phoneWidth = width;
+    this._set("phone-view", renderPhone(this._phone, { t: this._t, language: this._hass?.language, now: new Date(), ui: this._state.phone, width }));
+  }
+
+  /** The charts are drawn as wide as the page: again when it changed noticeably. */
+  _phoneResized() {
+    const state = this._state;
+    if (state.tab !== "phone" || state.phone.view !== "stats") return;
+    const width = this.shadowRoot.querySelector("#phone-view")?.clientWidth;
+    if (width && Math.abs(width - (this._phoneWidth ?? 0)) > 8) this._renderPhone();
+  }
+
+  /** The tooltip of a column or cell of the statistics, for the mouse and the focus; null hides it. */
+  _phoneTip(event) {
+    if (this._state.tab !== "phone") return;
+    const root = this.shadowRoot;
+    for (const tip of root.querySelectorAll(".ph-tip")) tip.hidden = true;
+    const g = event?.target?.closest?.("[data-tip]");
+    const wrap = g?.closest?.(".ph-vwrap");
+    const tip = wrap?.querySelector(".ph-tip");
+    if (!tip) return;
+    tip.textContent = g.dataset.tip;
+    tip.hidden = false;
+    const r = g.getBoundingClientRect();
+    const w = wrap.getBoundingClientRect();
+    tip.style.left = `${Math.min(Math.max(0, r.left - w.left + r.width / 2 - tip.offsetWidth / 2), Math.max(0, w.width - tip.offsetWidth))}px`;
+    tip.style.top = `${Math.max(0, r.top - w.top - tip.offsetHeight - 6)}px`;
+  }
+
+  /** Service calls of FRITZ!Box Telefon always go to the device of the entry shown (several boxes need it). */
+  _phoneTarget() {
+    const device = this._phone?.entry?.deviceId;
+    return device ? { device_id: device } : undefined;
+  }
+
+  /**
+   * One service of FRITZ!Box Telefon. A refusal shows as a toast with what Home Assistant says; one
+   * of the box itself (box_request_failed) also as a note at the top. Returns the answer, or
+   * undefined after a failure.
+   */
+  async _phoneService(service, data, { target = this._phoneTarget(), response = false } = {}) {
+    try {
+      const result = await this._hass.callService(PHONE_DOMAIN, service, data, target || undefined, false, response);
+      return result ?? true;
+    } catch (err) {
+      const message = err?.message ?? String(err);
+      if (err?.translation_key === "box_request_failed" || /box_request_failed/.test(message)) {
+        this._state.phone.rights = message;
+        this._renderPhone();
+      }
+      showToast(this.shadowRoot, fill(this._t.phone.failed, { error: message }));
+      return undefined;
+    }
+  }
+
+  _phoneFocus(k) {
+    this.shadowRoot.querySelector(`[data-k="${CSS.escape(k)}"]`)?.focus({ preventScroll: true });
+  }
+
+  _phoneClearTimers() {
+    clearTimeout(this._phoneDialTimer);
+    for (const timer of (this._phoneRevealTimers ?? new Map()).values()) clearTimeout(timer);
+    this._phoneRevealTimers = new Map();
+  }
+
+  /** In privacy mode a tapped row shows for 15 seconds, then folds and hides again. */
+  _phoneReveal(key) {
+    const ui = this._state.phone;
+    this._phoneRevealTimers ??= new Map();
+    clearTimeout(this._phoneRevealTimers.get(key));
+    ui.revealed.add(key);
+    ui.expanded.add(key);
+    this._phoneRevealTimers.set(
+      key,
+      setTimeout(() => {
+        ui.revealed.delete(key);
+        ui.expanded.delete(key);
+        this._phoneRevealTimers.delete(key);
+        if (this._state.tab === "phone") this._renderPhone();
+      }, REVEAL_MS)
+    );
+    this._renderPhone();
+    this._phoneFocus(`ph-r-${key}`);
+  }
+
+  _phoneChooseEntry(key) {
+    this._phoneStop();
+    const ui = this._state.phone;
+    Object.assign(ui, { chosen: key, expanded: new Set(), revealed: new Set(), book: null, rights: "", dial: null });
+    this._readPhone();
+    this._update();
+  }
+
+  _onPhoneInput(el) {
+    const ui = this._state.phone;
+    if (el.id === "ph-seek") {
+      const audio = this._phoneAudio;
+      if (audio && ui.play) audio.currentTime = Number(el.value);
+      return;
+    }
+    if (el.id === "ph-q") ui.query = el.value;
+    else ui.bookQuery = el.value;
+    this._renderPhone();
+    const box = this.shadowRoot.querySelector(`#${el.id}`);
+    box?.focus({ preventScroll: true });
+    box?.setSelectionRange?.(el.value.length, el.value.length);
+  }
+
+  _phoneMessage(entityId, index) {
+    const tam = this._phone?.tams?.find((x) => x.entityId === entityId);
+    const msg = tam?.messages.find((m) => m.index === Number(index));
+    return tam && msg ? { tam, msg } : null;
+  }
+
+  /** The data that names a message for the services: the key makes them refuse a renumbered one. */
+  _phoneMessageData(tam, msg, extra = {}) {
+    return { entity_id: tam.entityId, message_index: msg.index, ...(msg.key ? { message_key: msg.key } : {}), ...extra };
+  }
+
+  async _onPhoneClick(ds) {
+    const state = this._state;
+    const ui = state.phone;
+    const model = this._phone;
+    const act = ds.act;
+    const redraw = (k) => {
+      this._renderPhone();
+      if (k) this._phoneFocus(k);
+    };
+    if (act === "ph-view") {
+      ui.view = ds.phVal === "stats" ? "stats" : "list";
+      return redraw(`ph-v-${ui.view}`);
+    }
+    if (act === "ph-period") {
+      ui.period = ds.phVal;
+      redraw(`ph-per-${ds.phVal}`);
+      showToast(this.shadowRoot, fill(this._t.phone.stats.changed, { period: this._t.phone.stats.period[ds.phVal] ?? ds.phVal }));
+      return;
+    }
+    if (act === "ph-table") {
+      ui.tables = { ...ui.tables, [ds.phVal]: !ui.tables[ds.phVal] };
+      return redraw(`ph-tb-${ds.phVal}`);
+    }
+    if (act === "ph-filter") {
+      ui.filter = ds.phVal;
+      return redraw(`ph-f-${ds.phVal}`);
+    }
+    if (act === "ph-reset") {
+      ui.filter = "all";
+      ui.query = "";
+      return redraw("ph-f-all");
+    }
+    if (act === "ph-book") {
+      ui.book = ds.phEnt;
+      return redraw(`ph-b-${ds.phEnt}`);
+    }
+    if (act === "ph-row" || act === "ph-open") {
+      const key = ds.phKey;
+      if (model?.privacy && !ui.revealed.has(key)) return this._phoneReveal(key);
+      if (ui.expanded.has(key)) ui.expanded.delete(key);
+      else ui.expanded.add(key);
+      return redraw(`ph-r-${key}`);
+    }
+    if (!model?.found) return;
+    if (act === "ph-dial") return this._phoneDial(ds.phNum ?? "", ds.phName ?? "");
+    if (act === "ph-hangup") return this._phoneHangup();
+    if (act === "ph-block") return this._phoneBlock(ds.phNum, ds.phName ?? "");
+    if (act === "ph-contact") return this._phoneContact(ds.phNum, ds.phName ?? "");
+    if (act === "ph-lookup") return this._phoneLookup(ds.phNum);
+    if (act === "ph-play") return this._phonePlay(ds.phEnt, ds.phIdx);
+    if (act === "ph-speaker") return this._phoneSpeaker(ds.phEnt, ds.phIdx);
+    if (act === "ph-download") return this._phoneDownload(ds.phEnt, ds.phIdx);
+    if (act === "ph-mark") return this._phoneMark(ds.phEnt, ds.phIdx);
+    if (act === "ph-delete") return this._phoneDelete(ds.phEnt, ds.phIdx);
+    if (act === "ph-tamsw") return this._phoneTamSwitch(ds.phEnt, ds.phVal === "1", ds.phName ?? "");
+    if (act === "ph-jump") {
+      const tam = model.tams.find((x) => x.tamIndex === Number(ds.phTam));
+      if (!tam) return;
+      const key = `m:${tam.entityId}:${Number(ds.phIdx)}`;
+      ui.view = "list";
+      ui.expanded.add(key);
+      redraw(`ph-r-${key}`);
+      this.shadowRoot.querySelector(`#ph-msg-${CSS.escape(String(tam.tamIndex))}-${CSS.escape(String(ds.phIdx))}`)?.scrollIntoView?.({ block: "center" });
+    }
+  }
+
+  /** The dial dialog: a number or a name from the phone books, checked like the service checks it. */
+  async _phoneDial(number = "", name = "") {
+    const t = this._t;
+    const d = t.phone.dial;
+    const model = this._phone;
+    let picked = name;
+    const value = await openFormDialog(this.shadowRoot, t, {
+      title: d.title,
+      html: `<label class="field"><span class="label">${escapeHtml(d.field)}</span><input id="ph-dial-in" type="text" value="${escapeHtml(number)}" inputmode="tel" autocomplete="off" aria-describedby="ph-dial-help" aria-controls="ph-dial-sugg"></label>
+        <div id="ph-dial-sugg"></div>
+        <p class="hint" id="ph-dial-help">${escapeHtml(d.help)}</p>`,
+      ok: d.ok,
+      focus: "#ph-dial-in",
+      onOpen: (dialog) => {
+        const input = dialog.querySelector("#ph-dial-in");
+        const sugg = dialog.querySelector("#ph-dial-sugg");
+        input.oninput = () => {
+          picked = "";
+          sugg.innerHTML = dialSuggestions(model?.contacts ?? [], input.value, model?.privacy, t);
+          dialog.querySelector("#dlg-msg").textContent = "";
+        };
+        sugg.onclick = (event) => {
+          const button = event.target?.closest?.("[data-pick]");
+          if (!button) return;
+          input.value = button.dataset.pick;
+          picked = button.dataset.pname ?? "";
+          sugg.innerHTML = "";
+          input.focus();
+        };
+      },
+      validate: (dialog) => (dialable(dialog.querySelector("#ph-dial-in").value) ? null : d.invalid),
+      read: (dialog) => dialog.querySelector("#ph-dial-in").value.trim(),
+    });
+    if (value === null) return;
+    if ((await this._phoneService("dial", { number: value })) === undefined) return;
+    const ui = this._state.phone;
+    ui.dial = { number: value, name: picked, at: Date.now() };
+    clearTimeout(this._phoneDialTimer);
+    this._phoneDialTimer = setTimeout(() => {
+      ui.dial = null;
+      if (this._state.tab === "phone") this._renderPhone();
+    }, 90000);
+    showToast(this.shadowRoot, d.started);
+    this._renderPhone();
+  }
+
+  /** hangup only cancels dialling started with dial, never a call in progress. */
+  async _phoneHangup() {
+    if ((await this._phoneService("hangup", {})) === undefined) return;
+    this._state.phone.dial = null;
+    clearTimeout(this._phoneDialTimer);
+    showToast(this.shadowRoot, this._t.phone.dial.cancelled);
+    this._renderPhone();
+  }
+
+  async _phoneBlock(number, name = "") {
+    const t = this._t;
+    const b = t.phone.block;
+    if (!number) return;
+    const label = await openFormDialog(this.shadowRoot, t, {
+      title: b.title,
+      html: `<p>${escapeHtml(fill(b.body, { number }))}</p>
+        <label class="field"><span class="label">${escapeHtml(b.name)}</span><input id="ph-blk-name" type="text" maxlength="64" value="${escapeHtml(name.slice(0, 64))}" placeholder="${escapeHtml(b.placeholder)}"></label>
+        <ul>${b.list.map((x) => `<li>${escapeHtml(x)}</li>`).join("")}</ul>`,
+      ok: b.ok,
+      danger: true,
+      read: (dialog) => dialog.querySelector("#ph-blk-name").value.trim().slice(0, 64),
+    });
+    if (label === null) return;
+    if ((await this._phoneService("block_number", { number, ...(label ? { name: label } : {}) })) === undefined) return;
+    const ui = this._state.phone;
+    ui.blocked.add(number);
+    this._renderPhone();
+    showToast(this.shadowRoot, fill(b.done, { number }), {
+      label: b.undo,
+      run: async () => {
+        if ((await this._phoneService("unblock_number", { number })) === undefined) return;
+        ui.blocked.delete(number);
+        this._renderPhone();
+        showToast(this.shadowRoot, fill(b.undone, { number }));
+      },
+    });
+  }
+
+  /** add_contact needs a phone book id the sensors do not tell: it goes into the first one (id 0), and the dialog says so. */
+  async _phoneContact(number, suggestion = "") {
+    const t = this._t;
+    const c = t.phone.contact;
+    if (!number) return;
+    const books = this._phone?.books ?? [];
+    const bookName = books.length === 1 ? fill(c.bookName, { name: books[0].name }) : "";
+    const name = await openFormDialog(this.shadowRoot, t, {
+      title: c.title,
+      html: `<p class="mono">${escapeHtml(fill(c.number, { number }))}</p>
+        <label class="field"><span class="label">${escapeHtml(c.name)}</span><input id="ph-ct-name" type="text" maxlength="64" value="${escapeHtml(suggestion.slice(0, 64))}"></label>
+        ${suggestion ? `<p class="hint">${escapeHtml(c.suggestion)}</p>` : ""}
+        <p class="hint">${escapeHtml(fill(c.book, { name: bookName }))}</p>`,
+      ok: c.ok,
+      focus: "#ph-ct-name",
+      validate: (dialog) => (dialog.querySelector("#ph-ct-name").value.trim() ? null : c.noName),
+      read: (dialog) => dialog.querySelector("#ph-ct-name").value.trim().slice(0, 64),
+    });
+    if (name === null) return;
+    if ((await this._phoneService("add_contact", { number, name, phonebook_id: 0 })) === undefined) return;
+    showToast(this.shadowRoot, fill(c.done, { name }));
+  }
+
+  /** lookup_number answers with what FRITZ!Box Telefon knows about a number; shown in a dialog. */
+  async _phoneLookup(number) {
+    const t = this._t;
+    if (!number) return;
+    const result = await this._phoneService("lookup_number", { number }, { response: true });
+    if (result === undefined) return;
+    await openFormDialog(this.shadowRoot, t, {
+      title: fill(t.phone.lookup.title, { number }),
+      html: lookupBody(result?.response ?? result, t),
+      close: t.phone.lookup.close,
+    });
+  }
+
+  /** A signed address of a recording, asked for an hour and used again for 50 minutes (like the card). */
+  async _phoneSigned(path) {
+    this._phoneSigns ??= new Map();
+    const known = this._phoneSigns.get(path);
+    if (known && Date.now() - known.at < SIGN_REUSE_MS) return known.path;
+    const signed = await this._hass.callWS({ type: "auth/sign_path", path, expires: SIGN_EXPIRES_S });
+    this._phoneSigns.set(path, { path: signed.path, at: Date.now() });
+    return signed.path;
+  }
+
+  /** The audio element lives outside the drawn page, so a new state does not stop the playback. */
+  _phoneAudioEl() {
+    if (this._phoneAudio || typeof Audio === "undefined") return this._phoneAudio ?? null;
+    const audio = new Audio();
+    const ui = () => this._state.phone;
+    const show = () => {
+      const play = ui().play;
+      if (!play) return;
+      play.pos = audio.currentTime || 0;
+      if (Number.isFinite(audio.duration)) play.total = audio.duration;
+      const root = this.shadowRoot;
+      const seek = root.querySelector("#ph-seek");
+      const pos = root.querySelector("#ph-pt");
+      const total = root.querySelector("#ph-ptotal");
+      if (pos) pos.textContent = mmss(play.pos);
+      if (total) total.textContent = mmss(play.total);
+      if (seek) {
+        seek.max = String(Math.max(1, Math.round(play.total)));
+        seek.value = String(Math.floor(play.pos));
+        seek.setAttribute("aria-valuetext", fill(this._t.phone.tam.seekText, { pos: mmss(play.pos), total: mmss(play.total) }));
+      }
+    };
+    audio.addEventListener?.("timeupdate", show);
+    audio.addEventListener?.("loadedmetadata", show);
+    audio.addEventListener?.("ended", () => {
+      if (ui().play) ui().play.paused = true;
+      if (this._state.tab === "phone") this._renderPhone();
+    });
+    this._phoneAudio = audio;
+    return audio;
+  }
+
+  _phoneStop() {
+    this._phoneAudio?.pause?.();
+    if (this._state.phone) this._state.phone.play = null;
+  }
+
+  /** Plays a message here in the browser; a new one is marked as read, like the card does. */
+  async _phonePlay(entityId, index) {
+    const t = this._t;
+    const found = this._phoneMessage(entityId, index);
+    if (!found || !found.msg.hasRecording) return;
+    const { tam, msg } = found;
+    const ui = this._state.phone;
+    const audio = this._phoneAudioEl();
+    const k = `ph-p-m:${entityId}:${msg.index}`;
+    if (ui.play && ui.play.entityId === entityId && ui.play.index === msg.index) {
+      ui.play.paused = !ui.play.paused;
+      try {
+        if (ui.play.paused) audio?.pause();
+        else await audio?.play();
+      } catch (err) {
+        showToast(this.shadowRoot, fill(t.phone.tam.playFailed, { error: err?.message ?? err }));
+      }
+      this._renderPhone();
+      return this._phoneFocus(k);
+    }
+    this._phoneStop();
+    try {
+      const src = await this._phoneSigned(msg.recordingPath);
+      ui.play = { entityId, index: msg.index, paused: false, pos: 0, total: 0 };
+      if (audio) {
+        audio.src = src;
+        this._renderPhone();
+        this._phoneFocus(k);
+        await audio.play();
+      } else this._renderPhone();
+    } catch (err) {
+      ui.play = null;
+      this._renderPhone();
+      showToast(this.shadowRoot, fill(t.phone.tam.playFailed, { error: err?.message ?? err }));
+      return;
+    }
+    if (msg.isNew) {
+      try {
+        await this._hass.callService(PHONE_DOMAIN, "mark_message_read", this._phoneMessageData(tam, msg, { read: true }), undefined, false);
+      } catch (err) {
+        showToast(this.shadowRoot, fill(t.phone.tam.markFailed, { error: err?.message ?? err }));
+      }
+    }
+  }
+
+  /** Downloads a recording through a signed address, never with the old download service (it leaves the file unprotected under /local). */
+  async _phoneDownload(entityId, index) {
+    const found = this._phoneMessage(entityId, index);
+    if (!found?.msg.hasRecording) return;
+    try {
+      const href = await this._phoneSigned(found.msg.recordingPath);
+      const link = document.createElement("a");
+      link.href = href;
+      link.download = `fritzbox-message-${found.tam.tamIndex ?? 0}-${found.msg.index}`;
+      link.click();
+    } catch (err) {
+      showToast(this.shadowRoot, fill(this._t.phone.failed, { error: err?.message ?? err }));
+    }
+  }
+
+  async _phoneMark(entityId, index) {
+    const found = this._phoneMessage(entityId, index);
+    if (!found) return;
+    const read = found.msg.isNew;
+    if ((await this._phoneService("mark_message_read", this._phoneMessageData(found.tam, found.msg, { read }), { target: null })) === undefined) return;
+    showToast(this.shadowRoot, read ? this._t.phone.tam.markedRead : this._t.phone.tam.markedUnread);
+  }
+
+  async _phoneDelete(entityId, index) {
+    const t = this._t;
+    const a = t.phone.tam;
+    const found = this._phoneMessage(entityId, index);
+    if (!found) return;
+    const { tam, msg } = found;
+    const name = msg.name || msg.reverseName || msg.number;
+    const who = this._phone.privacy || !name ? "" : fill(a.deleteWho, { name });
+    const ok = await openDialog(this.shadowRoot, t, { title: a.deleteTitle, body: fill(a.deleteBody, { who, date: msg.dateText || "–" }), ok: a.deleteOk, danger: true });
+    if (!ok) return;
+    if ((await this._phoneService("delete_message", this._phoneMessageData(tam, msg), { target: null })) === undefined) return;
+    const ui = this._state.phone;
+    if (ui.play?.entityId === entityId && ui.play.index === msg.index) this._phoneStop();
+    this._renderPhone();
+    showToast(this.shadowRoot, a.deleted);
+  }
+
+  /** play_message on a speaker of Home Assistant; FRITZ!Box Telefon hands it a signed address. */
+  async _phoneSpeaker(entityId, index) {
+    const t = this._t;
+    const a = t.phone.tam;
+    const found = this._phoneMessage(entityId, index);
+    if (!found) return;
+    const players = Object.entries(this._hass.states ?? {})
+      .filter(([id, s]) => id.startsWith("media_player.") && s?.state !== "unavailable")
+      .map(([id, s]) => [id, s.attributes?.friendly_name || id])
+      .sort((x, y) => String(x[1]).localeCompare(String(y[1])));
+    if (!players.length) return showToast(this.shadowRoot, a.speakerNone);
+    const player = await openFormDialog(this.shadowRoot, t, {
+      title: a.speakerTitle,
+      html: `<label class="field"><span class="label">${escapeHtml(a.speakerField)}</span><select id="ph-mp">${players.map(([id, name]) => `<option value="${escapeHtml(id)}">${escapeHtml(name)}</option>`).join("")}</select></label><p class="hint">${escapeHtml(a.speakerHint)}</p>`,
+      ok: a.speakerOk,
+      focus: "#ph-mp",
+      read: (dialog) => dialog.querySelector("#ph-mp").value || players[0][0],
+    });
+    if (player === null) return;
+    if ((await this._phoneService("play_message", this._phoneMessageData(found.tam, found.msg, { media_player: player }), { target: null })) === undefined) return;
+    showToast(this.shadowRoot, fill(a.speakerDone, { name: players.find(([id]) => id === player)?.[1] ?? player }));
+  }
+
+  /** Switches an answering machine without asking; the toast offers to undo it. */
+  async _phoneTamSwitch(switchId, on, name) {
+    const t = this._t;
+    const a = t.phone.tam;
+    const ui = this._state.phone;
+    if (!switchId) return;
+    const run = async (value) => {
+      ui.busy.add(switchId);
+      this._renderPhone();
+      try {
+        await this._hass.callService("switch", value ? "turn_on" : "turn_off", { entity_id: switchId }, undefined, false);
+        return true;
+      } catch (err) {
+        showToast(this.shadowRoot, fill(t.phone.failed, { error: err?.message ?? err }));
+        return false;
+      } finally {
+        ui.busy.delete(switchId);
+        this._renderPhone();
+        this._phoneFocus(`ph-sw-${switchId}`);
+      }
+    };
+    if (!(await run(on))) return;
+    showToast(this.shadowRoot, fill(on ? a.toastOn : a.toastOff, { name }), {
+      label: t.phone.block.undo,
+      run: async () => {
+        if (await run(!on)) showToast(this.shadowRoot, fill(!on ? a.toastOn : a.toastOff, { name }));
+      },
+    });
   }
 
   /** One call to Home Assistant; a refusal shows as a toast with what Home Assistant says. */

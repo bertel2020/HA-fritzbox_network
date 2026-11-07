@@ -339,12 +339,23 @@ export function deviceFromHash(hash) {
 /** Which page a #/… route shows: the network (also for a device), the internet, the diagnosis, the clean-up or the filter. */
 /** The pages of the panel reached by "#/<page>"; the network list is "#/". */
 const PAGES = ["wlan", "addresses", "routes", "internet", "vpn", "box", "diagnose", "filter", "cleanup", "migrate"];
+/** Pages reached by "#/<tab>/<page>": the phone lives under the box. */
+const SUB_PAGES = { "box/phone": "phone" };
 
 export function routeFromHash(hash) {
   const device = deviceFromHash(hash);
   if (device) return { tab: "net", device };
+  const sub = /^#\/([a-z]+\/[a-z]+)$/.exec(hash ?? "")?.[1];
+  if (sub && SUB_PAGES[sub]) return { tab: SUB_PAGES[sub], device: null };
   const page = /^#\/([a-z]+)$/.exec(hash ?? "")?.[1];
   return { tab: PAGES.includes(page) ? page : "net", device: null };
+}
+
+/** The address of a page: "#/" for the network, "#/box/phone" for the phone, "#/<page>" otherwise. */
+export function pageHash(page) {
+  if (page === "net") return "#/";
+  const sub = Object.entries(SUB_PAGES).find(([, p]) => p === page)?.[0];
+  return `#/${sub ?? page}`;
 }
 
 /** The offline devices that have been gone for at least this many days. */

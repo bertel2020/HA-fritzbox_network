@@ -166,13 +166,88 @@ export function openPasswordDialog(root, t, { title, lead = "", warn = "", rules
   });
 }
 
+/**
+ * A dialog with fields of its own: html is the body (escaped by the caller), focus the selector
+ * that gets the focus, onOpen(dialog) wires the fields. On OK read(dialog) gives the answer; a
+ * string from validate(dialog) is shown in the dialog instead and it stays open. Without ok the
+ * dialog only has a close button. Resolves the answer, or null when cancelled. Escape cancels,
+ * Tab stays inside, the focus goes back where it was.
+ */
+export function openFormDialog(root, t, { title, html = "", ok = null, danger = false, focus = null, onOpen = null, validate = null, read = () => true, close = null }) {
+  return new Promise((resolve) => {
+    const backdrop = root.querySelector("#backdrop");
+    const dialog = root.querySelector("#dialog");
+    const before = root.activeElement;
+    dialog.innerHTML = `
+      <h2 id="dlg-title">${escapeHtml(title)}</h2>
+      <div class="dlg-body">${html}</div>
+      <p class="msg bad" id="dlg-msg" role="alert"></p>
+      <div class="btn-row">
+        <button class="btn" id="dlg-no">${escapeHtml(ok ? t.cancel : close ?? t.cancel)}</button>
+        ${ok ? `<button class="btn ${danger ? "dp" : "p"}" id="dlg-yes">${escapeHtml(ok)}</button>` : ""}
+      </div>`;
+    backdrop.classList.add("open");
+    const no = dialog.querySelector("#dlg-no");
+    const yes = ok ? dialog.querySelector("#dlg-yes") : null;
+    const msg = dialog.querySelector("#dlg-msg");
+    (focus ? dialog.querySelector(focus) : no)?.focus();
+    onOpen?.(dialog);
+
+    const done = (value) => {
+      backdrop.classList.remove("open");
+      document.removeEventListener("keydown", onKey);
+      before?.focus?.();
+      resolve(value);
+    };
+    const accept = () => {
+      const problem = validate?.(dialog);
+      if (problem) {
+        msg.textContent = problem;
+        return;
+      }
+      done(read(dialog));
+    };
+    const onKey = (event) => {
+      if (event.key === "Escape") return done(null);
+      if (event.key === "Enter" && yes && root.activeElement?.tagName === "INPUT") {
+        event.preventDefault();
+        return accept();
+      }
+      if (event.key === "Tab") {
+        const stops = [...dialog.querySelectorAll("input, select, button:not([disabled]), a[href]")];
+        if (!stops.length) return;
+        const at = stops.indexOf(root.activeElement);
+        event.preventDefault();
+        stops[(at + (event.shiftKey ? -1 : 1) + stops.length) % stops.length].focus();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    no.onclick = () => done(null);
+    if (yes) yes.onclick = accept;
+  });
+}
+
 let toastTimer = null;
 
-export function showToast(root, message) {
+/** A short message at the bottom; with action ({ label, run }) a button in it, for "Undo". */
+export function showToast(root, message, action = null) {
   const toast = root.querySelector("#toast");
   if (!toast) return;
-  toast.textContent = message;
+  if (action) {
+    toast.innerHTML = `<span>${escapeHtml(message)}</span><button type="button" class="toast-act" id="toast-act">${escapeHtml(action.label)}</button>`;
+    toast.classList.add("act");
+    const button = toast.querySelector("#toast-act");
+    if (button) {
+      button.onclick = () => {
+        toast.classList.remove("show", "act");
+        action.run();
+      };
+    }
+  } else {
+    toast.textContent = message;
+    toast.classList.remove("act");
+  }
   toast.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove("show"), 4500);
+  toastTimer = setTimeout(() => toast.classList.remove("show", "act"), action ? 8000 : 4500);
 }
