@@ -272,6 +272,12 @@
       },
       "wake_on_lan": {
         "name": "Wake on LAN"
+      },
+      "reboot": {
+        "name": "Box neu starten"
+      },
+      "reconnect": {
+        "name": "Internetverbindung neu aufbauen"
       }
     },
     "binary_sensor": {

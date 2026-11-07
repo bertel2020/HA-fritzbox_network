@@ -336,6 +336,35 @@ def test_a_box_without_a_guest_network_says_none_and_refuses_to_set_it():
         client.set_guest_wifi(True)
 
 
+def _reconnect_client(services, error=None):
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    client._fc = MagicMock()
+    client._fc.services = dict.fromkeys(services)
+    client._fc.call_action.side_effect = error
+    return client
+
+
+def test_reconnect_hangs_up_the_connection_the_box_has():
+    client = _reconnect_client(["WANPPPConnection1"])
+    client.reconnect()
+    client._fc.call_action.assert_called_once_with("WANPPPConnection1", "ForceTermination")
+
+    client = _reconnect_client(["WANIPConn1", "WANPPPConnection1"])
+    client.reconnect()
+    client._fc.call_action.assert_called_once_with("WANIPConn1", "ForceTermination")
+
+
+def test_reconnect_accepts_that_the_box_is_already_hanging_up_but_not_other_refusals():
+    # UPnP error 707: the disconnect is in progress, which is what was asked for
+    _reconnect_client(
+        ["WANIPConn1"], FritzActionError("UPnPError: errorCode: 707 DisconnectInProgress")
+    ).reconnect()
+    with pytest.raises(FritzActionError):
+        _reconnect_client(["WANIPConn1"], FritzActionError("errorCode: 501")).reconnect()
+    with pytest.raises(FritzServiceError):
+        _reconnect_client([]).reconnect()
+
+
 def test_the_port_mappings_are_read_until_the_box_runs_out():
     client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
     client._fc = MagicMock()

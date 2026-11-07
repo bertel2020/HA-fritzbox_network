@@ -161,6 +161,8 @@ def vpn_identifier(serial: str) -> str:
 
 KEY_ADDRESS_ASSIGNMENT = "address_assignment"
 KEY_REFRESH = "refresh"
+KEY_REBOOT = "reboot"
+KEY_RECONNECT = "reconnect"
 
 # Keys of the Wi-Fi radio sensors of an access point; the band is added to the unique id.
 KEY_RADIO_CHANNEL = "radio_channel"

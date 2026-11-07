@@ -141,6 +141,7 @@ def test_the_vpn_page_without_the_wanted_shape_is_none():
 
 def test_reboot_and_reconnect_call_the_box():
     client = _client()
+    client._fc.services = {"WANIPConn1": None}
     client.reboot()
     client.reconnect()
     names = [c.args[1] for c in client._fc.call_action.call_args_list]

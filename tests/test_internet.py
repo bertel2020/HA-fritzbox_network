@@ -3,6 +3,7 @@
 from datetime import timedelta
 from unittest.mock import patch
 
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er, issue_registry as ir
 from homeassistant.util import dt as dt_util
 import pytest
@@ -356,6 +357,44 @@ async def test_the_panel_can_reconnect_and_restart_the_box(
     )
     assert (await client.receive_json())["success"]
     assert ("reconnect",) in fake_client.calls and ("reboot",) in fake_client.calls
+
+
+async def test_the_box_buttons_are_off_and_restart_or_reconnect_when_pressed(
+    hass, fake_client, entry
+):
+    await _setup(hass, entry)
+    registry = er.async_get(hass)
+    for key in ("reboot", "reconnect"):
+        reg = registry.async_get(f"button.fritz_network_{key}")
+        assert reg is not None, key
+        assert reg.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+        registry.async_update_entity(reg.entity_id, disabled_by=None)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    for key in ("reboot", "reconnect"):
+        await hass.services.async_call(
+            "button", "press", {"entity_id": f"button.fritz_network_{key}"}, blocking=True
+        )
+    assert ("reboot",) in fake_client.calls and ("reconnect",) in fake_client.calls
+
+    fake_client.fail_actions = True
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(
+            "button", "press", {"entity_id": "button.fritz_network_reboot"}, blocking=True
+        )
+
+
+async def test_without_the_right_to_change_settings_there_are_no_box_buttons(
+    hass, fake_client, entry
+):
+    fake_client.writable = False
+    await _setup(hass, entry)
+    registry = er.async_get(hass)
+
+    assert registry.async_get("button.fritz_network_reboot") is None
+    assert registry.async_get("button.fritz_network_reconnect") is None
+    assert registry.async_get("button.fritz_network_refresh") is not None
 
 
 async def test_a_user_without_the_right_cannot_interrupt_the_network(

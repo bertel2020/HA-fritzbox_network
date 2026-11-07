@@ -184,6 +184,12 @@
       },
       "wake_on_lan": {
         "default": "mdi:power"
+      },
+      "reboot": {
+        "default": "mdi:restart"
+      },
+      "reconnect": {
+        "default": "mdi:connection"
       }
     },
     "binary_sensor": {

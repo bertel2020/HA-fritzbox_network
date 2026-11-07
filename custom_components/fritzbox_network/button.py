@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from fritzconnection.core.exceptions import FritzConnectionException
-from homeassistant.components.button import ButtonEntity
+from homeassistant.components.button import ButtonDeviceClass, ButtonEntity
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import DOMAIN, KEY_REFRESH, KEY_WAKE_ON_LAN
+from .const import DOMAIN, KEY_REBOOT, KEY_RECONNECT, KEY_REFRESH, KEY_WAKE_ON_LAN
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import (
     FritzNetworkClientEntity,
@@ -30,6 +31,12 @@ async def async_setup_entry(
     async_add_entities([FritzNetworkRefresh(entry.runtime_data)])
     if not entry.runtime_data.can_write:
         return
+    async_add_entities(
+        [
+            FritzNetworkBoxButton(entry.runtime_data, KEY_REBOOT, "async_reboot"),
+            FritzNetworkBoxButton(entry.runtime_data, KEY_RECONNECT, "async_reconnect"),
+        ]
+    )
     # Offline hosts have no interface type, and they are the ones to wake up:
     # only devices known to sit on WLAN are left out.
     async_remove_node_client_entities(hass, entry, "button", (KEY_WAKE_ON_LAN,))
@@ -58,6 +65,37 @@ class FritzNetworkRefresh(ButtonEntity):
 
     async def async_press(self) -> None:
         await self._coordinator.async_request_refresh()
+
+
+class FritzNetworkBoxButton(ButtonEntity):
+    """Restart the box or hang up and dial in again; off by default, a button has no question.
+
+    The panel asks before it does the same, so this is for automations and for those who want
+    the button. It needs the right to change settings.
+    """
+
+    _attr_has_entity_name = True
+    _attr_device_class = ButtonDeviceClass.RESTART
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, key: str, method: str) -> None:
+        self._coordinator = coordinator
+        self._method = method
+        self._attr_translation_key = key
+        self._attr_unique_id = f"{coordinator.serial}_{key}"
+        self.entity_id = f"button.fritz_network_{key}"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+
+    async def async_press(self) -> None:
+        try:
+            await getattr(self._coordinator, self._method)()
+        except FritzConnectionException as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
 
 
 class FritzNetworkWakeOnLan(FritzNetworkClientEntity, ButtonEntity):

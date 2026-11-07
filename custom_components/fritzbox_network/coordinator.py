@@ -964,5 +964,14 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         if self.data is not None:
             self.async_set_updated_data(replace(self.data, routes=routes))
 
+    async def async_reboot(self) -> None:
+        """Restart the box; the polls fail for a few minutes and the backoff takes care of it."""
+        await self.hass.async_add_executor_job(self.client.reboot)
+
+    async def async_reconnect(self) -> None:
+        """Hang up and dial in again, then read the connection once the box has had a moment."""
+        await self.hass.async_add_executor_job(self.client.reconnect)
+        await self.async_request_refresh()
+
     async def async_wake_on_lan(self, host: Host) -> None:
         await self.hass.async_add_executor_job(self.client.wake_on_lan, host.mac)

@@ -713,9 +713,22 @@ class FritzNetworkClient:
             self._connection.call_action(service, "SetEnable", NewEnable=enabled)
 
     def reconnect(self) -> None:
-        """Hang up and dial in again, which usually brings a new external address."""
+        """Hang up and dial in again, which usually brings a new external address.
+
+        The box answers 707 while it is already hanging up: that is what was asked for. A box
+        whose connection is not ``WANIPConn1`` (UPnP off, PPP) is asked at ``WANPPPConnection1``.
+        """
         with self._lock:
-            self._connection.call_action("WANIPConn1", "ForceTermination")
+            for service in ("WANIPConn1", "WANPPPConnection1"):
+                if service not in self._connection.services:
+                    continue
+                try:
+                    self._connection.call_action(service, "ForceTermination")
+                except FritzActionError as err:
+                    if "707" not in str(err):
+                        raise
+                return
+            raise FritzServiceError("The box has no connection to hang up")
 
     def reboot(self) -> None:
         """Restart the box."""
