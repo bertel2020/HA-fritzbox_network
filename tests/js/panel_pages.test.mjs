@@ -595,3 +595,39 @@ test("the notes of an address page that is not read yet are not sent to a box", 
   await p._saveOwn();
   assert.deepEqual(calls, []);
 });
+
+// ---------- keyboard on the tab lists ----------
+
+test("the arrows step around a tab list, Home and End go to its ends, other keys do nothing", () => {
+  const tabs = ["net", "internet", "box"];
+  assert.equal(panel.tabKeyTarget(tabs, "net", "ArrowRight"), "internet");
+  assert.equal(panel.tabKeyTarget(tabs, "box", "ArrowRight"), "net");
+  assert.equal(panel.tabKeyTarget(tabs, "net", "ArrowLeft"), "box");
+  assert.equal(panel.tabKeyTarget(tabs, "internet", "Home"), "net");
+  assert.equal(panel.tabKeyTarget(tabs, "internet", "End"), "box");
+  assert.equal(panel.tabKeyTarget(tabs, "net", "Enter"), null);
+  assert.equal(panel.tabKeyTarget([], "net", "ArrowRight"), null);
+});
+
+test("only the open tab is in the tab order, the others are reached with the arrows", () => {
+  const nav = panel.renderNav({ tab: "wlan", data: {} }, t, 0);
+  assert.equal([...nav.matchAll(/<button role="tab" tabindex="0"/g)].length, 1);
+  assert.match(nav, /tabindex="0" data-tab="net" aria-selected="true"/);
+  assert.match(nav, /tabindex="-1" data-tab="internet" aria-selected="false"/);
+  const sub = panel.renderSubTabs("wlan", t, { data: {} });
+  assert.match(sub, /tabindex="0" data-tab="wlan"/);
+  assert.match(sub, /tabindex="-1" data-tab="addresses"/);
+});
+
+test("an arrow on a tab moves the focus to the next one", () => {
+  const { p } = makePanel({}, "net");
+  const mk = (name) => ({ name, focus() { focused = name; }, getAttribute: () => "tab" });
+  let focused = null;
+  const buttons = [mk("a"), mk("b"), mk("c")];
+  const list = { querySelectorAll: () => buttons };
+  for (const b of buttons) b.closest = () => list;
+  let prevented = false;
+  p._onKey({ key: "ArrowRight", target: buttons[0], preventDefault: () => (prevented = true) });
+  assert.equal(focused, "b");
+  assert.equal(prevented, true);
+});

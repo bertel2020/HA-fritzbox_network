@@ -184,6 +184,17 @@ export function pagesOf(group, state) {
   });
 }
 
+/**
+ * The tab an arrow key leads to inside a tab list: left and right (up and down in the bottom bar's
+ * sibling lists too) step around, Home and End go to the ends. Null for any other key.
+ */
+export function tabKeyTarget(tabs, from, key) {
+  if (!tabs.length) return null;
+  const at = tabs.indexOf(from);
+  const to = { ArrowRight: at + 1, ArrowDown: at + 1, ArrowLeft: at - 1, ArrowUp: at - 1, Home: 0, End: tabs.length - 1 }[key];
+  return to === undefined ? null : tabs[(to + tabs.length) % tabs.length];
+}
+
 /** The switch between the pages of the tab of the open page; nothing where the tab has only one. */
 export function renderSubTabs(active, t, state = {}) {
   const group = groupOf(active);
@@ -192,7 +203,7 @@ export function renderSubTabs(active, t, state = {}) {
   return `<div class="seg subtabs" role="tablist" aria-label="${escapeHtml(t.tabs[group])}">${pages
     .map((id) => {
       const unread = id === "phone" && state.phoneUnread > 0 ? ` <span class="chip info sub-badge">${state.phoneUnread}<span class="sr"> ${escapeHtml(fill(t.phone.unread, { n: "" }).trim())}</span></span>` : "";
-      return `<button role="tab" data-tab="${id}" aria-selected="${id === active}" aria-pressed="${id === active}">${escapeHtml(t.tabs[SUB_LABELS[id] ?? id])}${unread}</button>`;
+      return `<button role="tab" tabindex="${id === active ? 0 : -1}" data-tab="${id}" aria-selected="${id === active}" aria-pressed="${id === active}">${escapeHtml(t.tabs[SUB_LABELS[id] ?? id])}${unread}</button>`;
     })
     .join("")}</div>`;
 }
@@ -208,7 +219,7 @@ export function renderNav(state, t, stale, icons = false) {
   const line = state.data?.internet;
   const open = groupOf(state.tab);
   const tab = (id, extra = "", label = "") =>
-    `<button role="tab" data-tab="${id}" aria-selected="${id === open}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${icons ? `<span class="ni">${ic(NAV_ICONS[id])}${extra}</span><span class="nl">${escapeHtml(t.tabs[id])}</span>` : `${escapeHtml(t.tabs[id])}${extra}`}</button>`;
+    `<button role="tab" tabindex="${id === open ? 0 : -1}" data-tab="${id}" aria-selected="${id === open}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${icons ? `<span class="ni">${ic(NAV_ICONS[id])}${extra}</span><span class="nl">${escapeHtml(t.tabs[id])}</span>` : `${escapeHtml(t.tabs[id])}${extra}`}</button>`;
   const dot = line ? `<i class="dot ${line.connected === false ? "" : "on"}" aria-hidden="true"></i>` : "";
   const label = line ? `${t.tabs.internet}, ${line.connected === false ? t.inet.state.down : t.inet.state.up}` : "";
   const restarting = state.boxRestart && state.boxRestart.phase !== "back";
@@ -1890,7 +1901,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     globalThis.location.hash = `#/device/${id}`;
   }
 
-  /** Esc closes the menu or the device, the arrows go through the menu, j and k page, / searches. */
+  /** Esc closes the menu or the device, the arrows go through the menu and the tab lists, j and k page, / searches. */
   _onKey(event) {
     const root = this.shadowRoot;
     const state = this._state;
@@ -1946,6 +1957,16 @@ class FritzboxNetworkPanel extends HTMLElement {
       if ((state.sel && state.tab === "net") && !/SELECT/.test(target.tagName)) {
         event.preventDefault();
         this._leaveDevice();
+        return;
+      }
+    }
+    if (target.getAttribute?.("role") === "tab" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      const list = target.closest?.('[role="tablist"]');
+      const next = list && tabKeyTarget([...list.querySelectorAll('[role="tab"]')], target, event.key);
+      if (next) {
+        event.preventDefault();
+        // the focus moves, Enter or Space opens the page: the bar is drawn anew on a click
+        next.focus();
         return;
       }
     }
