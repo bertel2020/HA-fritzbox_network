@@ -6,6 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Telephony page: the buttons under a call are equally wide in a grid, "Call again" is tinted as the main action, "Block" has a red outline, and "Add to phone book" and "Block" lose their dots.
 - Internet page: the **Connection** card is tidier. Download and upload sit in two tiles, the three details (external IPv4, IPv6 prefix, last error) are equally wide with a copy button for the addresses, the status has a dot, and the DNS servers are listed in a column each for IPv4 and IPv6, with a copy button per server.
 - Buttons now sit at the **right** of their card (rows of buttons and the buttons of the DHCP range form), as in the dialogs.
 - Wi-Fi page: the **Guest access** card is calmer again. The switch sits at the right edge like in the box networks card, the line under the name says security and the number of devices, the device buttons appear only when there are devices, "QR code" turns into "Hide QR code" in the same row as "Change password", and the hint is one short line.

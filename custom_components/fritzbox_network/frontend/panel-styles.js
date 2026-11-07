@@ -1220,6 +1220,10 @@ export const PANEL_CSS = `
   .ph-new { background: var(--accent); }
   .ph-detail { padding: 0 0 12px 46px; min-width: 0; }
   .ph-detail dl.kv { display: grid; }
+  .ph-detail .btn-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-2); }
+  .ph-detail .btn-row .btn { justify-content: center; white-space: nowrap; min-height: 38px; }
+  .ph-detail .btn-row .btn.pri { background: var(--accent-soft); color: var(--accent-hover); border-color: var(--accent); }
+  .ph-detail .btn-row .btn.d { border-color: var(--bad); }
   .ph-detail dl.kv dd { text-align: left; margin: 0; overflow-wrap: anywhere; }
   .ph-detail dl.kv dt { color: var(--muted); }
   @container app (max-width: 520px) { .ph-detail { padding-left: 0; } }

@@ -6,6 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Telefonseite: Die Knöpfe unter einem Anruf sind gleich breit in einem Raster, „Erneut anrufen“ ist als Hauptaktion getönt, „Sperren“ hat einen roten Rahmen, und „Ins Telefonbuch“ und „Sperren“ haben keine Auslassungspunkte mehr.
 - Internetseite: Die Karte **Verbindung** ist aufgeräumt. Download und Upload stehen in zwei Kacheln, die drei Angaben (externe IPv4, IPv6-Präfix, letzter Fehler) sind gleich breit mit Kopierknopf für die Adressen, der Status hat einen Punkt, und die DNS-Server stehen in je einer Spalte für IPv4 und IPv6, mit Kopierknopf je Server.
 - Schaltflächen sitzen jetzt **rechtsbündig** in ihrer Karte (Reihen von Knöpfen und die Knöpfe des DHCP-Bereich-Formulars), wie in den Dialogen.
 - WLAN-Seite: Die Karte **Gastzugang** ist noch ruhiger. Der Schalter sitzt wie bei den Funknetzen der Box rechts außen, die Zeile unter dem Namen nennt Verschlüsselung und Zahl der Geräte, die Geräte-Knöpfe erscheinen nur, wenn es Geräte gibt, „QR-Code“ wird in derselben Reihe wie „Passwort ändern“ zu „QR-Code ausblenden“, und der Hinweis ist eine kurze Zeile.

@@ -294,7 +294,7 @@ function callRow(c, model, ctx) {
           ${c.reverseName ? `<dt>${esc(p.calls.reverse)}</dt><dd>${esc(fill(p.calls.reverseValue, { name: c.reverseName, category: c.reverseCategory || "–" }))}</dd>` : ""}
         </dl>
         <div class="btn-row">
-          ${canDial ? `<button class="btn sm" data-act="ph-dial" data-ph-num="${esc(c.number)}" data-ph-name="${esc(c.name)}" data-k="ph-cdd-${esc(c.id)}"${off(model)}>${ic("phone")}${esc(action)}</button>` : ""}
+          ${canDial ? `<button class="btn sm pri" data-act="ph-dial" data-ph-num="${esc(c.number)}" data-ph-name="${esc(c.name)}" data-k="ph-cdd-${esc(c.id)}"${off(model)}>${ic("phone")}${esc(action)}</button>` : ""}
           ${!c.name && canDial ? `<button class="btn sm" data-act="ph-contact" data-ph-num="${esc(c.number)}" data-ph-name="${esc(c.reverseName)}" data-k="ph-cc-${esc(c.id)}" aria-haspopup="dialog"${off(model)}>${ic("userPlus")}${esc(p.calls.addContact)}</button>` : ""}
           ${canDial ? `<button class="btn sm" data-act="ph-lookup" data-ph-num="${esc(c.number)}" data-k="ph-cl-${esc(c.id)}" aria-haspopup="dialog"${off(model)}>${ic("search")}${esc(p.calls.lookup)}</button>` : ""}
           ${canUnblock ? `<button class="btn sm" data-act="ph-unblock" data-ph-num="${esc(c.number)}" data-k="ph-cu-${esc(c.id)}" aria-haspopup="dialog"${off(model)}>${ic("ban")}${esc(p.calls.unblock)}</button>` : ""}
