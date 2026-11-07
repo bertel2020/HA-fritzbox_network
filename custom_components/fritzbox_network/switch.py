@@ -14,7 +14,7 @@ from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, UpdateFailed
 
 from .const import (
     DOMAIN,
@@ -30,12 +30,14 @@ from .const import (
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import (
     FritzNetworkClientEntity,
+    FritzNetworkRepeaterEntity,
     async_remove_node_client_entities,
     async_setup_client_entities,
     is_mesh_node,
     vpn_device_info,
 )
 from .models import Host, PortRule, VpnConnection, WifiNetwork
+from .repeater import RepeaterCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -77,6 +79,8 @@ async def async_setup_entry(
     _async_setup_guest_wifi(entry, async_add_entities)
     _async_setup_wifi(entry, async_add_entities)
     _async_setup_ports(entry, async_add_entities)
+    for repeater in entry.runtime_data.repeaters.values():
+        _async_setup_repeater_wifi(repeater, entry, async_add_entities)
     _async_setup_vpn(entry, async_add_entities)
     _async_setup_routes(hass, entry, async_add_entities)
 
@@ -99,6 +103,27 @@ def _async_setup_wifi(
 
     _add()
     entry.async_on_unload(coordinator.async_add_listener(_add))
+
+
+@callback
+def _async_setup_repeater_wifi(
+    repeater: RepeaterCoordinator,
+    entry: FritzNetworkConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    """A switch for each band of a repeater, once the repeater has told its networks."""
+    known: set[str] = set()
+
+    @callback
+    def _add() -> None:
+        new = [key for key in (repeater.data.wifi if repeater.data else {}) if key not in known]
+        if not new:
+            return
+        known.update(new)
+        async_add_entities([FritzNetworkRepeaterWifi(repeater, key) for key in new])
+
+    _add()
+    entry.async_on_unload(repeater.async_add_listener(_add))
 
 
 @callback
@@ -348,6 +373,50 @@ class FritzNetworkWifi(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity)
         try:
             await self.coordinator.async_set_wifi(self._band, value)
         except FritzConnectionException as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self._set(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._set(False)
+
+
+class FritzNetworkRepeaterWifi(FritzNetworkRepeaterEntity, SwitchEntity):
+    """The Wi-Fi network of one band of a repeater. Whether the box overrides it is not known."""
+
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, coordinator: RepeaterCoordinator, band: str) -> None:
+        key = f"{KEY_WIFI_PREFIX}{band}"
+        super().__init__(coordinator, "switch", key)
+        self._band = band
+        self._attr_translation_key = key
+        network = self._network
+        self._attr_translation_placeholders = {"ssid": (network.ssid if network else "") or ""}
+
+    @property
+    def _network(self) -> WifiNetwork | None:
+        data = self.coordinator.data
+        return data.wifi.get(self._band) if data else None
+
+    @property
+    def available(self) -> bool:
+        return super().available and self._network is not None
+
+    @property
+    def is_on(self) -> bool | None:
+        network = self._network
+        return network.enabled if network else None
+
+    async def _set(self, value: bool) -> None:
+        try:
+            await self.coordinator.async_set_wifi(self._band, value)
+        except (FritzConnectionException, UpdateFailed) as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="action_failed",

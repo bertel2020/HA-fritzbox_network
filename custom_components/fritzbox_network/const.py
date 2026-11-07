@@ -7,6 +7,7 @@ DOMAIN = "fritzbox_network"
 CONF_USE_TLS = "use_tls"
 
 CONF_SCAN_INTERVAL = "scan_interval"
+CONF_REPEATERS = "repeaters"
 CONF_CONSIDER_HOME = "consider_home"
 CONF_FILTER_MODE = "filter_mode"
 CONF_FILTER_DEVICES = "filter_devices"
@@ -74,6 +75,8 @@ INTERNET_LOW_MARGIN_SECONDS = 3600
 INTERNET_RECONNECTS_WARN = 5
 # a repeater the box does not list for this long is a repair: a restart or an update is shorter
 MESH_REPEATER_LOST_SECONDS = 600
+# how often a repeater that is controlled from here is asked: it is slow, and little changes
+REPEATER_INTERVAL_SECONDS = 300
 
 EVENT_DEVICE_RENAMED = f"{DOMAIN}_device_renamed"
 EVENT_NEW_DEVICE = f"{DOMAIN}_new_device"
@@ -167,6 +170,7 @@ def vpn_identifier(serial: str) -> str:
 KEY_ADDRESS_ASSIGNMENT = "address_assignment"
 KEY_REFRESH = "refresh"
 KEY_REBOOT = "reboot"
+KEY_REPEATER_REBOOT = "repeater_reboot"
 KEY_RECONNECT = "reconnect"
 
 # Keys of the Wi-Fi radio sensors of an access point; the band is added to the unique id.

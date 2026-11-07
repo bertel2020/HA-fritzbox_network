@@ -35,6 +35,7 @@ from .const import (
     CONF_HIDDEN_MACS,
     CONF_IGNORE_GUESTS,
     CONF_IGNORE_PRIVATE_MACS,
+    CONF_REPEATERS,
     CONF_SCAN_INTERVAL,
     CONF_SHOW_VENDOR,
     CONF_SKIP_OFFLINE,
@@ -308,6 +309,22 @@ class FritzNetworkOptionsFlow(OptionsFlow):
         ]
         return sorted(options, key=lambda o: o["label"].lower())
 
+    def _repeater_options(self, chosen: list[str]) -> list[selector.SelectOptionDict]:
+        """The repeaters of the mesh, and those chosen earlier that the box does not list now."""
+        coordinator = getattr(self.config_entry, "runtime_data", None)
+        mesh = coordinator.data.mesh if coordinator is not None and coordinator.data else None
+        found = {
+            node.mac: f"{coordinator.node_name(node)} ({node.model or node.mac})"
+            for node in (mesh.nodes.values() if mesh else ())
+            if node.role != "master"
+        }
+        for mac in chosen:
+            found.setdefault(mac, mac)
+        return sorted(
+            (selector.SelectOptionDict(value=mac, label=label) for mac, label in found.items()),
+            key=lambda o: o["label"].lower(),
+        )
+
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> Any:
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)
@@ -318,6 +335,7 @@ class FritzNetworkOptionsFlow(OptionsFlow):
             known = set(self.config_entry.runtime_data.all_hosts)
         selected = list(options.get(CONF_FILTER_DEVICES, []))
         hidden = list(options.get(CONF_HIDDEN_MACS, []))
+        repeaters = list(options.get(CONF_REPEATERS, []))
         multi = selector.SelectSelectorConfig(
             options=self._device_options(known | set(selected)),
             multiple=True,
@@ -382,6 +400,13 @@ class FritzNetworkOptionsFlow(OptionsFlow):
                 vol.Optional(CONF_FILTER_DEVICES, default=selected): selector.SelectSelector(multi),
                 vol.Optional(CONF_HIDDEN_MACS, default=hidden): selector.SelectSelector(
                     hidden_multi
+                ),
+                vol.Optional(CONF_REPEATERS, default=repeaters): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=self._repeater_options(repeaters),
+                        multiple=True,
+                        mode=selector.SelectSelectorMode.DROPDOWN,
+                    )
                 ),
             }
         )

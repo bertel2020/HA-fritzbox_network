@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .const import DOMAIN, KEY_TRACKER, vpn_identifier
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .models import Host, MeshNode, mac_id
+from .repeater import RepeaterCoordinator
 
 
 class FritzNetworkClientEntity(CoordinatorEntity[FritzNetworkCoordinator]):
@@ -190,3 +191,27 @@ def async_setup_node_entities(
 
     _add_new_nodes()
     entry.async_on_unload(coordinator.async_add_listener(_add_new_nodes))
+
+
+class FritzNetworkRepeaterEntity(CoordinatorEntity[RepeaterCoordinator]):
+    """An entity of a repeater the user chose to control, on the device the mesh already made."""
+
+    _attr_has_entity_name = True
+
+    def __init__(self, coordinator: RepeaterCoordinator, platform_domain: str, key: str) -> None:
+        super().__init__(coordinator)
+        mac = coordinator.mac
+        self._attr_unique_id = f"{mac}_{key}"
+        self.entity_id = f"{platform_domain}.fritz_{mac_id(mac)}_{key}"
+        node = coordinator.node
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, mac)},
+            name=coordinator.device_name,
+            model=node.model if node else None,
+            sw_version=node.firmware if node else None,
+            via_device_id=coordinator.main.box_device_id,
+        )
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.coordinator.data is not None

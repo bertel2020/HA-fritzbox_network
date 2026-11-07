@@ -9,11 +9,20 @@ from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
+from homeassistant.helpers.update_coordinator import UpdateFailed
 
-from .const import DOMAIN, KEY_REBOOT, KEY_RECONNECT, KEY_REFRESH, KEY_WAKE_ON_LAN
+from .const import (
+    DOMAIN,
+    KEY_REBOOT,
+    KEY_RECONNECT,
+    KEY_REFRESH,
+    KEY_REPEATER_REBOOT,
+    KEY_WAKE_ON_LAN,
+)
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import (
     FritzNetworkClientEntity,
+    FritzNetworkRepeaterEntity,
     async_remove_node_client_entities,
     async_setup_client_entities,
     is_mesh_node,
@@ -31,6 +40,9 @@ async def async_setup_entry(
     async_add_entities([FritzNetworkRefresh(entry.runtime_data)])
     if not entry.runtime_data.can_write:
         return
+    async_add_entities(
+        FritzNetworkRepeaterReboot(repeater) for repeater in entry.runtime_data.repeaters.values()
+    )
     async_add_entities(
         [
             FritzNetworkBoxButton(entry.runtime_data, KEY_REBOOT, "async_reboot"),
@@ -91,6 +103,28 @@ class FritzNetworkBoxButton(ButtonEntity):
         try:
             await getattr(self._coordinator, self._method)()
         except FritzConnectionException as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+
+
+class FritzNetworkRepeaterReboot(FritzNetworkRepeaterEntity, ButtonEntity):
+    """Restart a repeater that is controlled from here; off by default like the one of the box."""
+
+    _attr_translation_key = KEY_REPEATER_REBOOT
+    _attr_device_class = ButtonDeviceClass.RESTART
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator) -> None:
+        super().__init__(coordinator, "button", "reboot")
+
+    async def async_press(self) -> None:
+        try:
+            await self.coordinator.async_reboot()
+        except (FritzConnectionException, UpdateFailed) as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="action_failed",

@@ -10,10 +10,12 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity, UpdateFailed
 
 from .const import DOMAIN, KEY_FIRMWARE
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
+from .entity import FritzNetworkRepeaterEntity
+from .repeater import RepeaterCoordinator
 
 PARALLEL_UPDATES = 0
 
@@ -37,6 +39,9 @@ async def async_setup_entry(
 
     _add()
     entry.async_on_unload(coordinator.async_add_listener(_add))
+    async_add_entities(
+        FritzNetworkRepeaterFirmware(repeater) for repeater in coordinator.repeaters.values()
+    )
 
 
 class FritzNetworkFirmware(CoordinatorEntity[FritzNetworkCoordinator], UpdateEntity):
@@ -74,6 +79,45 @@ class FritzNetworkFirmware(CoordinatorEntity[FritzNetworkCoordinator], UpdateEnt
         try:
             await self.coordinator.async_install_firmware()
         except FritzConnectionException as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+
+
+class FritzNetworkRepeaterFirmware(FritzNetworkRepeaterEntity, UpdateEntity):
+    """The firmware of a repeater controlled from here: the offer, and the install button."""
+
+    _attr_translation_key = KEY_FIRMWARE
+    _attr_supported_features = UpdateEntityFeature.INSTALL
+
+    def __init__(self, coordinator: RepeaterCoordinator) -> None:
+        super().__init__(coordinator, "update", KEY_FIRMWARE)
+
+    @property
+    def installed_version(self) -> str | None:
+        node = self.coordinator.node
+        return node.firmware if node else None
+
+    @property
+    def latest_version(self) -> str | None:
+        data = self.coordinator.data
+        firmware = data.firmware if data else None
+        if firmware is not None and firmware.update_available and firmware.version:
+            return firmware.version
+        return self.installed_version
+
+    @property
+    def release_url(self) -> str | None:
+        data = self.coordinator.data
+        firmware = data.firmware if data else None
+        return firmware.info_url if firmware and firmware.update_available else None
+
+    async def async_install(self, version: str | None, backup: bool, **kwargs: Any) -> None:
+        try:
+            await self.coordinator.async_install_firmware()
+        except (FritzConnectionException, UpdateFailed) as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="action_failed",

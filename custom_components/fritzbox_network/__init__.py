@@ -50,6 +50,7 @@ from .repairs import (
     async_update_stale_issue,
     async_update_upnp_issue,
 )
+from .repeater import RepeaterCoordinator, repeater_macs
 from .services import async_register as async_register_services
 from .vendor import async_load as async_load_vendors
 from .websocket_api import async_register as async_register_websocket
@@ -154,8 +155,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
         coordinator.async_add_listener(lambda: async_update_upnp_issue(hass, entry))
     )
     entry.async_on_unload(lambda: async_remove_upnp_issue(hass, entry))
+    if can_write:
+        # the repeaters the user chose to control: each asks its own repeater, slowly, on its own
+        for mac in repeater_macs(entry):
+            coordinator.repeaters[mac] = RepeaterCoordinator(hass, entry, coordinator, mac)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_ensure_panel(hass)
+    for repeater in coordinator.repeaters.values():
+        entry.async_create_background_task(
+            hass, repeater.async_refresh(), f"fritzbox_network_repeater_{repeater.mac}"
+        )
     # the first poll left out what the web interface of the box tells; read it now, not 30 s later
     entry.async_create_task(hass, coordinator.async_refresh(), "fritzbox_network_second_poll")
     _setup_stale_check(hass, entry)

@@ -45,6 +45,15 @@ async def async_get_config_entry_diagnostics(
             "cpu_temperature_supported": coordinator.cpu_supported,
             "uptime_known": coordinator.box_boot is not None,
             "wifi_networks": sorted(coordinator.data.wifi or ()),
+            # the repeaters controlled from here, without their addresses
+            "repeaters": [
+                {
+                    "answered": repeater.last_update_success,
+                    "cpu_temperature_supported": repeater.cpu_supported,
+                    "wifi_networks": sorted(repeater.data.wifi) if repeater.data else [],
+                }
+                for repeater in coordinator.repeaters.values()
+            ],
         },
         "firmware": asdict(firmware) if (firmware := coordinator.data.firmware) else None,
         "host_count": len(coordinator.all_hosts),

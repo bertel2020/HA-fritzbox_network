@@ -88,6 +88,7 @@ from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import (
     FritzNetworkClientEntity,
     FritzNetworkNodeEntity,
+    FritzNetworkRepeaterEntity,
     async_remove_node_client_entities,
     async_setup_client_entities,
     async_setup_node_entities,
@@ -95,6 +96,7 @@ from .entity import (
     vpn_device_info,
 )
 from .models import ClientLink, Host, InternetInfo, MeshNode, Radio, VpnConnection
+from .repeater import RepeaterCoordinator
 from .vendor import vendor_of
 
 CONNECTION_LAN = "lan"
@@ -198,6 +200,8 @@ async def async_setup_entry(
     _async_setup_vpn(coordinator, entry, async_add_entities)
     _async_setup_dhcp_pool(coordinator, entry, async_add_entities)
     _async_setup_cpu_temperature(coordinator, entry, async_add_entities)
+    for repeater in coordinator.repeaters.values():
+        _async_setup_repeater(repeater, entry, async_add_entities)
 
 
 @callback
@@ -250,6 +254,28 @@ def _async_setup_cpu_temperature(
 
     _add()
     entry.async_on_unload(coordinator.async_add_listener(_add))
+
+
+@callback
+def _async_setup_repeater(
+    repeater: RepeaterCoordinator,
+    entry: FritzNetworkConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    """The last restart of a repeater, and its CPU temperature once it has shown the sensor."""
+    async_add_entities([FritzNetworkRepeaterUptime(repeater)])
+    added = False
+
+    @callback
+    def _add() -> None:
+        nonlocal added
+        if added or not repeater.cpu_supported:
+            return
+        added = True
+        async_add_entities([FritzNetworkRepeaterCpu(repeater)])
+
+    _add()
+    entry.async_on_unload(repeater.async_add_listener(_add))
 
 
 @callback
@@ -1009,6 +1035,47 @@ class FritzNetworkCpuTemperature(_BoxSensor):
     @property
     def native_value(self) -> int | None:
         return self.coordinator.cpu_temperature
+
+
+class FritzNetworkRepeaterUptime(FritzNetworkRepeaterEntity, SensorEntity):
+    """When a repeater started: the day and time of its last restart."""
+
+    _attr_translation_key = KEY_BOX_UPTIME
+    _attr_device_class = SensorDeviceClass.UPTIME
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    def __init__(self, coordinator: RepeaterCoordinator) -> None:
+        super().__init__(coordinator, "sensor", KEY_BOX_UPTIME)
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self.coordinator.data.boot if self.coordinator.data else None
+
+
+class FritzNetworkRepeaterCpu(FritzNetworkRepeaterEntity, SensorEntity):
+    """The CPU temperature of a repeater; off by default, read only while it is on."""
+
+    _attr_translation_key = KEY_CPU_TEMPERATURE
+    _attr_device_class = SensorDeviceClass.TEMPERATURE
+    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: RepeaterCoordinator) -> None:
+        super().__init__(coordinator, "sensor", KEY_CPU_TEMPERATURE)
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        self.async_on_remove(self.coordinator.async_want_cpu_temperature())
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.coordinator.data.cpu_temperature is not None
+
+    @property
+    def native_value(self) -> int | None:
+        return self.coordinator.data.cpu_temperature if self.coordinator.data else None
 
 
 class FritzNetworkFailedPolls(_BoxDiagnostic):

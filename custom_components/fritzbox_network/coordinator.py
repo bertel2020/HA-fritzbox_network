@@ -140,6 +140,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         # the access point each device is confirmed at, and one it was seen at since
         self._access_points: dict[str, str] = {}
         self._pending_roam: dict[str, tuple[str, int]] = {}
+        # the repeaters the user chose to control, by the MAC of their mesh node; see repeater.py
+        self.repeaters: dict[str, Any] = {}
         self.last_active: dict[str, datetime] = {}
         self._failures = 0
         self.last_success: datetime | None = None
