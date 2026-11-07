@@ -214,3 +214,20 @@ async def test_the_actions_run_for_an_administrator(
         context=Context(user_id=hass_admin_user.id),
     )
     assert fake_client.calls[-1] == ("name", WLAN, "TV")
+
+
+async def test_the_guest_password_must_be_printable_ascii_like_in_the_panel(
+    hass, fake_client, entry
+):
+    import voluptuous as vol
+
+    await _setup(hass, entry)
+    with pytest.raises(vol.Invalid):
+        await hass.services.async_call(
+            DOMAIN,
+            "set_guest_wifi_password",
+            {"password": "Gäste-Netz1"},
+            blocking=True,
+            return_response=True,
+        )
+    assert not any(call[0] == "guest_password" for call in fake_client.calls)

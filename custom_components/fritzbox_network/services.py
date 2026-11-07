@@ -62,8 +62,10 @@ SET_ROUTE_SCHEMA = vol.Schema(
 )
 SET_GUEST_PASSWORD_SCHEMA = vol.Schema(
     {
-        # a WPA passphrase is 8 to 63 characters; without one a random one is made
-        vol.Optional("password"): vol.All(cv.string, vol.Length(min=8, max=63)),
+        # a WPA passphrase: 8 to 63 printable ASCII characters; without one a random one is made
+        vol.Optional("password"): vol.All(
+            cv.string, vol.Length(min=8, max=63), vol.Match(r"^[\x20-\x7e]+$")
+        ),
         vol.Optional("length", default=12): vol.All(int, vol.Range(min=8, max=63)),
     }
 )
@@ -146,9 +148,12 @@ async def _async_set_route(call: ServiceCall) -> None:
     """Switch a static route of the box on or off, found by its network."""
     await _require_admin(call)
     unknown = None
+    read_only = False
     for config_entry in call.hass.config_entries.async_loaded_entries(DOMAIN):
         coordinator = config_entry.runtime_data
-        _require_rights(coordinator)
+        if not coordinator.can_write:
+            read_only = True  # another box may carry the route and may be changed
+            continue
         try:
             await coordinator.async_set_route(call.data[ATTR_NETWORK], call.data[ATTR_ENABLED])
         except ServiceValidationError as err:
@@ -159,16 +164,21 @@ async def _async_set_route(call: ServiceCall) -> None:
             return
     if unknown is not None:
         raise unknown
+    if read_only:
+        raise HomeAssistantError(translation_domain=DOMAIN, translation_key="no_write_rights")
     raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_target")
 
 
 async def _async_set_guest_password(call: ServiceCall) -> dict[str, str]:
     """Set the password of the guest Wi-Fi and answer with it; nothing here logs it."""
     await _require_admin(call)
+    read_only = False
     for config_entry in call.hass.config_entries.async_loaded_entries(DOMAIN):
         coordinator = config_entry.runtime_data
-        _require_rights(coordinator)
         if coordinator.data.guest_wifi is None:
+            continue
+        if not coordinator.can_write:
+            read_only = True  # another box may have a guest network and may be changed
             continue
         password = await _async_failing(
             coordinator.async_set_guest_wifi_password(
@@ -176,6 +186,8 @@ async def _async_set_guest_password(call: ServiceCall) -> dict[str, str]:
             )
         )
         return {"password": password}
+    if read_only:
+        raise HomeAssistantError(translation_domain=DOMAIN, translation_key="no_write_rights")
     raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_guest_wifi")
 
 
