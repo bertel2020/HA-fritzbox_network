@@ -276,6 +276,17 @@ class FakeClient:
             raise FritzActionError("refused")
         # the box shows it with a delay, like the guest network: the next read says the old value
 
+    def get_guest_wifi_secret(self) -> dict | None:
+        self.calls.append(("guest_secret",))
+        if self.guest_wifi is None:
+            return None
+        return {"ssid": "Gast", "security": "WPA", "password": "geheim 123"}
+
+    def get_guest_wifi_info(self) -> dict | None:
+        if self.guest_wifi is None:
+            return None
+        return {"enabled": self.guest_wifi, "ssid": "Gast"}
+
     def get_guest_wifi_qr(self) -> bytes | None:
         self.calls.append(("guest_qr",))
         if self.fail_actions:

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 from dataclasses import asdict
 import ipaddress
 import time
@@ -11,7 +12,7 @@ from fritzconnection.core.exceptions import FritzConnectionException
 from homeassistant.components import websocket_api
 from homeassistant.const import CONF_HOST
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import (
     device_registry as dr,
     entity_registry as er,
@@ -61,6 +62,7 @@ from .latency import INTERVAL, STEPS
 from .models import MeshNode, MeshTopology, check_address_range, is_private_mac, mac_id
 from .repairs import async_update_stale_issue, last_online
 from .routes import home_network
+from .wifi_qr import wifi_qr_png
 
 COMMAND = f"{DOMAIN}/subscribe_topology"
 ENTRIES_COMMAND = f"{DOMAIN}/entries"
@@ -70,6 +72,11 @@ UNHIDE_COMMAND = f"{DOMAIN}/devices/unhide"
 RECONNECT_COMMAND = f"{DOMAIN}/internet/reconnect"
 REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
 MIGRATE_SCAN_COMMAND = f"{DOMAIN}/migrate/scan"
+BOX_INFO_COMMAND = f"{DOMAIN}/box/info"
+WLAN_LIST_COMMAND = f"{DOMAIN}/wlan/list"
+WLAN_SWITCH_COMMAND = f"{DOMAIN}/wlan/switch"
+WLAN_SECRET_COMMAND = f"{DOMAIN}/wlan/guest/secret"
+WLAN_PASSWORD_COMMAND = f"{DOMAIN}/wlan/guest/password"
 VPN_SWITCH_COMMAND = f"{DOMAIN}/vpn/switch"
 DEVICE_ACTION_COMMAND = f"{DOMAIN}/device/action"
 PORTS_COMMAND = f"{DOMAIN}/ports/list"
@@ -1038,6 +1045,194 @@ async def ws_device_action(
     connection.send_result(msg["id"], {})
 
 
+# the band as the panel names it, by the key of the network
+_BAND_NAMES = {"2_4ghz": "2.4", "5ghz": "5", "6ghz": "6"}
+
+
+def _no_rights(connection: websocket_api.ActiveConnection, msg: dict[str, Any]) -> None:
+    connection.send_error(msg["id"], websocket_api.ERR_UNAUTHORIZED, "No right to change settings")
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): BOX_INFO_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_box_info(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The box itself: model, firmware, last restart, CPU temperature, line and counters."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    _, coordinator = found
+    client = coordinator.client
+    temperature = None
+    if coordinator.cpu_supported is not False:
+        # asked now, not from the last poll: the page shows what the box says at this moment
+        try:
+            temperature = await hass.async_add_executor_job(client.get_cpu_temperature)
+        except (FritzConnectionException, OSError, ValueError, PermissionError):
+            temperature = None
+    boot = coordinator.box_boot
+    internet = coordinator.data.internet
+    connection.send_result(
+        msg["id"],
+        {
+            "model": client.model_name,
+            "firmware": client.system_version,
+            "last_restart": boot.isoformat() if boot else None,
+            "uptime_seconds": int((dt_util.utcnow() - boot).total_seconds()) if boot else None,
+            "cpu_temperature": temperature,
+            "line": {
+                "linked": internet.linked if internet else None,
+                "access_type": internet.access_type if internet else None,
+            },
+            "bytes_received": internet.bytes_received if internet else None,
+            "bytes_sent": internet.bytes_sent if internet else None,
+            "can_write": coordinator.can_write,
+        },
+    )
+
+
+async def _wlan_state(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) -> dict[str, Any]:
+    """The Wi-Fi networks of the box and the guest network, read now."""
+    networks = await hass.async_add_executor_job(coordinator.client.get_wifi_networks)
+    guest = await hass.async_add_executor_job(coordinator.client.get_guest_wifi_info)
+    return {
+        "networks": [
+            {
+                "key": key,
+                "band": _BAND_NAMES.get(key, key),
+                "ssid": network.ssid,
+                "enabled": network.enabled,
+                "bssid": network.bssid,
+                "standard": network.standard,
+            }
+            for key, network in networks.items()
+        ],
+        "guest": guest,
+        "can_write": coordinator.can_write,
+    }
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): WLAN_LIST_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_wlan_list(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The Wi-Fi networks of the box, without any password."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    try:
+        result = await _wlan_state(hass, found[1])
+    except FritzConnectionException as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WLAN_SWITCH_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("key"): vol.In(["2_4ghz", "5ghz", "6ghz", "guest"]),
+        vol.Required("enabled"): bool,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_wlan_switch(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Switch a Wi-Fi network on or off and answer with the networks as they are now."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    _, coordinator = found
+    if not coordinator.can_write:
+        _no_rights(connection, msg)
+        return
+    try:
+        if msg["key"] == "guest":
+            await coordinator.async_set_guest_wifi(msg["enabled"])
+        else:
+            await coordinator.async_set_wifi(msg["key"], msg["enabled"])
+        result = await _wlan_state(hass, coordinator)
+    except FritzConnectionException as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): WLAN_SECRET_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_wlan_secret(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Name, password and QR code of the guest Wi-Fi. Only with the right to change settings."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    _, coordinator = found
+    if not coordinator.can_write:
+        _no_rights(connection, msg)
+        return
+    try:
+        secret = await hass.async_add_executor_job(coordinator.client.get_guest_wifi_secret)
+        if secret is None:
+            connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "No guest Wi-Fi")
+            return
+        png = await hass.async_add_executor_job(
+            wifi_qr_png, secret["ssid"], secret["password"], secret["security"]
+        )
+    except FritzConnectionException as err:
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+        return
+    connection.send_result(
+        msg["id"], {**secret, "qr_png_base64": base64.b64encode(png).decode("ascii")}
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): WLAN_PASSWORD_COMMAND,
+        vol.Required("entry_id"): str,
+        # a WPA passphrase: 8 to 63 printable ASCII characters; without one a random one is made
+        vol.Optional("password"): vol.All(
+            str, vol.Length(min=8, max=63), vol.Match(r"^[\x20-\x7e]+$")
+        ),
+        vol.Optional("length", default=12): vol.All(int, vol.Range(min=8, max=63)),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_wlan_password(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Set the guest Wi-Fi password and answer with it; it is not logged here."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    _, coordinator = found
+    if not coordinator.can_write:
+        _no_rights(connection, msg)
+        return
+    try:
+        password = await coordinator.async_set_guest_wifi_password(
+            msg.get("password"), msg["length"]
+        )
+    except ServiceValidationError:
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "No guest Wi-Fi")
+        return
+    except FritzConnectionException as err:
+        connection.send_error(msg["id"], "invalid_format", str(err))
+        return
+    connection.send_result(msg["id"], {"password": password})
+
+
 @websocket_api.websocket_command(
     {vol.Required("type"): MIGRATE_SCAN_COMMAND, vol.Required("entry_id"): str}
 )
@@ -1440,6 +1635,11 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_device_action)
     websocket_api.async_register_command(hass, ws_reboot)
     websocket_api.async_register_command(hass, ws_migrate_scan)
+    websocket_api.async_register_command(hass, ws_box_info)
+    websocket_api.async_register_command(hass, ws_wlan_list)
+    websocket_api.async_register_command(hass, ws_wlan_switch)
+    websocket_api.async_register_command(hass, ws_wlan_secret)
+    websocket_api.async_register_command(hass, ws_wlan_password)
     websocket_api.async_register_command(hass, ws_latency)
     websocket_api.async_register_command(hass, ws_latency_switch)
     websocket_api.async_register_command(hass, ws_device_log)

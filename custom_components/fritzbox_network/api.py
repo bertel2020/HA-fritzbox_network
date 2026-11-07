@@ -903,11 +903,11 @@ class FritzNetworkClient:
                 raise FritzServiceError(f"The box has no Wi-Fi network {key}")
             self._connection.call_action(service, "SetEnable", NewEnable=enabled)
 
-    def get_guest_wifi_qr(self) -> bytes | None:
-        """The PNG of the QR code for the guest Wi-Fi; None where the box has no guest network.
+    def get_guest_wifi_secret(self) -> dict[str, Any] | None:
+        """Name, security and password of the guest Wi-Fi; None where the box has no guest network.
 
-        Two reads: the network name and type, and the password of a network that has one. The
-        image holds the password: whoever may look at it can join the network.
+        The password is read only for a network that has one. Whoever gets this can join the
+        network: it goes to the caller and nowhere else, and is never logged here.
         """
         with self._lock:
             if (service := self._guest_wifi_service()) is None:
@@ -918,7 +918,26 @@ class FritzNetworkClient:
             if security != "nopass":
                 keys = self._connection.call_action(service, "GetSecurityKeys")
                 password = keys.get("NewKeyPassphrase") or None
-        return wifi_qr_png(info.get("NewSSID") or "", password, security)
+        return {"ssid": info.get("NewSSID") or "", "security": security, "password": password}
+
+    def get_guest_wifi_info(self) -> dict[str, Any] | None:
+        """Whether the guest Wi-Fi is on and its name; None where the box has none."""
+        with self._lock:
+            if (service := self._guest_wifi_service()) is None:
+                return None
+            info = self._connection.call_action(service, "GetInfo")
+        return {"enabled": bool(info.get("NewEnable")), "ssid": info.get("NewSSID") or None}
+
+    def get_guest_wifi_qr(self) -> bytes | None:
+        """The PNG of the QR code for the guest Wi-Fi; None where the box has no guest network.
+
+        Two reads: the network name and type, and the password of a network that has one. The
+        image holds the password: whoever may look at it can join the network.
+        """
+        secret = self.get_guest_wifi_secret()
+        if secret is None:
+            return None
+        return wifi_qr_png(secret["ssid"], secret["password"], secret["security"])
 
     def set_guest_wifi_password(self, password: str | None = None, length: int = 12) -> str:
         """Set the password of the guest Wi-Fi, a random one of ``length`` if none is given.
