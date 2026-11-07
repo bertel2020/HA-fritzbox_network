@@ -405,9 +405,21 @@ Automations that refer to core entity ids have to be changed to the new ids; the
 | Port forwarding switches (only for the Home Assistant computer) | A switch per port forwarding, off by default |
 | Discovery | SSDP |
 | Call deflections, `dial` | **not covered**; telephony stays with `fritzbox_phone` and the core integration "FRITZ!Box" |
-| Repeater as an entry of its own (restart, Wi-Fi, update of the repeaters) | **not yet**: repeaters are devices of the box with mesh data but no controls of their own. Whoever needs that keeps the core entry of the repeater |
+| Repeater as an entry of its own (restart, Wi-Fi, update of the repeaters) | Repeaters can be chosen for control in the options (see below); they stay devices of the box |
 
 On top of that there are VPN, routes, mesh topology, history and the side panel here.
+
+### Controlling repeaters
+
+In the options of the box, choose under **Repeaters to control** the repeaters from the mesh that you want to operate from here. A repeater is already a device of the box; the chosen ones get on that device in addition:
+
+- the sensor **Last restart** (on),
+- the button **Restart** (off),
+- the **Wi-Fi switches** per band (on),
+- the sensor **CPU temperature** (off; only for repeaters that show it, and only read while it is on),
+- the **Update** entity "Firmware" with the Install button.
+
+The integration logs in to the repeater itself for this, with the **user and password of the box**; that worked on a FRITZ!Repeater 1200 AX, and a repeater that does not accept the login stays unavailable. The address comes from the device list of the box, so a new address is followed. A repeater is asked every 5 minutes, independently of the box; if it cannot be reached only its own entities are unavailable. It needs the right "FRITZ!Box settings". Not checked is whether the box sets a Wi-Fi back that you switch at the repeater at the next synchronisation; a repeater in the mesh takes its Wi-Fi settings from the box.
 
 ## Privacy and security
 
@@ -445,7 +457,7 @@ The integration ships its own icon in the local directory `custom_components/fri
 - Anything beyond TR-064 (VPN, address assignment, capture) is read from the web interface of the box. AVM can change it with a FRITZ!OS update; the entities then become unavailable or stay empty until the integration is adapted.
 - Private (randomized) MAC addresses count as new devices when they change.
 - Settings can only be changed by a user with the right "FRITZ!Box settings".
-- A repeater cannot be set up as an entry or controlled yet (see above).
+- A repeater is not set up as an entry of its own; repeaters are controlled through the options of the box.
 - Only one FRITZ!Box per entry; the core integration "AVM FRITZ!Box Tools" has to be separated (see above).
 
 ## Troubleshooting

@@ -405,9 +405,21 @@ Automationen, die auf Core-Entity-IDs verweisen, musst du auf die neuen IDs umst
 | Portfreigabe-Schalter (nur für den Home-Assistant-Rechner) | Schalter je Portfreigabe, standardmäßig aus |
 | Entdeckung | SSDP |
 | Rufumleitungen, `dial` | **nicht**; Telefonie bleibt bei `fritzbox_phone` bzw. der Core-Integration „FRITZ!Box“ |
-| Repeater als eigener Eintrag (Neustart, WLAN, Update der Repeater) | **noch nicht**: Repeater sind Geräte der Box mit Mesh-Daten, aber ohne eigene Steuerung. Wer das braucht, behält den Core-Eintrag des Repeaters |
+| Repeater als eigener Eintrag (Neustart, WLAN, Update der Repeater) | Repeater lassen sich in den Optionen zum Steuern auswählen (siehe unten); sie bleiben dabei Geräte der Box |
 
 Darüber hinaus gibt es hier VPN, Routen, Mesh-Topologie, Verläufe und das Seitenpanel.
+
+### Repeater steuern
+
+In den Optionen der Box wählst du unter **Repeater steuern** die Repeater aus dem Mesh aus, die du von hier aus bedienen willst. Ein Repeater ist schon ein Gerät der Box; die gewählten bekommen an diesem Gerät zusätzlich:
+
+- den Sensor **Letzter Neustart** (an),
+- den Button **Neu starten** (aus),
+- die **WLAN-Schalter** je Band (an),
+- den Sensor **CPU-Temperatur** (aus; nur bei Repeatern, die ihn zeigen, und nur gelesen, solange er an ist),
+- die **Update**-Entität „Firmware“ mit dem Knopf Installieren.
+
+Die Integration meldet sich dafür am Repeater selbst an, mit **Benutzer und Kennwort der Box**; das hat an einer FRITZ!Repeater 1200 AX funktioniert, ein Repeater, der die Anmeldung nicht annimmt, bleibt nicht verfügbar. Die Adresse nimmt sie aus der Geräteliste der Box, eine neue Adresse wird also übernommen. Ein Repeater wird alle 5 Minuten abgefragt, unabhängig von der Box; ist er nicht erreichbar, sind nur seine Entitäten nicht verfügbar. Es braucht das Recht „FRITZ!Box Einstellungen“. Ungeprüft ist, ob die Box ein WLAN, das du am Repeater schaltest, bei der nächsten Synchronisation wieder zurücksetzt; ein Repeater im Mesh übernimmt seine WLAN-Einstellungen von der Box.
 
 ## Datenschutz und Sicherheit
 
@@ -445,7 +457,7 @@ Die Integration enthält ein eigenes Symbol im von Home Assistant unterstützten
 - Was über TR-064 hinausgeht (VPN, Adressvergabe, Mitschnitt), wird aus der Weboberfläche der Box gelesen. AVM kann sie mit einem FRITZ!OS-Update ändern; die Entitäten sind dann nicht verfügbar oder bleiben leer, bis die Integration angepasst ist.
 - Private (zufällige) MAC-Adressen gelten nach einem Wechsel als neue Geräte.
 - Einstellungen kann nur ein Benutzer mit dem Recht „FRITZ!Box-Einstellungen" ändern.
-- Ein Repeater lässt sich noch nicht als Eintrag einrichten oder steuern (siehe oben).
+- Ein Repeater wird nicht als eigener Eintrag eingerichtet; gesteuert werden Repeater über die Optionen der Box.
 - Nur eine FRITZ!Box je Eintrag; die Core-Integration „AVM FRITZ!Box Tools" ist zu trennen (siehe oben).
 
 ## Fehlerbehebung
