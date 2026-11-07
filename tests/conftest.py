@@ -70,6 +70,8 @@ class FakeClient:
     model_name = "FRITZ!Box 7590 AX"
     system_version = "8.25"
     serial_number = "SERIAL1"
+    # how long the box has run, as the setup read it; read_uptime asks again
+    uptime: int | None = 3 * 3600
 
     def __init__(self) -> None:
         self.hosts = parse_hosts((FIXTURES / "hosts.xml").read_text())
@@ -249,6 +251,10 @@ class FakeClient:
         self.calls.append(("reconnect",))
         if self.fail_actions:
             raise FritzActionError("refused")
+
+    def read_uptime(self) -> int | None:
+        self.calls.append(("read_uptime",))
+        return self.uptime
 
     def install_firmware(self) -> None:
         self.calls.append(("install_firmware",))

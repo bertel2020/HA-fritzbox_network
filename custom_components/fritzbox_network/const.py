@@ -142,6 +142,7 @@ KEY_DSL_ATTENUATION_UP = "dsl_attenuation_up"
 KEY_DSL_FEC_ERRORS = "dsl_fec_errors"
 KEY_DSL_CRC_ERRORS = "dsl_crc_errors"
 
+KEY_BOX_UPTIME = "box_uptime"
 KEY_LAST_UPDATE = "last_update"
 KEY_FAILED_POLLS = "failed_polls"
 KEY_MESH_STATUS = "mesh_status"

@@ -577,6 +577,47 @@ async def test_without_the_right_to_change_settings_the_firmware_cannot_be_insta
     assert not state.attributes["supported_features"] & 1
 
 
+async def test_the_last_restart_comes_from_the_setup_and_is_read_again_only_now_and_then(
+    hass, fake_client, entry
+):
+    coordinator = await _setup(hass, entry)
+    state = hass.states.get("sensor.fritz_network_box_uptime")
+    assert state is not None and state.state != "unknown"
+    boot = coordinator.box_boot
+    assert (dt_util.utcnow() - boot).total_seconds() == pytest.approx(3 * 3600, abs=120)
+
+    # the setup read it: neither the first polls nor the next ones ask again
+    await _poll(hass, coordinator)
+    await _poll(hass, coordinator)
+    assert ("read_uptime",) not in fake_client.calls
+
+    # a box that did not answer may have restarted: the first answer afterwards is read
+    fake_client.uptime = 60
+    coordinator._register_failure()
+    await _poll(hass, coordinator)
+    assert fake_client.calls.count(("read_uptime",)) == 1
+    assert (dt_util.utcnow() - coordinator.box_boot).total_seconds() == pytest.approx(60, abs=120)
+    await _poll(hass, coordinator)
+    assert fake_client.calls.count(("read_uptime",)) == 1
+
+
+async def test_the_last_restart_stays_put_while_the_reads_differ_by_less_than_a_minute(
+    hass, fake_client, entry
+):
+    coordinator = await _setup(hass, entry)
+    boot = coordinator.box_boot
+    coordinator._note_uptime(3 * 3600 + 30)
+    assert coordinator.box_boot == boot
+    coordinator._note_uptime(2 * 3600)
+    assert coordinator.box_boot != boot
+
+
+async def test_a_box_that_does_not_tell_its_uptime_has_no_such_sensor(hass, fake_client, entry):
+    fake_client.uptime = None
+    await _setup(hass, entry)
+    assert er.async_get(hass).async_get("sensor.fritz_network_box_uptime") is None
+
+
 async def test_a_box_that_does_not_answer_about_firmware_has_no_update_entity(
     hass, fake_client, entry
 ):

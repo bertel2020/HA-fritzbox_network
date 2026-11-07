@@ -239,6 +239,9 @@
       },
       "dsl_max_rate_up": {
         "name": "DSL-Maximalrate Upload"
+      },
+      "box_uptime": {
+        "name": "Letzter Neustart"
       }
     },
     "select": {

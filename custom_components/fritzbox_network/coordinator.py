@@ -145,6 +145,11 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         # id -> name of the access profiles of the box, read now and then
         self.filter_profiles: dict[str, str] = {}
         self._polls = 0
+        # when the box started, as far as known; moved only if it differs by more than a minute
+        # (the uptime is read now and then, and each read is a little different)
+        self.box_boot: datetime | None = None
+        self._uptime_stale = False
+        self._note_uptime(getattr(client, "uptime", None))
         # The first poll reads only what the devices and the internet card need, so the setup is
         # not held up by the web interface of the box; a second poll right after it reads the rest.
         self._lean = True
@@ -225,6 +230,29 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             return
         if offer is not None:
             self._firmware = offer
+
+    def _note_uptime(self, seconds: int | None) -> None:
+        """When the box started, from how long it has run; kept while it moves by a minute."""
+        if seconds is None:
+            return
+        boot = (dt_util.utcnow() - timedelta(seconds=seconds)).replace(second=0, microsecond=0)
+        if self.box_boot is None or abs((boot - self.box_boot).total_seconds()) > 60:
+            self.box_boot = boot
+
+    def _fetch_uptime(self) -> None:
+        """How long the box has run, now and then and after it was unreachable or restarted.
+
+        The setup read it already, so the first poll does not. The answer of the box is large
+        (its event log), hence not at every poll.
+        """
+        if not self._uptime_stale and (self._polls == 0 or self._polls % FIRMWARE_REFRESH_POLLS):
+            return
+        try:
+            self._note_uptime(self.client.read_uptime())
+        except (*_FETCH_ERRORS, TypeError) as err:
+            _LOGGER.debug("Uptime unavailable: %s", err)
+            return
+        self._uptime_stale = False
 
     def _fetch_dhcp_pool(self) -> None:
         """The DHCP range, now and then; what was known stays if the box does not answer."""
@@ -376,6 +404,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             routes = self._fetch_routes()
             self._fetch_firmware()
             self._fetch_dhcp_pool()
+            self._fetch_uptime()
             self._fetch_reservations([h for h in hosts if h.ip and not h.guest])
             self._polls += 1
         return hosts, mesh, internet, guest, vpn, routes
@@ -580,6 +609,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
 
     def _register_failure(self) -> None:
         self._failures += 1
+        # the box may have restarted while it did not answer
+        self._uptime_stale = True
         if self._failures >= BACKOFF_AFTER_FAILURES:
             factor = 2 ** (self._failures - BACKOFF_AFTER_FAILURES + 1)
             seconds = min(self._base_interval * factor, MAX_BACKOFF_SECONDS)
@@ -971,6 +1002,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
     async def async_reboot(self) -> None:
         """Restart the box; the polls fail for a few minutes and the backoff takes care of it."""
         await self.hass.async_add_executor_job(self.client.reboot)
+        self._uptime_stale = True
 
     async def async_reconnect(self) -> None:
         """Hang up and dial in again, then read the connection once the box has had a moment."""

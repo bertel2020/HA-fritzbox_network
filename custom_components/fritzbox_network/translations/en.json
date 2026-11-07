@@ -239,6 +239,9 @@
       },
       "dsl_max_rate_up": {
         "name": "DSL attainable rate upload"
+      },
+      "box_uptime": {
+        "name": "Last restart"
       }
     },
     "select": {

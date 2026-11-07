@@ -35,6 +35,7 @@ from .const import (
     DOMAIN,
     KEY_ACCESS_POINT,
     KEY_ADDRESS_ASSIGNMENT,
+    KEY_BOX_UPTIME,
     KEY_CLIENTS,
     KEY_CONNECTION_TYPE,
     KEY_DEVICES_OFFLINE,
@@ -187,6 +188,7 @@ async def async_setup_entry(
             FritzNetworkLastUpdate(coordinator),
             FritzNetworkFailedPolls(coordinator),
             FritzNetworkMeshStatus(coordinator),
+            *([FritzNetworkBoxUptime(coordinator)] if coordinator.box_boot else []),
         ]
     )
     _async_setup_internet(coordinator, entry, async_add_entities)
@@ -943,6 +945,20 @@ class FritzNetworkLastUpdate(_BoxDiagnostic):
     @property
     def native_value(self) -> datetime | None:
         return self.coordinator.last_success
+
+
+class FritzNetworkBoxUptime(_BoxDiagnostic):
+    """When the box started: the day and time of the last restart."""
+
+    _attr_device_class = SensorDeviceClass.UPTIME
+    _attr_entity_registry_enabled_default = True
+
+    def __init__(self, coordinator: FritzNetworkCoordinator) -> None:
+        super().__init__(coordinator, KEY_BOX_UPTIME)
+
+    @property
+    def native_value(self) -> datetime | None:
+        return self.coordinator.box_boot
 
 
 class FritzNetworkFailedPolls(_BoxDiagnostic):

@@ -147,6 +147,9 @@
       },
       "dsl_max_rate_up": {
         "default": "mdi:speedometer"
+      },
+      "box_uptime": {
+        "default": "mdi:restart"
       }
     },
     "switch": {

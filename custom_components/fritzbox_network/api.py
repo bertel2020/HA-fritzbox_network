@@ -111,6 +111,11 @@ def web_login_response(challenge: str, password: str) -> str:
     return f"{challenge}-{digest}"
 
 
+def _uptime_of(info: dict[str, Any]) -> int | None:
+    value = info.get("NewUpTime")
+    return int(value) if isinstance(value, (int, str)) and str(value).isdigit() else None
+
+
 class FritzNetworkClient:
     """Thin wrapper around fritzconnection."""
 
@@ -130,6 +135,8 @@ class FritzNetworkClient:
         self._lock = threading.Lock()
         self._fc: FritzConnection | None = None
         # the WLANConfiguration service of the guest network: looked for once, then known
+        # how long the box has run, as the last read of DeviceInfo1 said (the setup reads it)
+        self.uptime: int | None = None
         self._guest_service: str | None = None
         self._guest_searched = False
         # the session of the web interface, which the fixed addresses are read from
@@ -169,7 +176,16 @@ class FritzNetworkClient:
     def serial_number(self) -> str | None:
         with self._lock:
             info = self._connection.call_action(DEVICEINFO_SERVICE, "GetInfo")
+        # the same answer tells how long the box runs: no second read at the setup
+        self.uptime = _uptime_of(info)
         return info.get("NewSerialNumber") or None
+
+    def read_uptime(self) -> int | None:
+        """How long the box has run in seconds; the answer also holds its whole event log."""
+        with self._lock:
+            info = self._connection.call_action(DEVICEINFO_SERVICE, "GetInfo")
+        self.uptime = _uptime_of(info)
+        return self.uptime
 
     def can_write(self) -> bool:
         """Return True if the user may change settings (BoxAdmin: readwrite)."""
