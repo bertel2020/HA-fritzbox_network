@@ -6,6 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Panel: Lange graue Hinweise unter den Karten sind hinter einer kleinen Zeile „Hinweis“ eingeklappt (kurze bleiben stehen). Ein geöffneter Hinweis bleibt beim Neuzeichnen der Seite offen.
 - Panel: Knöpfe haben dieselbe Ecke wie Eingabefelder und Zeitraum-Umschalter (abgerundetes Rechteck, 10 px) statt einer Pille; runde Chips, Tags und Icon-Knöpfe behalten ihre runde Form.
 - Panel: Jede Karte hat denselben Kopf. Links steht die Beschriftung, rechts das, was zur ganzen Karte gehört (Zeitraum-Umschalter, Status, Knopf), und der Kopf ist überall gleich hoch, sodass nebeneinanderstehende Karten auf einer Linie beginnen. Auf der Internet- und der Box-Seite wanderte der Status in diesen Kopf, darunter folgen Icon, Name und Angaben.
 - Die Geräteliste kommt wieder mit 35 Tagen Verkehr; das Jahr wird erst gelesen, wenn du unter Datenmenge **Jahr** wählst (neuer Befehl `history/traffic`).

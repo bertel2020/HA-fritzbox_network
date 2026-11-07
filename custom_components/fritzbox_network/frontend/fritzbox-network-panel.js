@@ -5,6 +5,7 @@ import {
   WEAK_LINK_RATIO,
   escapeHtml,
   formatDuration,
+  rememberNote,
   filterChanged,
   nearestStep,
   pagerFor,
@@ -339,6 +340,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       else if (event.target.id === "a-entryform") this._onEntryForm(event.target);
       else this._onAddressForm(event.target);
     });
+    // a note the reader opened stays open when the page is drawn again; "toggle" does not bubble
+    this.shadowRoot.addEventListener("toggle", (event) => rememberNote(event.target), true);
     this.shadowRoot.addEventListener("pointermove", (event) => this._onPlot(event));
     this.shadowRoot.addEventListener("pointerleave", () => this._hidePlots());
     this.shadowRoot.addEventListener("pointerover", (event) => this._phoneTip(event));

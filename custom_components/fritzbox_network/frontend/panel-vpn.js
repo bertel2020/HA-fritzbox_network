@@ -1,6 +1,6 @@
 /* The VPN page: the WireGuard connections of the box with their state, and the devices that are dialled in. */
 
-import { escapeHtml, formatDuration } from "./shared.js";
+import { escapeHtml, formatDuration, hintNote } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 
@@ -160,5 +160,5 @@ export function renderVpn(data, ctx) {
         )
         .join("")}</ul></section>`
     : "";
-  return `${head}<div class="tiles vpntiles">${tiles}</div>${group(v.devices, m.devices, ctx)}${group(v.sites, m.sites, ctx)}${remote}${statsSection(m, ctx)}<p class="hint">${escapeHtml(v.hint)}</p>`;
+  return `${head}<div class="tiles vpntiles">${tiles}</div>${group(v.devices, m.devices, ctx)}${group(v.sites, m.sites, ctx)}${remote}${statsSection(m, ctx)}${hintNote(v.hint, t)}`;
 }

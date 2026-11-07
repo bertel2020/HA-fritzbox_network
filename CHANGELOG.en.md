@@ -6,6 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Panel: long grey hints under the cards are folded behind a small "Note" line (short ones stay). An opened note stays open when the page is redrawn.
 - Panel: buttons have the same corner as input fields and range switches (rounded rectangle, 10 px) instead of a pill; round chips, tags and icon buttons keep their round shape.
 - Panel: every card has the same head. The label is on the left, what belongs to the whole card (range switch, status, button) on the right, and the head has the same height everywhere, so cards side by side start on one line. On the Internet and Box pages the status moved into that head and the icon, name and details follow below it.
 - The list of devices comes with 35 days of traffic again; the year is read only when you pick **Year** under data volume (new command `history/traffic`).

@@ -9,9 +9,26 @@ export const BANDS = { "2_4ghz": "2.4 GHz", "5ghz": "5 GHz", "6ghz": "6 GHz" };
 export const BUSY_UTILIZATION = 70;
 
 
-/** An explanation that stays closed until it is wanted: a summary line and the paragraphs. */
+const OPEN_NOTES = new Set();
+
+/** An explanation that stays closed until it is wanted: a summary line and the paragraphs. It stays open when the page is drawn again. */
 export function noteHtml(label, ...texts) {
-  return `<details class="explain"><summary>${escapeHtml(label)}</summary>${texts.map((text) => `<p class="hint">${escapeHtml(text)}</p>`).join("")}</details>`;
+  const key = `${label}|${String(texts[0] ?? "").slice(0, 40)}`;
+  return `<details class="explain" data-note="${escapeHtml(key)}"${OPEN_NOTES.has(key) ? " open" : ""}><summary>${escapeHtml(label)}</summary>${texts.map((text) => `<p class="hint">${escapeHtml(text)}</p>`).join("")}</details>`;
+}
+
+/** Notes the open or closed state of an explanation the reader toggled. */
+export function rememberNote(details) {
+  const key = details?.dataset?.note;
+  if (!key) return;
+  if (details.open) OPEN_NOTES.add(key);
+  else OPEN_NOTES.delete(key);
+}
+
+/** A hint under a card: a short one stays as it is, a long one is folded behind "Note" (it is read once). */
+export function hintNote(text, t, min = 110) {
+  if (!text) return "";
+  return String(text).length < min ? `<p class="hint">${escapeHtml(text)}</p>` : noteHtml(t.hintLabel, text);
 }
 
 export function escapeHtml(value) {

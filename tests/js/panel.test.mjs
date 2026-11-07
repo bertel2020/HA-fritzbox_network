@@ -1237,7 +1237,7 @@ test("the connection card shows the steps as tiles and names what to look at", (
   assert.match(html, /Namensserver/);
   assert.match(html, /<b>nicht verfügbar<\/b>/);
   assert.match(html, /class="checktile off" title="[^"]*kein Fehler/);
-  assert.equal((html.match(/<details class="explain">/g) ?? []).length, 1); // the two notes are one
+  assert.equal((html.match(/<details class="explain"/g) ?? []).length, 1); // the two notes are one
   assert.match(check.renderConnection("failed", empty, ctx), /nicht gelaufen/);
 });
 
@@ -1682,4 +1682,18 @@ test("the device page shows the hostname where it tells more than the name", () 
   const same = { ...data.clients[0], hostname: data.clients[0].name.toUpperCase() };
   assert.doesNotMatch(device.renderDevice(same, ctx), /<dt>Hostname<\/dt>/);
   assert.doesNotMatch(device.renderDevice({ ...data.clients[0], hostname: null }, ctx), /<dt>Hostname<\/dt>/);
+});
+
+test("a long hint is folded behind a note, a short one stays; an opened note stays open", () => {
+  const tt = { hintLabel: "Hinweis" };
+  assert.equal(sharedHelpers.hintNote("Kurz.", tt), '<p class="hint">Kurz.</p>');
+  const long = "Ein langer Hinweis, der erklärt, wie etwas gemessen wird und warum die Werte so sind, wie sie sind, auch wenn das viel Text ist.";
+  const closed = sharedHelpers.hintNote(long, tt);
+  assert.match(closed, /^<details class="explain" data-note="[^"]+"><summary>Hinweis<\/summary><p class="hint">Ein langer/);
+  const key = /data-note="([^"]+)"/.exec(closed)[1];
+  sharedHelpers.rememberNote({ dataset: { note: key }, open: true });
+  assert.match(sharedHelpers.hintNote(long, tt), /<details class="explain" data-note="[^"]+" open>/);
+  sharedHelpers.rememberNote({ dataset: { note: key }, open: false });
+  assert.doesNotMatch(sharedHelpers.hintNote(long, tt), / open>/);
+  assert.equal(sharedHelpers.hintNote("", tt), "");
 });

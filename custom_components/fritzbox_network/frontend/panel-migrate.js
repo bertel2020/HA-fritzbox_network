@@ -1,6 +1,6 @@
 /* Switching over from the core integration "AVM FRITZ!Box Tools": a read-only preview and the note above the pages. */
 
-import { escapeHtml } from "./shared.js";
+import { escapeHtml, hintNote } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 
@@ -141,6 +141,6 @@ export function renderMigrate(scan, ctx) {
       <div class="tiles">${tiles}</div>
       <div class="filters" role="group" aria-label="${escapeHtml(m.filterLabel)}">${filters}</div>
       <div class="mtable">${body || `<div class="empty"><b>${escapeHtml(m.emptyFilter)}</b></div>`}</div>
-      <p class="hint">${escapeHtml(m.hint)}</p>
+      ${hintNote(m.hint, t)}
     </section>`;
 }

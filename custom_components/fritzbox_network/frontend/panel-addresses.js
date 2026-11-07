@@ -1,6 +1,6 @@
 /* The address page of the panel: the whole /24 around the box, who has which address, what is free. */
 
-import { escapeHtml } from "./shared.js";
+import { escapeHtml, hintNote } from "./shared.js";
 import { fill } from "./texts.js";
 import { whenText } from "./panel-network.js";
 
@@ -315,7 +315,7 @@ function exportCard(m, ctx) {
     <div class="btn-row"><button class="btn" data-aexport="csv" data-k="x-csv">${escapeHtml(e.csv)}</button>
       <button class="btn" data-aexport="json" data-k="x-json">${escapeHtml(e.json)}</button>
       <button class="btn p" data-aexport="print" data-k="x-print">${escapeHtml(e.print)}</button></div>
-    <p class="hint">${escapeHtml(e.printHint)}</p></section>`;
+    ${hintNote(e.printHint, t)}</section>`;
 }
 
 /** The block of the user an address is in. */
@@ -693,7 +693,7 @@ function zonesCard(m, t, language) {
     })
     .join("");
   return `<section class="card sec"><span class="label">${escapeHtml(a.zonesTitle)}</span>
-    <div class="abar">${bar}</div><div class="azones">${rows}</div><p class="hint">${escapeHtml(a.zonesNote)}</p></section>`;
+    <div class="abar">${bar}</div><div class="azones">${rows}</div>${hintNote(a.zonesNote, t)}</section>`;
 }
 
 /**

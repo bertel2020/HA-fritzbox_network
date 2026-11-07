@@ -1,6 +1,6 @@
 /* The box page: the FRITZ!Box itself, how long it runs, how warm it is, its line, restart and reconnect. */
 
-import { escapeHtml, formatBytes, formatDuration } from "./shared.js";
+import { escapeHtml, formatBytes, formatDuration, hintNote } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { accessLabel } from "./panel-internet.js";
@@ -102,7 +102,7 @@ function lineCard(info, ctx) {
       ${tile(b.received, `<b>${bytes(info.bytes_received)}</b>`, b.sinceRestart)}
       ${tile(b.sent, `<b>${bytes(info.bytes_sent)}</b>`, b.sinceRestart)}
     </div>
-    <p class="hint">${escapeHtml(b.lineNote)}</p></section>`;
+    ${hintNote(b.lineNote, t)}</section>`;
 }
 
 function restartBlock(restart, ctx) {

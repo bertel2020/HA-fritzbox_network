@@ -1,6 +1,6 @@
 /* The internet page of the panel: the connection of the box, its load and, on a DSL line, its quality. */
 
-import { dailyTotals, escapeHtml, formatBytes, formatDuration, formatRate, sparkPaths, trafficByDevice, trafficMonth, trafficSummary, usedPercent } from "./shared.js";
+import { dailyTotals, escapeHtml, formatBytes, formatDuration, formatRate, hintNote, sparkPaths, trafficByDevice, trafficMonth, trafficSummary, usedPercent } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { whenText } from "./panel-network.js";
@@ -115,7 +115,7 @@ function lineQuality(dsl, language, t) {
       ${error(i.lineCrc, dsl.crc_errors, crcTone ? i.lineCrcSome : i.lineCrcNone, crcTone)}
     </div>
     ${spectrum(dsl, t, language)}
-    <p class="hint">${escapeHtml(i.lineHint)}</p></section>`;
+    ${hintNote(i.lineHint, t)}</section>`;
 }
 
 // the box gives the signal to noise per tone group in tenths of a dB (assumed, the unit is not documented)
@@ -207,7 +207,7 @@ function spectrum(dsl, t, language) {
       : "";
   return `<div class="spectrum"><span class="label">${escapeHtml(t.inet.spectrum)}</span>
     ${charts.map((c) => spectrumChart(c, { max, mhz, label: c.label, cls: c.cls, t, language })).join("")}${summary}
-    <p class="hint">${escapeHtml(t.inet.spectrumHint)}</p></div>`;
+    ${hintNote(t.inet.spectrumHint, t)}</div>`;
 }
 
 const TOP_DEVICES = 10;
@@ -305,7 +305,7 @@ function volumeCard(ctx) {
     <div class="subhead">${escapeHtml(i.perDay)}</div>${dayBars(dailyTotals(traffic, days), language, t)}
     <div class="subhead">${escapeHtml(fill(i.topTitle, { range: t.trafficRanges[range] }))}</div>
     ${rows.length ? `<ol class="topdev">${list}</ol>${more}` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}
-    <p class="hint">${escapeHtml(i.topHint)}</p></section>`;
+    ${hintNote(i.topHint, t)}</section>`;
 }
 
 /** A button that copies a value to the clipboard. */
@@ -348,7 +348,7 @@ function addressHistory(addresses, language, t) {
   const day = (ms) => new Date(ms).toLocaleDateString(language, { day: "numeric", month: "short" });
   const rows = addressRows(addresses);
   const head = `<div class="chead"><span class="label">${escapeHtml(i.addressHistory)}</span></div>`;
-  if (rows.length < 2) return `<section class="card sec">${head}<p class="hint">${escapeHtml(i.addressNone)}</p><p class="hint">${escapeHtml(i.addressHint)}</p></section>`;
+  if (rows.length < 2) return `<section class="card sec">${head}<p class="hint">${escapeHtml(i.addressNone)}</p>${hintNote(i.addressHint, t)}</section>`;
   const body = rows
     .map((row, n) => {
       const current = KINDS.some((kind) => row[kind] && !row[kind].until);
@@ -360,7 +360,7 @@ function addressHistory(addresses, language, t) {
     .join("");
   return `<section class="card sec">${head}
     <table class="addrtable"><thead><tr><th>${escapeHtml(i.addressSince)}</th>${KINDS.map((kind) => `<th>${escapeHtml(i.addressKinds[kind])}</th>`).join("")}</tr></thead><tbody>${body}</tbody></table>
-    <p class="hint">${escapeHtml(i.addressHint)}</p></section>`;
+    ${hintNote(i.addressHint, t)}</section>`;
 }
 
 function events(internet, t, now) {
@@ -373,7 +373,7 @@ function events(internet, t, now) {
     .join("");
   return `<section class="card sec"><span class="label">${escapeHtml(i.events)}</span>
     ${items ? `<ul class="events">${items}</ul>` : `<p class="hint">${escapeHtml(i.eventsNone)}</p>`}
-    <p class="hint">${escapeHtml(i.eventsHint)}</p></section>`;
+    ${hintNote(i.eventsHint, t)}</section>`;
 }
 
 const DAY = 86400000;
@@ -470,7 +470,7 @@ export function renderInternet(internet, ctx) {
           ${gauge("dn", i.down, rate?.down, internet.rate_down, language, t)}
           ${gauge("upl", i.up, rate?.up, internet.rate_up, language, t)}
           ${chart(internet, language, t)}
-          <p class="hint">${escapeHtml(i.measureNote)}</p></section>
+          ${hintNote(i.measureNote, t)}</section>
         ${internet.dsl ? lineQuality(internet.dsl, language, t) : ""}
         ${events(internet, t, now)}
       </div>

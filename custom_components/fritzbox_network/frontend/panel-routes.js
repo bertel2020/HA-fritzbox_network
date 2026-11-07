@@ -1,6 +1,6 @@
 /** The routes page: the static IPv4 routes of the box, a switch and a delete button for each, and a form for a new one. */
 
-import { escapeHtml } from "./shared.js";
+import { escapeHtml, hintNote } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 
@@ -213,5 +213,5 @@ export function renderRoutes(routes, ctx) {
       <section class="card sec"><span class="label">${escapeHtml(v.listTitle)}</span><ul class="vpnlist">${m.routes.map((r) => row(r, c)).join("")}</ul></section>
       <aside class="card sec routedetail" aria-live="polite">${detail(selected, c)}</aside>
     </div>
-    <p class="hint">${escapeHtml(v.hint)}</p>`;
+    ${hintNote(v.hint, t)}`;
 }

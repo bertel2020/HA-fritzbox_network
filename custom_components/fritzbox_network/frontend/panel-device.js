@@ -1,6 +1,6 @@
 /* The device page of the panel: a page of its own with the connection, the actions and the master data, as HTML. */
 
-import { BANDS, escapeHtml, formatBytes, isBlocked, isWeak, pointColumn, seriesStats, sparkLine, trafficSum, uplinkStyle } from "./shared.js";
+import { BANDS, escapeHtml, formatBytes, hintNote, isBlocked, isWeak, pointColumn, seriesStats, sparkLine, trafficSum, uplinkStyle } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { weakPercent, whenText } from "./panel-network.js";
@@ -315,7 +315,7 @@ function groupsSection(client, data, t) {
             `<button class="fchip" data-label="${escapeHtml(l.id)}" aria-pressed="${(client.labels ?? []).includes(l.id)}" data-k="lb-${escapeHtml(l.id)}">${escapeHtml(l.name)}</button>`
         )
         .join("")}<button class="fchip" data-act="new-group" data-k="new-group">+ ${escapeHtml(t.newGroup)}</button></div>
-      <p class="hint">${escapeHtml(t.groupsHint)}</p>`
+      ${hintNote(t.groupsHint, t)}`
     : `<p class="hint">${escapeHtml(t.noGroupEntity)}</p>`;
   return `<div class="section"><span class="label">${escapeHtml(t.groupsTitle)}</span>${body}</div>`;
 }
@@ -325,5 +325,5 @@ function historySection(client, t) {
   if (!client.entity_id) return "";
   return `<div class="section"><span class="label">${escapeHtml(t.historyTitle)}</span>
     <div class="btn-row"><button class="btn sm" data-act="logbook" data-k="logbook">${escapeHtml(t.logbook)}</button><button class="btn sm" data-act="history" data-k="history">${escapeHtml(t.history)}</button></div>
-    <p class="hint">${escapeHtml(t.historyHint)}</p></div>`;
+    ${hintNote(t.historyHint, t)}</div>`;
 }

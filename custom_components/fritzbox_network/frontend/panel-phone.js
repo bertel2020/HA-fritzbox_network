@@ -5,7 +5,7 @@
  * calls its services from the panel; it never talks to the box itself.
  */
 
-import { escapeHtml } from "./shared.js";
+import { escapeHtml, hintNote } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { BOOK_ROWS, CALL_FILTERS, digits, HISTORY_PERIODS, PERIODS, PERIOD_DAYS, SERIES, callKind, dialable, displayName, filterCalls, filterCounts, foldHeat, heatGrid, isOutgoing, onBlocklist, phoneStats, searchBook, shortNumber, wsStats } from "./phone-model.js";
@@ -514,7 +514,7 @@ function bookCard(model, ctx) {
     <div class="ph-tools"><label class="search ph-search"><span class="sr">${esc(b.searchLabel)}</span>${ic("search")}<input type="search" id="ph-bq" value="${esc(ui.bookQuery)}" placeholder="${esc(b.search)}" autocomplete="off"></label></div>
     <p class="sr" role="status">${esc(fill(b.found, { n: found.length }))}</p>
     ${book.contacts.length ? (found.length ? rows : `<div class="empty ph-small"><b>${esc(b.noMatch)}</b></div>`) : `<div class="empty ph-small"><b>${esc(b.empty)}</b></div>`}${more}
-    <p class="hint">${esc(b.hint)}</p></div></section>`;
+    ${hintNote(b.hint, t)}</div></section>`;
 }
 
 // ---------- block list (only with the commands) ----------
@@ -527,7 +527,7 @@ export function blockCard(model, ctx) {
   if (model.api !== "ws" || !bl?.known || (bl.ok && !bl.supported)) return "";
   const head = `<div class="chead"><span class="label" id="ph-bl-h">${esc(k.listTitle)}</span>${bl.ok ? `<span class="chip">${esc(fill(k.listCount, { n: bl.numbers.size }))}</span>` : ""}</div>`;
   if (!bl.ok) return `<section class="card sec" aria-labelledby="ph-bl-h">${head}<p class="hint">${esc(t.phone.part)}</p></section>`;
-  if (!bl.entries.length) return `<section class="card sec" aria-labelledby="ph-bl-h">${head}<div class="empty ph-small"><b>${esc(k.listEmpty)}</b></div><p class="hint">${esc(k.listHint)}</p></section>`;
+  if (!bl.entries.length) return `<section class="card sec" aria-labelledby="ph-bl-h">${head}<div class="empty ph-small"><b>${esc(k.listEmpty)}</b></div>${hintNote(k.listHint, t)}</section>`;
   const shown = bl.entries.slice(0, BOOK_ROWS);
   const rows = shown
     .map((e, i) => {
@@ -541,7 +541,7 @@ export function blockCard(model, ctx) {
     })
     .join("");
   const more = bl.entries.length > shown.length ? `<p class="hint">${esc(fill(t.phone.book.more, { n: bl.entries.length - shown.length }))}</p>` : "";
-  return `<section class="card sec" aria-labelledby="ph-bl-h">${head}${rows}${more}<p class="hint">${esc(k.listHint)}</p></section>`;
+  return `<section class="card sec" aria-labelledby="ph-bl-h">${head}${rows}${more}${hintNote(k.listHint, t)}</section>`;
 }
 
 // ---------- statistics ----------
