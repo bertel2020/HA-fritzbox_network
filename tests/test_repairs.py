@@ -106,3 +106,23 @@ async def test_the_fix_hides_the_chosen_devices(hass, fake_client, entry):
         is None
     )
     assert WLAN not in entry.options["hidden_macs"]
+
+
+async def test_a_device_that_came_back_while_the_form_was_open_is_not_hidden(
+    hass, fake_client, entry
+):
+    await _setup(hass, entry, stale_repair=True, stale_days=30)
+    hass.states.async_set(OFFLINE_SENSOR, _ago(40))
+    await async_update_stale_issue(hass, entry)
+    flow = await async_create_fix_flow(
+        hass, f"stale_devices_{entry.entry_id}", _issue(hass, entry).data
+    )
+    flow.hass = hass
+    await flow.async_step_init()
+
+    hass.states.async_set(OFFLINE_SENSOR, _ago(1))
+    result = await flow.async_step_init({"macs": [OFFLINE]})
+    await hass.async_block_till_done()
+
+    assert result["type"].value == "create_entry"
+    assert OFFLINE not in entry.options.get("hidden_macs", [])
