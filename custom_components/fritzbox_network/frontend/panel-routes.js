@@ -112,19 +112,22 @@ function switchOf(route, ctx) {
 function deleteOf(route, ctx) {
   if (!ctx.canWrite) return "";
   const busy = ctx.busy?.has(route.network);
-  return `<button class="btn del" data-act="route-delete" data-network="${escapeHtml(route.network)}"${busy ? " disabled" : ""}>${escapeHtml(ctx.t.routesPage.delete.ok)}</button>`;
+  const label = ctx.t.routesPage.delete.ok;
+  return `<button class="iconbtn del" data-act="route-delete" data-network="${escapeHtml(route.network)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}"${busy ? " disabled" : ""}>${ic("trash")}</button>`;
 }
 
+/** A route: the target network first, then the way it takes ("via gateway") with its reachability. */
 function row(route, ctx) {
   const { t } = ctx;
   const v = t.routesPage;
-  const tone = { on: "ok", off: "", down: "bad" }[route.state];
-  // the address only where the name is not already the address
-  const facts = [route.device_name ? route.gateway : null, fill(v.metric, { n: route.metric })].filter(Boolean).map(escapeHtml).join(" · ");
+  const reach = route.gateway_online === true ? "on" : route.gateway_online === false ? "down" : "unknown";
+  // the address only where the name is not already the address; the metric only where it is not the usual 0
+  const facts = [route.device_name ? route.gateway : null, route.metric ? fill(v.metric, { n: route.metric }) : null].filter(Boolean).map(escapeHtml);
+  const via = `<span class="rvia"><i class="gdot ${reach}" title="${escapeHtml(v.reach[reach])}" aria-hidden="true"></i>${escapeHtml(fill(v.via, { name: gatewayName(route, t) }))}${facts.length ? ` <em>${facts.join(" · ")}</em>` : ""}${route.state === "down" ? ` <span class="chip bad">${escapeHtml(v.state.down)}</span>` : ""}</span>`;
   return `<li class="routerow ${route.state}" aria-current="${route.network === ctx.sel}">
-    <span class="i" aria-hidden="true">${ic("network")}</span>
-    <button class="routepick routenet" data-act="route-pick" data-network="${escapeHtml(route.network)}"><b class="mono">${escapeHtml(route.network)}</b><small>${escapeHtml(gatewayName(route, t))} · ${facts}</small></button>
-    <span class="chip ${tone}">${escapeHtml(v.state[route.state])}</span>${switchOf(route, ctx)}${deleteOf(route, ctx)}</li>`;
+    <span class="rico" aria-hidden="true">${ic("network")}</span>
+    <button class="routepick routenet" data-act="route-pick" data-network="${escapeHtml(route.network)}"><b class="mono">${escapeHtml(route.network)}</b><small>${via}</small></button>
+    ${switchOf(route, ctx)}${deleteOf(route, ctx)}</li>`;
 }
 
 /** What the box says of the gateway's address: the reservation as read from it, or null while unknown. */
@@ -194,9 +197,9 @@ export function renderRoutes(routes, ctx) {
   const tiles = [
     [String(m.routes.length), v.tileRoutes],
     [String(m.on), v.tileOn],
-    [String(m.down.length), v.tileDown],
+    [String(m.down.length), v.tileDown, m.down.length ? "bad" : "ok"],
   ]
-    .map(([value, label]) => `<div class="tile"><b>${escapeHtml(value)}</b><small>${escapeHtml(label)}</small></div>`)
+    .map(([value, label, tone]) => `<div class="tile ${tone ?? ""}"><span class="label">${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`)
     .join("");
   const hints = m.down.length
     ? `<div class="ahints">${m.down
@@ -205,7 +208,7 @@ export function renderRoutes(routes, ctx) {
     : "";
   const selected = m.routes.find((r) => r.network === ctx.sel) ?? m.routes[0];
   const c = { ...ctx, sel: selected.network, home: routes.home };
-  return `${head}${newForm}${noHome}<div class="vpntiles">${tiles}</div>${hints}
+  return `${head}${newForm}${noHome}<div class="tiles routetiles">${tiles}</div>${hints}
     <div class="routelayout">
       <section class="card sec"><span class="label">${escapeHtml(v.listTitle)}</span><ul class="vpnlist">${m.routes.map((r) => row(r, c)).join("")}</ul></section>
       <aside class="card sec routedetail" aria-live="polite">${detail(selected, c)}</aside>

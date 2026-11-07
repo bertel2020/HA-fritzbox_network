@@ -1591,7 +1591,7 @@ test("the detail of a route shows the way of the traffic for the selected route"
   assert.match(html, /class="rnode"><b>FRITZ!Box<\/b><small class="mono">192\.168\.178\.1/);
   assert.match(html, /class="rnode gw down"><b>Keller<\/b>/); // the gateway is offline
   assert.match(html, /class="rnode dst"><b class="mono">192\.168\.2\.0\/24<\/b>/);
-  assert.match(html, /<button class="btn del" data-act="route-delete" data-network="192\.168\.2\.0\/24">Löschen/);
+  assert.match(html, /<button class="iconbtn del" data-act="route-delete" data-network="192\.168\.2\.0\/24" title="Löschen" aria-label="Löschen">/);
   const first = routesPage.renderRoutes(withHome, { t, canWrite: true, clients: [] });
   assert.match(first, /class="rnode gw "><b>Pi &lt;b&gt;<\/b>/);
   // a switched-off route draws a dashed gateway and grey links

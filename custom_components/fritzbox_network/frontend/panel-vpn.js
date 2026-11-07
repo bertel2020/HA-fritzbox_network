@@ -147,7 +147,7 @@ export function renderVpn(data, ctx) {
     [fill(v.upOf, { up: m.up, n: m.connections.length }), v.tileConnections],
     [String(m.remoteOnline), v.tileRemote],
   ]
-    .map(([value, label]) => `<div class="tile"><b>${escapeHtml(value)}</b><small>${escapeHtml(label)}</small></div>`)
+    .map(([value, label]) => `<div class="tile"><span class="label">${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`)
     .join("");
   const remote = m.remote.length
     ? `<section class="card sec"><span class="label">${escapeHtml(v.remoteTitle)}</span><ul class="vpnlist">${m.remote
@@ -158,5 +158,5 @@ export function renderVpn(data, ctx) {
         )
         .join("")}</ul></section>`
     : "";
-  return `${head}<div class="vpntiles">${tiles}</div>${group(v.devices, m.devices, ctx)}${group(v.sites, m.sites, ctx)}${remote}${statsSection(m, ctx)}<p class="hint">${escapeHtml(v.hint)}</p>`;
+  return `${head}<div class="tiles vpntiles">${tiles}</div>${group(v.devices, m.devices, ctx)}${group(v.sites, m.sites, ctx)}${remote}${statsSection(m, ctx)}<p class="hint">${escapeHtml(v.hint)}</p>`;
 }

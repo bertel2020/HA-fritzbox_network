@@ -516,7 +516,6 @@ export const PANEL_CSS = `
   .aphead { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 12px; }
   .aphead small { color: var(--muted); }
   ul.radios { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 12px; }
-  .vpntiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
   .vbars { display: grid; gap: 14px; margin-top: 12px; }
   .vhead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
   .vhead b { font-weight: 500; }
@@ -543,9 +542,20 @@ export const PANEL_CSS = `
   .vpnrow.up .i { color: var(--ok); }
   .routerow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
   .routerow:first-child { border-top: 0; }
-  .routerow .i { width: 20px; height: 20px; color: var(--muted); }
-  .routerow.on .i { color: var(--ok); }
-  .routerow.down .i { color: var(--bad); }
+  .rico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); flex: none; }
+  .routerow.off .rico { background: var(--soft); color: var(--muted); }
+  .routerow.down .rico { background: var(--bad-soft); color: var(--bad); }
+  .rvia { display: inline-flex; align-items: center; flex-wrap: wrap; gap: 0 6px; }
+  .rvia em { font-style: normal; color: var(--muted); opacity: .85; }
+  .gdot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+  .gdot.on { background: var(--ok); }
+  .gdot.down { background: var(--bad); }
+  .iconbtn.del:hover { background: var(--bad-soft); color: var(--bad); }
+  .routetiles, .vpntiles { margin: 16px 0; }
+  .routetiles .tile.ok b::before { content: "✓ "; }
+  .tile .label { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  .tiles .tile.ok b { color: var(--ok); }
+  .tiles .tile.bad b { color: var(--bad); }
   .routerow.off .routenet { opacity: .6; }
   .routerow .switch[aria-checked="true"] { background: var(--ok); }
   .routenet { flex: 1; min-width: 0; }
