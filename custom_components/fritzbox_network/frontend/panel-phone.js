@@ -248,7 +248,7 @@ function todayCard(model, ctx) {
       ? tile(d.spam, model.today.spamToday !== null ? `<b>${model.today.spamToday}</b>` : na, model.today.spamTotal !== null ? fill(d.spamTotal, { n: model.today.spamTotal }) : "")
       : "",
   ].join("");
-  return `<section class="card sec" aria-labelledby="ph-today-h"><div class="ph-chead"><span class="label" id="ph-today-h">${esc(d.title)}</span><span class="ph-src">${esc(d.window)}</span></div><div class="tiles">${tiles}</div></section>`;
+  return `<section class="card sec" aria-labelledby="ph-today-h"><div class="chead"><span class="label" id="ph-today-h">${esc(d.title)}</span><span class="ph-src">${esc(d.window)}</span></div><div class="tiles">${tiles}</div></section>`;
 }
 
 // ---------- call list ----------
@@ -313,7 +313,7 @@ function callRow(c, model, ctx) {
 function callCard(model, ctx) {
   const { t, ui, now, language } = ctx;
   const p = t.phone;
-  const head = `<div class="ph-chead"><span class="label" id="ph-calls-h">${esc(p.calls.title)}</span><button class="btn sm p" data-act="ph-dial" data-k="ph-dialopen" aria-haspopup="dialog"${off(model)}>${ic("phone")}${esc(p.calls.dial)}</button></div>`;
+  const head = `<div class="chead"><span class="label" id="ph-calls-h">${esc(p.calls.title)}</span><button class="btn sm p" data-act="ph-dial" data-k="ph-dialopen" aria-haspopup="dialog"${off(model)}>${ic("phone")}${esc(p.calls.dial)}</button></div>`;
   if (!model.list.ok) {
     const why = model.api === "ws" ? p.part : fill(p.tooOld, { attr: "calls" });
     return `<section class="card sec" aria-labelledby="ph-calls-h">${head}<div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${esc(why)}</b></div></section>`;
@@ -409,8 +409,8 @@ function messageRow(msg, tam, model, ctx) {
 function tamCard(tam, model, ctx) {
   const { t, ui } = ctx;
   const a = t.phone.tam;
-  if (tam.loading) return `<section class="card sec" aria-busy="true"><div class="ph-chead"><span class="label">${esc(a.title)}</span></div><p class="hint">${esc(t.loading)}</p></section>`;
-  if (!tam.ok) return `<section class="card sec"><div class="ph-chead"><span class="label">${esc(tam.name)}</span></div><p class="hint">${esc(tam.offline || model.api === "ws" ? t.phone.part : fill(t.phone.tooOld, { attr: "messages" }))}</p></section>`;
+  if (tam.loading) return `<section class="card sec" aria-busy="true"><div class="chead"><span class="label">${esc(a.title)}</span></div><p class="hint">${esc(t.loading)}</p></section>`;
+  if (!tam.ok) return `<section class="card sec"><div class="chead"><span class="label">${esc(tam.name)}</span></div><p class="hint">${esc(tam.offline || model.api === "ws" ? t.phone.part : fill(t.phone.tooOld, { attr: "messages" }))}</p></section>`;
   const newCount = tam.messages.filter((m) => m.isNew).length;
   const busy = ui.busy?.has(tam.switchId);
   const sw = tam.switchId && tam.switchOn !== null
@@ -420,7 +420,7 @@ function tamCard(tam, model, ctx) {
   const facts = [enabled === null ? "" : enabled ? a.on : a.off, tam.capacity !== null ? fill(a.capacity, { n: tam.capacity }) : "", a.playHint].filter(Boolean).join(" · ");
   const rows = tam.messages.length ? tam.messages.map((m) => messageRow(m, tam, model, ctx)).join("") : `<div class="empty ph-small">${ic("tam")}<b>${esc(a.noMessages)}</b></div>`;
   return `<section class="card sec" aria-labelledby="ph-tam-${esc(tam.entityId)}">
-    <div class="ph-chead"><span class="label" id="ph-tam-${esc(tam.entityId)}">${esc(tam.name)}</span>${newCount ? `<span class="chip info">${esc(fill(a.nNew, { n: newCount }))}</span>` : `<span class="chip ok">${esc(a.allHeard)}</span>`}${sw}</div>
+    <div class="chead"><span class="label" id="ph-tam-${esc(tam.entityId)}">${esc(tam.name)}</span>${newCount ? `<span class="chip info">${esc(fill(a.nNew, { n: newCount }))}</span>` : `<span class="chip ok">${esc(a.allHeard)}</span>`}${sw}</div>
     ${tam.offline ? staleNote({ offline: true, staleAt: tam.staleAt }, ctx) : ""}
     ${rows}
     <p class="hint">${esc(facts)}</p></section>`;
@@ -428,11 +428,11 @@ function tamCard(tam, model, ctx) {
 
 function tamCards(model, ctx) {
   const a = ctx.t.phone.tam;
-  const head = `<div class="ph-chead"><span class="label">${esc(a.title)}</span></div>`;
+  const head = `<div class="chead"><span class="label">${esc(a.title)}</span></div>`;
   if (model.tamsState === "loading") return `<section class="card sec" aria-busy="true">${head}<p class="hint">${esc(ctx.t.loading)}</p></section>`;
   if (model.tamsState === "na") return `<section class="card sec">${head}<p class="hint">${esc(ctx.t.phone.part)}</p></section>`;
   if (!model.tams.length) {
-    return `<section class="card sec"><div class="ph-chead"><span class="label">${esc(a.title)}</span></div><div class="empty ph-small">${ic("tam")}<b>${esc(a.none)}</b><span>${esc(a.noneBody)}</span></div></section>`;
+    return `<section class="card sec"><div class="chead"><span class="label">${esc(a.title)}</span></div><div class="empty ph-small">${ic("tam")}<b>${esc(a.none)}</b><span>${esc(a.noneBody)}</span></div></section>`;
   }
   return model.tams.map((tam) => tamCard(tam, model, ctx)).join("");
 }
@@ -442,12 +442,12 @@ function tamCards(model, ctx) {
 function bookCard(model, ctx) {
   const { t, ui } = ctx;
   const b = t.phone.book;
-  if (model.booksState === "loading") return `<section class="card sec" aria-busy="true"><div class="ph-chead"><span class="label">${esc(b.title)}</span></div><p class="hint">${esc(t.loading)}</p></section>`;
-  if (model.booksState === "na") return `<section class="card sec"><div class="ph-chead"><span class="label">${esc(b.title)}</span></div><p class="hint">${esc(t.phone.part)}</p></section>`;
-  if (!model.books.length) return `<section class="card sec"><div class="ph-chead"><span class="label">${esc(b.title)}</span></div><div class="empty ph-small"><b>${esc(b.none)}</b><span>${esc(b.noneBody)}</span></div></section>`;
+  if (model.booksState === "loading") return `<section class="card sec" aria-busy="true"><div class="chead"><span class="label">${esc(b.title)}</span></div><p class="hint">${esc(t.loading)}</p></section>`;
+  if (model.booksState === "na") return `<section class="card sec"><div class="chead"><span class="label">${esc(b.title)}</span></div><p class="hint">${esc(t.phone.part)}</p></section>`;
+  if (!model.books.length) return `<section class="card sec"><div class="chead"><span class="label">${esc(b.title)}</span></div><div class="empty ph-small"><b>${esc(b.none)}</b><span>${esc(b.noneBody)}</span></div></section>`;
   const book = model.books.find((x) => x.entityId === ui.book) ?? model.books[0];
   const open = ui.bookOpen === true;
-  const head = `<div class="ph-chead"><button class="ph-fold" data-act="ph-bookopen" data-k="ph-bookopen" aria-expanded="${open}" aria-controls="ph-book-body"><span class="label" id="ph-book-h">${esc(b.title)}</span><span class="ph-chev" aria-hidden="true">${ic("chev")}</span></button>${book.ok ? `<span class="chip">${esc(fill(b.count, { n: book.count }))}</span>` : ""}</div>`;
+  const head = `<div class="chead"><button class="ph-fold" data-act="ph-bookopen" data-k="ph-bookopen" aria-expanded="${open}" aria-controls="ph-book-body"><span class="label" id="ph-book-h">${esc(b.title)}</span><span class="ph-chev" aria-hidden="true">${ic("chev")}</span></button>${book.ok ? `<span class="chip">${esc(fill(b.count, { n: book.count }))}</span>` : ""}</div>`;
   if (!open) {
     const vips = book.ok ? book.contacts.filter((c) => c.vip).length : 0;
     return `<section class="card sec ph-folded" aria-labelledby="ph-book-h">${head}${book.ok && book.count ? `<p class="hint">${esc(vips ? fill(b.summaryVip, { n: vips }) : b.summary)}</p>` : ""}</section>`;
@@ -525,7 +525,7 @@ export function blockCard(model, ctx) {
   const k = t.phone.block;
   const bl = model.blocked;
   if (model.api !== "ws" || !bl?.known || (bl.ok && !bl.supported)) return "";
-  const head = `<div class="ph-chead"><span class="label" id="ph-bl-h">${esc(k.listTitle)}</span>${bl.ok ? `<span class="chip">${esc(fill(k.listCount, { n: bl.numbers.size }))}</span>` : ""}</div>`;
+  const head = `<div class="chead"><span class="label" id="ph-bl-h">${esc(k.listTitle)}</span>${bl.ok ? `<span class="chip">${esc(fill(k.listCount, { n: bl.numbers.size }))}</span>` : ""}</div>`;
   if (!bl.ok) return `<section class="card sec" aria-labelledby="ph-bl-h">${head}<p class="hint">${esc(t.phone.part)}</p></section>`;
   if (!bl.entries.length) return `<section class="card sec" aria-labelledby="ph-bl-h">${head}<div class="empty ph-small"><b>${esc(k.listEmpty)}</b></div><p class="hint">${esc(k.listHint)}</p></section>`;
   const shown = bl.entries.slice(0, BOOK_ROWS);
@@ -727,7 +727,7 @@ export function statsView(model, ctx) {
   const ws = model.api === "ws";
   const periods = ws && model.historyDays > 0 ? HISTORY_PERIODS : PERIODS;
   const period = periods.includes(ui.period) ? ui.period : "7";
-  const head = `<div class="ph-chead"><span class="label" id="ph-stat-h">${esc(s.title)}</span><span class="seg ph-seg" role="group" aria-label="${esc(s.periodLabel)}">${periods.map((p) => `<button data-act="ph-period" data-ph-val="${p}" data-k="ph-per-${p}" aria-pressed="${period === p}">${esc(s.period[p])}</button>`).join("")}</span></div>`;
+  const head = `<div class="chead"><span class="label" id="ph-stat-h">${esc(s.title)}</span><span class="seg ph-seg" role="group" aria-label="${esc(s.periodLabel)}">${periods.map((p) => `<button data-act="ph-period" data-ph-val="${p}" data-k="ph-per-${p}" aria-pressed="${period === p}">${esc(s.period[p])}</button>`).join("")}</span></div>`;
   const card = (body, busy = false) => `<section class="card sec"${busy ? ' aria-busy="true"' : ""} aria-labelledby="ph-stat-h">${head}${body}</section>`;
   if (!ws && !model.list.ok) return card(`<div class="empty"><b>${esc(fill(t.phone.tooOld, { attr: "calls" }))}</b></div>`);
   const parts = ws ? wsStatsParts(model, period, ctx) : listStatsParts(model, period, ctx);
@@ -766,16 +766,16 @@ export function statsView(model, ctx) {
       ${tamTile}
     </div>
     <p class="hint">${esc(compareText)}</p>
-    <div class="ph-vsec"><div class="ph-chead"><span class="label">${esc(s.chart[st.bars.unit])}</span>${toggle("bars")}</div>${legend}
+    <div class="ph-vsec"><div class="chead"><span class="label">${esc(s.chart[st.bars.unit])}</span>${toggle("bars")}</div>${legend}
       <div class="ph-vwrap">${ui.tables?.bars ? barTable(st.bars, ctx) : barChart(st.bars, width, ctx)}<div class="ph-tip" role="tooltip" hidden></div></div></div>
-    <div class="ph-vsec"><div class="ph-chead"><span class="label">${esc(s.heat)}</span>${toggle("heat")}</div>
+    <div class="ph-vsec"><div class="chead"><span class="label">${esc(s.heat)}</span>${toggle("heat")}</div>
       <div class="ph-vwrap">${ui.tables?.heat ? heatTable(heat, width, ctx) : heatChart(heat, width, ctx)}<div class="ph-tip" role="tooltip" hidden></div></div>
       <p class="hint">${esc(hourly ? s.heatHintHours : s.heatHint)}</p></div>
     <div class="two ph-two">
-      <div class="ph-vsec"><div class="ph-chead"><span class="label">${esc(s.topIn)}</span></div>${rankList(st.topIn, s.topIn, "tin", model, ctx)}</div>
-      <div class="ph-vsec"><div class="ph-chead"><span class="label">${esc(s.topOut)}</span></div>${rankList(st.topOut, s.topOut, "tout", model, ctx)}</div>
+      <div class="ph-vsec"><div class="chead"><span class="label">${esc(s.topIn)}</span></div>${rankList(st.topIn, s.topIn, "tin", model, ctx)}</div>
+      <div class="ph-vsec"><div class="chead"><span class="label">${esc(s.topOut)}</span></div>${rankList(st.topOut, s.topOut, "tout", model, ctx)}</div>
     </div>
-    <div class="ph-vsec"><div class="ph-chead"><span class="label">${esc(s.perLine)}</span></div>${rankList(st.lines.map((l) => ({ ...l, name: "", talk: 0 })), s.perLine, "own", model, ctx, true)}<p class="hint">${esc(s.perLineHint)}</p></div>
+    <div class="ph-vsec"><div class="chead"><span class="label">${esc(s.perLine)}</span></div>${rankList(st.lines.map((l) => ({ ...l, name: "", talk: 0 })), s.perLine, "own", model, ctx, true)}<p class="hint">${esc(s.perLineHint)}</p></div>
     ${model.privacy ? `<p class="hint">${esc(s.privacy)}</p>` : ""}
     <p class="hint">${esc(parts.sourceText)}</p></section>`;
 }

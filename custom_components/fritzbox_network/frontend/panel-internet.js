@@ -300,7 +300,7 @@ function volumeCard(ctx) {
     .join("");
   const rest = rows.slice(TOP_DEVICES);
   const more = rest.length ? `<p class="hint">${escapeHtml(fill(i.topMore, { n: rest.length, size: formatBytes(rest.reduce((a, r) => a + r.total, 0), language) }))}</p>` : "";
-  return `<section class="card sec"><div class="trendhead"><span class="label">${escapeHtml(i.volume)}</span><div class="seg" role="group" aria-label="${escapeHtml(i.volume)}">${buttons}</div></div>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(i.volume)}</span><div class="seg" role="group" aria-label="${escapeHtml(i.volume)}">${buttons}</div></div>
     ${known ? `<div class="tiles">${[1, 7, 30].map(tile).join("")}</div>${monthBlock()}
     <div class="subhead">${escapeHtml(i.perDay)}</div>${dayBars(dailyTotals(traffic, days), language, t)}
     <div class="subhead">${escapeHtml(fill(i.topTitle, { range: t.trafficRanges[range] }))}</div>
@@ -347,7 +347,7 @@ function addressHistory(addresses, language, t) {
   const i = t.inet;
   const day = (ms) => new Date(ms).toLocaleDateString(language, { day: "numeric", month: "short" });
   const rows = addressRows(addresses);
-  const head = `<div class="trendhead"><span class="label">${escapeHtml(i.addressHistory)}</span></div>`;
+  const head = `<div class="chead"><span class="label">${escapeHtml(i.addressHistory)}</span></div>`;
   if (rows.length < 2) return `<section class="card sec">${head}<p class="hint">${escapeHtml(i.addressNone)}</p><p class="hint">${escapeHtml(i.addressHint)}</p></section>`;
   const body = rows
     .map((row, n) => {
@@ -445,20 +445,17 @@ export function renderInternet(internet, ctx) {
   const back = `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(i.title)}</h1></div>`;
   if (!internet) return `${back}<div class="card"><div class="empty"><b>${escapeHtml(i.noData)}</b></div></div>`;
   const up = internet.connected !== false;
-  const sub = [
-    accessLabel(internet.access_type, t),
-    internet.uptime !== null && up ? fill(i.since, { time: formatDuration(internet.uptime, i.units) }) : "",
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const access = accessLabel(internet.access_type, t) || i.connection;
+  const sub = internet.uptime !== null && up ? fill(i.since, { time: formatDuration(internet.uptime, i.units) }) : "";
   const prefix = internet.ipv6_prefix ? `${internet.ipv6_prefix}/${internet.ipv6_prefix_length ?? ""}`.replace(/\/$/, "") : "–";
   const rate = internet.throughput;
   return `${back}
     ${hintsHtml(internet, t, now)}
     <section class="card sec hero">
-      <div class="ihead"><span class="ico">${ic("globe")}</span>
-        <span class="who"><b>${escapeHtml(i.connection)}</b><small>${escapeHtml(sub)}</small></span>
+      <div class="chead"><span class="label">${escapeHtml(i.connection)}</span>
         <span class="stat ${up ? "ok" : "warn"}"><i class="sdot" aria-hidden="true"></i>${escapeHtml(up ? i.state.up : i.state.down)}</span></div>
+      <div class="ihead"><span class="ico">${ic("globe")}</span>
+        <span class="who"><b>${escapeHtml(access)}</b>${sub ? `<small>${escapeHtml(sub)}</small>` : ""}</span></div>
       <div class="live"><div class="dn"><span class="gl">↓ ${escapeHtml(i.down)}</span><b>${escapeHtml(formatRate(rate?.down ?? null, language))}</b></div>
         <div class="upl"><span class="gl">↑ ${escapeHtml(i.up)}</span><b>${escapeHtml(formatRate(rate?.up ?? null, language))}</b></div></div>
       <div class="tiles">

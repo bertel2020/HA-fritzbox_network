@@ -106,7 +106,7 @@ function statsSection(m, ctx) {
   const legend = ["up", "idle", "off"].map((s) => `<span><i class="vl ${s}"></i>${escapeHtml(v.legend[s])}</span>`).join("");
   const since = rows.map((c) => c.stats.tracked_since).filter(Boolean).sort((a, b) => a - b)[0];
   const note = since ? fill(v.statSince, { time: formatDuration(Math.max(0, now - since), t.inet.units) }) : "";
-  return `<section class="card sec"><div class="trendhead"><span class="label">${escapeHtml(v.statsTitle)}</span><div class="seg" role="group" aria-label="${escapeHtml(v.statsTitle)}">${buttons}</div></div>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(v.statsTitle)}</span><div class="seg" role="group" aria-label="${escapeHtml(v.statsTitle)}">${buttons}</div></div>
     <div class="vbars">${bars}</div>
     <div class="vaxis"><span>${escapeHtml(v.axis[range])}</span><span>${escapeHtml(v.now)}</span></div>
     <div class="vlegend">${legend}</div>

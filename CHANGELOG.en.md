@@ -6,6 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Panel: every card has the same head. The label is on the left, what belongs to the whole card (range switch, status, button) on the right, and the head has the same height everywhere, so cards side by side start on one line. On the Internet and Box pages the status moved into that head and the icon, name and details follow below it.
 - The list of devices comes with 35 days of traffic again; the year is read only when you pick **Year** under data volume (new command `history/traffic`).
 - Panel: lighter and more even. The sessions for the VPN chart are no longer sent with every update but read when the VPN page opens (new command `vpn/history`). All figure tiles share one look (same width, spacing, label above the value). Tips on charts stay open when the page is redrawn, charts keep their parsed data, and on touch screens small buttons are 44 px tall.
 - Routes page: the counters are tiles like on the other pages (label above the number, a green tick when no gateway is offline). Each route names its target network first and the way it takes ("via gateway") with a dot for whether the gateway is reachable; the metric shows only when it is not 0. The state chip is gone (the switch says it), and delete is a trash icon. The VPN page counters are tiles in the same style.

@@ -301,7 +301,7 @@ function trendSection(client, ctx) {
   const buttons = ["day", "week"]
     .map((r) => `<button data-range="${r}" aria-pressed="${r === range}">${escapeHtml(t.trendRanges[r])}</button>`)
     .join("");
-  return `<section class="card sec wide"><div class="trendhead"><span class="label">${escapeHtml(t.trendTitle)}</span><div class="seg" role="group" aria-label="${escapeHtml(t.trendTitle)}">${buttons}</div></div>
+  return `<section class="card sec wide"><div class="chead"><span class="label">${escapeHtml(t.trendTitle)}</span><div class="seg" role="group" aria-label="${escapeHtml(t.trendTitle)}">${buttons}</div></div>
     ${charts ? `<div class="trends">${charts}</div>` : `<p class="hint">${escapeHtml(t.trendNone)}</p>`}${volume}</section>`;
 }
 

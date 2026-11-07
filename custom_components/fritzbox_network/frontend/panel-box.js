@@ -69,8 +69,9 @@ function hero(info, ctx) {
     : `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${escapeHtml(b.running)}</span>`;
   const sub = [info.firmware ? `FRITZ!OS ${info.firmware}` : ""].filter(Boolean).join(" · ");
   return `<section class="card sec">
+    <div class="chead"><span class="label">${escapeHtml(t.box)}</span>${stat}</div>
     <div class="ihead"><span class="ico">${ic("router")}</span>
-      <span class="who"><b>${escapeHtml(info.model ?? t.box)}</b>${sub ? `<small>${escapeHtml(sub)}</small>` : ""}</span>${stat}</div>
+      <span class="who"><b>${escapeHtml(info.model ?? t.box)}</b>${sub ? `<small>${escapeHtml(sub)}</small>` : ""}</span></div>
     <div class="tiles">
       ${tile(b.uptime, `<b>${escapeHtml(down ? "–" : formatDuration(uptime, t.inet.units))}</b>`, b.noRestart)}
       ${tile(b.lastRestart, `<b>${escapeHtml(last)}</b>`, back && restart.backAt ? fill(b.lastRestartTook, { time: minSec(restart.backAt - restart.requestedAt) }) : b.noReason)}
