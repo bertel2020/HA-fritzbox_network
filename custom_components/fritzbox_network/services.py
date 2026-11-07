@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from fritzconnection.core.exceptions import FritzConnectionException
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized
 from homeassistant.helpers import (
     config_validation as cv,
     device_registry as dr,
@@ -103,6 +103,15 @@ async def _async_targets(
     return targets
 
 
+async def _require_admin(call: ServiceCall) -> None:
+    """Only an administrator may act on the box; calls without a user (automations) pass."""
+    if call.context.user_id is None:
+        return
+    user = await call.hass.auth.async_get_user(call.context.user_id)
+    if user is None or not user.is_admin:
+        raise Unauthorized(context=call.context)
+
+
 def _require_rights(coordinator: FritzNetworkCoordinator) -> None:
     if not coordinator.can_write:
         raise HomeAssistantError(translation_domain=DOMAIN, translation_key="no_write_rights")
@@ -120,12 +129,14 @@ async def _async_failing(awaitable):
 
 
 async def _async_set_name(call: ServiceCall) -> None:
+    await _require_admin(call)
     for coordinator, host in await _async_targets(call.hass, call):
         _require_rights(coordinator)
         await _async_failing(coordinator.async_set_name(host, call.data[ATTR_NAME]))
 
 
 async def _async_wake_on_lan(call: ServiceCall) -> None:
+    await _require_admin(call)
     for coordinator, host in await _async_targets(call.hass, call):
         _require_rights(coordinator)
         await _async_failing(coordinator.async_wake_on_lan(host))
@@ -133,6 +144,7 @@ async def _async_wake_on_lan(call: ServiceCall) -> None:
 
 async def _async_set_route(call: ServiceCall) -> None:
     """Switch a static route of the box on or off, found by its network."""
+    await _require_admin(call)
     unknown = None
     for config_entry in call.hass.config_entries.async_loaded_entries(DOMAIN):
         coordinator = config_entry.runtime_data
@@ -152,6 +164,7 @@ async def _async_set_route(call: ServiceCall) -> None:
 
 async def _async_set_guest_password(call: ServiceCall) -> dict[str, str]:
     """Set the password of the guest Wi-Fi and answer with it; nothing here logs it."""
+    await _require_admin(call)
     for config_entry in call.hass.config_entries.async_loaded_entries(DOMAIN):
         coordinator = config_entry.runtime_data
         _require_rights(coordinator)
@@ -168,6 +181,7 @@ async def _async_set_guest_password(call: ServiceCall) -> dict[str, str]:
 
 async def _async_capture(call: ServiceCall) -> None:
     """Record the traffic of the box, of one device if the call names one; it runs on its own."""
+    await _require_admin(call)
     hass = call.hass
     has_target = any(
         call.data.get(key) for key in ("entity_id", "device_id", "area_id", "label_id")
@@ -238,6 +252,7 @@ def _remove_empty_vpn_device(
 
 async def _async_remove_unavailable_vpn(call: ServiceCall) -> None:
     """Remove the entities of WireGuard connections that no longer exist on the box."""
+    await _require_admin(call)
     registry = er.async_get(call.hass)
     for config_entry in call.hass.config_entries.async_loaded_entries(DOMAIN):
         for entry in stale_vpn_entities(registry, config_entry.runtime_data):

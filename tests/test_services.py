@@ -2,7 +2,8 @@
 
 from dataclasses import replace
 
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.core import Context
+from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 import pytest
@@ -175,3 +176,41 @@ async def test_a_refusal_of_the_box_does_not_leak_the_password_into_the_error(
             return_response=True,
         )
     assert "sehr geheim" not in str(err.value)
+
+
+async def test_the_actions_refuse_a_user_who_is_no_administrator(
+    hass, fake_client, entry, hass_read_only_user
+):
+    await _setup(hass, entry)
+    device_id = _device_id(hass, entry, WLAN)
+    calls = (
+        ("set_name", {"name": "TV", "device_id": device_id}),
+        ("wake_on_lan", {"device_id": device_id}),
+        ("set_route", {"network": "10.8.0.0/24", "enabled": True}),
+        ("set_guest_wifi_password", {"length": 12}),
+        ("remove_unavailable_vpn", {}),
+    )
+    for service, data in calls:
+        with pytest.raises(Unauthorized):
+            await hass.services.async_call(
+                DOMAIN,
+                service,
+                data,
+                blocking=True,
+                context=Context(user_id=hass_read_only_user.id),
+            )
+    assert not [c for c in fake_client.calls if c[0] == "name"]
+
+
+async def test_the_actions_run_for_an_administrator(
+    hass, fake_client, entry, hass_admin_user
+):
+    await _setup(hass, entry)
+    await hass.services.async_call(
+        DOMAIN,
+        "set_name",
+        {"name": "TV", "device_id": _device_id(hass, entry, WLAN)},
+        blocking=True,
+        context=Context(user_id=hass_admin_user.id),
+    )
+    assert fake_client.calls[-1] == ("name", WLAN, "TV")
