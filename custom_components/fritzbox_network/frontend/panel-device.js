@@ -250,15 +250,28 @@ function ipBadge(state, client, t) {
   return ` <span class="chip ${reservation.fixed ? "info" : ""}" title="${escapeHtml(reservation.fixed ? t.ipFixedTitle : t.ipAutoTitle)}">${escapeHtml(reservation.fixed ? t.ipFixed : t.ipAuto)}</span>`;
 }
 
+/** Signal scale of the chart: fixed, so the colour means the same strength at any time. */
+const SIGNAL_TONE = { min: -90, max: -50 };
+
+/** A vertical gradient that colours a signal line by strength: good from -60, medium from -70, weak from -80 dBm. */
+function signalGradient(id, { min, max }) {
+  const at = (dbm) => (((max - dbm) / (max - min)) * 100).toFixed(1);
+  const bands = [[max, "good"], [-60, "good"], [-60, "mid"], [-70, "mid"], [-70, "weak"], [-80, "weak"], [-80, "bad"], [min, "bad"]];
+  const stops = bands.map(([dbm, tone]) => `<stop offset="${at(dbm)}%" style="stop-color:var(--sig-${tone})"/>`).join("");
+  return `<defs><linearGradient id="${id}" gradientUnits="userSpaceOnUse" x1="0" y1="2" x2="0" y2="88">${stops}</linearGradient></defs>`;
+}
+
 /** One chart of the trend: the line, the area below and the lowest, mean and highest value. */
-function trendChart(title, values, unit, t, times, range) {
-  const path = sparkLine(values, 300, 90);
+function trendChart(title, values, unit, t, times, range, tone = null) {
+  const path = sparkLine(values, 300, 90, tone ? { min: tone.min, max: tone.max } : {});
   const stats = seriesStats(values);
   if (!path || !stats) return "";
   const round = (n) => Math.round(n);
+  const gid = tone ? `tone-${range}` : "";
+  const defs = tone ? signalGradient(gid, tone) : "";
   return `<div class="trend"><span class="label">${escapeHtml(title)}</span>
     <div class="plot" data-pts="${escapeHtml(JSON.stringify(values.map((v, i) => [times[i], typeof v === "number" ? Math.round(v * 10) / 10 : null])))}" data-unit="${escapeHtml(unit)}" data-range="${range}">
-      <svg viewBox="0 0 300 90" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(title)}"><path class="area" d="${path.area}"/><path d="${path.line}"/></svg>
+      <svg viewBox="0 0 300 90" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(title)}">${defs}<path class="area" d="${path.area}"${tone ? ` style="fill:url(#${gid})"` : ""}/><path d="${path.line}"${tone ? ` style="stroke:url(#${gid})"` : ""}/></svg>
       <i class="cursor" hidden></i><b class="tip" hidden></b></div>
     <span class="hint">${escapeHtml(fill(t.trendStats, { min: round(stats.min), mean: round(stats.mean), max: round(stats.max), unit }))}</span></div>`;
 }
@@ -271,7 +284,7 @@ function trendSection(client, ctx) {
   const points = trend.data?.[range] ?? [];
   const times = points.map((p) => p[0]);
   const charts = [
-    client.link_type === "wlan" ? trendChart(t.trendSignal, pointColumn(points, 2), "dBm", t, times, range) : "",
+    client.link_type === "wlan" ? trendChart(t.trendSignal, pointColumn(points, 2), "dBm", t, times, range, SIGNAL_TONE) : "",
     trendChart(t.trendRate, pointColumn(points, 3), "Mbit/s", t, times, range),
   ].join("");
   const days = trend.data?.traffic;

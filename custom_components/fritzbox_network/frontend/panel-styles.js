@@ -16,6 +16,10 @@ export const PANEL_CSS = `
     --on-accent: light-dark(#fff, #0b1a26);
     --focus: #7db8e0;
     --up: light-dark(#7a4bc2, #b79af0);
+    --sig-good: light-dark(#0ca30c, #3ccf5c);
+    --sig-mid: light-dark(#e0a000, #fab219);
+    --sig-weak: light-dark(#e2672f, #ec835a);
+    --sig-bad: light-dark(#d03b3b, #f2706e);
     --ok: light-dark(#1e6b34, #7fd49a);
     --ok-soft: light-dark(#e6f4ea, #173a24);
     --warn: light-dark(#8a4b00, #f2c27a);

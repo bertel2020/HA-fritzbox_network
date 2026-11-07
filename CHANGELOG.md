@@ -6,6 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Geräteseite: Der **Signalverlauf** ist nach Stärke eingefärbt (grün ab -60 dBm, gelb ab -70, orange ab -80, darunter rot) auf einer festen Skala von -90 bis -50 dBm, damit die Farbe zu jeder Zeit dasselbe bedeutet.
 - Telefonseite: Das **Telefonbuch** ist standardmäßig eingeklappt (ein Tipp auf die Überschrift öffnet es). Geöffnet hat es Filter (Alle, VIP, Mit Anrufen), Buchstaben-Überschriften, je Kontakt die Zahl der Anrufe und den letzten Anruf sowie den Knopf **Neuer Kontakt**, der auch nach der Nummer fragt.
 - Telefonseite: „Ins Telefonbuch“ an einem Anruf kann die Nummer jetzt auch **zu einem vorhandenen Kontakt hinzufügen** (mit Art privat, mobil, geschäftlich, sonstige), statt immer einen neuen anzulegen. Das braucht die neue Aktion `add_number_to_contact` von `fritzbox_phone`; ohne sie und im Datenschutzmodus gibt es nur „neuer Kontakt“.
 - WLAN-Seite: Die Karte „Gastzugang“ ist aufgeräumt. Sie zeigt die Verschlüsselung (zum Beispiel WPA2 + WPA3) und die Geräte, die gerade im Gastnetz sind, als Schaltflächen, die ihre Seite öffnen. Der QR-Code erscheint erst auf Wunsch neben den Angaben, statt als leere gestreifte Fläche; der lange Hinweis steht klein am Ende.

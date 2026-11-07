@@ -6,6 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Device page: the **signal chart** is coloured by strength (green from -60 dBm, yellow from -70, orange from -80, red below) on a fixed scale of -90 to -50 dBm, so the colour means the same at any time.
 - Telephony page: the **phone book** is closed by default (a tap on the heading opens it). Open, it has filters (All, VIP, With calls), letter headings, the number of calls and the last call per contact, and a **New contact** button that also asks for the number.
 - Telephony page: "Add to phone book" on a call can now **add the number to an existing contact** (as home, mobile, work or other) instead of always creating a new one. It needs the new action `add_number_to_contact` of `fritzbox_phone`; without it, and in privacy mode, only "new contact" is offered.
 - Wi-Fi page: the "Guest access" card is tidier. It shows the security (for example WPA2 + WPA3) and the devices that are in the guest network right now as buttons that open their page. The QR code appears next to the details only on request, instead of an empty striped area; the long hint is small at the bottom.
