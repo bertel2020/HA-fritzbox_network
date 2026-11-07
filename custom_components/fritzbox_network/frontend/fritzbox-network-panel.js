@@ -43,7 +43,7 @@ import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice } from "./panel-device.js";
 import { openDialog, openFormDialog, openPasswordDialog, showToast } from "./panel-dialogs.js";
 import { dialSuggestions, lookupBody, mmss, renderPhone } from "./panel-phone.js";
-import { PHONE_DOMAIN, REVEAL_MS, SIGN_EXPIRES_S, SIGN_REUSE_MS, dialable, readPhone } from "./phone-model.js";
+import { HISTORY_PERIODS, PERIODS, PERIOD_DAYS, PHONE_DOMAIN, REVEAL_MS, SIGN_EXPIRES_S, SIGN_REUSE_MS, WS_PARTS, dialable, fetchPhoneWs, parseWsEntries, phoneLoaded, phoneTrigger, readPhoneModel, wsCode } from "./phone-model.js";
 import { RESTART_POLL_MS, minSec, nextRestart, renderBoxPage, restarted } from "./panel-box.js";
 import { isLastNetwork, passwordRules, randomPassword, renderWlan } from "./panel-wlan.js";
 import { bannerHidden, hasCore, hideBanner, renderBanner, renderMigrate } from "./panel-migrate.js";
@@ -192,15 +192,18 @@ export function renderSubTabs(active, t, state = {}) {
     .join("")}</div>`;
 }
 
+/** The icons of the five tabs, shown in the bar at the bottom of a narrow screen. */
+const NAV_ICONS = { net: "network", internet: "globe", box: "router", diagnose: "search", devices: "list" };
+
 /**
  * The five tabs. Internet carries a dot for the state of the line, Box one while it restarts,
  * Manage the number of devices gone for long.
  */
-export function renderNav(state, t, stale) {
+export function renderNav(state, t, stale, icons = false) {
   const line = state.data?.internet;
   const open = groupOf(state.tab);
   const tab = (id, extra = "", label = "") =>
-    `<button role="tab" data-tab="${id}" aria-selected="${id === open}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${escapeHtml(t.tabs[id])}${extra}</button>`;
+    `<button role="tab" data-tab="${id}" aria-selected="${id === open}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${icons ? `<span class="ni">${ic(NAV_ICONS[id])}${extra}</span><span class="nl">${escapeHtml(t.tabs[id])}</span>` : `${escapeHtml(t.tabs[id])}${extra}`}</button>`;
   const dot = line ? `<i class="dot ${line.connected === false ? "" : "on"}" aria-hidden="true"></i>` : "";
   const label = line ? `${t.tabs.internet}, ${line.connected === false ? t.inet.state.down : t.inet.state.up}` : "";
   const restarting = state.boxRestart && state.boxRestart.phase !== "back";
@@ -293,6 +296,10 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._look = rememberedLook();
     this._entries = [];
     this._entryId = null;
+    // how FRITZ!Box Telefon is read: null (not known yet), "ws" (its commands) or "entities" (older versions)
+    this._phoneApi = null;
+    this._phoneLegacy = false;
+    this._phoneWs = { entries: [], data: null };
     this._error = null;
     this._unsub = null;
     this._updatedAt = 0;
@@ -355,6 +362,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       if (this._phoneSignature() !== phoneBefore) this._update();
       else if (phoneChanged && this._state.tab === "phone") this._renderPhone();
     }
+    this._phoneSync();
   }
 
   /** The colours and the size of the type chosen, with light or dark as Home Assistant has it when that is chosen. */
@@ -516,6 +524,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     else if (this._state.tab === "box") this._loadBox();
     else if (this._state.tab === "wlan") this._loadWlan();
     else if (this._state.tab === "migrate") this._loadMigrate();
+    else if (this._state.tab === "phone") this._phoneSync({ parts: WS_PARTS });
   }
 
   _ws(type, extra = {}) {
@@ -1024,6 +1033,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           </div>
         </main>
       </div>
+      <nav role="tablist" id="bnav" aria-label="${t.navLabel}"></nav>
       <div class="backdrop" id="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-title" id="dialog"></div></div>
       <div class="toast" id="toast" role="status"></div>`;
     const menu = this.shadowRoot.querySelector("ha-menu-button");
@@ -1103,6 +1113,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     root.querySelector("#live-chip").hidden = !ready;
     const stale = ready ? panelCounts(state.data, Date.now(), state.threshold).stale : 0;
     this._set("nav", ready ? renderNav(state, t, stale) : "");
+    this._set("bnav", ready ? renderNav(state, t, stale, true) : "");
     this._set("subtabs", ready && !onDevice ? renderSubTabs(tab, t, state) : "");
     this._set("migbanner", ready ? renderBanner(state.migrate, { t, hidden: state.migrateHidden, tab }) : "");
     if (!ready) return;
@@ -2077,7 +2088,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     } else if (ds.tab) {
       // a tab opens the page of it that was open last, a switch of pages the page itself
       let page = ds.tab;
-      if (target.closest("#nav")) {
+      if (target.closest("#nav, #bnav")) {
         const offered = pagesOf(ds.tab, state);
         page = offered.includes(state.lastPage[ds.tab]) ? state.lastPage[ds.tab] : (offered[0] ?? ds.tab);
       }
@@ -2664,17 +2675,18 @@ class FritzboxNetworkPanel extends HTMLElement {
   }
 
   /**
-   * Reads the entities of FRITZ!Box Telefon into the model of the page; only when one of them,
-   * the registries or the chosen entry changed. Returns whether anything changed.
+   * Reads what FRITZ!Box Telefon has into the model of the page: the answers of its commands, or
+   * its entities with an older version; only when one of the entities, the registries, the
+   * answers or the chosen entry changed. Returns whether anything changed.
    */
   _readPhone() {
     const hass = this._hass;
     if (!hass) return false;
     const ui = this._state.phone;
-    const key = [hass.entities, hass.devices, hass.config, this._entryId, ui.chosen];
+    const key = [hass.entities, hass.devices, hass.config, this._entryId, ui.chosen, this._phoneApi, this._phoneWs];
     const ids = this._phoneIds ?? [];
     if (this._phoneKey && key.every((v, i) => v === this._phoneKey[i]) && ids.every((id, i) => hass.states?.[id] === this._phoneRefs[i])) return false;
-    const model = readPhone(hass, this._entryId, { chosen: ui.chosen, cache: ui.cache });
+    const model = readPhoneModel(hass, this._entryId, { api: this._phoneApi, legacy: this._phoneLegacy, ws: this._phoneWs, chosen: ui.chosen, cache: ui.cache });
     this._phone = model;
     this._phoneKey = key;
     this._phoneIds = model.entry ? Object.values(model.entry.entities).flat().filter(Boolean) : [];
@@ -2684,6 +2696,99 @@ class FritzboxNetworkPanel extends HTMLElement {
     state.phoneUnread = model.found ? model.unread : 0;
     state.phoneRinging = Boolean(model.found && model.ringing);
     return true;
+  }
+
+  /** Draws again after new answers: the tabs where the badge or the dot changed, else the page. */
+  _phoneRefresh() {
+    const before = this._phoneSignature();
+    this._phoneKey = null;
+    this._readPhone();
+    if (this._phoneSignature() !== before) this._update();
+    else if (this._state.tab === "phone") this._renderPhone();
+  }
+
+  /**
+   * Asks fritzbox_phone/entries whether FRITZ!Box Telefon has the commands. unknown_command: an
+   * older version, the page reads its entities and says so in one muted line. Another refusal:
+   * the entities for now, asked again a minute later.
+   */
+  async _phoneDetect(key) {
+    this._phoneDetecting = true;
+    this._phoneDetectKey = key;
+    try {
+      const result = await this._hass.callWS({ type: `${PHONE_DOMAIN}/entries` });
+      this._phoneWs = { ...this._phoneWs, entries: parseWsEntries(result) };
+      this._phoneApi = "ws";
+      this._phoneLegacy = false;
+    } catch (err) {
+      this._phoneApi = "entities";
+      this._phoneLegacy = wsCode(err) === "unknown_command";
+      if (!this._phoneLegacy) {
+        this._phoneDetectKey = null;
+        this._phoneRetryAt = Date.now() + 60000;
+      }
+    } finally {
+      this._phoneDetecting = false;
+    }
+    this._phoneRefresh();
+    this._phoneSync({ parts: WS_PARTS });
+  }
+
+  /**
+   * Keeps the answers of the commands up to date while the page is open: all parts when the entry
+   * is new, calls, answering machines and phone books when fritzbox_phone has new data (its
+   * entities changed), the statistics for the view and period shown, and the parts asked for.
+   */
+  _phoneSync({ parts = null } = {}) {
+    const hass = this._hass;
+    if (!hass || !phoneLoaded(hass)) return;
+    const key = [hass.config, hass.devices];
+    const stale = !this._phoneDetectKey || key.some((v, i) => v !== this._phoneDetectKey[i]);
+    if (this._phoneApi === null || (stale && Date.now() >= (this._phoneRetryAt ?? 0))) {
+      if (!this._phoneDetecting) this._phoneDetect(key);
+      return;
+    }
+    if (this._phoneApi !== "ws" || this._state.tab !== "phone") return;
+    const entry = this._phone?.entry;
+    if (!entry || entry.loaded === false) return;
+    const ui = this._state.phone;
+    const data = this._phoneWs.data;
+    const want = new Set(parts ?? []);
+    if (!data || data.entryId !== entry.entryId) for (const part of WS_PARTS) want.add(part);
+    const trigger = phoneTrigger(hass, entry);
+    const before = this._phoneTriggerRefs;
+    if (before && (trigger.length !== before.length || trigger.some((st, i) => st !== before[i]))) for (const part of ["calls", "tams", "phonebooks"]) want.add(part);
+    this._phoneTriggerRefs = trigger;
+    const periods = this._phone.historyDays > 0 ? HISTORY_PERIODS : PERIODS;
+    const days = PERIOD_DAYS[periods.includes(ui.period) ? ui.period : "7"];
+    if (ui.view === "stats" && (want.has("calls") || data?.stats?.days !== days || data?.entryId !== entry.entryId)) want.add("stats");
+    if (want.size) this._phoneFetch(entry.entryId, want, days);
+  }
+
+  /** One round of commands; a round asked for meanwhile follows once this one is in. */
+  async _phoneFetch(entryId, parts, days) {
+    if (this._phoneFetching) {
+      const pending = this._phonePending;
+      this._phonePending = { entryId, days, parts: new Set([...(pending?.entryId === entryId ? pending.parts : []), ...parts]) };
+      return;
+    }
+    this._phoneFetching = true;
+    try {
+      const got = await fetchPhoneWs((msg) => this._hass.callWS(msg), entryId, { parts, days });
+      const old = this._phoneWs.data?.entryId === entryId ? this._phoneWs.data : { entryId };
+      this._phoneWs = { ...this._phoneWs, data: { ...old, ...got, at: Date.now() } };
+      // the entry is gone or no longer loaded: ask again which entries there are, in a while
+      if (Object.values(got).some((part) => part?.code === "not_found")) {
+        this._phoneDetectKey = null;
+        this._phoneRetryAt = Date.now() + 30000;
+      }
+    } finally {
+      this._phoneFetching = false;
+    }
+    this._phoneRefresh();
+    const next = this._phonePending;
+    this._phonePending = null;
+    if (next) await this._phoneFetch(next.entryId, next.parts, next.days);
   }
 
   _renderPhone() {
@@ -2781,6 +2886,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     Object.assign(ui, { chosen: key, expanded: new Set(), revealed: new Set(), book: null, rights: "", dial: null });
     this._readPhone();
     this._update();
+    this._phoneSync();
   }
 
   _onPhoneInput(el) {
@@ -2820,11 +2926,13 @@ class FritzboxNetworkPanel extends HTMLElement {
     };
     if (act === "ph-view") {
       ui.view = ds.phVal === "stats" ? "stats" : "list";
-      return redraw(`ph-v-${ui.view}`);
+      redraw(`ph-v-${ui.view}`);
+      return this._phoneSync();
     }
     if (act === "ph-period") {
       ui.period = ds.phVal;
       redraw(`ph-per-${ds.phVal}`);
+      this._phoneSync();
       showToast(this.shadowRoot, fill(this._t.phone.stats.changed, { period: this._t.phone.stats.period[ds.phVal] ?? ds.phVal }));
       return;
     }
@@ -2856,6 +2964,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (act === "ph-dial") return this._phoneDial(ds.phNum ?? "", ds.phName ?? "");
     if (act === "ph-hangup") return this._phoneHangup();
     if (act === "ph-block") return this._phoneBlock(ds.phNum, ds.phName ?? "");
+    if (act === "ph-unblock") return this._phoneUnblock(ds.phNum);
     if (act === "ph-contact") return this._phoneContact(ds.phNum, ds.phName ?? "");
     if (act === "ph-lookup") return this._phoneLookup(ds.phNum);
     if (act === "ph-play") return this._phonePlay(ds.phEnt, ds.phIdx);
@@ -2948,38 +3057,75 @@ class FritzboxNetworkPanel extends HTMLElement {
     const ui = this._state.phone;
     ui.blocked.add(number);
     this._renderPhone();
+    this._phoneSync({ parts: ["blocklist"] });
     showToast(this.shadowRoot, fill(b.done, { number }), {
       label: b.undo,
       run: async () => {
         if ((await this._phoneService("unblock_number", { number })) === undefined) return;
         ui.blocked.delete(number);
         this._renderPhone();
+        this._phoneSync({ parts: ["blocklist"] });
         showToast(this.shadowRoot, fill(b.undone, { number }));
       },
     });
   }
 
-  /** add_contact needs a phone book id the sensors do not tell: it goes into the first one (id 0), and the dialog says so. */
+  /** Releases a number of the box's block list, after asking; the list is read again from the box. */
+  async _phoneUnblock(number) {
+    const t = this._t;
+    const b = t.phone.block;
+    if (!number) return;
+    const shown = this._phone?.privacy ? "•••" : number;
+    const ok = await openDialog(this.shadowRoot, t, { title: b.unblockTitle, body: fill(b.unblockBody, { number: shown }), ok: b.unblockOk });
+    if (!ok) return;
+    if ((await this._phoneService("unblock_number", { number })) === undefined) return;
+    this._state.phone.blocked.delete(number);
+    this._renderPhone();
+    this._phoneSync({ parts: ["blocklist"] });
+    showToast(this.shadowRoot, fill(b.undone, { number: shown }));
+  }
+
+  /**
+   * add_contact with the id of a phone book as fritzbox_phone reports it (command phonebooks, or
+   * the attribute phonebook_id); with several the dialog offers the choice. An older version tells
+   * no ids: then the first one (id 0), and the dialog says so.
+   */
   async _phoneContact(number, suggestion = "") {
     const t = this._t;
     const c = t.phone.contact;
     if (!number) return;
-    const books = this._phone?.books ?? [];
-    const bookName = books.length === 1 ? fill(c.bookName, { name: books[0].name }) : "";
-    const name = await openFormDialog(this.shadowRoot, t, {
+    const all = this._phone?.books ?? [];
+    const books = all.filter((b) => Number.isInteger(b.phonebookId));
+    const bookName = all.length === 1 ? fill(c.bookName, { name: all[0].name }) : "";
+    const bookHtml =
+      books.length > 1
+        ? `<label class="field"><span class="label">${escapeHtml(c.bookField)}</span><select id="ph-ct-book">${books.map((b) => `<option value="${b.phonebookId}">${escapeHtml(b.name)}</option>`).join("")}</select></label>`
+        : books.length === 1
+          ? `<p class="hint">${escapeHtml(fill(c.bookIn, { name: books[0].name }))}</p>`
+          : `<p class="hint">${escapeHtml(fill(c.book, { name: bookName }))}</p>`;
+    const pickBook = (dialog) => {
+      if (books.length > 1) {
+        const id = Number(dialog.querySelector("#ph-ct-book").value);
+        return books.some((b) => b.phonebookId === id) ? id : books[0].phonebookId;
+      }
+      return books.length === 1 ? books[0].phonebookId : 0;
+    };
+    const answer = await openFormDialog(this.shadowRoot, t, {
       title: c.title,
       html: `<p class="mono">${escapeHtml(fill(c.number, { number }))}</p>
         <label class="field"><span class="label">${escapeHtml(c.name)}</span><input id="ph-ct-name" type="text" maxlength="64" value="${escapeHtml(suggestion.slice(0, 64))}"></label>
         ${suggestion ? `<p class="hint">${escapeHtml(c.suggestion)}</p>` : ""}
-        <p class="hint">${escapeHtml(fill(c.book, { name: bookName }))}</p>`,
+        ${bookHtml}`,
       ok: c.ok,
       focus: "#ph-ct-name",
       validate: (dialog) => (dialog.querySelector("#ph-ct-name").value.trim() ? null : c.noName),
-      read: (dialog) => dialog.querySelector("#ph-ct-name").value.trim().slice(0, 64),
+      read: (dialog) => ({ name: dialog.querySelector("#ph-ct-name").value.trim().slice(0, 64), book: pickBook(dialog) }),
     });
-    if (name === null) return;
-    if ((await this._phoneService("add_contact", { number, name, phonebook_id: 0 })) === undefined) return;
+    if (answer === null) return;
+    const { name, book } = answer;
+    if ((await this._phoneService("add_contact", { number, name, phonebook_id: book })) === undefined) return;
     showToast(this.shadowRoot, fill(c.done, { name }));
+    this._phoneSync({ parts: ["phonebooks"] });
   }
 
   /** lookup_number answers with what FRITZ!Box Telefon knows about a number; shown in a dialog. */

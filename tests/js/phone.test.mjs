@@ -1,4 +1,8 @@
-/* The page Box › Phone: it reads the entities of FRITZ!Box Telefon (fritzbox_phone) and calls its services, against a fake Home Assistant. */
+/*
+ * The page Box › Phone: it reads FRITZ!Box Telefon (fritzbox_phone) through its websocket commands
+ * (stage 2), or its entities with an older version (stage 1, the fallback), and calls its services,
+ * against a fake Home Assistant.
+ */
 
 import assert from "node:assert/strict";
 import test, { mock } from "node:test";
@@ -126,8 +130,11 @@ test.afterEach(() => {
   }
 });
 
-/** A panel on the phone page; services[name] answers a service (an Error is thrown), ws[type] a websocket command. */
-function makePanel(hassOpts = {}, { services = {}, ws = {} } = {}) {
+/**
+ * A panel on the phone page; services[name] answers a service (an Error is thrown), ws[type] a
+ * websocket command. api "entities": as after the detection found an older fritzbox_phone (stage 1).
+ */
+function makePanel(hassOpts = {}, { services = {}, ws = {}, api = "entities" } = {}) {
   const p = new panel.FritzboxNetworkPanel();
   panels.push(p);
   const calls = [];
@@ -150,6 +157,8 @@ function makePanel(hassOpts = {}, { services = {}, ws = {} } = {}) {
   };
   p._state.tab = "phone";
   p._state.data = { can_write: true, nodes: [], clients: [] };
+  p._phoneApi = api;
+  if (api) p._phoneDetectKey = [p._hass.config, p._hass.devices];
   p._readPhone();
   return { p, calls, wsCalls, root: p.shadowRoot, html: () => (p._renderPhone(), p._html["phone-view"]) };
 }
@@ -444,12 +453,17 @@ test("statistics over the last 7 days: sums, talk time from h:mm, missed rate, b
   assert.deepEqual([day(6).in, day(6).out, day(6).miss, day(6).spam, day(6).total], [1, 1, 0, 1, 3]);
   assert.equal(day(4).miss, 1);
   assert.equal(day(5).total, 0);
-  // Saturday is row 5, 12–15 h is column 4
-  assert.equal(s.heat[5][4], 3);
-  assert.equal(s.heat[5][3], 1);
-  assert.equal(s.heat[4][6], 2);
-  assert.equal(s.heat[4][5], 1);
-  assert.equal(s.heat[2][3], 1);
+  // 7 × 24 like the command stats: Saturday is row 5, the call at 14:12 in column 14
+  assert.equal(s.heat[5].length, 24);
+  assert.equal(s.heat[5][14], 1);
+  assert.equal(s.heat[5][10], 1);
+  // in blocks of three hours (narrow screens): 12–15 h is column 4
+  const blocks = model.foldHeat(s.heat);
+  assert.equal(blocks[5][4], 3);
+  assert.equal(blocks[5][3], 1);
+  assert.equal(blocks[4][6], 2);
+  assert.equal(blocks[4][5], 1);
+  assert.equal(blocks[2][3], 1);
   assert.equal(s.heat.flat().reduce((a, b) => a + b, 0), 8);
   assert.deepEqual(s.topIn[0], { key: "01712345678", number: "01712345678", name: "Mama", vip: false, n: 2, talk: 35, spam: false, area: "Mobilfunk" });
   assert.deepEqual(s.topOut.map((x) => [x.name, x.n, x.talk]), [["Mama", 1, 72], ["Dr. Weber", 1, 2]]);
@@ -490,7 +504,10 @@ test("the statistics view says how far the list reaches, shows deltas as text an
   assert.match(html, /Änderung gegenüber gestern/);
   assert.match(html, /<svg class="ph-chart"[^>]*aria-label="Anrufe je Stunde, gestapelt nach Art"/);
   assert.match(html, /<g class="bar" tabindex="0" role="img" aria-label="14–15 Uhr: 1 Anrufe – 1 Eingehend, 0 Ausgehend, 0 Verpasst, 0 Spam"/);
-  assert.match(html, /aria-label="Sa 12–15 Uhr: 3 Anrufe"/);
+  // wide: one column per hour; narrow: blocks of three hours as before
+  assert.match(html, /aria-label="Sa 14–15 Uhr: 1 Anrufe"/);
+  assert.match(html, /Alle Anrufe nach Wochentag und Stunde/);
+  assert.match(page.renderPhone(m, ctx({ view: "stats", period: "today" }, { width: 375 })), /aria-label="Sa 12–15 Uhr: 3 Anrufe"/);
   assert.match(html, /heute 1 · gesamt 23/);
   assert.match(html, /Anrufe mit Nachricht · 1 ungehört/);
   html = page.renderPhone(m, ctx({ view: "stats", period: "7", tables: { bars: true, heat: true } }));
@@ -510,6 +527,10 @@ test("the charts fit narrow screens: at 375 px the labels are thinned out", () =
   assert.ok(labels < 30 && labels >= 5, `labels: ${labels}`);
   assert.match(narrow, /width="309"/);
   assert.match(page.heatChart(s.heat, 260, { t }), /width="260"/);
+  // 24 columns where each gets 20 px, else eight blocks
+  assert.equal([...page.heatChart(s.heat, 700, { t }).matchAll(/<g class="cell"/g)].length, 7 * 24);
+  assert.equal([...page.heatChart(s.heat, 309, { t }).matchAll(/<g class="cell"/g)].length, 7 * 8);
+  assert.equal(page.heatShape(s.heat, 500).hourly, false);
 });
 
 // ---------- services ----------
@@ -705,4 +726,334 @@ test("the phone texts exist in both languages with the same shape", () => {
   assert.equal(t.tabs.boxOverview, "Übersicht");
   for (const r of model.RATINGS) assert.ok(t.phone.rating[r] && en.phone.rating[r]);
   for (const ty of model.CALL_TYPES) assert.ok(t.phone.calls.type[ty] && en.phone.calls.type[ty]);
+});
+
+// ---------- stage 2: the websocket commands of fritzbox_phone ----------
+
+// the shapes as fritzbox_phone answers them (tests/test_websocket.py there), with this page's dates
+const iso = (text) => {
+  const d = model.parseAvmDate(text);
+  return d ? d.toISOString() : null;
+};
+const WS_ENTRIES = { entries: [{ entry_id: "p1", title: "FRITZ!Box 7590 AX", host: "fritz.box", serial: "SER123", loaded: true, call_list_days: 14, call_list_max: 80, privacy_mode: false, history_days: 0, version: "2.3.0" }] };
+const OLD_CALL = { id: "hold1", box_id: null, type: "incoming", name: "Tante Erna", caller_number: "0309999", called_number: "030 5550102", device: "Anrufbeantworter 1", date: "01.10.26 09:00", datetime: iso("01.10.26 09:00"), duration: "0:01", is_answering_machine: true, has_recording: true, tam_index: 0, tam_message_index: 5, vip: false, in_list: false };
+const wsCalls = (privacy = false) => ({
+  calls: [...CALLS.map((c) => ({ ...c, id: `h${c.id}`, box_id: String(c.id), datetime: iso(c.date), vip: c.name === "Mama", in_list: true })), OLD_CALL],
+  window: { days: 14, max: 80, offset: 0, oldest: iso("04.11.26 10:02"), source: "list" },
+  total: CALLS.length + 1,
+  privacy_mode: privacy,
+});
+const WS_TAMS = { tams: [{ index: 0, name: "Anrufbeantworter 1", enabled: true, running: true, capacity_minutes_remaining: 41, new_count: 1, total: 2, messages: MESSAGES.map((m) => ({ ...m, tam_index: 0, id: `m${m.index}` })) }], privacy_mode: false };
+const WS_BOOKS = { phonebooks: [{ id: 0, name: "Telefonbuch", count: 3 }, { id: 2, name: "Firma", count: 1 }], privacy_mode: false };
+const WS_CONTACTS = {
+  0: { contacts: CONTACTS.map((c) => ({ ...c, has_image: false })), privacy_mode: false },
+  2: { contacts: [{ name: "Carla", vip: false, uniqueid: "9", has_image: false, numbers: [{ number: "040123", type: "home" }] }], privacy_mode: false },
+};
+const WS_BLOCKED = { numbers: ["+498999990000", "0900123"], entries: [{ uniqueid: "5", name: "Gewinnspiel", numbers: ["+498999990000"] }, { uniqueid: "6", name: "", numbers: ["0900123"] }], supported: true, privacy_mode: false };
+const heat24 = () => {
+  const h = Array.from({ length: 7 }, () => Array(24).fill(0));
+  h[5][14] = 1;
+  h[5][13] = 1;
+  h[5][12] = 1;
+  h[5][10] = 1;
+  h[4][19] = 1;
+  h[4][18] = 1;
+  h[4][16] = 1;
+  h[2][10] = 1;
+  return h;
+};
+const day = (date, v = {}) => ({ date, incoming: 0, outgoing: 0, missed: 0, spam: 0, talk_minutes: 0, ...v });
+const wsStatsAnswer = (days = 7, extra = {}) => ({
+  window: { days, from: "2026-11-01", to: "2026-11-07", oldest: iso("28.10.26 09:00"), newest: iso("07.11.26 14:12"), count: 8, undated: 1, source: "list" },
+  per_day: [day("2026-11-01"), day("2026-11-02"), day("2026-11-03"), day("2026-11-04", { missed: 1 }), day("2026-11-05"), day("2026-11-06", { incoming: 1, outgoing: 1, spam: 1, talk_minutes: 103 }), day("2026-11-07", { incoming: 1, outgoing: 1, missed: 1, spam: 1, talk_minutes: 6 })],
+  heat: heat24(),
+  totals: { calls: 8, incoming: 2, outgoing: 2, missed: 2, spam: 2, connected: 4, talk_minutes: 109, avg_talk_minutes: 27.3, missed_rate: 0.333 },
+  previous: { calls: 1, incoming: 1, outgoing: 0, missed: 0, spam: 0, connected: 1, talk_minutes: 10, avg_talk_minutes: 10, missed_rate: 0 },
+  compare: { kind: "partial", days, cover_days: 4 },
+  top_callers: [{ number: "01712345678", name: "Mama", vip: true, count: 2, talk_minutes: 35, spam: false }],
+  top_called: [{ number: "0171 2345678", name: "Mama", vip: true, count: 1, talk_minutes: 72, spam: false }],
+  per_line: [{ own_number: "030 5550101", count: 7 }, { own_number: "030 5550102", count: 1 }],
+  privacy_mode: false,
+  ...extra,
+});
+const refused = (code) => Object.assign(new Error(code), { code });
+
+/** Lets the detection and the rounds of commands come in. */
+async function settle() {
+  for (let i = 0; i < 12; i += 1) await new Promise((r) => setImmediate(r));
+}
+
+/** A panel that detects the commands and fetches its parts; ws overrides single answers. */
+async function makeWsPanel(hassOpts = {}, { services = {}, ws = {}, privacy = false } = {}) {
+  const answers = {
+    "fritzbox_phone/entries": WS_ENTRIES,
+    "fritzbox_phone/calls": wsCalls(privacy),
+    "fritzbox_phone/tams": WS_TAMS,
+    "fritzbox_phone/phonebooks": WS_BOOKS,
+    "fritzbox_phone/contacts": (msg) => {
+      if (!WS_CONTACTS[msg.phonebook_id]) throw refused("not_found");
+      return WS_CONTACTS[msg.phonebook_id];
+    },
+    "fritzbox_phone/blocklist": WS_BLOCKED,
+    "fritzbox_phone/stats": (msg) => wsStatsAnswer(msg.days),
+    ...ws,
+  };
+  const made = makePanel(hassOpts, { services, ws: answers, api: null });
+  made.p._phoneSync();
+  await settle();
+  return made;
+}
+
+test("the commands are found with fritzbox_phone/entries, the entry by the serial number, and every part is fetched", async () => {
+  const { p, wsCalls: sent, html } = await makeWsPanel();
+  assert.equal(p._phoneApi, "ws");
+  assert.equal(p._phone.api, "ws");
+  assert.equal(p._phone.pick.how, "match");
+  assert.equal(p._phone.entry.entryId, "p1");
+  assert.deepEqual(sent[0], { type: "fritzbox_phone/entries" });
+  const types = sent.map((m) => m.type).sort();
+  assert.deepEqual(types, ["fritzbox_phone/blocklist", "fritzbox_phone/calls", "fritzbox_phone/contacts", "fritzbox_phone/contacts", "fritzbox_phone/entries", "fritzbox_phone/phonebooks", "fritzbox_phone/tams"]);
+  assert.ok(sent.slice(1).every((m) => m.entry_id === "p1"));
+  assert.deepEqual(sent.filter((m) => m.type === "fritzbox_phone/contacts").map((m) => m.phonebook_id).sort(), [0, 2]);
+  // the services still go to the device of that entry
+  assert.deepEqual(p._phoneTarget(), { device_id: "dph1" });
+  const out = html();
+  assert.doesNotMatch(out, /Ältere Version/);
+  assert.match(out, /aria-label="Zurückrufen: Mama"/);
+  assert.match(out, /10 Anrufe aus der Anrufliste der letzten 14 Tage, höchstens 80/);
+  // today's numbers and the call monitor are still plain sensor states
+  assert.match(out, /<span class="label">Anrufe<\/span><b>4<\/b>/);
+  assert.match(out, /Anrufmonitor <span class="chip ok">/);
+  assert.match(out, /<span class="chip info">1 neu<\/span>/);
+  assert.equal(p._state.phoneUnread, 1);
+  // two phone books with their real names, the second one a choice
+  assert.match(out, /data-act="ph-book" data-ph-ent="pb:2"[^>]*>Firma<\/button>/);
+  // nothing is fetched again while fritzbox_phone has no new data
+  const before = sent.length;
+  p._phoneSync();
+  await settle();
+  assert.equal(sent.length, before);
+  // new data (the call list sensor changed): calls, answering machines and phone books again, not the block list
+  p._hass = { ...p._hass, states: { ...p._hass.states, "sensor.fb_anrufliste": st(10, { calls: [] }) } };
+  p._phoneSync();
+  await settle();
+  const again = sent.slice(before).map((m) => m.type);
+  assert.ok(again.includes("fritzbox_phone/calls") && again.includes("fritzbox_phone/tams") && again.includes("fritzbox_phone/phonebooks"));
+  assert.ok(!again.includes("fritzbox_phone/blocklist"));
+});
+
+test("an older fritzbox_phone without the commands (unknown_command) is read from its entities, with one muted line", async () => {
+  const { p, wsCalls: sent, html } = await makeWsPanel({}, { ws: { "fritzbox_phone/entries": refused("unknown_command") } });
+  assert.equal(p._phoneApi, "entities");
+  assert.equal(p._phoneLegacy, true);
+  assert.equal(sent.length, 1);
+  const out = html();
+  assert.match(out, /<p class="ph-src ph-legacy">Ältere Version von FRITZ!Box Telefon: eingeschränkte Ansicht<\/p>/);
+  assert.match(out, /aria-label="Zurückrufen: Mama"/);
+  assert.doesNotMatch(out, /Rufsperre<\/span>/);
+  // another refusal: the entities for now, without the line, asked again later
+  const other = await makeWsPanel({}, { ws: { "fritzbox_phone/entries": refused("timeout") } });
+  assert.equal(other.p._phoneApi, "entities");
+  assert.equal(other.p._phoneLegacy, false);
+  assert.doesNotMatch(other.html(), /Ältere Version/);
+  assert.ok(other.p._phoneRetryAt > Date.now());
+  // while the answer is not there the page waits instead of showing the entities first
+  const waiting = makePanel({}, { api: null });
+  assert.match(waiting.html(), /aria-busy="true"/);
+});
+
+test("a refused part says not available, the others stay; an entry that is not loaded says so", async () => {
+  const { p, html } = await makeWsPanel({}, { ws: { "fritzbox_phone/calls": refused("not_found"), "fritzbox_phone/contacts": (msg) => (msg.phonebook_id === 0 ? WS_CONTACTS[0] : Promise.reject(refused("not_found"))) } });
+  let out = html();
+  assert.match(out, /id="ph-calls-h">Anrufliste<\/span>[\s\S]*<b>nicht verfügbar<\/b>/);
+  assert.match(out, /Anrufbeantworter 1/);
+  assert.match(out, /Büro Schmidt/);
+  // not_found: asked again which entries there are, but not at once
+  assert.equal(p._phoneDetectKey, null);
+  assert.ok(p._phoneRetryAt > Date.now());
+  p._onPhoneClick({ act: "ph-book", phEnt: "pb:2" });
+  assert.match(p._html["phone-view"], /Firma[\s\S]*nicht verfügbar/);
+  const tamsGone = await makeWsPanel({}, { ws: { "fritzbox_phone/tams": refused("not_found") } });
+  out = tamsGone.html();
+  assert.match(out, /<span class="label">Anrufbeantworter<\/span><\/div><p class="hint">nicht verfügbar/);
+  assert.match(out, /aria-label="Zurückrufen: Mama"/);
+  const unloaded = await makeWsPanel({}, { ws: { "fritzbox_phone/entries": { entries: [{ ...WS_ENTRIES.entries[0], loaded: false }] } } });
+  assert.match(unloaded.html(), /Der Eintrag von FRITZ!Box Telefon ist nicht geladen/);
+  assert.equal(unloaded.wsCalls.length, 1);
+  // answers of odd shape never throw
+  assert.equal(model.parseWsCalls({ ok: true, result: { calls: "x" } }).ok, false);
+  assert.deepEqual(model.parseWsEntries({ entries: [null, { title: "no id" }] }), []);
+  assert.equal(model.parseWsTams({ ok: true, result: { tams: [null] } }, {}, { answering_machine: [], tam_enabled: [] }).tams[0].target, false);
+  assert.equal(model.wsCode({ code: "unknown_command" }), "unknown_command");
+});
+
+test("calls that left the box's list (in_list false) offer no recording and no jump to a message", async () => {
+  const c = model.parseWsCall(OLD_CALL);
+  assert.equal(c.inList, false);
+  assert.equal(c.hasRecording, false);
+  assert.equal(c.tamMessageIndex, null);
+  assert.deepEqual(c.date, new Date(2026, 9, 1, 9, 0));
+  const live = model.parseWsCall(wsCalls().calls[3]);
+  assert.equal(live.inList, true);
+  assert.equal(live.hasRecording, true);
+  assert.equal(live.id, "h509");
+  assert.equal(live.boxId, "509");
+  const { p, html } = await makeWsPanel();
+  p._state.phone.expanded.add("c:hold1");
+  p._state.phone.expanded.add("c:h509");
+  const out = html();
+  assert.match(out, /data-act="ph-jump" data-ph-tam="0" data-ph-idx="2" data-k="ph-cj-h509"/);
+  assert.doesNotMatch(out, /ph-cj-hold1/);
+  // vip comes with the call now
+  assert.equal(p._phone.list.calls.find((x) => x.id === "h512").vip, true);
+});
+
+test("the box's block list: a chip, a marker, a card with release; hidden where the box has none", async () => {
+  const { p, calls: sent, root, html, wsCalls: asked } = await makeWsPanel({}, { services: { unblock_number: {} } });
+  let out = html();
+  assert.match(out, /data-ph-val="blocked" data-k="ph-f-blocked" aria-pressed="false">Gesperrt<span class="n">1/);
+  assert.match(out, /id="ph-bl-h">Rufsperre<\/span><span class="chip">2 Nummern/);
+  assert.match(out, /Gewinnspiel[\s\S]*\+498999990000[\s\S]*aria-label="\+498999990000 freigeben"/);
+  assert.match(out, /ohne Bezeichnung[\s\S]*0900123/);
+  p._onPhoneClick({ act: "ph-filter", phVal: "blocked" });
+  out = p._html["phone-view"];
+  assert.match(out, /1 von 10 Anrufen angezeigt/);
+  assert.match(out, /<span class="chip">gesperrt<\/span>/);
+  // a blocked call offers release instead of block
+  p._state.phone.expanded.add("c:h506");
+  out = html();
+  assert.match(out, /data-act="ph-unblock" data-ph-num="\+498999990000" data-k="ph-cu-h506"/);
+  assert.doesNotMatch(out, /data-k="ph-cb-h506"/);
+  const before = asked.length;
+  const done = p._onPhoneClick({ act: "ph-unblock", phNum: "0900123" });
+  const dialog = root.els["#dialog"];
+  assert.match(dialog.innerHTML, /Nummer freigeben\?/);
+  dialog.querySelector("#dlg-yes").onclick();
+  await done;
+  await settle();
+  assert.deepEqual(sent.at(-1), { domain: "fritzbox_phone", service: "unblock_number", data: { number: "0900123" }, target: { device_id: "dph1" }, notify: false, response: false });
+  assert.match(root.els["#toast"].textContent, /0900123 ist wieder freigegeben/);
+  assert.deepEqual(asked.slice(before).map((m) => m.type), ["fritzbox_phone/blocklist"]);
+  // a box without call barring: no chip, no card
+  const none = await makeWsPanel({}, { ws: { "fritzbox_phone/blocklist": { numbers: [], entries: [], supported: false } } });
+  out = none.html();
+  assert.doesNotMatch(out, /ph-f-blocked|Rufsperre<\/span>/);
+  // the box did not answer: the card says not available
+  const failed = await makeWsPanel({}, { ws: { "fritzbox_phone/blocklist": refused("box_request_failed") } });
+  assert.match(failed.html(), /id="ph-bl-h">Rufsperre<\/span><\/div><p class="hint">nicht verfügbar/);
+  // numbers are matched by their digits
+  const bl = model.parseBlocklist({ ok: true, result: WS_BLOCKED });
+  assert.equal(model.onBlocklist(bl, "+49 89 9999 0000"), true);
+  assert.equal(model.onBlocklist(bl, "030 1"), false);
+  assert.equal(model.parseBlocklist({ ok: true, result: { numbers: ["0301"], supported: true } }).entries[0].numbers[0], "0301");
+});
+
+test("add_contact takes the real phonebook_id, with a choice where there are several", async () => {
+  const { p, calls: sent, root } = await makeWsPanel({}, { services: { add_contact: {} } });
+  let asked = p._phoneContact("0401234567", "Hermes Logistik");
+  const dialog = root.els["#dialog"];
+  assert.match(dialog.innerHTML, /<select id="ph-ct-book"><option value="0">Telefonbuch<\/option><option value="2">Firma<\/option><\/select>/);
+  assert.doesNotMatch(dialog.innerHTML, /erste Telefonbuch/);
+  dialog.querySelector("#ph-ct-name").value = "Hermes";
+  dialog.querySelector("#ph-ct-book").value = "2";
+  dialog.querySelector("#dlg-yes").onclick();
+  await asked;
+  assert.deepEqual(sent[0], { domain: "fritzbox_phone", service: "add_contact", data: { number: "0401234567", name: "Hermes", phonebook_id: 2 }, target: { device_id: "dph1" }, notify: false, response: false });
+  // one phone book: no choice, its name and its id
+  const one = await makeWsPanel({}, { services: { add_contact: {} }, ws: { "fritzbox_phone/phonebooks": { phonebooks: [{ id: 3, name: "Privat", count: 1 }] }, "fritzbox_phone/contacts": WS_CONTACTS[2] } });
+  asked = one.p._phoneContact("0301", "");
+  const d1 = one.root.els["#dialog"];
+  assert.match(d1.innerHTML, /Er kommt in das Telefonbuch „Privat“/);
+  d1.querySelector("#ph-ct-name").value = "X";
+  d1.querySelector("#dlg-yes").onclick();
+  await asked;
+  assert.equal(one.calls[0].data.phonebook_id, 3);
+  // the entities of a newer version carry phonebook_id too
+  assert.equal(model.parseBook("sensor.b", st(1, { contacts: [], phonebook_id: 2 })).phonebookId, 2);
+});
+
+test("messages from the command tams are named by the sensor with the same tam_index; recordings via auth/sign_path", async () => {
+  const { p, calls: sent } = await makeWsPanel({}, { services: { mark_message_read: {} } });
+  const tam = p._phone.tams[0];
+  assert.equal(tam.entityId, "sensor.fb_anrufbeantworter_1");
+  assert.equal(tam.target, true);
+  assert.equal(tam.switchId, "switch.fb_anrufbeantworter_1_aktiv");
+  assert.equal(tam.messages[0].recordingPath, MESSAGES[0].recording_path);
+  await p._onPhoneClick({ act: "ph-mark", phEnt: tam.entityId, phIdx: "0" });
+  assert.deepEqual(sent[0].data, { entity_id: "sensor.fb_anrufbeantworter_1", message_index: 0, message_key: "04.11.26 17:45|0304567890", read: false });
+  // without a sensor for it the actions are locked
+  const hass = makeHass();
+  const ids = model.phoneEntries(hass)[0].entities;
+  const two = model.parseWsTams({ ok: true, result: { tams: [{ index: 0, messages: [] }, { index: 1, messages: [{ index: 0, has_recording: true, recording_path: "/x" }] }] } }, hass, ids);
+  assert.equal(two.tams[0].entityId, "sensor.fb_anrufbeantworter_1");
+  assert.equal(two.tams[1].entityId, "tam:1");
+  assert.equal(two.tams[1].target, false);
+});
+
+test("privacy mode follows privacy_mode of the answers", async () => {
+  const { html } = await makeWsPanel({}, { privacy: true });
+  const out = html();
+  assert.match(out, /Privatsphäre-Modus ist in FRITZ!Box Telefon eingeschaltet/);
+  assert.doesNotMatch(out, /Mama|Hermes|Gewinnspiel|0900123/);
+});
+
+test("statistics from fritzbox_phone/stats: source and window, a partial comparison, the hint on the call history, 7 × 24 hours", async () => {
+  const { p, wsCalls: sent, html } = await makeWsPanel();
+  const before = sent.length;
+  p._onPhoneClick({ act: "ph-view", phVal: "stats" });
+  await settle();
+  assert.deepEqual(sent.slice(before), [{ type: "fritzbox_phone/stats", entry_id: "p1", days: 7 }]);
+  let out = html();
+  assert.match(out, /Zeitraum: 8 Anrufe vom 01\.11\.2026 bis 07\.11\.2026/);
+  assert.match(out, /Quelle: die Anrufliste der Box/);
+  assert.match(out, /Vorhanden: 28\.10\.2026 bis 07\.11\.2026/);
+  assert.match(out, /1 Anrufe ohne lesbares Datum/);
+  assert.match(out, /Option „Anrufverlauf“ einschalten/);
+  assert.match(out, /Vergleich: nur 4 Tage des Vorzeitraums\./);
+  assert.match(out, /<span class="label">Anrufe<\/span><b>8<\/b><small><span class="ph-delta">▲ \+7/);
+  assert.match(out, /33 %<\/b><small>2 von 6 eingehenden/);
+  assert.match(out, /1 Std\. 49 Min\./);
+  assert.match(out, /aria-label="Sa 14–15 Uhr: 1 Anrufe"/);
+  assert.match(out, /<span class="label">Anrufbeantworter<\/span><b>1<\/b><small>2 Nachrichten auf der Box/);
+  assert.match(out, /Wer am meisten anruft[\s\S]*Mama/);
+  assert.match(out, /Gezählt von FRITZ!Box Telefon/);
+  // only the periods of the call list without the history; another period asks again
+  assert.doesNotMatch(out, /ph-per-90/);
+  p._onPhoneClick({ act: "ph-period", phVal: "30" });
+  assert.match(p._html["phone-view"], /Die Statistik wird geladen/);
+  await settle();
+  assert.deepEqual(sent.at(-1), { type: "fritzbox_phone/stats", entry_id: "p1", days: 30 });
+  // today: hours from the calls of the list
+  p._onPhoneClick({ act: "ph-period", phVal: "today" });
+  await settle();
+  assert.equal(sent.at(-1).days, 1);
+  assert.match(p._html["phone-view"], /aria-label="14–15 Uhr: 1 Anrufe – 1 Eingehend/);
+  // with the call history: longer periods, the source, no hint
+  const hist = await makeWsPanel({}, { ws: { "fritzbox_phone/entries": { entries: [{ ...WS_ENTRIES.entries[0], history_days: 365 }] }, "fritzbox_phone/stats": (msg) => wsStatsAnswer(msg.days, { compare: { kind: "full", days: msg.days, cover_days: msg.days }, window: { ...wsStatsAnswer(msg.days).window, source: "history" } }) } });
+  hist.p._onPhoneClick({ act: "ph-view", phVal: "stats" });
+  await settle();
+  out = hist.html();
+  assert.match(out, /data-k="ph-per-90"[^>]*>90 Tage<\/button>[\s\S]*data-k="ph-per-365"[^>]*>1 Jahr/);
+  assert.match(out, /Quelle: der Anrufverlauf von FRITZ!Box Telefon/);
+  assert.match(out, /Änderung gegenüber den 7 Tagen davor/);
+  assert.doesNotMatch(out, /Anrufverlauf“ einschalten/);
+  // refused or odd: not available, never thrown
+  assert.equal(model.wsStats({ ok: false, code: "not_found" }).reason, "na");
+  assert.equal(model.wsStats({ ok: true, result: { totals: null } }).ok, false);
+  assert.equal(model.wsStats({ ok: true, result: { totals: { calls: 0 }, window: { oldest: null } } }).empty, true);
+  const odd = model.wsStats({ ok: true, result: { ...wsStatsAnswer(), heat: [[1]] } }, { now: NOW });
+  assert.equal(odd.heat, null);
+  const failed = await makeWsPanel({}, { ws: { "fritzbox_phone/stats": refused("not_found") } });
+  failed.p._onPhoneClick({ act: "ph-view", phVal: "stats" });
+  await settle();
+  assert.match(failed.html(), /Statistik: nicht verfügbar/);
+});
+
+test("more than 31 days of the command are drawn per week", () => {
+  const per = Array.from({ length: 40 }, (_, i) => day(new Date(2026, 8, 29 + i).toLocaleDateString("sv"), { incoming: 1 }));
+  const s = model.wsStats({ ok: true, result: { ...wsStatsAnswer(0), window: { ...wsStatsAnswer(0).window, days: 0, from: per[0].date }, per_day: per, compare: { kind: "none", days: 0, cover_days: 0 } } }, { period: "all", now: NOW });
+  assert.equal(s.bars.unit, "week");
+  assert.equal(s.bars.list.length, 6);
+  assert.equal(s.bars.list.reduce((n, b) => n + b.in, 0), 40);
+  assert.deepEqual(s.compare, { kind: "noneAll" });
 });

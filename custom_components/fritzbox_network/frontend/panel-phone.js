@@ -1,13 +1,14 @@
 /*
- * The page Box › Phone: calls, answering machines, phone books and statistics of the integration
- * FRITZ!Box Telefon (fritzbox_phone). It only reads that integration's entities (phone-model.js)
- * and calls its services from the panel; it never talks to the box itself.
+ * The page Box › Phone: calls, answering machines, phone books, block list and statistics of the
+ * integration FRITZ!Box Telefon (fritzbox_phone). It reads what that integration answers to its
+ * websocket commands, or its entities with an older version without them (phone-model.js), and
+ * calls its services from the panel; it never talks to the box itself.
  */
 
 import { escapeHtml } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
-import { BOOK_ROWS, CALL_FILTERS, PERIODS, SERIES, callKind, dialable, displayName, filterCalls, filterCounts, isOutgoing, phoneStats, searchBook, shortNumber } from "./phone-model.js";
+import { BOOK_ROWS, CALL_FILTERS, HISTORY_PERIODS, PERIODS, PERIOD_DAYS, SERIES, callKind, dialable, displayName, filterCalls, filterCounts, foldHeat, heatGrid, isOutgoing, onBlocklist, phoneStats, searchBook, shortNumber, wsStats } from "./phone-model.js";
 
 const esc = escapeHtml;
 const KIND_ICON = { in: "callIn", out: "callOut", miss: "callMissed", spam: "shield", tam: "tam" };
@@ -153,7 +154,8 @@ function callRow(c, model, ctx) {
   const name = displayName(c) || p.calls.unknown;
   const action = out ? p.calls.redial : p.calls.callback;
   const canDial = dialable(c.number);
-  const blocked = ui.blocked?.has(c.number);
+  const blocked = ui.blocked?.has(c.number) || onBlocklist(model.blocked, c.number);
+  const canUnblock = blocked && onBlocklist(model.blocked, c.number);
   const chips = [
     c.vip ? `${ic("star")}<span class="sr">${esc(p.calls.vip)}</span>` : "",
     c.isSpam ? `<span class="chip bad">${esc(c.spamConfidence !== null ? fill(p.calls.spamChip, { p: c.spamConfidence }) : p.calls.filters.spam)}</span>` : "",
@@ -185,6 +187,7 @@ function callRow(c, model, ctx) {
           ${canDial ? `<button class="btn sm" data-act="ph-dial" data-ph-num="${esc(c.number)}" data-ph-name="${esc(c.name)}" data-k="ph-cdd-${esc(c.id)}"${off(model)}>${ic("phone")}${esc(action)}</button>` : ""}
           ${!c.name && canDial ? `<button class="btn sm" data-act="ph-contact" data-ph-num="${esc(c.number)}" data-ph-name="${esc(c.reverseName)}" data-k="ph-cc-${esc(c.id)}" aria-haspopup="dialog"${off(model)}>${ic("userPlus")}${esc(p.calls.addContact)}</button>` : ""}
           ${canDial ? `<button class="btn sm" data-act="ph-lookup" data-ph-num="${esc(c.number)}" data-k="ph-cl-${esc(c.id)}" aria-haspopup="dialog"${off(model)}>${ic("search")}${esc(p.calls.lookup)}</button>` : ""}
+          ${canUnblock ? `<button class="btn sm" data-act="ph-unblock" data-ph-num="${esc(c.number)}" data-k="ph-cu-${esc(c.id)}" aria-haspopup="dialog"${off(model)}>${ic("ban")}${esc(p.calls.unblock)}</button>` : ""}
           ${canDial && !blocked ? `<button class="btn sm d" data-act="ph-block" data-ph-num="${esc(c.number)}" data-ph-name="${esc(c.name || c.reverseName)}" data-k="ph-cb-${esc(c.id)}" aria-haspopup="dialog"${off(model)}>${ic("ban")}${esc(p.calls.block)}</button>` : ""}
           ${tamHas ? `<button class="btn sm" data-act="ph-jump" data-ph-tam="${c.tamIndex}" data-ph-idx="${c.tamMessageIndex}" data-k="ph-cj-${esc(c.id)}">${ic("tam")}${esc(p.calls.toMessage)}</button>` : ""}
         </div></div>`
@@ -202,14 +205,19 @@ function callCard(model, ctx) {
   const p = t.phone;
   const head = `<div class="ph-chead"><span class="label" id="ph-calls-h">${esc(p.calls.title)}</span><button class="btn sm p" data-act="ph-dial" data-k="ph-dialopen" aria-haspopup="dialog"${off(model)}>${ic("phone")}${esc(p.calls.dial)}</button></div>`;
   if (!model.list.ok) {
-    return `<section class="card sec" aria-labelledby="ph-calls-h">${head}<div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${esc(fill(p.tooOld, { attr: "calls" }))}</b></div></section>`;
+    const why = model.api === "ws" ? p.part : fill(p.tooOld, { attr: "calls" });
+    return `<section class="card sec" aria-labelledby="ph-calls-h">${head}<div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${esc(why)}</b></div></section>`;
   }
   const all = model.list.calls;
   if (!all.length) {
     return `<section class="card sec" aria-labelledby="ph-calls-h">${head}${staleNote(model, ctx)}<div class="empty">${ic("phone")}<b>${esc(p.calls.none)}</b><span>${esc(p.calls.noneBody)}</span></div></section>`;
   }
-  const counts = filterCounts(all);
-  const list = filterCalls(all, ui.filter, ui.query);
+  // the chip "blocked" only where the box's block list is known
+  const isBlocked = model.blocked?.ok && model.blocked.supported ? (n) => onBlocklist(model.blocked, n) || Boolean(ui.blocked?.has(n)) : null;
+  const filters = isBlocked ? [...CALL_FILTERS, "blocked"] : CALL_FILTERS;
+  const filter = filters.includes(ui.filter) ? ui.filter : "all";
+  const counts = filterCounts(all, isBlocked);
+  const list = filterCalls(all, filter, ui.query, isBlocked);
   let rows = "";
   let last = null;
   for (const c of list) {
@@ -224,13 +232,22 @@ function callCard(model, ctx) {
   const legend = ["in", "out", "miss", "tam", "spam"].map((k) => `<span><span class="ph-ico ${k} sm">${ic(KIND_ICON[k])}</span>${esc(p.calls.legend[k])}</span>`).join("");
   return `<section class="card sec" aria-labelledby="ph-calls-h">${head}${staleNote(model, ctx)}
     <div class="ph-tools">
-      <span class="seg ph-seg" role="group" aria-label="${esc(p.calls.filterLabel)}">${CALL_FILTERS.map((f) => `<button data-act="ph-filter" data-ph-val="${f}" data-k="ph-f-${f}" aria-pressed="${ui.filter === f}">${esc(p.calls.filters[f])}<span class="n">${counts[f]}</span></button>`).join("")}</span>
+      <span class="seg ph-seg" role="group" aria-label="${esc(p.calls.filterLabel)}">${filters.map((f) => `<button data-act="ph-filter" data-ph-val="${f}" data-k="ph-f-${f}" aria-pressed="${filter === f}">${esc(p.calls.filters[f])}<span class="n">${counts[f]}</span></button>`).join("")}</span>
       <label class="search ph-search"><span class="sr">${esc(p.calls.searchLabel)}</span>${ic("search")}<input type="search" id="ph-q" value="${esc(ui.query)}" placeholder="${esc(p.calls.search)}" autocomplete="off"></label>
     </div>
     <p class="sr" role="status">${esc(fill(p.calls.shown, { n: list.length, total: all.length }))}</p>
     <div class="ph-rows">${rows}</div>
     <div class="ph-legend" aria-hidden="true">${legend}</div>
-    <p class="hint">${esc(fill(p.calls.hint, { n: all.length }))}</p></section>`;
+    <p class="hint">${esc(callHint(model, all.length, t))}</p></section>`;
+}
+
+/** What the list holds: with the commands the real window of fritzbox_phone, else only the count. */
+function callHint(model, n, t) {
+  const w = model.list.window;
+  if (model.api !== "ws" || !w) return fill(t.phone.calls.hint, { n });
+  if (w.source === "history") return fill(t.phone.calls.windowHistory, { n, days: w.days || "–" });
+  if (w.days && w.max) return fill(t.phone.calls.windowHint, { n, days: w.days, max: w.max });
+  return fill(t.phone.calls.hint, { n });
 }
 
 // ---------- answering machines ----------
@@ -255,7 +272,7 @@ function messageRow(msg, tam, model, ctx) {
   const sounding = playing && !ui.play.paused;
   const when = msg.date ? `${dayLabel(msg.date, now, t, language)}, ${hhmm(msg.date, language)}` : msg.dateText;
   const meta = [when, msg.duration, hide ? "" : msg.area].filter(Boolean).join(" · ");
-  const usableIdx = msg.index !== null;
+  const usableIdx = msg.index !== null && tam.target !== false;
   const playBtn = msg.hasRecording
     ? `<button class="icon-btn" data-act="ph-play" data-ph-ent="${esc(tam.entityId)}" data-ph-idx="${msg.index}" data-k="ph-p-${esc(key)}" aria-pressed="${Boolean(sounding)}" aria-label="${esc(sounding ? a.pause : a.play)}"${off(model, !usableIdx)}>${ic(sounding ? "pause" : "play")}</button>`
     : `<span class="ph-norec">${esc(a.noRecording)}</span>`;
@@ -283,7 +300,7 @@ function tamCard(tam, model, ctx) {
   const { t, ui } = ctx;
   const a = t.phone.tam;
   if (tam.loading) return `<section class="card sec" aria-busy="true"><div class="ph-chead"><span class="label">${esc(a.title)}</span></div><p class="hint">${esc(t.loading)}</p></section>`;
-  if (!tam.ok) return `<section class="card sec"><div class="ph-chead"><span class="label">${esc(tam.name)}</span></div><p class="hint">${esc(tam.offline ? t.phone.part : fill(t.phone.tooOld, { attr: "messages" }))}</p></section>`;
+  if (!tam.ok) return `<section class="card sec"><div class="ph-chead"><span class="label">${esc(tam.name)}</span></div><p class="hint">${esc(tam.offline || model.api === "ws" ? t.phone.part : fill(t.phone.tooOld, { attr: "messages" }))}</p></section>`;
   const newCount = tam.messages.filter((m) => m.isNew).length;
   const busy = ui.busy?.has(tam.switchId);
   const sw = tam.switchId && tam.switchOn !== null
@@ -301,6 +318,9 @@ function tamCard(tam, model, ctx) {
 
 function tamCards(model, ctx) {
   const a = ctx.t.phone.tam;
+  const head = `<div class="ph-chead"><span class="label">${esc(a.title)}</span></div>`;
+  if (model.tamsState === "loading") return `<section class="card sec" aria-busy="true">${head}<p class="hint">${esc(ctx.t.loading)}</p></section>`;
+  if (model.tamsState === "na") return `<section class="card sec">${head}<p class="hint">${esc(ctx.t.phone.part)}</p></section>`;
   if (!model.tams.length) {
     return `<section class="card sec"><div class="ph-chead"><span class="label">${esc(a.title)}</span></div><div class="empty ph-small">${ic("tam")}<b>${esc(a.none)}</b><span>${esc(a.noneBody)}</span></div></section>`;
   }
@@ -312,6 +332,8 @@ function tamCards(model, ctx) {
 function bookCard(model, ctx) {
   const { t, ui } = ctx;
   const b = t.phone.book;
+  if (model.booksState === "loading") return `<section class="card sec" aria-busy="true"><div class="ph-chead"><span class="label">${esc(b.title)}</span></div><p class="hint">${esc(t.loading)}</p></section>`;
+  if (model.booksState === "na") return `<section class="card sec"><div class="ph-chead"><span class="label">${esc(b.title)}</span></div><p class="hint">${esc(t.phone.part)}</p></section>`;
   if (!model.books.length) return `<section class="card sec"><div class="ph-chead"><span class="label">${esc(b.title)}</span></div><div class="empty ph-small"><b>${esc(b.none)}</b><span>${esc(b.noneBody)}</span></div></section>`;
   const book = model.books.find((x) => x.entityId === ui.book) ?? model.books[0];
   const head = `<div class="ph-chead"><span class="label" id="ph-book-h">${esc(b.title)}</span>${book.ok ? `<span class="chip">${esc(fill(b.count, { n: book.count }))}</span>` : ""}</div>`;
@@ -319,7 +341,7 @@ function bookCard(model, ctx) {
     ? `<span class="seg ph-seg" role="group" aria-label="${esc(b.choose)}">${model.books.map((x) => `<button data-act="ph-book" data-ph-ent="${esc(x.entityId)}" data-k="ph-b-${esc(x.entityId)}" aria-pressed="${x === book}">${esc(x.name)}</button>`).join("")}</span>`
     : "";
   if (book.loading) return `<section class="card sec" aria-busy="true" aria-labelledby="ph-book-h">${head}<div class="ph-tools">${choose}</div><p class="hint">${esc(t.loading)}</p></section>`;
-  if (!book.ok) return `<section class="card sec" aria-labelledby="ph-book-h">${head}<div class="ph-tools">${choose}</div><p class="hint">${esc(book.offline ? t.phone.part : fill(t.phone.tooOld, { attr: "contacts" }))}</p></section>`;
+  if (!book.ok) return `<section class="card sec" aria-labelledby="ph-book-h">${head}<div class="ph-tools">${choose}</div><p class="hint">${esc(book.offline || model.api === "ws" ? t.phone.part : fill(t.phone.tooOld, { attr: "contacts" }))}</p></section>`;
   const found = searchBook(book.contacts, ui.bookQuery);
   const shown = found.slice(0, BOOK_ROWS);
   const rows = shown
@@ -347,6 +369,33 @@ function bookCard(model, ctx) {
     <p class="sr" role="status">${esc(fill(b.found, { n: found.length }))}</p>
     ${book.contacts.length ? (found.length ? rows : `<div class="empty ph-small"><b>${esc(b.noMatch)}</b></div>`) : `<div class="empty ph-small"><b>${esc(b.empty)}</b></div>`}${more}
     <p class="hint">${esc(b.hint)}</p></section>`;
+}
+
+// ---------- block list (only with the commands) ----------
+
+/** The block list of the box: shown where the box has one, with a release per number; nothing otherwise. */
+export function blockCard(model, ctx) {
+  const { t, ui } = ctx;
+  const k = t.phone.block;
+  const bl = model.blocked;
+  if (model.api !== "ws" || !bl?.known || (bl.ok && !bl.supported)) return "";
+  const head = `<div class="ph-chead"><span class="label" id="ph-bl-h">${esc(k.listTitle)}</span>${bl.ok ? `<span class="chip">${esc(fill(k.listCount, { n: bl.numbers.size }))}</span>` : ""}</div>`;
+  if (!bl.ok) return `<section class="card sec" aria-labelledby="ph-bl-h">${head}<p class="hint">${esc(t.phone.part)}</p></section>`;
+  if (!bl.entries.length) return `<section class="card sec" aria-labelledby="ph-bl-h">${head}<div class="empty ph-small"><b>${esc(k.listEmpty)}</b></div><p class="hint">${esc(k.listHint)}</p></section>`;
+  const shown = bl.entries.slice(0, BOOK_ROWS);
+  const rows = shown
+    .map((e, i) => {
+      const key = `bl:${i}`;
+      const hide = masked(ui, model.privacy, key);
+      if (hide) return `<div class="ph-row"><div class="ph-line two"><span class="ph-ico">${ic("ban")}</span><button class="ph-main" data-act="ph-row" data-ph-key="${esc(key)}" data-k="ph-r-${esc(key)}" aria-label="${esc(k.hidden)}"><span class="ph-name"><span>${hiddenName(t)}</span></span></button></div></div>`;
+      const nums = e.numbers
+        .map((n) => `<span class="ph-num"><span class="mono">${esc(n)}</span><button class="icon-btn" data-act="ph-unblock" data-ph-num="${esc(n)}" data-k="ph-bu-${i}-${esc(n)}" aria-haspopup="dialog" aria-label="${esc(fill(k.unblockLabel, { number: n }))}"${off(model)}>${ic("close")}</button></span>`)
+        .join("");
+      return `<div class="ph-row ph-contact"><div class="ph-line two"><span class="ph-ico">${ic("ban")}</span><div class="ph-cbody"><span class="ph-name"><span>${esc(e.name || k.noName)}</span></span><div class="ph-nums">${nums}</div></div></div></div>`;
+    })
+    .join("");
+  const more = bl.entries.length > shown.length ? `<p class="hint">${esc(fill(t.phone.book.more, { n: bl.entries.length - shown.length }))}</p>` : "";
+  return `<section class="card sec" aria-labelledby="ph-bl-h">${head}${rows}${more}<p class="hint">${esc(k.listHint)}</p></section>`;
 }
 
 // ---------- statistics ----------
@@ -419,31 +468,53 @@ function barTable(bars, ctx) {
     .join("")}</tbody></table>`;
 }
 
-/** The heat map: one colour in six steps, the number in each cell. */
+/**
+ * The heat map shape for a width: 24 hours where each column gets 20 px, else blocks of three
+ * hours (as in stage 1). grid is 7 × 24 (an older 7 × 8 grid is drawn as it is).
+ */
+export function heatShape(grid, width) {
+  const W = Math.max(260, Math.min(760, Math.round(width)));
+  const hourly = grid[0]?.length === 24 && (W - 32) / 24 >= 20;
+  const shown = hourly || grid[0]?.length !== 24 ? grid : foldHeat(grid);
+  return { W, hourly: shown[0]?.length === 24, grid: shown };
+}
+
+/** The labels of the columns: hours ("9", "9–10") or the blocks of three hours of the texts. */
+function heatSlots(hourly, s) {
+  return hourly ? Array.from({ length: 24 }, (_, h) => ({ axis: String(h), slot: `${h}–${h + 1}` })) : s.slots.map((x) => ({ axis: x, slot: x }));
+}
+
+/** The heat map: one colour in six steps, the number in each cell where it fits. */
 export function heatChart(grid, width, ctx) {
   const s = ctx.t.phone.stats;
-  const W = Math.max(260, Math.min(520, Math.round(width)));
+  const shape = heatShape(grid, width);
+  const W = shape.W;
+  const rows = shape.grid;
+  const slots = heatSlots(shape.hourly, s);
   const L = 30;
   const T = 20;
-  const cw = (W - L - 2) / 8;
+  const cw = (W - L - 2) / slots.length;
   const ch = 26;
   const H = T + 7 * ch + 2;
-  const max = Math.max(1, ...grid.flat());
-  let g = s.slots.map((slot, j) => (j % (cw < 34 ? 2 : 1) === 0 ? `<text class="ax" x="${(L + j * cw + cw / 2).toFixed(1)}" y="13" text-anchor="middle">${esc(slot)}</text>` : "")).join("");
-  grid.forEach((row, i) => {
+  const max = Math.max(1, ...rows.flat());
+  const every = shape.hourly ? 3 : cw < 34 ? 2 : 1;
+  let g = slots.map((x, j) => (j % every === 0 ? `<text class="ax" x="${(L + j * cw + cw / 2).toFixed(1)}" y="13" text-anchor="middle">${esc(x.axis)}</text>` : "")).join("");
+  rows.forEach((row, i) => {
     g += `<text class="ax" x="${L - 6}" y="${T + i * ch + ch / 2 + 4}" text-anchor="end">${esc(s.weekdays[i])}</text>`;
     row.forEach((v, j) => {
       const lvl = v === 0 ? 0 : Math.min(5, 1 + Math.floor((v / max) * 4.999));
-      const label = fill(s.heatLabel, { day: s.weekdays[i], slot: s.slots[j], n: v });
-      g += `<g class="cell" tabindex="0" role="img" aria-label="${esc(label)}" data-tip="${esc(label)}"><rect class="h${lvl}" x="${(L + j * cw + 1).toFixed(1)}" y="${T + i * ch + 1}" width="${(cw - 2).toFixed(1)}" height="${ch - 2}" rx="4"/>${v && cw >= 22 ? `<text class="hv h${lvl}t" x="${(L + j * cw + cw / 2).toFixed(1)}" y="${T + i * ch + ch / 2 + 4}" text-anchor="middle">${v}</text>` : ""}</g>`;
+      const label = fill(s.heatLabel, { day: s.weekdays[i], slot: slots[j]?.slot ?? "", n: v });
+      g += `<g class="cell" tabindex="0" role="img" aria-label="${esc(label)}" data-tip="${esc(label)}"><rect class="h${lvl}" x="${(L + j * cw + 1).toFixed(1)}" y="${T + i * ch + 1}" width="${(cw - 2).toFixed(1)}" height="${ch - 2}" rx="4"/>${v && cw >= 18 ? `<text class="hv h${lvl}t" x="${(L + j * cw + cw / 2).toFixed(1)}" y="${T + i * ch + ch / 2 + 4}" text-anchor="middle">${v}</text>` : ""}</g>`;
     });
   });
   return `<svg class="ph-chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="group" aria-label="${esc(s.heatChart)}">${g}</svg>`;
 }
 
-function heatTable(grid, ctx) {
+function heatTable(grid, width, ctx) {
   const s = ctx.t.phone.stats;
-  return `<table class="ph-table"><caption class="sr">${esc(s.heatChart)}</caption><thead><tr><th scope="col">${esc(s.day)}</th>${s.slots.map((x) => `<th scope="col">${esc(x)}</th>`).join("")}</tr></thead><tbody>${grid
+  const shape = heatShape(grid, width);
+  const slots = heatSlots(shape.hourly, s);
+  return `<table class="ph-table"><caption class="sr">${esc(s.heatChart)}</caption><thead><tr><th scope="col">${esc(s.day)}</th>${slots.map((x) => `<th scope="col">${esc(x.slot)}</th>`).join("")}</tr></thead><tbody>${shape.grid
     .map((r, i) => `<tr><th scope="row">${esc(s.weekdays[i])}</th>${r.map((v) => `<td>${v}</td>`).join("")}</tr>`)
     .join("")}</tbody></table>`;
 }
@@ -465,20 +536,62 @@ function rankList(items, title, prefix, model, ctx, own = false) {
     .join("")}</ol>`;
 }
 
-/** The statistics view: only what the call list holds, and the page says how far that reaches. */
-export function statsView(model, ctx) {
-  const { t, ui, now, language } = ctx;
+/** The statistics as fritzbox_phone counts them (command stats), with what the page needs to say about them. */
+function wsStatsParts(model, period, ctx) {
+  const { t, now, language } = ctx;
   const s = t.phone.stats;
-  const period = PERIODS.includes(ui.period) ? ui.period : "7";
-  const head = `<div class="ph-chead"><span class="label" id="ph-stat-h">${esc(s.title)}</span><span class="seg ph-seg" role="group" aria-label="${esc(s.periodLabel)}">${PERIODS.map((p) => `<button data-act="ph-period" data-ph-val="${p}" data-k="ph-per-${p}" aria-pressed="${period === p}">${esc(s.period[p])}</button>`).join("")}</span></div>`;
-  if (!model.list.ok) return `<section class="card sec" aria-labelledby="ph-stat-h">${head}<div class="empty"><b>${esc(fill(t.phone.tooOld, { attr: "calls" }))}</b></div></section>`;
+  const part = model.stats && model.stats.days === PERIOD_DAYS[period] ? model.stats : null;
+  const st = wsStats(part, { period, now, calls: model.list.calls ?? [] });
+  if (!st.ok || st.empty) return { st };
+  const day = (d) => d.toLocaleDateString(language || "en", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const notes = [
+    fill(s.wsBasis, { n: st.count, from: day(st.from), to: day(new Date(st.to.getTime() - 1)) }),
+    st.source === "history" ? s.sourceHistory : s.sourceList,
+    fill(s.held, { oldest: day(st.oldest), newest: st.newest ? day(st.newest) : "–" }),
+    st.short ? fill(s.reachShort, { date: day(st.oldest) }) : "",
+    st.undated ? fill(s.undated, { n: st.undated }) : "",
+    model.historyDays > 0 ? "" : s.historyHint,
+  ].filter(Boolean);
+  const unheard = model.tams.reduce((n, x) => n + (x.newCount ?? x.messages.filter((m) => m.isNew).length), 0);
+  const held = model.tams.reduce((n, x) => n + (x.total ?? x.messages.length), 0);
+  const tamTile = model.tamsState === "ok" && model.tams.length ? { label: s.tamBox, value: unheard, small: fill(s.tamBoxSub, { n: held }) } : null;
+  return { st, notes, tamTile, sourceText: s.wsSource };
+}
+
+/** The statistics as the page counts them from the call list it holds (older versions, stage 1). */
+function listStatsParts(model, period, ctx) {
+  const { t, now, language } = ctx;
+  const s = t.phone.stats;
   const st = phoneStats(model.list.calls, { period, now });
-  if (st.empty) return `<section class="card sec" aria-labelledby="ph-stat-h">${head}<div class="empty">${ic("phone")}<b>${esc(s.noData)}</b><span>${esc(s.noDataBody)}</span></div></section>`;
+  if (st.empty) return { st: { ok: true, ...st } };
+  const first = st.first.toLocaleDateString(language || "en", { day: "2-digit", month: "2-digit" });
+  const unheard = model.tams.reduce((n, x) => n + x.messages.filter((m) => m.isNew).length, 0);
+  const notes = [fill(s.basis, { n: st.total - st.undated, date: first }), s.basisBody, st.short ? fill(s.sameAsAll, { n: st.spanDays }) : "", st.undated ? fill(s.undated, { n: st.undated }) : ""].filter(Boolean);
+  return { st: { ok: true, ...st }, notes, tamTile: { label: s.tam, value: st.sum.tam, small: fill(s.tamSub, { n: unheard }) }, sourceText: s.source };
+}
+
+/**
+ * The statistics view. With the commands fritzbox_phone counts (over its call history where that
+ * is switched on) and the page says from what and how far back; with an older version the page
+ * counts what the call list holds and says how far that reaches.
+ */
+export function statsView(model, ctx) {
+  const { t, ui, language } = ctx;
+  const s = t.phone.stats;
+  const ws = model.api === "ws";
+  const periods = ws && model.historyDays > 0 ? HISTORY_PERIODS : PERIODS;
+  const period = periods.includes(ui.period) ? ui.period : "7";
+  const head = `<div class="ph-chead"><span class="label" id="ph-stat-h">${esc(s.title)}</span><span class="seg ph-seg" role="group" aria-label="${esc(s.periodLabel)}">${periods.map((p) => `<button data-act="ph-period" data-ph-val="${p}" data-k="ph-per-${p}" aria-pressed="${period === p}">${esc(s.period[p])}</button>`).join("")}</span></div>`;
+  const card = (body, busy = false) => `<section class="card sec"${busy ? ' aria-busy="true"' : ""} aria-labelledby="ph-stat-h">${head}${body}</section>`;
+  if (!ws && !model.list.ok) return card(`<div class="empty"><b>${esc(fill(t.phone.tooOld, { attr: "calls" }))}</b></div>`);
+  const parts = ws ? wsStatsParts(model, period, ctx) : listStatsParts(model, period, ctx);
+  const st = parts.st;
+  if (!st.ok && st.reason === "loading") return card(`<p class="hint" role="status">${esc(s.loading)}</p>`, true);
+  if (!st.ok) return card(`<div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${esc(s.title)}: ${esc(t.phone.part)}</b></div>`);
+  if (st.empty) return card(`<div class="empty">${ic("phone")}<b>${esc(s.noData)}</b><span>${esc(s.noDataBody)}</span></div>${ws && !model.historyDays ? `<p class="hint">${esc(s.historyHint)}</p>` : ""}`);
   const sum = st.sum;
   const prev = st.prev;
   const fmt1 = (n) => n.toLocaleString(language || "en", { maximumFractionDigits: 1 });
-  const first = st.first.toLocaleDateString(language || "en", { day: "2-digit", month: "2-digit" });
-  const unheard = model.tams.reduce((n, x) => n + x.messages.filter((m) => m.isNew).length, 0);
   const tile = (label, value, small) => `<div class="tile"><span class="label">${esc(label)}</span><b>${value}</b><small>${small}</small></div>`;
   const spamTile = model.today.hasSpam || sum.spam
     ? tile(s.spam, sum.spam, esc(fill(s.spamSub, { today: model.today.spamToday ?? "–", total: model.today.spamTotal ?? "–" })))
@@ -487,12 +600,15 @@ export function statsView(model, ctx) {
   const compareText =
     compare.kind === "noneAll" ? s.compareNoneAll
       : compare.kind === "none" ? s.compareNone
-        : compare.kind === "partial" ? fill(s.compareIncomplete, { cover: compare.cover, len: compare.len })
+        : compare.kind === "partial" ? (compare.only ? fill(s.compareOnly, { cover: compare.cover, len: compare.len }) : fill(s.compareIncomplete, { cover: compare.cover, len: compare.len }))
           : period === "today" ? s.compareToday : fill(s.compareFull, { n: compare.len });
   const width = Math.max(260, Math.min(1100, (ctx.width || 640) - 34));
   const legend = `<div class="ph-legend ph-vleg">${SERIES.map((k) => `<span><i class="sw s-${k}" aria-hidden="true"></i>${esc(s.series[k])} <b>${st.bars.list.reduce((n, b) => n + b[k], 0)}</b></span>`).join("")}</div>`;
   const toggle = (id) => `<button class="btn sm" data-act="ph-table" data-ph-val="${id}" data-k="ph-tb-${id}" aria-pressed="${Boolean(ui.tables?.[id])}">${esc(ui.tables?.[id] ? s.asChart : s.asTable)}</button>`;
-  const notes = [fill(s.basis, { n: st.total - st.undated, date: first }), s.basisBody, st.short ? fill(s.sameAsAll, { n: st.spanDays }) : "", st.undated ? fill(s.undated, { n: st.undated }) : ""].filter(Boolean);
+  const notes = parts.notes;
+  const heat = st.heat ?? heatGrid([]);
+  const hourly = heatShape(heat, width).hourly;
+  const tamTile = parts.tamTile ? tile(parts.tamTile.label, parts.tamTile.value, esc(parts.tamTile.small)) : "";
   return `<section class="card sec" aria-labelledby="ph-stat-h">${head}
     <p class="ph-limit">${ic("help")}<span><b>${esc(notes[0])}</b> ${esc(notes.slice(1).join(" "))}</span></p>
     ${staleNote(model, ctx)}
@@ -501,23 +617,21 @@ export function statsView(model, ctx) {
       ${tile(s.talk, esc(fmtMinutes(sum.talk, t)), `${deltaHtml(sum.talk, prev?.talk, "min", t)} · ${esc(fill(s.avgTalk, { n: sum.conn ? fmtMinutes(sum.avg, t) : "–" }))}`)}
       ${tile(s.missedRate, `${Math.round(sum.rate * 100)} %`, `${esc(fill(s.missedOf, { n: sum.missed, total: sum.inbound }))} ${deltaHtml(sum.rate, prev?.rate, "pp", t)}`)}
       ${spamTile}
-      ${tile(s.tam, sum.tam, esc(fill(s.tamSub, { n: unheard })))}
+      ${tamTile}
     </div>
     <p class="hint">${esc(compareText)}</p>
     <div class="ph-vsec"><div class="ph-chead"><span class="label">${esc(s.chart[st.bars.unit])}</span>${toggle("bars")}</div>${legend}
       <div class="ph-vwrap">${ui.tables?.bars ? barTable(st.bars, ctx) : barChart(st.bars, width, ctx)}<div class="ph-tip" role="tooltip" hidden></div></div></div>
-    <div class="two ph-two">
-      <div class="ph-vsec"><div class="ph-chead"><span class="label">${esc(s.heat)}</span>${toggle("heat")}</div>
-        <div class="ph-vwrap">${ui.tables?.heat ? heatTable(st.heat, ctx) : heatChart(st.heat, width, ctx)}<div class="ph-tip" role="tooltip" hidden></div></div>
-        <p class="hint">${esc(s.heatHint)}</p></div>
-      <div class="ph-vsec"><div class="ph-chead"><span class="label">${esc(s.perLine)}</span></div>${rankList(st.lines.map((l) => ({ ...l, name: "", talk: 0 })), s.perLine, "own", model, ctx, true)}<p class="hint">${esc(s.perLineHint)}</p></div>
-    </div>
+    <div class="ph-vsec"><div class="ph-chead"><span class="label">${esc(s.heat)}</span>${toggle("heat")}</div>
+      <div class="ph-vwrap">${ui.tables?.heat ? heatTable(heat, width, ctx) : heatChart(heat, width, ctx)}<div class="ph-tip" role="tooltip" hidden></div></div>
+      <p class="hint">${esc(hourly ? s.heatHintHours : s.heatHint)}</p></div>
     <div class="two ph-two">
       <div class="ph-vsec"><div class="ph-chead"><span class="label">${esc(s.topIn)}</span></div>${rankList(st.topIn, s.topIn, "tin", model, ctx)}</div>
       <div class="ph-vsec"><div class="ph-chead"><span class="label">${esc(s.topOut)}</span></div>${rankList(st.topOut, s.topOut, "tout", model, ctx)}</div>
     </div>
+    <div class="ph-vsec"><div class="ph-chead"><span class="label">${esc(s.perLine)}</span></div>${rankList(st.lines.map((l) => ({ ...l, name: "", talk: 0 })), s.perLine, "own", model, ctx, true)}<p class="hint">${esc(s.perLineHint)}</p></div>
     ${model.privacy ? `<p class="hint">${esc(s.privacy)}</p>` : ""}
-    <p class="hint">${esc(s.source)}</p></section>`;
+    <p class="hint">${esc(parts.sourceText)}</p></section>`;
 }
 
 // ---------- the page ----------
@@ -536,11 +650,13 @@ function skeleton(ctx) {
 export function renderPhone(model, ctx) {
   const { t, ui } = ctx;
   const p = t.phone;
-  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">${esc(p.title)}</h1><p class="lead">${esc(p.lead)}</p>${model?.entry ? sourceLine(model, ctx) : ""}</div>`;
+  const legacy = model?.legacy ? `<p class="ph-src ph-legacy">${esc(p.legacy)}</p>` : "";
+  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">${esc(p.title)}</h1><p class="lead">${esc(p.lead)}</p>${model?.entry ? sourceLine(model, ctx) : ""}${legacy}</div>`;
   if (!model?.found) return `${head}<div class="card"><div class="empty"><b>${esc(p.missing)}</b></div></div>`;
   const view = `<div class="seg ph-seg ph-view" role="group" aria-label="${esc(p.view.label)}"><button data-act="ph-view" data-ph-val="list" data-k="ph-v-list" aria-pressed="${ui.view !== "stats"}">${esc(p.view.list)}</button><button data-act="ph-view" data-ph-val="stats" data-k="ph-v-stats" aria-pressed="${ui.view === "stats"}">${esc(p.view.stats)}</button></div>`;
   const integration = `<div class="btn-row"><a class="btn" href="/config/integrations/integration/fritzbox_phone" data-act="integration" data-k="ph-int2">${esc(p.openIntegration)}</a></div>`;
   if (model.missing) return `${head}<div class="card"><div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${esc(p.missing)}</b><span>${esc(p.missingBody)}</span>${integration}</div></div>`;
+  if (model.notLoaded) return `${head}<div class="card"><div class="empty"><span class="bad-ico">${ic("unplug")}</span><b>${esc(p.notLoaded)}</b><span>${esc(p.notLoadedBody)}</span>${integration}</div></div>`;
   if (model.loading) return `${head}${view}${skeleton(ctx)}`;
   const offline = model.offline && !model.list.ok
     ? `<section class="card"><div class="empty"><span class="bad-ico">${ic("unplug")}</span><b>${esc(p.offline)}</b><span>${esc(p.offlineBody)}</span>${integration}</div></section>`
@@ -548,7 +664,7 @@ export function renderPhone(model, ctx) {
   if (offline) return `${head}${liveBand(model, ctx)}${offline}`;
   const body = ui.view === "stats"
     ? statsView(model, ctx)
-    : `${todayCard(model, ctx)}<div class="two ph-two">${callCard(model, ctx)}<div class="ph-col">${tamCards(model, ctx)}${bookCard(model, ctx)}</div></div>`;
+    : `${todayCard(model, ctx)}<div class="two ph-two">${callCard(model, ctx)}<div class="ph-col">${tamCards(model, ctx)}${bookCard(model, ctx)}${blockCard(model, ctx)}</div></div>`;
   return `${head}${view}${liveBand(model, ctx)}${notices(model, ctx)}${body}`;
 }
 

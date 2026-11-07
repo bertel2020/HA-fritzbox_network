@@ -201,36 +201,41 @@ export function ownName(stateObj, deviceTitle) {
   return name;
 }
 
+/** One message of an answering machine, as the sensor lists it and the command tams answers. */
+export function parseMessage(raw) {
+  const m = raw && typeof raw === "object" ? raw : {};
+  return {
+    index: int(m.index),
+    id: str(m.id),
+    key: str(m.key),
+    name: str(m.name),
+    number: str(m.number),
+    called: str(m.called),
+    date: parseAvmDate(m.date),
+    dateText: str(m.date),
+    duration: str(m.duration),
+    isNew: m.new === true,
+    inPhonebook: m.in_phonebook === true,
+    hasRecording: m.has_recording === true && Boolean(str(m.recording_path)),
+    recordingPath: str(m.recording_path),
+    area: str(m.area_name),
+    isSpam: m.is_spam === true,
+    spamConfidence: num(m.spam_confidence),
+    spamRating: str(m.spam_rating),
+    reverseName: str(m.reverse_name),
+    reverseCategory: str(m.reverse_category),
+  };
+}
+
 /** One answering machine: { ok, entityId, name, tamIndex, enabled, running, capacity, total, privacy, messages }. */
 export function parseTam(entityId, stateObj, deviceTitle = "") {
   const a = stateObj?.attributes ?? {};
   const list = Array.isArray(a.messages) ? a.messages : null;
-  const messages = (list ?? []).map((raw) => {
-    const m = raw && typeof raw === "object" ? raw : {};
-    return {
-      index: int(m.index),
-      key: str(m.key),
-      name: str(m.name),
-      number: str(m.number),
-      called: str(m.called),
-      date: parseAvmDate(m.date),
-      dateText: str(m.date),
-      duration: str(m.duration),
-      isNew: m.new === true,
-      inPhonebook: m.in_phonebook === true,
-      hasRecording: m.has_recording === true && Boolean(str(m.recording_path)),
-      recordingPath: str(m.recording_path),
-      area: str(m.area_name),
-      isSpam: m.is_spam === true,
-      spamConfidence: num(m.spam_confidence),
-      spamRating: str(m.spam_rating),
-      reverseName: str(m.reverse_name),
-      reverseCategory: str(m.reverse_category),
-    };
-  });
+  const messages = (list ?? []).map(parseMessage);
   return {
     ok: Boolean(list),
     entityId,
+    target: true,
     name: ownName(stateObj, deviceTitle) || entityId,
     tamIndex: int(a.tam_index),
     enabled: typeof a.enabled === "boolean" ? a.enabled : null,
@@ -243,11 +248,9 @@ export function parseTam(entityId, stateObj, deviceTitle = "") {
   };
 }
 
-/** One phone book: { ok, entityId, name, count, privacy, contacts } with VIP first, then by name. */
-export function parseBook(entityId, stateObj, deviceTitle = "") {
-  const a = stateObj?.attributes ?? {};
-  const list = Array.isArray(a.contacts) ? a.contacts : null;
-  const contacts = (list ?? [])
+/** Contacts as the sensor lists them and the command contacts answers: VIP first, then by name. */
+export function parseContacts(list) {
+  return (Array.isArray(list) ? list : [])
     .map((raw) => {
       const c = raw && typeof raw === "object" ? raw : {};
       return {
@@ -257,9 +260,20 @@ export function parseBook(entityId, stateObj, deviceTitle = "") {
       };
     })
     .sort((x, y) => Number(y.vip) - Number(x.vip) || x.name.localeCompare(y.name, "de"));
+}
+
+/**
+ * One phone book: { ok, entityId, phonebookId, name, count, privacy, contacts }. phonebookId is the
+ * id add_contact takes; newer versions of fritzbox_phone carry it as an attribute, older ones not (null).
+ */
+export function parseBook(entityId, stateObj, deviceTitle = "") {
+  const a = stateObj?.attributes ?? {};
+  const list = Array.isArray(a.contacts) ? a.contacts : null;
+  const contacts = parseContacts(list);
   return {
     ok: Boolean(list),
     entityId,
+    phonebookId: int(a.phonebook_id),
     name: ownName(stateObj, deviceTitle) || entityId,
     count: num(stateObj?.state) ?? contacts.length,
     privacy: a.privacy_mode === true,
@@ -302,14 +316,18 @@ export function parseMonitor(stateObj) {
   };
 }
 
-/** The calls of the list filtered as the chips say and by a search over name, lookup, place and number. */
-export function filterCalls(calls, filter = "all", query = "") {
+/**
+ * The calls of the list filtered as the chips say and by a search over name, lookup, place and
+ * number. isBlocked (number → boolean) serves the chip "blocked", only there with a block list.
+ */
+export function filterCalls(calls, filter = "all", query = "", isBlocked = null) {
   const q = str(query).trim().toLowerCase().replace(/\s/g, "");
   return calls.filter((c) => {
     if (filter === "missed" && !(c.type === "missed" || c.type === "rejected_incoming")) return false;
     if (filter === "incoming" && !(c.type === "incoming" || c.type === "active_incoming")) return false;
     if (filter === "outgoing" && !isOutgoing(c.type)) return false;
     if (filter === "spam" && !c.isSpam) return false;
+    if (filter === "blocked" && !(isBlocked && c.number && isBlocked(c.number))) return false;
     if (!q) return true;
     return [c.name, c.reverseName, c.area, c.number].some((v) => v.toLowerCase().replace(/\s/g, "").includes(q));
   });
@@ -317,9 +335,11 @@ export function filterCalls(calls, filter = "all", query = "") {
 
 export const CALL_FILTERS = ["all", "missed", "incoming", "outgoing", "spam"];
 
-/** How many calls each chip would show. */
-export function filterCounts(calls) {
-  return Object.fromEntries(CALL_FILTERS.map((f) => [f, filterCalls(calls, f).length]));
+/** How many calls each chip would show; with isBlocked also the chip "blocked". */
+export function filterCounts(calls, isBlocked = null) {
+  const counts = Object.fromEntries(CALL_FILTERS.map((f) => [f, filterCalls(calls, f).length]));
+  if (isBlocked) counts.blocked = filterCalls(calls, "blocked", "", isBlocked).length;
+  return counts;
 }
 
 /** Whether privacy mode is on: any of the entities read carries privacy_mode true (like the card). */
@@ -346,25 +366,65 @@ function lastGood(hass, id, cache) {
   return { state: s ?? null, staleAt: null, offline: Boolean(s) };
 }
 
-/** The switch of an answering machine: same name plus a word, or the only one where there is one of each. */
+/** The entity of a list (switches, sensors of answering machines) that carries this tam_index. */
+function byTamIndex(hass, ids, index) {
+  if (index === null || index === undefined) return null;
+  return ids.find((id) => int(hass?.states?.[id]?.attributes?.tam_index) === index) ?? null;
+}
+
+/**
+ * The switch of an answering machine: the one with the same tam_index (newer versions of
+ * fritzbox_phone), else same name plus a word, or the only one where there is one of each.
+ */
 function tamSwitch(hass, tam, switches, count) {
+  const same = byTamIndex(hass, switches, tam.tamIndex);
+  if (same) return same;
   const name = str(hass?.states?.[tam.entityId]?.attributes?.friendly_name);
   const found = name && switches.find((id) => str(hass?.states?.[id]?.attributes?.friendly_name).startsWith(`${name} `));
   if (found) return found;
   return count === 1 && switches.length === 1 ? switches[0] : null;
 }
 
+function withSwitch(hass, tam, ids, count) {
+  tam.switchId = tamSwitch(hass, tam, ids.tam_enabled, count);
+  const sw = tam.switchId ? hass?.states?.[tam.switchId] : null;
+  tam.switchOn = sw && usable(sw) ? sw.state === "on" : null;
+  return tam;
+}
+
+/** Today's numbers, the call monitor and the badge: plain sensor states in both ways of reading. */
+function sensorParts(hass, ids, tams) {
+  const today = hass?.states?.[ids.calls_today];
+  const unreadState = hass?.states?.[ids.unread_messages];
+  const counted = tams.reduce((s, t) => s + (t.newCount ?? t.messages.filter((m) => m.isNew).length), 0);
+  const unread = usable(unreadState) ? int(unreadState.attributes?.count) ?? counted : counted;
+  const monitor = parseMonitor(ids.call_monitor ? hass?.states?.[ids.call_monitor] : null);
+  return {
+    today: {
+      calls: usable(today) ? { n: num(today.state), in: int(today.attributes?.incoming), out: int(today.attributes?.outgoing), missed: int(today.attributes?.missed) } : null,
+      talk: sensorNumber(hass, ids.talk_time_today),
+      hasSpam: Boolean(ids.spam_calls_today || ids.spam_calls_total),
+      spamToday: sensorNumber(hass, ids.spam_calls_today),
+      spamTotal: sensorNumber(hass, ids.spam_calls_total),
+    },
+    monitor,
+    unread,
+    ringing: monitor.state === "ringing",
+  };
+}
+
 /**
- * The whole page model from Home Assistant: which entry, its call list, today's numbers, the
- * answering machines, phone books and the call monitor. ownEntryId is the entry of this panel,
- * chosen the entry key the user picked, cache keeps the last good states (see lastGood).
+ * The whole page model from the entities (stage 1, and the fallback for versions of fritzbox_phone
+ * without the websocket commands): which entry, its call list, today's numbers, the answering
+ * machines, phone books and the call monitor. ownEntryId is the entry of this panel, chosen the
+ * entry key the user picked, cache keeps the last good states (see lastGood).
  */
 export function readPhone(hass, ownEntryId, { chosen = null, cache = null } = {}) {
   const found = phoneLoaded(hass);
   const entries = found ? phoneEntries(hass) : [];
   const pick = pickEntry(entries, ownSerials(hass, ownEntryId), chosen);
   const entry = pick.entry;
-  if (!found || !entry) return { found: false, pick, entry: null };
+  if (!found || !entry) return { found: false, api: "entities", pick, entry: null };
   const ids = entry.entities;
   const title = entry.title;
   const books = ids.phonebook.map((id) => {
@@ -374,21 +434,14 @@ export function readPhone(hass, ownEntryId, { chosen = null, cache = null } = {}
   const contacts = books.flatMap((b) => b.contacts);
   const tams = ids.answering_machine.map((id) => {
     const got = lastGood(hass, id, cache);
-    const tam = { ...parseTam(id, got.state, title), staleAt: got.staleAt, offline: got.offline, loading: !got.state };
-    tam.switchId = tamSwitch(hass, tam, ids.tam_enabled, ids.answering_machine.length);
-    const sw = tam.switchId ? hass.states?.[tam.switchId] : null;
-    tam.switchOn = sw && usable(sw) ? sw.state === "on" : null;
-    return tam;
+    return withSwitch(hass, { ...parseTam(id, got.state, title), staleAt: got.staleAt, offline: got.offline, loading: !got.state }, ids, ids.answering_machine.length);
   });
   const listId = ids.call_list ?? null;
   const got = listId ? lastGood(hass, listId, cache) : { state: null, staleAt: null, offline: false };
   const list = got.state ? parseCallList(got.state, contacts) : { ok: false, calls: [], privacy: false };
-  const today = hass?.states?.[ids.calls_today];
-  const unreadState = hass?.states?.[ids.unread_messages];
-  const unread = usable(unreadState) ? int(unreadState.attributes?.count) ?? tams.reduce((s, t) => s + t.messages.filter((m) => m.isNew).length, 0) : tams.reduce((s, t) => s + t.messages.filter((m) => m.isNew).length, 0);
-  const monitor = parseMonitor(ids.call_monitor ? hass?.states?.[ids.call_monitor] : null);
   return {
     found: true,
+    api: "entities",
     pick,
     entry,
     listId,
@@ -397,21 +450,310 @@ export function readPhone(hass, ownEntryId, { chosen = null, cache = null } = {}
     offline: got.offline,
     staleAt: got.staleAt,
     list,
-    today: {
-      calls: usable(today) ? { n: num(today.state), in: int(today.attributes?.incoming), out: int(today.attributes?.outgoing), missed: int(today.attributes?.missed) } : null,
-      talk: sensorNumber(hass, ids.talk_time_today),
-      hasSpam: Boolean(ids.spam_calls_today || ids.spam_calls_total),
-      spamToday: sensorNumber(hass, ids.spam_calls_today),
-      spamTotal: sensorNumber(hass, ids.spam_calls_total),
-    },
+    ...sensorParts(hass, ids, tams),
     tams,
     books,
     contacts,
-    monitor,
-    unread,
-    ringing: monitor.state === "ringing",
+    blocked: null,
     privacy: privacyOn(list, books, tams),
   };
+}
+
+// ---------- stage 2: the websocket commands of fritzbox_phone ----------
+
+/** The days the command stats is asked for, per period of the page (0 = everything held). */
+export const PERIOD_DAYS = { today: 1, 7: 7, 30: 30, 90: 90, 365: 365, all: 0 };
+/** The periods with the call history of fritzbox_phone switched on; without it those of stage 1. */
+export const HISTORY_PERIODS = ["today", "7", "30", "90", "365", "all"];
+/** The parts of the page the commands answer; stats only for the statistics view. */
+export const WS_PARTS = ["calls", "tams", "phonebooks", "blocklist"];
+
+const obj = (v) => (v && typeof v === "object" && !Array.isArray(v) ? v : {});
+const arr = (v) => (Array.isArray(v) ? v : []);
+const LIST_EMPTY = () => Object.fromEntries(LIST_KEYS.map((k) => [k, []]));
+
+/** The code of a refused command (unknown_command, not_found, box_request_failed …); "" without one. */
+export const wsCode = (err) => str(err?.code ?? err?.error?.code);
+
+/** An ISO 8601 time as fritzbox_phone writes it; null when missing or unreadable. */
+export function parseIso(text) {
+  const s = str(text);
+  if (!s) return null;
+  const d = new Date(s);
+  return Number.isNaN(d.getTime()) ? null : d;
+}
+
+/** A day "2026-01-10" as local midnight; null when unreadable. */
+export function parseDay(text) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(str(text));
+  if (!m) return null;
+  const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return d.getDate() === Number(m[3]) ? d : null;
+}
+
+/** The answer of fritzbox_phone/entries: one per config entry, keyed by its entry id. */
+export function parseWsEntries(result) {
+  return arr(obj(result).entries)
+    .map(obj)
+    .filter((e) => str(e.entry_id))
+    .map((e) => ({
+      key: str(e.entry_id),
+      entryId: str(e.entry_id),
+      title: str(e.title) || str(e.host),
+      serial: str(e.serial),
+      loaded: e.loaded !== false,
+      privacy: e.privacy_mode === true,
+      historyDays: int(e.history_days) ?? 0,
+      callListDays: int(e.call_list_days),
+      callListMax: int(e.call_list_max),
+      version: str(e.version),
+    }))
+    .sort((a, b) => a.title.localeCompare(b.title));
+}
+
+/**
+ * One call of the command calls: the fields of the sensor plus a stable id, an ISO start time,
+ * vip and in_list. A recording is only offered while the call is still in the box's list.
+ */
+export function parseWsCall(raw, i = 0) {
+  const r = obj(raw);
+  const c = parseCall(r, i);
+  c.id = str(r.id) || c.id;
+  c.boxId = str(r.box_id);
+  c.date = parseIso(r.datetime) ?? c.date;
+  c.vip = r.vip === true;
+  c.inList = r.in_list !== false;
+  if (!c.inList) {
+    c.hasRecording = false;
+    c.tamMessageIndex = null;
+  }
+  return c;
+}
+
+/** A part of the page as fetched: { ok, result } or { ok: false, code }; undefined while not asked yet. */
+const partOk = (part) => Boolean(part?.ok);
+
+/** The answer of the command calls: { ok, calls, privacy, window, total }; ok false with the error code. */
+export function parseWsCalls(part) {
+  if (!partOk(part)) return { ok: false, reason: part ? "na" : "loading", code: part?.code ?? "", calls: [], privacy: false };
+  const r = obj(part.result);
+  if (!Array.isArray(r.calls)) return { ok: false, reason: "na", code: "", calls: [], privacy: false };
+  const calls = r.calls.map(parseWsCall);
+  calls.sort((a, b) => (b.date?.getTime() ?? -Infinity) - (a.date?.getTime() ?? -Infinity));
+  const w = obj(r.window);
+  return {
+    ok: true,
+    calls,
+    privacy: r.privacy_mode === true,
+    window: { days: int(w.days), max: int(w.max), oldest: parseIso(w.oldest), source: str(w.source) },
+    total: int(r.total) ?? calls.length,
+  };
+}
+
+/** The sensor of an answering machine for its tam_index (the services name it); the only one where there is one of each. */
+function tamEntity(hass, sensors, index, count) {
+  return byTamIndex(hass, sensors, index) ?? (count === 1 && sensors.length === 1 ? sensors[0] : null);
+}
+
+/**
+ * The answer of the command tams. The services for messages still need the entity id of the
+ * sensor: found over tam_index; target is false (actions locked) where none is found.
+ */
+export function parseWsTams(part, hass, ids) {
+  if (!partOk(part)) return { ok: false, reason: part ? "na" : "loading", tams: [], privacy: false };
+  const r = obj(part.result);
+  const list = arr(r.tams).map(obj);
+  const tams = list.map((raw, i) => {
+    const index = int(raw.index);
+    const entityId = tamEntity(hass, ids.answering_machine, index, list.length);
+    const messages = arr(raw.messages).map(parseMessage);
+    const tam = {
+      ok: Array.isArray(raw.messages),
+      entityId: entityId ?? `tam:${index ?? i}`,
+      target: Boolean(entityId),
+      name: str(raw.name) || `${index ?? i}`,
+      tamIndex: index,
+      enabled: typeof raw.enabled === "boolean" ? raw.enabled : null,
+      running: typeof raw.running === "boolean" ? raw.running : null,
+      capacity: num(raw.capacity_minutes_remaining),
+      total: int(raw.total) ?? messages.length,
+      newCount: int(raw.new_count),
+      privacy: r.privacy_mode === true,
+      available: true,
+      staleAt: null,
+      offline: false,
+      loading: false,
+      messages,
+    };
+    return withSwitch(hass, tam, ids, list.length);
+  });
+  return { ok: true, tams, privacy: r.privacy_mode === true };
+}
+
+/** The answers of phonebooks and contacts: one book per phone book with its real id. */
+export function parseWsBooks(part, contacts = {}) {
+  if (!partOk(part)) return { ok: false, reason: part ? "na" : "loading", books: [], privacy: false };
+  const r = obj(part.result);
+  const books = arr(r.phonebooks)
+    .map(obj)
+    .filter((pb) => int(pb.id) !== null)
+    .map((pb) => {
+      const id = int(pb.id);
+      const got = contacts?.[id];
+      const answer = obj(got?.result);
+      const list = partOk(got) && Array.isArray(answer.contacts) ? answer.contacts : null;
+      const parsed = parseContacts(list);
+      return {
+        ok: Boolean(list),
+        entityId: `pb:${id}`,
+        phonebookId: id,
+        name: str(pb.name) || String(id),
+        count: int(pb.count) ?? parsed.length,
+        privacy: r.privacy_mode === true || answer.privacy_mode === true,
+        available: true,
+        staleAt: null,
+        offline: false,
+        loading: !got,
+        contacts: parsed,
+      };
+    });
+  return { ok: true, books, privacy: r.privacy_mode === true };
+}
+
+/**
+ * The answer of the command blocklist: { known, ok, supported, numbers (a Set of digits), entries,
+ * privacy }. known is false while not asked yet; ok false where the box did not answer.
+ */
+export function parseBlocklist(part) {
+  if (!part) return { known: false, ok: false, supported: false, numbers: new Set(), entries: [], privacy: false };
+  if (!part.ok) return { known: true, ok: false, supported: true, code: part.code ?? "", numbers: new Set(), entries: [], privacy: false };
+  const r = obj(part.result);
+  const entries = arr(r.entries)
+    .map(obj)
+    .map((e) => ({ name: str(e.name), numbers: arr(e.numbers).map(str).filter(Boolean) }))
+    .filter((e) => e.numbers.length);
+  const all = arr(r.numbers).map(str).filter(Boolean);
+  // numbers without an entry (an older answer) become entries of their own
+  const listed = new Set(entries.flatMap((e) => e.numbers.map(digits)));
+  for (const n of all) if (!listed.has(digits(n))) entries.push({ name: "", numbers: [n] });
+  return {
+    known: true,
+    ok: true,
+    supported: r.supported === true,
+    numbers: new Set([...all, ...entries.flatMap((e) => e.numbers)].map(digits).filter(Boolean)),
+    entries,
+    privacy: r.privacy_mode === true,
+  };
+}
+
+/** Whether a number is on the block list of the box (by its digits). */
+export const onBlocklist = (blocked, number) => Boolean(blocked?.ok && blocked.supported && number && blocked.numbers.has(digits(number)));
+
+/**
+ * The model from the answers of the commands; the same shape as readPhone, plus api "ws", the
+ * block list, the window of the call list and the statistics. ws: { entries, data } with data
+ * { entryId, at, calls, tams, phonebooks, contacts, blocklist, stats } as fetchPhoneWs answers.
+ * The live band, today's numbers, the badge and the targets of the services still come from the
+ * entities of the same entry (plain states; there is no command for them).
+ */
+export function readPhoneWs(hass, ownEntryId, ws, { chosen = null } = {}) {
+  const entries = (ws?.entries ?? []).map((e) => ({ ...e, deviceId: null, entities: LIST_EMPTY() }));
+  const pick = pickEntry(entries, ownSerials(hass, ownEntryId), chosen);
+  const entry = pick.entry;
+  if (!phoneLoaded(hass) || !entry) return { found: false, api: "ws", pick, entry: null };
+  const group = phoneEntries(hass).find((g) => g.entryId === entry.entryId);
+  if (group) Object.assign(entry, { deviceId: group.deviceId, entities: group.entities, deviceTitle: group.title });
+  const ids = entry.entities;
+  const data = ws?.data?.entryId === entry.entryId ? ws.data : {};
+  const list = parseWsCalls(data.calls);
+  const tamPart = parseWsTams(data.tams, hass, ids);
+  const bookPart = parseWsBooks(data.phonebooks, data.contacts);
+  const books = bookPart.books;
+  const blocked = parseBlocklist(data.blocklist);
+  // the box is away: fritzbox_phone keeps its last data, its entities say unavailable
+  const listState = ids.call_list ? hass?.states?.[ids.call_list] : null;
+  const offline = Boolean(listState) && !usable(listState) && list.ok;
+  const sensors = sensorParts(hass, ids, tamPart.tams);
+  return {
+    found: true,
+    api: "ws",
+    pick,
+    entry,
+    listId: ids.call_list ?? null,
+    missing: false,
+    notLoaded: !entry.loaded,
+    loading: entry.loaded && list.reason === "loading",
+    offline,
+    staleAt: offline ? data.at ?? null : null,
+    list,
+    ...sensors,
+    unread: tamPart.ok ? tamPart.tams.reduce((n, t) => n + (t.newCount ?? t.messages.filter((m) => m.isNew).length), 0) : sensors.unread,
+    tams: tamPart.tams,
+    tamsState: tamPart.ok ? "ok" : tamPart.reason,
+    books,
+    booksState: bookPart.ok ? "ok" : bookPart.reason,
+    contacts: books.flatMap((b) => b.contacts),
+    blocked,
+    historyDays: entry.historyDays ?? 0,
+    stats: data.stats ?? null,
+    privacy: entry.privacy || privacyOn(list, books, tamPart.tams, blocked, bookPart, tamPart) || obj(data.stats?.result).privacy_mode === true,
+  };
+}
+
+/**
+ * The page model: from the commands where fritzbox_phone has them (api "ws"), else from the
+ * entities (api "entities", legacy: an older version without the commands). api null: not known
+ * yet, the page waits (loading) but the tabs already know from the entities whether it is there.
+ */
+export function readPhoneModel(hass, ownEntryId, { api = null, legacy = false, ws = null, chosen = null, cache = null } = {}) {
+  if (api === "ws") return readPhoneWs(hass, ownEntryId, ws, { chosen });
+  const model = readPhone(hass, ownEntryId, { chosen, cache });
+  if (model.found && api === null) model.loading = true;
+  model.legacy = legacy;
+  return model;
+}
+
+/**
+ * Fetches parts of the page with the commands of fritzbox_phone, each on its own: a refused
+ * part ({ ok: false, code }) leaves the others standing. phonebooks also fetches the contacts of
+ * each book; stats needs days. Nothing is logged, the answers hold names and numbers.
+ */
+export async function fetchPhoneWs(callWS, entryId, { parts = WS_PARTS, days = 7 } = {}) {
+  const run = async (type, extra = {}) => {
+    try {
+      return { ok: true, result: await callWS({ type: `${PHONE_DOMAIN}/${type}`, entry_id: entryId, ...extra }) };
+    } catch (err) {
+      return { ok: false, code: wsCode(err) || "error" };
+    }
+  };
+  const out = {};
+  await Promise.all(
+    [...parts].map(async (part) => {
+      if (part === "stats") out.stats = { ...(await run("stats", { days })), days };
+      else if (part === "phonebooks") {
+        const books = await run("phonebooks");
+        const contacts = {};
+        if (books.ok) {
+          await Promise.all(
+            arr(obj(books.result).phonebooks).map(async (pb) => {
+              const id = int(obj(pb).id);
+              if (id !== null) contacts[id] = await run("contacts", { phonebook_id: id });
+            })
+          );
+        }
+        out.phonebooks = books;
+        out.contacts = contacts;
+      } else if (["calls", "tams", "blocklist"].includes(part)) out[part] = await run(part);
+    })
+  );
+  return out;
+}
+
+/** The states whose change means fritzbox_phone has new data: call list, answering machines, phone books. */
+export function phoneTrigger(hass, entry) {
+  const ids = entry?.entities;
+  if (!ids) return [];
+  return [ids.call_list, ...ids.answering_machine, ...ids.phonebook].filter(Boolean).map((id) => hass?.states?.[id]);
 }
 
 // ---------- statistics ----------
@@ -475,11 +817,16 @@ export function perLine(list) {
   return [...map.values()].sort((a, b) => b.n - a.n);
 }
 
-/** Weekday (Monday first) × block of three hours, a count in each cell. */
+/** Weekday (Monday first) × hour, a count in each cell (7 × 24, the shape the command stats answers). */
 export function heatGrid(list) {
-  const grid = Array.from({ length: 7 }, () => Array(8).fill(0));
-  for (const c of list) if (c.date) grid[(c.date.getDay() + 6) % 7][Math.floor(c.date.getHours() / 3)] += 1;
+  const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
+  for (const c of list) if (c.date) grid[(c.date.getDay() + 6) % 7][c.date.getHours()] += 1;
   return grid;
+}
+
+/** The heat map in blocks of three hours (7 × 8), for narrow screens. */
+export function foldHeat(grid) {
+  return grid.map((row) => Array.from({ length: 8 }, (_, j) => row.slice(j * 3, j * 3 + 3).reduce((a, b) => a + b, 0)));
 }
 
 /** The columns of the bar chart: today per hour, up to 31 days per day, beyond per week. */
@@ -554,5 +901,124 @@ export function phoneStats(calls, { period = "7", now = new Date() } = {}) {
     lines: perLine(inP),
     topIn: topNumbers(inP, "in"),
     topOut: topNumbers(inP, "out"),
+  };
+}
+
+/** The sums of the command stats (totals, previous) in the shape of summarize; null where unreadable. */
+function wsTotals(raw) {
+  const r = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : null;
+  if (!r || int(r.calls) === null) return null;
+  const n = int(r.calls);
+  const missed = int(r.missed) ?? 0;
+  // the command gives the rate, not the inbound count: every call that is not outgoing
+  const inbound = Math.max(0, n - (int(r.outgoing) ?? 0));
+  return {
+    n,
+    talk: num(r.talk_minutes) ?? 0,
+    conn: int(r.connected) ?? 0,
+    avg: num(r.avg_talk_minutes) ?? 0,
+    inbound,
+    missed,
+    rate: num(r.missed_rate) ?? (inbound ? missed / inbound : 0),
+    spam: int(r.spam) ?? 0,
+    tam: null,
+  };
+}
+
+/**
+ * The statistics from the answer of the command stats, in the shape statsView draws (like
+ * phoneStats) plus source, window and the reach of the comparison. The columns for "today" are
+ * hours, counted from the calls of the list (the command answers per day); more than 31 days are
+ * weeks. part: { ok, result, days } as fetchPhoneWs answers; calls: the parsed calls of the list.
+ */
+export function wsStats(part, { period = "7", now = new Date(), calls = [] } = {}) {
+  if (!part) return { ok: false, reason: "loading" };
+  if (!part.ok) return { ok: false, reason: "na", code: part.code ?? "" };
+  const r = part.result && typeof part.result === "object" ? part.result : {};
+  const w = r.window && typeof r.window === "object" ? r.window : {};
+  const sum = wsTotals(r.totals);
+  if (!sum) return { ok: false, reason: "na" };
+  const days = int(w.days) ?? PERIOD_DAYS[period] ?? 7;
+  const today = dayStart(now);
+  const oldest = parseIso(w.oldest);
+  const newest = parseIso(w.newest);
+  const undated = int(w.undated) ?? 0;
+  if (!oldest) return { ok: true, empty: true, total: undated, source: str(w.source) };
+  const from = parseDay(w.from) ?? (days ? addDays(today, -(days - 1)) : dayStart(oldest));
+  const last = parseDay(w.to) ?? today;
+  const to = addDays(last, 1);
+  const len = daysBetween(from, to);
+  const reach = dayStart(oldest) > from ? dayStart(oldest) : from;
+  const covered = Math.max(1, daysBetween(reach, to));
+  const kind = str(r.compare?.kind);
+  const compare =
+    days === 0 ? { kind: "noneAll" }
+      : kind === "full" ? { kind: "full", len: days }
+        : kind === "partial" ? { kind: "partial", cover: int(r.compare?.cover_days) ?? 0, len: days, only: true }
+          : { kind: "none" };
+  const series = { incoming: "in", outgoing: "out", missed: "miss", spam: "spam" };
+  const perDay = (Array.isArray(r.per_day) ? r.per_day : [])
+    .map((d) => {
+      const start = parseDay(d?.date);
+      if (!start) return null;
+      const b = { start, end: addDays(start, 1), total: 0 };
+      for (const [k, s] of Object.entries(series)) {
+        b[s] = int(d[k]) ?? 0;
+        b.total += b[s];
+      }
+      return b;
+    })
+    .filter(Boolean);
+  let bars;
+  if (period === "today" || days === 1) bars = buckets(calls.filter((c) => c.date && c.date >= today && c.date < addDays(today, 1)), "today", today, addDays(today, 1));
+  else if (perDay.length > 31) {
+    const weeks = [];
+    for (let i = 0; i < perDay.length; i += 7) {
+      const part7 = perDay.slice(i, i + 7);
+      const b = { start: part7[0].start, end: part7.at(-1).end, total: 0 };
+      for (const s of SERIES) {
+        b[s] = part7.reduce((n, x) => n + x[s], 0);
+        b.total += b[s];
+      }
+      weeks.push(b);
+    }
+    bars = { unit: "week", list: weeks };
+  } else bars = { unit: "day", list: perDay };
+  const rank = (list) =>
+    (Array.isArray(list) ? list : []).map((x) => ({
+      key: digits(x?.number) || str(x?.number),
+      number: str(x?.number),
+      name: str(x?.name),
+      vip: x?.vip === true,
+      n: int(x?.count) ?? 0,
+      talk: num(x?.talk_minutes) ?? 0,
+      spam: x?.spam === true,
+      area: "",
+    }));
+  const heat = Array.isArray(r.heat) && r.heat.length === 7 && r.heat.every((row) => Array.isArray(row) && row.length === 24) ? r.heat.map((row) => row.map((v) => int(v) ?? 0)) : null;
+  return {
+    ok: true,
+    empty: false,
+    source: str(w.source),
+    days,
+    total: (int(w.count) ?? sum.n) + undated,
+    count: int(w.count) ?? sum.n,
+    undated,
+    first: oldest,
+    oldest,
+    newest,
+    from,
+    to,
+    len,
+    short: days !== 0 && dayStart(oldest) > from,
+    perDay: len > 1 ? (int(w.count) ?? sum.n) / Math.min(len, covered) : null,
+    sum,
+    prev: wsTotals(r.previous),
+    compare,
+    bars,
+    heat,
+    lines: (Array.isArray(r.per_line) ? r.per_line : []).map((x) => ({ key: digits(x?.own_number) || str(x?.own_number), number: str(x?.own_number), n: int(x?.count) ?? 0 })),
+    topIn: rank(r.top_callers),
+    topOut: rank(r.top_called),
   };
 }

@@ -333,3 +333,34 @@ Was in `fritzbox_phone` fehlt oder abweicht (für eine spätere Stufe 2):
 - `call_list_days` und `call_list_max` als Attribute, damit die Texte das echte Fenster nennen können.
 - Anrufe tragen kein `vip`; die Seite nimmt VIP aus den Kontakten des Telefonbuchs.
 
+
+## 12. Stufe 2: die Websocket-Befehle von FRITZ!Box Telefon (2026-11-07)
+
+FRITZ!Box Telefon hat jetzt eine Websocket-API (`websocket.py`, `payloads.py`, `history.py` dort; nur für Administratoren). Die Seite liest ihre Daten darüber statt aus Attributen. Am Python-Teil von FRITZ!Box Netzwerk und an `fritzbox_phone` wurde nichts geändert.
+
+**Erkennung und Rückfall.** Ein Adapter in `phone-model.js` (`readPhoneModel`) hält beide Wege hinter einer Schnittstelle:
+
+- Das Panel fragt einmal `fritzbox_phone/entries` (wieder, wenn sich `hass.config` oder `hass.devices` ändert). Der Eintrag wird über `serial` gegen die Seriennummern der eigenen Box (Geräte des eigenen Eintrags, wie in Stufe 1) gewählt; sonst der einzige („andere Box?“) oder eine Auswahl.
+- Antwortet der Befehl mit `unknown_command` (Version ohne API), liest die Seite wie in Stufe 1 die Entitäten (`readPhone`) und zeigt nur die gedämpfte Zeile „Ältere Version von FRITZ!Box Telefon: eingeschränkte Ansicht“. Ein anderer Fehler: ebenfalls Entitäten, ohne Zeile, neuer Versuch nach einer Minute.
+- Ob der Unterreiter erscheint, entscheidet weiter synchron `phoneLoaded` (Komponente und Entitäten), damit der Reiter nicht erst nach einer Antwort auftaucht.
+
+**Was woher kommt (Weg „ws“).**
+
+| Teil | Quelle |
+|---|---|
+| Anrufliste | `calls` ohne `days`/`limit` (= Fenster der Optionen); Text nennt das echte Fenster aus `window` (`days`, `max`, `source`). `vip` kommt jetzt mit dem Anruf. |
+| Aufnahmen | weiter `auth/sign_path` über `recording_path`; ein Anruf mit `in_list: false` (nur noch im Verlauf) bietet weder Aufnahme noch „Zur Nachricht“. |
+| Anrufbeantworter | `tams`; die Dienste für Nachrichten brauchen weiter die Sensor-Entität: Zuordnung über das Attribut `tam_index` des Sensors (Schalter ebenso). Ohne Treffer sind die Aktionen gesperrt. |
+| Telefonbücher | `phonebooks` und je Buch `contacts`; `add_contact` sendet die echte `phonebook_id`, bei mehreren Büchern mit Auswahlfeld im Dialog. (Im Rückfall wird `phonebook_id` aus dem Attribut gelesen, wenn vorhanden, sonst 0 wie bisher.) |
+| Rufsperre | `blocklist`: Chip „Gesperrt“ (Filter), Markierung „gesperrt“ an Anrufen, Karte „Rufsperre“ mit „Freigeben …“ (Rückfrage, `unblock_number`). Bei `supported: false` fehlt alles; bei `box_request_failed` sagt die Karte „nicht verfügbar“. Nach Sperren/Freigeben wird die Liste neu gelesen. |
+| Statistik | `stats` mit `days` je Zeitraum (Heute 1, 7, 30, mit Verlauf zusätzlich 90 und 365, Alles 0). Gezeigt werden Quelle (`window.source`), Zeitraum, ältester/neuester Anruf, `compare.kind partial` als „Vergleich: nur x Tage des Vorzeitraums“; bei `history_days` 0 der Hinweis auf die Option „Anrufverlauf“. „Heute“ je Stunde aus der Anrufliste, über 31 Tage je Woche aus `per_day`. Kachel „Anrufbeantworter“ (ungehört / Nachrichten auf der Box) statt „Auf den AB“, weil `stats` die AB-Anrufe nicht zählt. „eingehend“ für die Verpasst-Quote = `calls − outgoing`. |
+| Heatmap | 7 × 24 Stunden (in beiden Wegen); unter 20 px je Spalte (schmale Bildschirme) in 3-Stunden-Blöcken wie bisher. Steht jetzt in voller Breite. |
+| Tageszahlen, Live-Band, Plakette, Ziel der Dienste | weiter aus den Entitäten desselben Eintrags (einfache Zustände, kein Befehl dafür); Ziel `device_id` des Geräts mit Kennung `("fritzbox_phone", entry_id)`. |
+
+**Aktualisieren.** Befehle laufen nur, solange die Seite offen ist: beim Öffnen alle Teile; wenn sich der Zustand der Anrufliste, eines AB- oder Telefonbuch-Sensors ändert (fritzbox_phone hat neue Daten) Anrufe, AB und Telefonbücher; die Statistik nur in ihrer Ansicht und beim Zeitraumwechsel; die Sperrliste (fragt jedes Mal die Box) nur beim Öffnen und nach Sperren/Freigeben. Eine Runde, die während einer anderen angefragt wird, folgt danach.
+
+**Fehler.** Jeder Teil steht für sich: ein abgelehnter Befehl zeigt an seiner Stelle „nicht verfügbar“. `not_found` lässt die Einträge nach 30 s neu erfragen; ein Eintrag mit `loaded: false` zeigt „Der Eintrag von FRITZ!Box Telefon ist nicht geladen“. Ist die Anrufliste-Entität `unavailable`, zeigt die Seite den letzten Stand mit Uhrzeit und sperrt Aktionen wie in Stufe 1.
+
+**Privatsphäre** wie in Stufe 1, jetzt aus `privacy_mode` der Antworten (und von `entries`). Nichts wird geloggt.
+
+**Von `fritzbox_phone` noch wünschenswert:** die AB-Anrufe im Zeitraum in `stats.totals` (für die alte Kachel „Auf den AB“) und die Zahl ankommender Anrufe (statt sie aus `calls − outgoing` zu schätzen); `entry_id`/`device_id` des Geräts in `entries`, damit das Panel für Dienstziel und AB-Zuordnung keine Registry mehr lesen muss.
