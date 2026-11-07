@@ -238,6 +238,9 @@ export function renderNav(state, t, stale, icons = false) {
 /** What the address page knows of one box: it is all gone when another box is chosen. */
 const addrState = () => ({ status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", groupsOpen: false, groupDraft: null, entryOpen: false, entryDraft: null, entryMessage: "", progress: null, exportOpts: { free: false, mac: true, map: true, poolNames: true } });
 
+/** The width of the panel up to which the pages are a bar at the bottom: where the content gets its narrow layout too. */
+export const COMPACT_WIDTH = 600;
+
 class FritzboxNetworkPanel extends HTMLElement {
   constructor() {
     super();
@@ -340,6 +343,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       else if (!state.sel && was) this._backToList(was);
     };
     this._resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => {
+      this._syncCompact();
       this._drawLinks();
       this._phoneResized();
     });
@@ -404,7 +408,13 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   set panel(_panel) {}
 
+  /** The bar at the bottom replaces the top one when the panel is narrow, as the content turns narrow with it. */
+  _syncCompact() {
+    this.toggleAttribute?.("compact", this.clientWidth > 0 && this.clientWidth <= COMPACT_WIDTH);
+  }
+
   connectedCallback() {
+    this._syncCompact();
     globalThis.addEventListener("hashchange", this._onHash);
     this._clock = setInterval(() => this._tick(), 5000);
     this._callClock = setInterval(() => this._tickCall(), 1000);

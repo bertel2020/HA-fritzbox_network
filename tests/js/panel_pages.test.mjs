@@ -631,3 +631,24 @@ test("an arrow on a tab moves the focus to the next one", () => {
   assert.equal(focused, "b");
   assert.equal(prevented, true);
 });
+
+// ---------- the width the bar at the bottom follows ----------
+
+test("the bar at the bottom follows the width of the panel, not of the window", async () => {
+  const styles = await import(`${base}panel-styles.js`);
+  const css = Object.values(styles).find((v) => typeof v === "string" && v.includes("#bnav"));
+  assert.ok(css);
+  // no media query of the window decides about the bars any more
+  assert.doesNotMatch(css, /@media[^{]*\{\s*#nav/);
+  assert.match(css, /:host\(\[compact\]\) #nav \{ display: none; \}/);
+  assert.match(css, /:host\(\[compact\]\) #bnav \{ display: flex/);
+
+  const { p } = makePanel({}, "net");
+  const flags = [];
+  p.toggleAttribute = (name, on) => flags.push([name, on]);
+  for (const width of [1200, panel.COMPACT_WIDTH, panel.COMPACT_WIDTH + 1, 0]) {
+    Object.defineProperty(p, "clientWidth", { value: width, configurable: true });
+    p._syncCompact();
+  }
+  assert.deepEqual(flags, [["compact", false], ["compact", true], ["compact", false], ["compact", false]]);
+});

@@ -90,19 +90,18 @@ export const PANEL_CSS = `
 
   /* on a phone the pages are a bar at the bottom of the screen; it sits outside .app, which contains fixed boxes */
   #bnav { display: none; }
-  @media (max-width: 640px) {
-    #nav { display: none; }
-    #bnav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--surface); border-top: 1px solid var(--line);
-      padding: 4px 4px max(4px, env(safe-area-inset-bottom)); gap: 2px; }
-    #bnav button { flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: 2px; min-height: 52px; padding: 4px 2px; border-radius: 14px; font-size: 11px; font-weight: 500; color: var(--muted); display: flex; align-items: center; background: none; }
-    #bnav button[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
-    #bnav .ni { position: relative; display: inline-grid; place-items: center; }
-    #bnav .ni svg.i { width: 22px; height: 22px; }
-    #bnav .ni .dot, #bnav .ni em { position: absolute; top: -2px; right: -8px; }
-    #bnav .ni em { top: -6px; right: -14px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10px; }
-    #bnav .nl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    main { padding-bottom: 96px !important; }
-  }
+  /* narrow means the width of the panel, not of the window: Home Assistant's sidebar takes a share of it */
+  :host([compact]) #nav { display: none; }
+  :host([compact]) #bnav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--surface); border-top: 1px solid var(--line);
+    padding: 4px 4px max(4px, env(safe-area-inset-bottom)); gap: 2px; }
+  :host([compact]) #bnav button { flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: 2px; min-height: 52px; padding: 4px 2px; border-radius: 14px; font-size: 11px; font-weight: 500; color: var(--muted); display: flex; align-items: center; background: none; }
+  :host([compact]) #bnav button[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
+  :host([compact]) #bnav .ni { position: relative; display: inline-grid; place-items: center; }
+  :host([compact]) #bnav .ni svg.i { width: 22px; height: 22px; }
+  :host([compact]) #bnav .ni .dot, :host([compact]) #bnav .ni em { position: absolute; top: -2px; right: -8px; }
+  :host([compact]) #bnav .ni em { top: -6px; right: -14px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10px; }
+  :host([compact]) #bnav .nl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  :host([compact]) main { padding-bottom: 96px !important; }
 
   main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; }
   @container app (max-width: 600px) { main { padding: 16px 16px 56px; } }
@@ -802,7 +801,7 @@ export const PANEL_CSS = `
   .dialog .btn-row { justify-content: flex-end; margin-top: 20px; }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; transition: .2s; background: var(--text); color: var(--surface); padding: 10px 18px; border-radius: 12px; max-width: min(560px, calc(100vw - 32px)); z-index: 30; pointer-events: none; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
-  @media (max-width: 640px) { .toast { bottom: 84px; } }
+  :host([compact]) .toast { bottom: 84px; }
 
   /* the flat list as a table */
   .tablecard { margin-top: 16px; overflow: hidden; }
