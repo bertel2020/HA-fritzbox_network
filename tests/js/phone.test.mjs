@@ -1096,3 +1096,27 @@ test("the new contact button asks for the number too", async () => {
   await settle();
   assert.equal(calls.find((c) => c.service === "add_contact")?.data.number, "0301234567");
 });
+
+test("a number of a call can go to an existing contact with the action of fritzbox_phone", async () => {
+  const { p, calls: sent, root } = makePanel({}, { services: { add_contact: {}, add_number_to_contact: {} } });
+  p._hass.services = { fritzbox_phone: { add_number_to_contact: {} } };
+  p._phone.books[0].phonebookId = 0;
+  const asked = p._phoneContact("0401234567", "");
+  const dialog = root.els["#dialog"];
+  assert.match(dialog.innerHTML, /id="ph-ct-mode"/);
+  assert.match(dialog.innerHTML, /<option value="0:3">Dr\. Weber<\/option>/);
+  dialog.querySelector("#ph-ct-mode").value = "add";
+  dialog.querySelector("#ph-ct-who").value = "0:3";
+  dialog.querySelector("#ph-ct-kind").value = "mobile";
+  dialog.querySelector("#dlg-yes").onclick();
+  await asked;
+  assert.deepEqual(sent[0].data, { number: "0401234567", contact_id: "3", number_type: "mobile", phonebook_id: 0 });
+  assert.equal(sent[0].service, "add_number_to_contact");
+});
+
+test("without the action, or in privacy mode, the dialog only creates a new contact", () => {
+  const { p, root } = makePanel({}, { services: { add_contact: {} } });
+  p._phone.books[0].phonebookId = 0;
+  p._phoneContact("0401234567", "");
+  assert.doesNotMatch(root.els["#dialog"].innerHTML, /ph-ct-mode/);
+});

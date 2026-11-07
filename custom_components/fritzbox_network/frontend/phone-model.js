@@ -255,6 +255,7 @@ export function parseContacts(list) {
       const c = raw && typeof raw === "object" ? raw : {};
       return {
         name: str(c.name),
+        uniqueid: str(c.uniqueid),
         vip: c.vip === true,
         numbers: (Array.isArray(c.numbers) ? c.numbers : []).map((n) => ({ number: str(n?.number), type: str(n?.type) })).filter((n) => n.number),
       };

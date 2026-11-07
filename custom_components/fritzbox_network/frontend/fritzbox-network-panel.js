@@ -3147,21 +3147,55 @@ class FritzboxNetworkPanel extends HTMLElement {
       }
       return books.length === 1 ? books[0].phonebookId : 0;
     };
+    // a number from a call can also go to a contact that is already there (needs the action of fritzbox_phone)
+    const canAdd = !ask && !this._phone?.privacy && Boolean(this._hass?.services?.[PHONE_DOMAIN]?.add_number_to_contact);
+    const existing = canAdd
+      ? all.flatMap((b) => (Number.isInteger(b.phonebookId) ? b.contacts.filter((x) => x.uniqueid).map((x) => ({ book: b.phonebookId, id: x.uniqueid, name: x.name })) : []))
+      : [];
+    const joinHtml = existing.length
+      ? `<label class="field"><span class="label">${escapeHtml(c.mode)}</span><select id="ph-ct-mode"><option value="new">${escapeHtml(c.modeNew)}</option><option value="add">${escapeHtml(c.modeAdd)}</option></select></label>
+        <div id="ph-ct-join" hidden>
+          <label class="field"><span class="label">${escapeHtml(c.contact)}</span><select id="ph-ct-who">${existing.map((x) => `<option value="${escapeHtml(`${x.book}:${x.id}`)}">${escapeHtml(x.name || "?")}</option>`).join("")}</select></label>
+          <label class="field"><span class="label">${escapeHtml(c.kind)}</span><select id="ph-ct-kind">${["home", "mobile", "work", "other"].map((k) => `<option value="${k}">${escapeHtml(c.kinds[k])}</option>`).join("")}</select></label>
+        </div>`
+      : "";
+    const joining = (dialog) => dialog.querySelector("#ph-ct-mode")?.value === "add";
     const answer = await openFormDialog(this.shadowRoot, t, {
       title: c.title,
+      onOpen: (dialog) => {
+        const mode = dialog.querySelector("#ph-ct-mode");
+        if (!mode) return;
+        mode.onchange = () => {
+          const add = joining(dialog);
+          dialog.querySelector("#ph-ct-join").hidden = !add;
+          dialog.querySelector("#ph-ct-new").hidden = add;
+        };
+      },
       html: `${ask ? `<label class="field"><span class="label">${escapeHtml(c.numberField)}</span><input id="ph-ct-num" type="tel" maxlength="40" inputmode="tel" autocomplete="off"></label>` : `<p class="mono">${escapeHtml(fill(c.number, { number }))}</p>`}
-        <label class="field"><span class="label">${escapeHtml(c.name)}</span><input id="ph-ct-name" type="text" maxlength="64" value="${escapeHtml(suggestion.slice(0, 64))}"></label>
+        ${joinHtml}
+        <div id="ph-ct-new"><label class="field"><span class="label">${escapeHtml(c.name)}</span><input id="ph-ct-name" type="text" maxlength="64" value="${escapeHtml(suggestion.slice(0, 64))}"></label>
         ${suggestion ? `<p class="hint">${escapeHtml(c.suggestion)}</p>` : ""}
-        ${bookHtml}`,
+        ${bookHtml}</div>`,
       ok: c.ok,
       focus: ask ? "#ph-ct-num" : "#ph-ct-name",
       validate: (dialog) => {
+        if (joining(dialog)) return null;
         if (ask && !dialable(dialog.querySelector("#ph-ct-num").value.trim())) return c.noNumber;
         return dialog.querySelector("#ph-ct-name").value.trim() ? null : c.noName;
       },
-      read: (dialog) => ({ name: dialog.querySelector("#ph-ct-name").value.trim().slice(0, 64), book: pickBook(dialog), number: ask ? dialog.querySelector("#ph-ct-num").value.trim() : number }),
+      read: (dialog) => (joining(dialog)
+        ? { join: dialog.querySelector("#ph-ct-who").value, kind: dialog.querySelector("#ph-ct-kind").value, number }
+        : { name: dialog.querySelector("#ph-ct-name").value.trim().slice(0, 64), book: pickBook(dialog), number: ask ? dialog.querySelector("#ph-ct-num").value.trim() : number }),
     });
     if (answer === null) return;
+    if (answer.join) {
+      const [bookId, contactId] = answer.join.split(":");
+      const who = existing.find((x) => `${x.book}:${x.id}` === answer.join)?.name ?? "";
+      if ((await this._phoneService("add_number_to_contact", { number, contact_id: contactId, number_type: answer.kind, phonebook_id: Number(bookId) })) === undefined) return;
+      showToast(this.shadowRoot, fill(c.addedTo, { name: who }));
+      this._phoneSync({ parts: ["phonebooks"] });
+      return;
+    }
     const { name, book } = answer;
     number = answer.number;
     if ((await this._phoneService("add_contact", { number, name, phonebook_id: book })) === undefined) return;
