@@ -1069,6 +1069,10 @@ async def ws_device_action(
         connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "No such device")
         return
     action, value = msg["action"], msg.get("value")
+    if action in ("internet_access", "priority") and not host.ip:
+        # the box addresses these by IPv4: without one it would act on address 0
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_SUPPORTED, "The device has no IPv4 address")
+        return
     try:
         if action == "wake_on_lan":
             await coordinator.async_wake_on_lan(host)
@@ -1083,7 +1087,7 @@ async def ws_device_action(
                 await coordinator.async_set_internet_access(host, value)
             else:
                 await coordinator.async_set_priority(host, value)
-    except HomeAssistantError as err:
+    except (HomeAssistantError, FritzConnectionException) as err:
         connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
         return
     connection.send_result(msg["id"], {})

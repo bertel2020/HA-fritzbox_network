@@ -1,5 +1,6 @@
 """The commands behind the clean-up and filter pages of the panel."""
 
+from dataclasses import replace
 from datetime import timedelta
 
 from homeassistant.util import dt as dt_util
@@ -243,3 +244,36 @@ async def test_a_device_action_refuses_unknown_values_devices_and_missing_rights
     )
     assert refused["error"]["code"] == "unauthorized"
     assert not [c for c in fake_client.calls if c[0] in ("priority", "profile")]
+
+
+async def test_a_switch_for_a_device_without_an_address_is_refused(
+    hass, hass_ws_client, fake_client, entry
+):
+    coordinator = await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    coordinator.all_hosts[LAN] = replace(coordinator.all_hosts[LAN], ip="")
+
+    for action in ("internet_access", "priority"):
+        result = await _call(
+            client, ACTION, entry_id=entry.entry_id, mac=LAN, action=action, value=True
+        )
+        assert result["error"]["code"] == "not_supported", action
+    assert not [c for c in fake_client.calls if c[0] in ("internet", "priority")]
+
+
+async def test_a_failure_of_the_box_on_a_device_action_is_an_answer_not_a_trace(
+    hass, hass_ws_client, fake_client, entry
+):
+    from fritzconnection.core.exceptions import FritzConnectionException
+
+    coordinator = await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    async def fail(host, value):
+        raise FritzConnectionException("boom")
+
+    coordinator.async_set_internet_access = fail
+    result = await _call(
+        client, ACTION, entry_id=entry.entry_id, mac=LAN, action="internet_access", value=False
+    )
+    assert result["error"]["code"] == "unknown_error"
