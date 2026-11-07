@@ -166,3 +166,18 @@ def test_vpn_sessions_are_counted_and_summed():
     assert stats["seconds_7d"] == 1800 + 2100 + 200
     assert stats["last_end"] == int(NOW) + 3900
     assert history.vpn_stats("nobody", NOW)["sessions_30d"] == 0
+
+
+def test_vpn_notes_when_a_connection_is_on_and_gives_the_chart_data():
+    history = _history()
+    history.note_vpn(NOW, "anna", False, None, True)
+    history.note_vpn(NOW + 100, "anna", True, int(NOW) + 50, True)
+    history.note_vpn(NOW + 200, "anna", False, None, False)
+    history.note_vpn(NOW + 300, "anna", False, None, False)
+    history.note_vpn(NOW + 400, "anna", False, None, True)
+    stats = history.vpn_stats("anna", NOW + 500)
+    assert stats["sessions"] == [[int(NOW) + 50, int(NOW) + 200]]
+    assert stats["enabled_periods"] == [[int(NOW), int(NOW) + 200], [int(NOW) + 400, None]]
+    # a poll that does not say whether it is on notes nothing about it
+    history.note_vpn(NOW + 600, "bob", True, int(NOW) + 600)
+    assert history.vpn_stats("bob", NOW + 700)["enabled_periods"] == []

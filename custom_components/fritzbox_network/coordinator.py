@@ -643,7 +643,9 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             return
         now = dt_util.utcnow().timestamp()
         for connection in vpn:
-            self.history.note_vpn(now, connection.key, connection.connected, connection.since)
+            self.history.note_vpn(
+                now, connection.key, connection.connected, connection.since, connection.active
+            )
 
     def _apply_guest_override(self, polled: bool | None) -> bool | None:
         """Show a guest Wi-Fi switch just made until the box shows it too."""

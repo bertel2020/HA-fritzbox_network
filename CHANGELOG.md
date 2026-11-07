@@ -6,6 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- VPN-Seite: Die **Statistik** ist jetzt ein durchgehender Balken je WireGuard-Verbindung statt einer Tabelle. Ein Umschalter (Tag, Woche, Monat, Jahr) bestimmt, wie weit er zurückreicht. Blau ist die Zeit, in der die Verbindung stand, hellgrau aktiviert aber nicht verbunden, gestreift ausgeschaltet. Beim Darüberfahren nennt der Balken den Zustand und bei einer Verbindung Beginn, Ende und Dauer. Ob eine Verbindung eingeschaltet war, wird ab jetzt festgehalten; die Sitzungen bleiben ein Jahr erhalten.
 - Internetseite: Die Karte **Leitungsqualität** ist eine Tabelle mit Leitungsrate (und möglicher Rate), Störabstand und Dämpfung in Spalten für Download und Upload, nichts wird mehr abgeschnitten. Der Störabstand hat einen Punkt (gut ab 10 dB, in Ordnung ab 6 dB), das Profil ist ein Chip, und FEC- und CRC-Fehler sind zwei Kacheln mit kurzer Erklärung.
 - Telefonseite: Die Knöpfe unter einem Anruf sind gleich breit in einem Raster, „Erneut anrufen“ ist als Hauptaktion getönt, „Sperren“ hat einen roten Rahmen, und „Ins Telefonbuch“ und „Sperren“ haben keine Auslassungspunkte mehr.
 - Internetseite: Die Karte **Verbindung** ist aufgeräumt. Download und Upload stehen in zwei Kacheln, die drei Angaben (externe IPv4, IPv6-Präfix, letzter Fehler) sind gleich breit mit Kopierknopf für die Adressen, der Status hat einen Punkt, und die DNS-Server stehen in je einer Spalte für IPv4 und IPv6, mit Kopierknopf je Server.

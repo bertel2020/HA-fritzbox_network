@@ -91,7 +91,7 @@ async def test_the_panel_gets_the_connections_without_any_key(
     event = await client.receive_json()
     vpn = event["event"]["vpn"]
     assert [c["name"] for c in vpn] == ["Holiday house", "Anna iPhone", "Bob laptop", "Old tablet"]
-    assert vpn[0] == {
+    assert {k: v for k, v in vpn[0].items() if k != "stats"} == {
         "key": "Holiday house",
         "uid": "vpnconnection9003",
         "name": "Holiday house",

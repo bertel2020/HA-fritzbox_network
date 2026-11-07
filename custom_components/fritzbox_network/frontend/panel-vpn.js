@@ -28,45 +28,87 @@ export function vpnModel(data) {
   };
 }
 
-/** What the tunnels did in the last 30 days, summed up from what was recorded per connection. */
-export function vpnStatsModel(connections) {
-  const rows = connections.filter((c) => c.stats);
-  return {
-    rows,
-    sessions: rows.reduce((n, c) => n + c.stats.sessions_30d, 0),
-    seconds: rows.reduce((n, c) => n + c.stats.seconds_30d, 0),
-    longest: rows.reduce((n, c) => Math.max(n, c.stats.longest), 0),
-    trackedSince: rows.map((c) => c.stats.tracked_since).filter(Boolean).sort((a, b) => a - b)[0] ?? null,
+/** The seconds the chart reaches back for each range. */
+export const VPN_RANGES = { day: 86400, week: 7 * 86400, month: 30 * 86400, year: 365 * 86400 };
+
+/**
+ * One connection as a run of states from `from` to `to` (unix seconds): "up" while a session
+ * stood, "off" while it was switched off, "none" before anything was recorded, else "idle" (on
+ * but not dialled in). Neighbours of the same state are merged.
+ */
+export function vpnSegments(stats, from, to) {
+  const sessions = (stats.sessions ?? []).map(([a, b]) => [a, b ?? to]);
+  const periods = stats.enabled_periods ?? [];
+  const tracked = stats.tracked_since ?? from;
+  const enabledFrom = periods.length ? periods[0][0] : null;
+  // switched off: after the first note of the switch, outside the periods it was on
+  const off = [];
+  if (enabledFrom !== null) {
+    let at = enabledFrom;
+    for (const [a, b] of periods) {
+      if (a > at) off.push([at, a]);
+      at = b ?? to;
+    }
+    if (at < to) off.push([at, to]);
+  }
+  const cuts = new Set([from, to]);
+  const add = (t) => {
+    if (t > from && t < to) cuts.add(t);
   };
+  [...sessions.flat(), ...off.flat(), tracked].forEach(add);
+  const points = [...cuts].sort((x, y) => x - y);
+  const inside = (list, t) => list.some(([a, b]) => t >= a && t < b);
+  const out = [];
+  for (let i = 0; i < points.length - 1; i += 1) {
+    const mid = (points[i] + points[i + 1]) / 2;
+    const state = mid < tracked ? "none" : inside(sessions, mid) ? "up" : inside(off, mid) ? "off" : "idle";
+    const last = out[out.length - 1];
+    if (last && last[2] === state) last[1] = points[i + 1];
+    else out.push([points[i], points[i + 1], state]);
+  }
+  return out;
+}
+
+/** The share of the recorded time a connection stood, in percent; null before anything is recorded. */
+export function vpnShare(segments) {
+  const known = segments.filter(([, , s]) => s !== "none");
+  const total = known.reduce((n, [a, b]) => n + b - a, 0);
+  if (!total) return null;
+  return Math.round((known.filter(([, , s]) => s === "up").reduce((n, [a, b]) => n + b - a, 0) / total) * 100);
 }
 
 function statsSection(m, ctx) {
   const { t, now } = ctx;
   const v = t.vpnPage;
-  const s = vpnStatsModel(m.connections);
-  if (!s.rows.length) return "";
-  const dur = (sec) => (sec > 0 ? formatDuration(sec, t.inet.units) : "–");
-  const tiles = [
-    [String(s.sessions), v.statSessions],
-    [dur(s.seconds), v.statTime],
-    [dur(s.longest), v.statLongest],
-  ]
-    .map(([value, label]) => `<div class="tile"><b>${escapeHtml(value)}</b><small>${escapeHtml(label)}</small></div>`)
+  const rows = m.connections.filter((c) => c.stats);
+  if (!rows.length) return "";
+  const range = VPN_RANGES[ctx.vpnRange] ? ctx.vpnRange : "week";
+  const to = Math.round(now);
+  const from = to - VPN_RANGES[range];
+  const buttons = Object.keys(VPN_RANGES)
+    .map((r) => `<button data-vrange="${r}" aria-pressed="${r === range}">${escapeHtml(v.ranges[r])}</button>`)
     .join("");
-  const head = [v.statName, v.statSessions7, v.statSessions30, v.statTime30, v.statLongest, v.statLast]
-    .map((h) => `<th>${escapeHtml(h)}</th>`)
-    .join("");
-  const body = s.rows
+  const bars = rows
     .map((c) => {
-      const st = c.stats;
-      const last = c.connected ? v.state.up : st.last_end ? fill(v.ago, { time: formatDuration(Math.max(0, now - st.last_end), t.inet.units) }) : "–";
-      return `<tr><td>${escapeHtml(c.name)}</td><td>${st.sessions_7d}</td><td>${st.sessions_30d}</td><td>${escapeHtml(dur(st.seconds_30d))}</td><td>${escapeHtml(dur(st.longest))}</td><td>${escapeHtml(last)}</td></tr>`;
+      const segs = vpnSegments(c.stats, from, to);
+      const share = vpnShare(segs);
+      const spans = segs
+        .filter(([, , s]) => s === "up" || s === "off" || s === "none")
+        .map(([a, b, s]) => `<i class="${s}" style="left:${(((a - from) / (to - from)) * 100).toFixed(3)}%;width:${(((b - a) / (to - from)) * 100).toFixed(3)}%"></i>`)
+        .join("");
+      const tone = { up: "ok", idle: "info", off: "" }[c.state];
+      return `<div class="vrow"><div class="vhead"><b>${escapeHtml(c.name)}</b><span class="chip ${tone}">${escapeHtml(v.state[c.state])}</span>${share === null ? "" : `<span class="vshare">${escapeHtml(fill(v.share, { percent: share }))}</span>`}</div>
+        <div class="vbar" role="img" aria-label="${escapeHtml(fill(v.barLabel, { name: c.name }))}" data-from="${from}" data-to="${to}" data-segs="${escapeHtml(JSON.stringify(segs))}">${spans}<b class="tip" hidden></b><i class="cursor" hidden></i></div></div>`;
     })
     .join("");
-  const since = s.trackedSince ? `<p class="hint">${escapeHtml(fill(v.statSince, { time: formatDuration(Math.max(0, now - s.trackedSince), t.inet.units) }))}</p>` : "";
-  return `<section class="card sec"><span class="label">${escapeHtml(v.statsTitle)}</span>
-    <div class="vpntiles">${tiles}</div>
-    <div class="tablewrap"><table class="vpnstats"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>${since}</section>`;
+  const legend = ["up", "idle", "off"].map((s) => `<span><i class="vl ${s}"></i>${escapeHtml(v.legend[s])}</span>`).join("");
+  const since = rows.map((c) => c.stats.tracked_since).filter(Boolean).sort((a, b) => a - b)[0];
+  const note = since ? fill(v.statSince, { time: formatDuration(Math.max(0, now - since), t.inet.units) }) : "";
+  return `<section class="card sec"><div class="trendhead"><span class="label">${escapeHtml(v.statsTitle)}</span><div class="seg" role="group" aria-label="${escapeHtml(v.statsTitle)}">${buttons}</div></div>
+    <div class="vbars">${bars}</div>
+    <div class="vaxis"><span>${escapeHtml(v.axis[range])}</span><span>${escapeHtml(v.now)}</span></div>
+    <div class="vlegend">${legend}</div>
+    <p class="hint">${escapeHtml(note)} ${escapeHtml(v.statHint)}</p></section>`;
 }
 
 function card(connection, ctx) {

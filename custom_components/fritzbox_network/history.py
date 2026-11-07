@@ -24,6 +24,7 @@ STORAGE_VERSION = 1
 
 _HOUR = 3600
 _DAY = 86400
+_VPN_CHART_DAYS = 365  # how far back the chart of a tunnel reaches
 
 # one point: [epoch seconds, online 0..1, signal in dBm or None, rate in Mbit/s or None]
 type Point = list[float | None]
@@ -120,11 +121,19 @@ class DeviceHistory:
             kind: list(reversed(periods)) for kind, periods in self._connection["addresses"].items()
         }
 
-    def note_vpn(self, now: float, key: str, connected: bool, since: int | None) -> None:
+    def note_vpn(
+        self,
+        now: float,
+        key: str,
+        connected: bool,
+        since: int | None,
+        enabled: bool | None = None,
+    ) -> None:
         """Note whether a WireGuard tunnel stands; a session runs from its start to its end.
 
         The box tells when a tunnel came up (``since``); a different time while a session is open
-        means the tunnel was down and up again between two polls.
+        means the tunnel was down and up again between two polls. ``enabled`` is whether the
+        connection is switched on in the box; its periods are noted the same way, for the chart.
         """
         self._vpn.setdefault("since", now)
         sessions = self._vpn["sessions"].setdefault(key, [])
@@ -144,6 +153,16 @@ class DeviceHistory:
         elif is_open:
             last[1] = now
             changed = True
+        if enabled is not None:
+            periods = self._vpn.setdefault("enabled", {}).setdefault(key, [])
+            open_period = bool(periods) and periods[-1][1] is None
+            if enabled and not open_period:
+                periods.append([now, None])
+                del periods[:-VPN_SESSIONS_KEPT]
+                changed = True
+            elif not enabled and open_period:
+                periods[-1][1] = now
+                changed = True
         if changed:
             self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
 
@@ -162,7 +181,15 @@ class DeviceHistory:
                     seconds[days] += end - max(start, limit)
                     count[days] += 1
         last_end = next((e for _, e in reversed(sessions) if e is not None), None)
+        horizon = now - _VPN_CHART_DAYS * _DAY
         return {
+            # for the chart: the sessions and the periods the connection was on, as far back as it shows
+            "sessions": [[round(a), None if b is None else round(b)] for a, b in sessions if b is None or b > horizon],
+            "enabled_periods": [
+                [round(a), None if b is None else round(b)]
+                for a, b in (self._vpn.get("enabled", {}).get(key) or [])
+                if b is None or b > horizon
+            ],
             "sessions_7d": count[7],
             "sessions_30d": count[30],
             "seconds_7d": round(seconds[7]),
@@ -241,12 +268,17 @@ class DeviceHistory:
         for mac in [m for m, s in self._data.items() if not s["f"] or s["f"][-1][0] < limit]:
             del self._data[mac]
             self._traffic.pop(mac, None)
-        old = now - 35 * _DAY
+        old = now - (_VPN_CHART_DAYS + 5) * _DAY
         sessions = self._vpn["sessions"]
         for key in list(sessions):
             sessions[key] = [x for x in sessions[key] if x[1] is None or x[1] > old]
             if not sessions[key]:
                 del sessions[key]
+        enabled = self._vpn.get("enabled", {})
+        for key in list(enabled):
+            enabled[key] = [x for x in enabled[key] if x[1] is None or x[1] > old]
+            if not enabled[key]:
+                del enabled[key]
 
     def forget(self, mac: str) -> None:
         if (self._data.pop(mac, None) is not None) | (self._traffic.pop(mac, None) is not None):

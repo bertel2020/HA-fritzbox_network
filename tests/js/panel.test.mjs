@@ -1440,17 +1440,23 @@ test("the VPN page lists devices and sites with their state and escapes names", 
   assert.match(html, /Geräte im Heimnetz per VPN/);
 });
 
-test("the VPN page sums up the recorded sessions per connection", () => {
-  const stats = (n, sec) => ({ sessions_7d: n, sessions_30d: n + 2, seconds_7d: sec, seconds_30d: sec * 3, longest: sec, last_end: 7000, tracked_since: 1000 });
-  const data = { ...vpnData, vpn: vpnData.vpn.map((c, i) => ({ ...c, stats: stats(i + 1, 3600) })) };
-  const s = vpnPage.vpnStatsModel(vpnPage.vpnModel(data).connections);
-  assert.equal(s.sessions, 3 + 4 + 5);
-  assert.equal(s.seconds, 3 * 3600 * 3);
-  const html = vpnPage.renderVpn(data, { t, now: 8200 });
-  assert.match(html, /class="vpnstats"/);
-  assert.match(html, /<td>Haus &lt;b&gt;<\/td><td>1<\/td><td>3<\/td><td>3 Std\. 0 Min\.<\/td>/);
-  assert.match(html, /vor 20 Min\./);
-  assert.doesNotMatch(vpnPage.renderVpn(vpnData, { t, now: 8200 }), /class="vpnstats"/);
+test("the VPN page draws one bar per connection with sessions, switched-off times and the share connected", () => {
+  const stats = { sessions: [[2000, 3000], [5000, null]], enabled_periods: [[1000, 4000], [4500, null]], tracked_since: 1000 };
+  const segs = vpnPage.vpnSegments(stats, 0, 6000);
+  assert.deepEqual(segs, [[0, 1000, "none"], [1000, 2000, "idle"], [2000, 3000, "up"], [3000, 4000, "idle"], [4000, 4500, "off"], [4500, 5000, "idle"], [5000, 6000, "up"]]);
+  // 2000 of the 5000 recorded seconds stood
+  assert.equal(vpnPage.vpnShare(segs), 40);
+  assert.equal(vpnPage.vpnShare([[0, 10, "none"]]), null);
+  // without notes of the switch the whole recorded time counts as on
+  assert.deepEqual(vpnPage.vpnSegments({ sessions: [[10, 20]], tracked_since: 0 }, 0, 30), [[0, 10, "idle"], [10, 20, "up"], [20, 30, "idle"]]);
+  const data = { ...vpnData, vpn: vpnData.vpn.map((c, i) => ({ ...c, stats: { ...stats, tracked_since: 8000 - 3600 * (i + 1) } })) };
+  const html = vpnPage.renderVpn(data, { t, now: 8200, vpnRange: "day" });
+  assert.equal((html.match(/class="vbar"/g) ?? []).length, 3);
+  assert.match(html, /data-vrange="week" aria-pressed="false"/);
+  assert.match(html, /data-vrange="day" aria-pressed="true"/);
+  assert.match(html, /% verbunden/);
+  assert.match(html, /Haus &lt;b&gt;/);
+  assert.doesNotMatch(vpnPage.renderVpn(vpnData, { t, now: 8200 }), /class="vbar"/);
 });
 
 test("the VPN page says so where the box tells nothing or has no connection", () => {

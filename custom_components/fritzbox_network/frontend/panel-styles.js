@@ -517,10 +517,24 @@ export const PANEL_CSS = `
   .aphead small { color: var(--muted); }
   ul.radios { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 12px; }
   .vpntiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
-  .vpnstats { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
-  .vpnstats th { text-align: left; font-weight: 400; font-size: 12px; color: var(--muted); padding: 0 8px 8px 0; }
-  .vpnstats td { padding: 8px 8px 8px 0; border-top: 1px solid var(--line); white-space: nowrap; }
-  .vpnstats td:first-child { white-space: normal; font-weight: 500; }
+  .vbars { display: grid; gap: 14px; margin-top: 12px; }
+  .vhead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+  .vhead b { font-weight: 500; }
+  .vhead .vshare { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .vbar { position: relative; height: 26px; border-radius: 6px; background: var(--neutral-soft, var(--soft)); touch-action: pan-y; }
+  .vbar i { position: absolute; top: 0; bottom: 0; }
+  .vbar i.up { background: var(--accent); min-width: 2px; }
+  .vbar i.off { background: repeating-linear-gradient(45deg, transparent 0 3px, var(--line) 3px 4px), var(--soft); }
+  .vbar i.none { background: var(--surface); opacity: .7; }
+  .vbar .cursor { top: -2px; bottom: -2px; width: 0; border-left: 1px dashed var(--muted); pointer-events: none; }
+  .vbar .tip { position: absolute; bottom: 32px; transform: translateX(-50%); padding: 5px 10px; border-radius: 8px; background: var(--text); color: var(--bg, #fff); font-size: 12px; font-weight: 400; line-height: 1.5; white-space: nowrap; pointer-events: none; z-index: 2; }
+  .vbar .tip b { font-weight: 500; }
+  .vaxis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .vlegend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .vlegend span { display: inline-flex; align-items: center; gap: 6px; }
+  .vlegend .vl { width: 14px; height: 10px; border-radius: 2px; display: inline-block; background: var(--neutral-soft, var(--soft)); }
+  .vlegend .vl.up { background: var(--accent); }
+  .vlegend .vl.off { background: repeating-linear-gradient(45deg, transparent 0 3px, var(--line) 3px 4px), var(--soft); }
   .tablewrap { overflow-x: auto; }
   .vpnlist { list-style: none; margin: 8px 0 0; padding: 0; }
   .vpnrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }

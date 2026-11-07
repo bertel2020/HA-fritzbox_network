@@ -4,6 +4,7 @@ import {
   STALE_STEPS,
   WEAK_LINK_RATIO,
   escapeHtml,
+  formatDuration,
   filterChanged,
   nearestStep,
   pagerFor,
@@ -342,7 +343,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this.shadowRoot.addEventListener("pointerover", (event) => this._phoneTip(event));
     this.shadowRoot.addEventListener("focusin", (event) => this._phoneTip(event));
     this.shadowRoot.addEventListener("pointerout", (event) => {
-      if (!event.relatedTarget?.closest?.(".plot")) this._hidePlots();
+      if (!event.relatedTarget?.closest?.(".plot, .vbar")) this._hidePlots();
     });
   }
 
@@ -1175,6 +1176,9 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   /** The value under the pointer on a chart of the trend: a cursor line and the time with the value. */
   _onPlot(event) {
+    const vbar = event.target?.closest?.(".vbar");
+    if (vbar) return this._onVbar(vbar, event);
+    this._hideVbars();
     const plot = event.target?.closest?.(".plot");
     if (!plot) return this._hidePlots();
     const pts = JSON.parse(plot.dataset.pts);
@@ -1202,7 +1206,38 @@ class FritzboxNetworkPanel extends HTMLElement {
     tip.style.left = `${Math.min(Math.max(x, tip.offsetWidth / 2), box.width - tip.offsetWidth / 2)}px`;
   }
 
+  /** What a tunnel did where the pointer is: its state there and, for a connection, when and how long. */
+  _onVbar(bar, event) {
+    const box = bar.getBoundingClientRect();
+    if (!box.width) return;
+    const from = Number(bar.dataset.from);
+    const to = Number(bar.dataset.to);
+    const ratio = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
+    const moment = from + ratio * (to - from);
+    const segment = JSON.parse(bar.dataset.segs).find(([a, b]) => moment >= a && moment <= b);
+    if (!segment) return;
+    const t = this._t.vpnPage;
+    const language = this._hass?.language;
+    const at = (sec) => new Date(sec * 1000).toLocaleString(language || "en", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+    const [a, b, state] = segment;
+    const lines = [t.tip[state]];
+    if (state === "up") lines.push(`${at(a)} – ${b >= to - 60 ? t.now : at(b)}`, fill(t.tip.duration, { time: formatDuration(b - a, this._t.inet.units) }));
+    else lines.push(at(moment));
+    const tip = bar.querySelector(".tip");
+    const cursor = bar.querySelector(".cursor");
+    tip.innerHTML = lines.map((line, i) => (i ? escapeHtml(line) : `<b>${escapeHtml(line)}</b>`)).join("<br>");
+    const x = ratio * box.width;
+    cursor.style.left = `${x}px`;
+    cursor.hidden = tip.hidden = false;
+    tip.style.left = `${Math.min(Math.max(x, tip.offsetWidth / 2), box.width - tip.offsetWidth / 2)}px`;
+  }
+
+  _hideVbars() {
+    for (const el of this.shadowRoot.querySelectorAll(".vbar .cursor, .vbar .tip")) el.hidden = true;
+  }
+
   _hidePlots() {
+    this._hideVbars();
     for (const el of this.shadowRoot.querySelectorAll(".plot .cursor, .plot .tip")) el.hidden = true;
   }
 
@@ -1233,7 +1268,7 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _renderVpn() {
     const state = this._state;
-    this._set("vpn-view", renderVpn(state.data, { t: this._t, now: Date.now() / 1000, canWrite: Boolean(state.data?.can_write), busy: state.vpnBusy }));
+    this._set("vpn-view", renderVpn(state.data, { t: this._t, now: Date.now() / 1000, language: this._hass?.language, vpnRange: state.vpnRange, canWrite: Boolean(state.data?.can_write), busy: state.vpnBusy }));
   }
 
   /** Switches a WireGuard connection; the button waits until the box shows the new state. */
@@ -1963,6 +1998,11 @@ class FritzboxNetworkPanel extends HTMLElement {
       if (state.trend) state.trend.range = ds.range;
       this._update();
       this.shadowRoot.querySelector(`[data-range="${ds.range}"]`)?.focus();
+      return;
+    } else if (ds.vrange) {
+      state.vpnRange = ds.vrange;
+      this._renderVpn();
+      this.shadowRoot.querySelector(`[data-vrange="${ds.vrange}"]`)?.focus();
       return;
     } else if (ds.trange) {
       state.trafficRange = Number(ds.trange);
