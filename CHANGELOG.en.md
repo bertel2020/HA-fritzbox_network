@@ -6,6 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Wi-Fi page: the "Guest access" card is tidier. It shows the security (for example WPA2 + WPA3) and the devices that are in the guest network right now as buttons that open their page. The QR code appears next to the details only on request, instead of an empty striped area; the long hint is small at the bottom.
 - Repeaters you chose to control now also have a **Guest Wi-Fi** switch and the image **Guest Wi-Fi QR code** (off by default), as long as the repeater reports a guest network.
 - Options: under **Create switches for** you choose the areas that get switches: devices (internet access, priority, Wake on LAN), Wi-Fi networks (box, repeaters, guest network and QR code), port forwardings, WireGuard connections, static routes. All are on by default. An area turned off removes its switches.
 

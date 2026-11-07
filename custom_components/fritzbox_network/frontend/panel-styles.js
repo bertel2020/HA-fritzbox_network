@@ -1008,12 +1008,21 @@ export const PANEL_CSS = `
   .net .end { display: flex; align-items: center; gap: 10px; }
   .net .end .chip { display: none; }
   @container app (min-width: 640px) { .net .end .chip { display: inline-flex; } }
-  .guest { display: grid; grid-template-columns: minmax(0, 1fr) 232px; gap: 20px; align-items: stretch; }
-  .guest > div:first-child { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; min-width: 0; }
-  .guest > div:first-child .btn-row, .guest > div:first-child .hint { margin: 0; }
-  .guest > div:first-child .hint { margin-top: auto; padding-top: 4px; max-width: 52ch; }
+  .guest { display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px; align-items: start; }
+  .guest.withqr { grid-template-columns: minmax(0, 1fr) 232px; }
+  .guest > div:first-child { display: flex; flex-direction: column; gap: 16px; align-items: flex-start; min-width: 0; }
+  .guest > div:first-child .btn-row { margin: 0; }
   .guest .net { grid-template-columns: 40px minmax(0, auto) auto; justify-content: start; gap: 4px 16px; }
-  @container app (max-width: 720px) { .guest { grid-template-columns: minmax(0, 1fr); } }
+  .guest .net small span + span::before { content: "·"; margin-right: 10px; }
+  .gdev { display: grid; gap: 8px; width: 100%; padding-top: 14px; border-top: 1px solid var(--line); }
+  .gdev.none { color: var(--muted); font-size: 13px; margin: 0; }
+  .gdev .gl { font-size: 12px; color: var(--muted); }
+  .gchips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .gchip { display: inline-flex; align-items: center; gap: 7px; min-height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid var(--line); background: var(--surface); color: inherit; font: inherit; font-size: 13px; cursor: pointer; }
+  .gchip:hover { background: var(--soft); }
+  .gmore { align-self: center; color: var(--muted); font-size: 12px; }
+  .gfoot { margin: 16px 0 0; padding-top: 12px; border-top: 1px solid var(--line); max-width: none; font-size: 12px; }
+  @container app (max-width: 720px) { .guest.withqr { grid-template-columns: minmax(0, 1fr); } }
   .qrbox { border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; justify-items: center; align-content: center; gap: 12px; background: var(--soft); text-align: center; }
   .qr { width: 180px; height: 180px; background: #fff; border-radius: 10px; padding: 8px; box-sizing: border-box; }
   .qr img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }

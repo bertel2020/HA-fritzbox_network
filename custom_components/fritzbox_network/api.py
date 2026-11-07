@@ -926,7 +926,12 @@ class FritzNetworkClient:
             if (service := self._guest_wifi_service()) is None:
                 return None
             info = self._connection.call_action(service, "GetInfo")
-        return {"enabled": bool(info.get("NewEnable")), "ssid": info.get("NewSSID") or None}
+        return {
+            "enabled": bool(info.get("NewEnable")),
+            "ssid": info.get("NewSSID") or None,
+            # how the network is secured, as the box names it (WPA, 11i, WPA3, OWE, None …)
+            "beacon": info.get("NewBeaconType") or None,
+        }
 
     def get_guest_wifi_qr(self) -> bytes | None:
         """The PNG of the QR code for the guest Wi-Fi; None where the box has no guest network.

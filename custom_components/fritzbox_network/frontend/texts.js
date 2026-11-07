@@ -683,6 +683,10 @@ const en = {
       copy: "Copy password",
       copied: "Password copied. It stays on the clipboard until you copy something else.",
       hint: "The other settings of the guest access are changed in the box under Wi-Fi › Guest Access. Here only on, off and the password.",
+      devices: "{n} devices connected",
+      noDevices: "No device is connected to the guest access.",
+      more: "+{n} more",
+      security: { WPA: "WPA", "11i": "WPA2", WPAand11i: "WPA + WPA2", WPA3: "WPA3", "11iandWPA3": "WPA2 + WPA3", Basic: "WEP", OWE: "Enhanced Open", OWETrans: "Enhanced Open", None: "open" },
     },
     pw: {
       title: "Change the password of the guest access",
@@ -2082,6 +2086,10 @@ const de = {
       copy: "Passwort kopieren",
       copied: "Passwort kopiert. Es bleibt in der Zwischenablage, bis du etwas anderes kopierst.",
       hint: "Die übrigen Einstellungen des Gastzugangs ändern geht in der Box unter WLAN › Gastzugang. Hier nur an, aus und das Passwort.",
+      devices: "{n} Geräte verbunden",
+      noDevices: "Zurzeit ist kein Gerät im Gastzugang.",
+      more: "+{n} weitere",
+      security: { WPA: "WPA", "11i": "WPA2", WPAand11i: "WPA + WPA2", WPA3: "WPA3", "11iandWPA3": "WPA2 + WPA3", Basic: "WEP", OWE: "Enhanced Open", OWETrans: "Enhanced Open", None: "offen" },
     },
     pw: {
       title: "Passwort des Gastzugangs ändern",

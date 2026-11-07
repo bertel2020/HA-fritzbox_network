@@ -2266,7 +2266,7 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _renderWlan() {
     const state = this._state;
-    this._set("wlan-view", renderWlan(state.wlan, { t: this._t, busy: state.wlanBusy, secret: state.wlanSecret, reveal: state.wlanReveal, error: state.wlanError }));
+    this._set("wlan-view", renderWlan(state.wlan, { t: this._t, busy: state.wlanBusy, secret: state.wlanSecret, reveal: state.wlanReveal, error: state.wlanError, clients: state.data?.clients ?? [] }));
   }
 
   /** Forgets the guest password and draws the page without it, so that it is not kept in the page either. */

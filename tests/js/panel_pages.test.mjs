@@ -282,6 +282,23 @@ test("the Wi-Fi page lists the networks with a switch each and the guest access,
   assert.match(busy, /wird geschaltet …/);
 });
 
+test("the guest card names how the network is secured and who is in it, with a button per device", () => {
+  const clients = [
+    { id: "a1", name: "Handy <b>", guest: true, online: true },
+    { id: "a2", name: "Laptop", guest: false, online: true },
+    { id: "a3", name: "Alt", guest: true, online: false },
+  ];
+  const guest = { ...wlan, guest: { enabled: true, ssid: "Gäste", beacon: "11iandWPA3" } };
+  const html = wlanPage.renderWlan(guest, { t, busy: new Set(), secret: null, clients });
+  assert.match(html, /<span>an<\/span><span>WPA2 \+ WPA3<\/span>/);
+  assert.match(html, /1 Geräte verbunden/);
+  assert.match(html, /data-dev="a1"><span class="dot on"><\/span>Handy &lt;b&gt;/);
+  assert.doesNotMatch(html, /data-dev="a2"|data-dev="a3"/);
+  assert.match(wlanPage.renderWlan(guest, { t, busy: new Set(), secret: null, clients: [] }), /kein Gerät im Gastzugang/);
+  const many = Array.from({ length: 8 }, (_, i) => ({ id: `g${i}`, name: `G${i}`, guest: true, online: true }));
+  assert.match(wlanPage.renderWlan(guest, { t, busy: new Set(), secret: null, clients: many }), /\+2 weitere/);
+});
+
 test("without the right to write the switches are off, QR and password locked, and the page says why", () => {
   const html = wlanPage.renderWlan({ ...wlan, can_write: false }, { t, busy: new Set(), secret: null });
   assert.match(html, /data-key="2_4ghz"[^>]*disabled/);
@@ -305,7 +322,8 @@ test("a switch calls wlan/switch and takes the answer as the new list; the guest
   assert.deepEqual(calls[1], { type: "fritzbox_network/wlan/switch", entry_id: "e1", key: "guest", enabled: false });
   assert.equal(p._state.wlan.guest.enabled, false);
   assert.match(p._html["wlan-view"], /aria-checked="false"[^>]*data-key="guest"/);
-  assert.match(p._html["wlan-view"], /Der Gastzugang ist aus/);
+  assert.match(p._html["wlan-view"], /<small><span>aus<\/span><\/small>/);
+  assert.doesNotMatch(p._html["wlan-view"], /data-act="wlan-qr"/);
   assert.equal(p._state.wlanBusy.size, 0);
 });
 
