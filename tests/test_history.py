@@ -1,7 +1,9 @@
 """The history of the devices behind the sparklines."""
 
+from datetime import date, timedelta
 from unittest.mock import MagicMock
 
+from custom_components.fritzbox_network.const import TRAFFIC_DAYS
 from custom_components.fritzbox_network.history import DeviceHistory
 
 NOW = 1_800_000_000.0
@@ -93,14 +95,12 @@ def test_a_counter_that_fell_started_anew():
     assert history.traffic(MAC) == {"2026-11-01": [200, 20]}
 
 
-def test_only_the_last_35_days_of_traffic_are_kept():
+def test_only_the_last_year_of_traffic_is_kept():
     history = _history()
-    history.record_traffic("2026-01-01", MAC, 0, 0)
-    for day in range(1, 41):
-        history.record_traffic(
-            f"2026-02-{day:02d}" if day < 29 else f"2026-03-{day - 28:02d}", MAC, day, day
-        )
-    assert len(history.traffic(MAC)) == 35
+    start = date(2025, 1, 1)
+    for day in range(400):
+        history.record_traffic((start + timedelta(days=day)).isoformat(), MAC, day, day)
+    assert len(history.traffic(MAC)) == TRAFFIC_DAYS == 366
 
 
 def test_the_mesh_reads_the_bytes_counted_per_device():

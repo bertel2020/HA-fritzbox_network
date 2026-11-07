@@ -511,7 +511,7 @@ test("the statistics view says how far the list reaches, shows deltas as text an
   const m = read();
   let html = page.renderPhone(m, ctx({ view: "stats", period: "today" }));
   assert.match(html, /Zeitraum: die letzten 8 Anrufe, seit 04\.11\./);
-  assert.match(html, /Die Liste reicht nur 4 Tage zurück: 7 Tage, 30 Tage und „Alles“ zeigen dasselbe/);
+  assert.match(html, /Die Liste reicht nur 4 Tage zurück: Woche, Monat und „Alles“ zeigen dasselbe/);
   assert.match(html, /1 Anrufe ohne lesbares Datum/);
   assert.match(html, /▲ \+1<span class="sr"> gegenüber dem Zeitraum davor/);
   assert.match(html, /Änderung gegenüber gestern/);
@@ -1046,7 +1046,7 @@ test("statistics from fritzbox_phone/stats: source and window, a partial compari
   hist.p._onPhoneClick({ act: "ph-view", phVal: "stats" });
   await settle();
   out = hist.html();
-  assert.match(out, /data-k="ph-per-90"[^>]*>90 Tage<\/button>[\s\S]*data-k="ph-per-365"[^>]*>1 Jahr/);
+  assert.match(out, /data-k="ph-per-90"[^>]*>Quartal<\/button>[\s\S]*data-k="ph-per-365"[^>]*>Jahr/);
   assert.match(out, /Quelle: der Anrufverlauf von FRITZ!Box Telefon/);
   assert.match(out, /Änderung gegenüber den 7 Tagen davor/);
   assert.doesNotMatch(out, /Anrufverlauf“ einschalten/);

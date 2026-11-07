@@ -70,7 +70,7 @@ HISTORY_OFFLINE_SECONDS = 1800
 HISTORY_COARSE_SECONDS = 3600
 HISTORY_DAYS = 7
 # the data volume per day is kept for this many days
-TRAFFIC_DAYS = 35
+TRAFFIC_DAYS = 366
 HISTORY_SAVE_DELAY = 300
 # sessions kept per WireGuard connection
 VPN_SESSIONS_KEPT = 500

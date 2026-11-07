@@ -6,6 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- The time range switches are named the same everywhere: **Day, Week, Month, Year**. Device page (day and week, more is not recorded), data volume on the Internet page (now also Year; the daily traffic is kept for a year instead of 35 days), and the phone statistics (Day, Week, Month, Quarter, Year, All).
 - VPN page: the **statistics** are now one continuous bar per WireGuard connection instead of a table. A range switch (day, week, month, year) sets how far it reaches. Blue is when the connection stood, light grey when it was on but not dialled in, striped when it was switched off. Hovering a bar names the state there and, for a connection, its start, end and duration. Whether a connection was switched on is noted from now on; the sessions are kept for a year.
 - Internet page: the **Line quality** card is a table with line rate (and the possible rate), noise margin and attenuation in columns for download and upload, nothing is cut off any more. The noise margin has a dot (good from 10 dB, fine from 6 dB), the profile is a chip, and FEC and CRC errors are two tiles with a short explanation.
 - Telephony page: the buttons under a call are equally wide in a grid, "Call again" is tinted as the main action, "Block" has a red outline, and "Add to phone book" and "Block" lose their dots.

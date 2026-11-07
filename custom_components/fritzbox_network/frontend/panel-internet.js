@@ -280,14 +280,14 @@ function volumeCard(ctx) {
       <div class="meter" role="img" aria-label="↓ ${escapeHtml(formatBytes(m.down, language))} · ↑ ${escapeHtml(formatBytes(m.up, language))}"><i class="d" style="width:${total ? ((m.down / total) * 100).toFixed(1) : 0}%"></i><i class="u" style="width:${total ? ((m.up / total) * 100).toFixed(1) : 0}%"></i></div>
       <div class="legend2"><span><i></i>↓ ${escapeHtml(formatBytes(m.down, language))}</span><span><i class="upl"></i>↑ ${escapeHtml(formatBytes(m.up, language))}</span></div></div>`;
   };
-  const days = range === 30 ? 30 : 14;
+  const days = range === 365 ? 365 : range === 30 ? 30 : 14;
   const names = new Map((clients ?? []).map((c) => [c.mac, c]));
   const rows = Object.entries(trafficByDevice(traffic, range))
     .map(([mac, [down, up]]) => ({ mac, down, up, total: down + up, client: names.get(mac) }))
     .sort((a, b) => b.total - a.total);
   const top = rows[0]?.total || 1;
-  const buttons = [1, 7, 30]
-    .map((n) => `<button data-trange="${n}" aria-pressed="${n === range}">${escapeHtml(t.trafficRanges[n])}</button>`)
+  const buttons = [1, 7, 30, 365]
+    .map((n) => `<button data-trange="${n}" aria-pressed="${n === range}">${escapeHtml(t.trafficSwitch[n])}</button>`)
     .join("");
   const list = rows
     .slice(0, TOP_DEVICES)
