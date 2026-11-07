@@ -23,6 +23,7 @@ from homeassistant.util import dt as dt_util
 import requests
 import voluptuous as vol
 
+from . import migration
 from .capture import (
     DEFAULT_BYTES,
     DEFAULT_SECONDS,
@@ -68,6 +69,7 @@ HIDE_COMMAND = f"{DOMAIN}/devices/hide"
 UNHIDE_COMMAND = f"{DOMAIN}/devices/unhide"
 RECONNECT_COMMAND = f"{DOMAIN}/internet/reconnect"
 REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
+MIGRATE_SCAN_COMMAND = f"{DOMAIN}/migrate/scan"
 VPN_SWITCH_COMMAND = f"{DOMAIN}/vpn/switch"
 DEVICE_ACTION_COMMAND = f"{DOMAIN}/device/action"
 PORTS_COMMAND = f"{DOMAIN}/ports/list"
@@ -1037,6 +1039,20 @@ async def ws_device_action(
 
 
 @websocket_api.websocket_command(
+    {vol.Required("type"): MIGRATE_SCAN_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@callback
+def ws_migrate_scan(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """What taking over the entities of the core integration would do. Reads, changes nothing."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    connection.send_result(msg["id"], migration.scan(hass, found[0]))
+
+
+@websocket_api.websocket_command(
     {vol.Required("type"): REBOOT_COMMAND, vol.Required("entry_id"): str}
 )
 @websocket_api.require_admin
@@ -1423,6 +1439,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_vpn_switch)
     websocket_api.async_register_command(hass, ws_device_action)
     websocket_api.async_register_command(hass, ws_reboot)
+    websocket_api.async_register_command(hass, ws_migrate_scan)
     websocket_api.async_register_command(hass, ws_latency)
     websocket_api.async_register_command(hass, ws_latency_switch)
     websocket_api.async_register_command(hass, ws_device_log)
