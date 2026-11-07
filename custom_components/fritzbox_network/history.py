@@ -222,13 +222,16 @@ class DeviceHistory:
                 del entry["days"][old]
             self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
 
-    def traffic_all(self) -> dict[str, dict[str, list[int]]]:
-        """The bytes of every device per day: {mac: {date: [received, sent]}}."""
-        return {
-            mac: dict(entry.get("days", {}))
-            for mac, entry in self._traffic.items()
-            if entry.get("days")
-        }
+    def traffic_all(self, days: int | None = None) -> dict[str, dict[str, list[int]]]:
+        """The bytes of every device per day: {mac: {date: [received, sent]}}; days: only the last ones."""
+        result: dict[str, dict[str, list[int]]] = {}
+        for mac, entry in self._traffic.items():
+            kept = entry.get("days") or {}
+            if days is not None:
+                kept = {day: kept[day] for day in sorted(kept)[-days:]}
+            if kept:
+                result[mac] = dict(kept)
+        return result
 
     def traffic(self, mac: str) -> dict[str, list[int]]:
         """The bytes a device moved per day: {date: [received, sent]}."""

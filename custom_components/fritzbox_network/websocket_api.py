@@ -39,6 +39,7 @@ from .capture import (
 )
 from .connection_check import box_port, run_checks
 from .const import (
+    TRAFFIC_SUMMARY_DAYS,
     CONF_FILTER_DEVICES,
     CONF_FILTER_MODE,
     CONF_HIDDEN_MACS,
@@ -94,6 +95,7 @@ ADDRESS_POOL_COMMAND = f"{DOMAIN}/address/pool"
 HISTORY_COMMAND = f"{DOMAIN}/history/summary"
 HISTORY_DEVICE_COMMAND = f"{DOMAIN}/history/device"
 VPN_HISTORY_COMMAND = f"{DOMAIN}/vpn/history"
+HISTORY_TRAFFIC_COMMAND = f"{DOMAIN}/history/traffic"
 LATENCY_COMMAND = f"{DOMAIN}/diagnose/latency"
 LATENCY_SWITCH_COMMAND = f"{DOMAIN}/diagnose/latency/switch"
 LOG_COMMAND = f"{DOMAIN}/diagnose/log"
@@ -904,7 +906,7 @@ def ws_history_summary(
         msg["id"],
         {
             "devices": history.summary(time.time()) if history else {},
-            "traffic": history.traffic_all() if history else {},
+            "traffic": history.traffic_all(TRAFFIC_SUMMARY_DAYS) if history else {},
         },
     )
 
@@ -930,6 +932,20 @@ def ws_history_device(
         if history
         else {"day": [], "week": [], "traffic": {}},
     )
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): HISTORY_TRAFFIC_COMMAND, vol.Required("entry_id"): str}
+)
+@callback
+def ws_history_traffic(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The traffic of every device per day for the whole year, read when the year is asked for."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    history = found[1].history
+    connection.send_result(msg["id"], {"traffic": history.traffic_all() if history else {}})
 
 
 @websocket_api.websocket_command(
@@ -1661,6 +1677,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_history_summary)
     websocket_api.async_register_command(hass, ws_history_device)
     websocket_api.async_register_command(hass, ws_vpn_history)
+    websocket_api.async_register_command(hass, ws_history_traffic)
     websocket_api.async_register_command(hass, ws_reconnect)
     websocket_api.async_register_command(hass, ws_vpn_switch)
     websocket_api.async_register_command(hass, ws_device_action)

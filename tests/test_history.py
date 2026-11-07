@@ -120,6 +120,8 @@ def test_the_traffic_of_all_devices_is_served_per_mac():
     history.record_traffic("2026-11-01", MAC, 150, 20)
     history.record_traffic("2026-11-01", "aa:bb:cc:dd:ee:02", 5, 5)
     assert history.traffic_all() == {MAC: {"2026-11-01": [50, 10]}}
+    history.record_traffic("2026-11-02", MAC, 200, 30)
+    assert history.traffic_all(1) == {MAC: {"2026-11-02": [50, 10]}}
 
 
 def test_an_address_that_changes_closes_the_one_before():

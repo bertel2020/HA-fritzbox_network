@@ -6,6 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Die Geräteliste kommt wieder mit 35 Tagen Verkehr; das Jahr wird erst gelesen, wenn du unter Datenmenge **Jahr** wählst (neuer Befehl `history/traffic`).
 - Panel: leichter und einheitlicher. Die Sitzungen für den VPN-Verlauf werden nicht mehr mit jedem Update geschickt, sondern beim Öffnen der VPN-Seite gelesen (neuer Befehl `vpn/history`). Alle Kennzahlen-Kacheln haben denselben Stil (gleiche Breite, gleicher Abstand, Beschriftung über dem Wert). Hinweise an Verläufen bleiben beim Neuzeichnen der Seite offen, Verläufe behalten ihre ausgelesenen Daten, und auf Touch-Bildschirmen sind kleine Knöpfe 44 px hoch.
 - Routenseite: Die Zähler sind Kacheln wie auf den anderen Seiten (Beschriftung über der Zahl, grünes Häkchen, wenn kein Gateway offline ist). Jede Route nennt zuerst das Zielnetz und dann den Weg („über Gateway“) mit einem Punkt, ob das Gateway erreichbar ist; die Metrik erscheint nur, wenn sie nicht 0 ist. Der Zustands-Chip entfällt (der Schalter sagt es), und Löschen ist ein Papierkorb-Symbol. Die Zähler der VPN-Seite sind Kacheln im selben Stil.
 - Die Zeitraum-Umschalter heißen überall gleich: **Tag, Woche, Monat, Jahr**. Geräteseite (Tag und Woche, mehr wird nicht aufgezeichnet), Datenmenge auf der Internetseite (jetzt auch Jahr; der Tagesverkehr bleibt ein Jahr statt 35 Tage erhalten) und die Telefonstatistik (Tag, Woche, Monat, Quartal, Jahr, Alles).

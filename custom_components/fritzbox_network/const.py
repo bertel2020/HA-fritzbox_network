@@ -71,6 +71,8 @@ HISTORY_COARSE_SECONDS = 3600
 HISTORY_DAYS = 7
 # the data volume per day is kept for this many days
 TRAFFIC_DAYS = 366
+# the days of traffic the list of devices comes with; the year is read on request
+TRAFFIC_SUMMARY_DAYS = 35
 HISTORY_SAVE_DELAY = 300
 # sessions kept per WireGuard connection
 VPN_SESSIONS_KEPT = 500

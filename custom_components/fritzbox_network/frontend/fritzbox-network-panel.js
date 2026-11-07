@@ -549,6 +549,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._state.history = summary.devices;
       this._state.traffic = summary.traffic ?? {};
       this._historyAt = Date.now();
+      if (this._state.trafficRange === 365) this._loadTrafficYear();
       this._update();
     } catch {
       // without a history the table shows no sparklines; the next poll tries again
@@ -556,6 +557,20 @@ class FritzboxNetworkPanel extends HTMLElement {
     } finally {
       this._historyBusy = false;
     }
+  }
+
+  /** The traffic of the whole year, read only while the year is shown: the list of devices comes with 35 days. */
+  async _loadTrafficYear() {
+    if (this._trafficYearBusy) return;
+    this._trafficYearBusy = true;
+    try {
+      this._state.trafficYear = (await this._ws("history/traffic")).traffic ?? {};
+    } catch {
+      this._state.trafficYear ??= null;
+    } finally {
+      this._trafficYearBusy = false;
+    }
+    this._update();
   }
 
   async _loadCleanup() {
@@ -1295,7 +1310,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         now: Date.now(),
         canWrite: Boolean(this._state.data?.can_write),
         ports: this._state.ports,
-        traffic: this._state.traffic,
+        traffic: this._state.trafficRange === 365 ? (this._state.trafficYear ?? this._state.traffic) : this._state.traffic,
         trafficRange: this._state.trafficRange,
         portsFilter: this._state.portsFilter,
         clients: this._state.data?.clients ?? [],
@@ -2043,6 +2058,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       return;
     } else if (ds.trange) {
       state.trafficRange = Number(ds.trange);
+      if (state.trafficRange === 365) this._loadTrafficYear();
       this._update();
       this.shadowRoot.querySelector(`[data-trange="${ds.trange}"]`)?.focus();
       return;
