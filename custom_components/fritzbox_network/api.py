@@ -503,6 +503,11 @@ class FritzNetworkClient:
             except (FritzActionError, FritzServiceError, FritzAuthorizationError, KeyError):
                 return {}
 
+    def install_firmware(self) -> None:
+        """Start the installation of the firmware the box offers; the box restarts by itself."""
+        with self._lock:
+            self._connection.call_action("UserInterface1", "X_AVM-DE_DoUpdate")
+
     def get_vpn(self) -> dict[str, Any] | None:
         """The WireGuard connections as the VPN page of the web interface lists them.
 

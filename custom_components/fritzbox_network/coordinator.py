@@ -964,6 +964,10 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         if self.data is not None:
             self.async_set_updated_data(replace(self.data, routes=routes))
 
+    async def async_install_firmware(self) -> None:
+        """Let the box install the firmware it offers; the polls fail while it restarts."""
+        await self.hass.async_add_executor_job(self.client.install_firmware)
+
     async def async_reboot(self) -> None:
         """Restart the box; the polls fail for a few minutes and the backoff takes care of it."""
         await self.hass.async_add_executor_job(self.client.reboot)

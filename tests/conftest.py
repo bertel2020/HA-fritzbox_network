@@ -250,6 +250,11 @@ class FakeClient:
         if self.fail_actions:
             raise FritzActionError("refused")
 
+    def install_firmware(self) -> None:
+        self.calls.append(("install_firmware",))
+        if self.fail_actions:
+            raise FritzActionError("refused")
+
     def reboot(self) -> None:
         self.calls.append(("reboot",))
         if self.fail_actions:

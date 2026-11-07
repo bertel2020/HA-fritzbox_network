@@ -547,6 +547,36 @@ async def test_without_a_newer_firmware_the_update_is_off(hass, fake_client, ent
     assert state.attributes["latest_version"] == state.attributes["installed_version"]
 
 
+async def test_the_firmware_is_installed_by_the_box_when_the_user_may_change_settings(
+    hass, fake_client, entry
+):
+    fake_client.firmware = {"NewUpgradeAvailable": True, "NewX_AVM-DE_Version": "8.30"}
+    await _setup(hass, entry)
+    state = hass.states.get("update.fritz_network_firmware")
+    assert state.attributes["supported_features"] & 1  # INSTALL
+
+    await hass.services.async_call(
+        "update", "install", {"entity_id": "update.fritz_network_firmware"}, blocking=True
+    )
+    assert ("install_firmware",) in fake_client.calls
+
+    fake_client.fail_actions = True
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(
+            "update", "install", {"entity_id": "update.fritz_network_firmware"}, blocking=True
+        )
+
+
+async def test_without_the_right_to_change_settings_the_firmware_cannot_be_installed(
+    hass, fake_client, entry
+):
+    fake_client.writable = False
+    fake_client.firmware = {"NewUpgradeAvailable": True, "NewX_AVM-DE_Version": "8.30"}
+    await _setup(hass, entry)
+    state = hass.states.get("update.fritz_network_firmware")
+    assert not state.attributes["supported_features"] & 1
+
+
 async def test_a_box_that_does_not_answer_about_firmware_has_no_update_entity(
     hass, fake_client, entry
 ):

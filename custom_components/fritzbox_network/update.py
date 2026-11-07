@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
-from homeassistant.components.update import UpdateEntity
+from typing import Any
+
+from fritzconnection.core.exceptions import FritzConnectionException
+from homeassistant.components.update import UpdateEntity, UpdateEntityFeature
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -36,7 +40,7 @@ async def async_setup_entry(
 
 
 class FritzNetworkFirmware(CoordinatorEntity[FritzNetworkCoordinator], UpdateEntity):
-    """Shows a new firmware; the box installs it itself, so there is nothing to install here."""
+    """Shows a new firmware and, with the right to change settings, lets the box install it."""
 
     _attr_has_entity_name = True
     _attr_translation_key = KEY_FIRMWARE
@@ -46,6 +50,8 @@ class FritzNetworkFirmware(CoordinatorEntity[FritzNetworkCoordinator], UpdateEnt
         self._attr_unique_id = f"{coordinator.serial}_{KEY_FIRMWARE}"
         self.entity_id = f"update.fritz_network_{KEY_FIRMWARE}"
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+        if coordinator.can_write:
+            self._attr_supported_features = UpdateEntityFeature.INSTALL
 
     @property
     def installed_version(self) -> str | None:
@@ -62,3 +68,14 @@ class FritzNetworkFirmware(CoordinatorEntity[FritzNetworkCoordinator], UpdateEnt
     def release_url(self) -> str | None:
         firmware = self.coordinator.data.firmware
         return firmware.info_url if firmware and firmware.update_available else None
+
+    async def async_install(self, version: str | None, backup: bool, **kwargs: Any) -> None:
+        """Start the installation; the box restarts, so the next polls fail for a few minutes."""
+        try:
+            await self.coordinator.async_install_firmware()
+        except FritzConnectionException as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
