@@ -52,6 +52,8 @@ class RepeaterData:
     wifi: dict[str, WifiNetwork] = field(default_factory=dict)
     firmware: FirmwareInfo | None = None
     cpu_temperature: int | None = None
+    # the guest network of the repeater: None where it has none
+    guest: bool | None = None
 
 
 class RepeaterCoordinator(DataUpdateCoordinator[RepeaterData]):
@@ -133,6 +135,7 @@ class RepeaterCoordinator(DataUpdateCoordinator[RepeaterData]):
         self._note_uptime(client.read_uptime())
         wifi = client.get_wifi_networks()
         firmware = parse_firmware(client.get_firmware())
+        guest = client.get_guest_wifi_info()
         cpu = self.data.cpu_temperature if self.data else None
         if self.cpu_supported is None or (self.cpu_supported and self._cpu_demand):
             try:
@@ -145,7 +148,13 @@ class RepeaterCoordinator(DataUpdateCoordinator[RepeaterData]):
                 else:
                     self.cpu_supported = True
                     cpu = value
-        return RepeaterData(boot=self._boot, wifi=wifi, firmware=firmware, cpu_temperature=cpu)
+        return RepeaterData(
+            boot=self._boot,
+            wifi=wifi,
+            firmware=firmware,
+            cpu_temperature=cpu,
+            guest=guest["enabled"] if guest else None,
+        )
 
     def _note_uptime(self, seconds: int | None) -> None:
         if seconds is None:
@@ -192,6 +201,15 @@ class RepeaterCoordinator(DataUpdateCoordinator[RepeaterData]):
 
     async def async_install_firmware(self) -> None:
         await self.hass.async_add_executor_job(self._require_client().install_firmware)
+
+    async def async_set_guest_wifi(self, enabled: bool) -> None:
+        """Switch the guest network of the repeater and read it again."""
+        await self.hass.async_add_executor_job(self._require_client().set_guest_wifi, enabled)
+        await self.async_request_refresh()
+
+    async def async_guest_qr(self) -> bytes | None:
+        """The QR code of the guest network of the repeater."""
+        return await self.hass.async_add_executor_job(self._require_client().get_guest_wifi_qr)
 
     async def async_set_wifi(self, key: str, enabled: bool) -> None:
         """Switch a band, show it at once and read the repeater again soon."""

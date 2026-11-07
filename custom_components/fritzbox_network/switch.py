@@ -17,6 +17,10 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, UpdateFailed
 
 from .const import (
+    AREA_CLIENTS,
+    AREA_PORTS,
+    AREA_ROUTES,
+    AREA_VPN,
     DOMAIN,
     KEY_AUTO_WOL,
     KEY_GUEST_WIFI,
@@ -31,9 +35,11 @@ from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import (
     FritzNetworkClientEntity,
     FritzNetworkRepeaterEntity,
+    async_remove_entities,
     async_remove_node_client_entities,
     async_setup_client_entities,
     is_mesh_node,
+    switch_areas,
     vpn_device_info,
 )
 from .models import Host, PortRule, VpnConnection, WifiNetwork
@@ -54,6 +60,20 @@ async def async_setup_entry(
 ) -> None:
     if not entry.runtime_data.can_write:
         return
+    areas = switch_areas(entry)
+    serial = entry.runtime_data.serial
+    for area, prefix in (
+        (AREA_PORTS, f"{serial}_{KEY_PORT_PREFIX}"),
+        (AREA_VPN, f"{serial}_{KEY_VPN_SWITCH}_"),
+        (AREA_ROUTES, f"{serial}_{KEY_ROUTE_SWITCH}_"),
+    ):
+        if area not in areas:
+            async_remove_entities(hass, entry, "switch", lambda uid, p=prefix: uid.startswith(p))
+    if AREA_CLIENTS not in areas:
+        client_keys = (KEY_INTERNET_ACCESS, KEY_PRIORITY, KEY_AUTO_WOL)
+        async_remove_entities(
+            hass, entry, "switch", lambda uid: uid.endswith(tuple(f"_{k}" for k in client_keys))
+        )
     async_remove_node_client_entities(
         hass, entry, "switch", (KEY_INTERNET_ACCESS, KEY_PRIORITY, KEY_AUTO_WOL)
     )
@@ -63,7 +83,7 @@ async def async_setup_entry(
         lambda coordinator, host: (
             # the box and the repeaters are no clients: blocking one would cut off what hangs on it
             []
-            if is_mesh_node(coordinator, host)
+            if is_mesh_node(coordinator, host) or AREA_CLIENTS not in areas
             else [
                 FritzNetworkInternetAccess(coordinator, host),
                 FritzNetworkPriority(coordinator, host),
@@ -78,11 +98,14 @@ async def async_setup_entry(
     )
     _async_setup_guest_wifi(entry, async_add_entities)
     _async_setup_wifi(entry, async_add_entities)
-    _async_setup_ports(entry, async_add_entities)
+    if AREA_PORTS in areas:
+        _async_setup_ports(entry, async_add_entities)
     for repeater in entry.runtime_data.repeaters.values():
         _async_setup_repeater_wifi(repeater, entry, async_add_entities)
-    _async_setup_vpn(entry, async_add_entities)
-    _async_setup_routes(hass, entry, async_add_entities)
+    if AREA_VPN in areas:
+        _async_setup_vpn(entry, async_add_entities)
+    if AREA_ROUTES in areas:
+        _async_setup_routes(hass, entry, async_add_entities)
 
 
 @callback
@@ -117,10 +140,13 @@ def _async_setup_repeater_wifi(
     @callback
     def _add() -> None:
         new = [key for key in (repeater.data.wifi if repeater.data else {}) if key not in known]
-        if not new:
-            return
+        entities: list[SwitchEntity] = [FritzNetworkRepeaterWifi(repeater, key) for key in new]
         known.update(new)
-        async_add_entities([FritzNetworkRepeaterWifi(repeater, key) for key in new])
+        if "guest" not in known and repeater.data and repeater.data.guest is not None:
+            known.add("guest")
+            entities.append(FritzNetworkRepeaterGuestWifi(repeater))
+        if entities:
+            async_add_entities(entities)
 
     _add()
     entry.async_on_unload(repeater.async_add_listener(_add))
@@ -487,6 +513,40 @@ class FritzNetworkPort(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity)
         try:
             await self.coordinator.async_set_port_rule(self._key, value)
         except FritzConnectionException as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self._set(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._set(False)
+
+
+class FritzNetworkRepeaterGuestWifi(FritzNetworkRepeaterEntity, SwitchEntity):
+    """The guest Wi-Fi of a repeater that has one, on or off."""
+
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_translation_key = KEY_GUEST_WIFI
+
+    def __init__(self, coordinator: RepeaterCoordinator) -> None:
+        super().__init__(coordinator, "switch", KEY_GUEST_WIFI)
+
+    @property
+    def available(self) -> bool:
+        return super().available and self.coordinator.data.guest is not None
+
+    @property
+    def is_on(self) -> bool | None:
+        return self.coordinator.data.guest if self.coordinator.data else None
+
+    async def _set(self, value: bool) -> None:
+        try:
+            await self.coordinator.async_set_guest_wifi(value)
+        except (FritzConnectionException, UpdateFailed) as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN,
                 translation_key="action_failed",

@@ -32,6 +32,7 @@ class FakeRepeater:
             "5ghz": WifiNetwork(True, "Home", "02:ab", "ax"),
         }
         self.firmware = {"NewUpgradeAvailable": False}
+        self.guest = None
         FakeRepeater.instances.append(self)
 
     def connect(self):
@@ -47,6 +48,16 @@ class FakeRepeater:
 
     def get_firmware(self):
         return dict(self.firmware)
+
+    def get_guest_wifi_info(self):
+        return None if self.guest is None else {"enabled": self.guest, "ssid": "Gast"}
+
+    def set_guest_wifi(self, enabled):
+        self.calls.append(("guest", enabled))
+        self.guest = enabled
+
+    def get_guest_wifi_qr(self):
+        return b"\x89PNG-repeater"
 
     def get_cpu_temperature(self):
         self.calls.append(("cpu",))
@@ -64,6 +75,14 @@ class FakeRepeater:
 
     def install_firmware(self):
         self.calls.append(("install",))
+
+
+_plain_init = FakeRepeater.__init__
+
+
+def _guest_init(self, *args, **kwargs):
+    _plain_init(self, *args, **kwargs)
+    self.guest = True
 
 
 @pytest.fixture(autouse=True)
@@ -250,3 +269,24 @@ async def test_the_options_offer_the_repeaters_of_the_mesh(hass, fake_client, en
     field = result["data_schema"].schema[schema["repeaters"]]
     values = [o["value"] for o in field.config["options"]]
     assert REPEATER in values
+
+
+async def test_a_repeater_with_a_guest_network_gets_its_switch_and_qr_code(hass, fake_client, entry):
+    _with_repeater(fake_client)
+    with patch.object(FakeRepeater, "__init__", _guest_init):
+        await _setup(hass, entry)
+    (client,) = FakeRepeater.instances
+    switch_id = f"switch.fritz_{ID}_guest_wifi"
+    assert hass.states.get(switch_id).state == "on"
+    assert hass.states.get(f"image.fritz_{ID}_guest_wifi_qr") is None  # off by default
+
+    await hass.services.async_call("switch", "turn_off", {"entity_id": switch_id}, blocking=True)
+    await hass.async_block_till_done()
+    assert ("guest", False) in client.calls
+    assert hass.states.get(switch_id).state == "off"
+
+
+async def test_a_repeater_without_a_guest_network_gets_neither(hass, fake_client, entry):
+    _with_repeater(fake_client)
+    await _setup(hass, entry)
+    assert hass.states.get(f"switch.fritz_{ID}_guest_wifi") is None

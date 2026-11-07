@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .const import (
+    AREA_CLIENTS,
     DOMAIN,
     KEY_REBOOT,
     KEY_RECONNECT,
@@ -23,9 +24,11 @@ from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import (
     FritzNetworkClientEntity,
     FritzNetworkRepeaterEntity,
+    async_remove_entities,
     async_remove_node_client_entities,
     async_setup_client_entities,
     is_mesh_node,
+    switch_areas,
 )
 from .models import Host
 
@@ -52,6 +55,11 @@ async def async_setup_entry(
     # Offline hosts have no interface type, and they are the ones to wake up:
     # only devices known to sit on WLAN are left out.
     async_remove_node_client_entities(hass, entry, "button", (KEY_WAKE_ON_LAN,))
+    if AREA_CLIENTS not in switch_areas(entry):
+        async_remove_entities(
+            hass, entry, "button", lambda uid: uid.endswith(f"_{KEY_WAKE_ON_LAN}")
+        )
+        return
     async_setup_client_entities(
         entry,
         async_add_entities,

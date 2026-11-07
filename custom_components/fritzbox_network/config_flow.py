@@ -41,6 +41,7 @@ from .const import (
     CONF_SKIP_OFFLINE,
     CONF_STALE_DAYS,
     CONF_STALE_REPAIR,
+    CONF_SWITCH_AREAS,
     CONF_USE_TLS,
     CONF_WAKE_ON_LAN_WIFI,
     DEFAULT_ADOPT_NAMES,
@@ -57,6 +58,7 @@ from .const import (
     FILTER_ALL,
     FILTER_EXCLUDE,
     FILTER_INCLUDE,
+    SWITCH_AREAS,
 )
 from .coordinator import FritzNetworkConfigEntry
 
@@ -400,6 +402,16 @@ class FritzNetworkOptionsFlow(OptionsFlow):
                 vol.Optional(CONF_FILTER_DEVICES, default=selected): selector.SelectSelector(multi),
                 vol.Optional(CONF_HIDDEN_MACS, default=hidden): selector.SelectSelector(
                     hidden_multi
+                ),
+                vol.Optional(
+                    CONF_SWITCH_AREAS, default=options.get(CONF_SWITCH_AREAS, SWITCH_AREAS)
+                ): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=SWITCH_AREAS,
+                        multiple=True,
+                        translation_key=CONF_SWITCH_AREAS,
+                        mode=selector.SelectSelectorMode.LIST,
+                    )
                 ),
                 vol.Optional(CONF_REPEATERS, default=repeaters): selector.SelectSelector(
                     selector.SelectSelectorConfig(

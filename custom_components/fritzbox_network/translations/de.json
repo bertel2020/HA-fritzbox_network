@@ -75,7 +75,8 @@
           "skip_offline": "Für Offline-Geräte keine Geräte anlegen",
           "stale_repair": "Auf lange offline Geräte hinweisen",
           "stale_days": "Tage offline, bis ein Gerät als weg gilt",
-          "repeaters": "Repeater steuern"
+          "repeaters": "Repeater steuern",
+          "switch_areas": "Schalter anlegen für"
         },
         "data_description": {
           "consider_home": "Wie lange ein Gerät nach dem Offline-Gehen noch als anwesend gilt.",
@@ -85,7 +86,8 @@
           "hidden_macs": "Von Hand entfernte Geräte stehen hier. Abwählen blendet ein Gerät wieder ein.",
           "skip_offline": "Die Box merkt sich jedes Gerät, das sie je gesehen hat. Ein Gerät, das offline ist und noch kein Gerät in Home Assistant hat, wird angelegt, sobald es online kommt. Vorhandene Geräte bleiben.",
           "stale_repair": "Ist das an, listet eine Reparatur die Geräte auf, die länger als die Tage unten offline sind, und bietet an, sie auszublenden. Ohne deine Auswahl wird nichts ausgeblendet. Geräte ohne Zeitangabe bleiben außen vor.",
-          "repeaters": "Die gewählten Repeater bekommen an ihrem Gerät einen Neustart-Button, den letzten Neustart, die CPU-Temperatur, WLAN-Schalter und das Firmware-Update. Sie werden alle 5 Minuten mit der Anmeldung dieser Box abgefragt; der Repeater muss sie annehmen. Braucht das Recht, Einstellungen zu ändern."
+          "repeaters": "Die gewählten Repeater bekommen an ihrem Gerät einen Neustart-Button, den letzten Neustart, die CPU-Temperatur, WLAN-Schalter und das Firmware-Update. Sie werden alle 5 Minuten mit der Anmeldung dieser Box abgefragt; der Repeater muss sie annehmen. Braucht das Recht, Einstellungen zu ändern.",
+          "switch_areas": "Je Bereich, ob Entitäten angelegt werden, die etwas ändern. Ein ausgeschalteter Bereich entfernt seine Schalter. Geräte: Internetzugang, Priorität und Wake on LAN je Gerät. Ports: Portfreigaben. VPN: WireGuard-Verbindungen. Routen: statische Routen."
         }
       }
     }
@@ -96,6 +98,14 @@
         "all": "Alle Geräte",
         "include": "Nur die ausgewählten Geräte",
         "exclude": "Alle außer den ausgewählten Geräten"
+      }
+    },
+    "switch_areas": {
+      "options": {
+        "clients": "Geräte (Internetzugang, Priorität, Wake on LAN)",
+        "ports": "Portfreigaben",
+        "vpn": "WireGuard-Verbindungen",
+        "routes": "Statische Routen"
       }
     }
   },

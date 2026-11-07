@@ -12,10 +12,13 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.util import dt as dt_util
+from homeassistant.helpers.update_coordinator import UpdateFailed
 import requests
 
 from .const import DOMAIN, KEY_GUEST_WIFI_QR
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
+from .entity import FritzNetworkRepeaterEntity
+from .repeater import RepeaterCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -34,6 +37,8 @@ async def async_setup_entry(
     coordinator = entry.runtime_data
     if not coordinator.can_write:
         return
+    for repeater in coordinator.repeaters.values():
+        _async_setup_repeater(hass, repeater, entry, async_add_entities)
     added = False
 
     @callback
@@ -46,6 +51,75 @@ async def async_setup_entry(
 
     _add()
     entry.async_on_unload(coordinator.async_add_listener(_add))
+
+
+@callback
+def _async_setup_repeater(
+    hass: HomeAssistant,
+    repeater: RepeaterCoordinator,
+    entry: FritzNetworkConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    """The image of a repeater that has a guest network, once it has told so."""
+    added = False
+
+    @callback
+    def _add() -> None:
+        nonlocal added
+        if added or repeater.data is None or repeater.data.guest is None:
+            return
+        added = True
+        async_add_entities([FritzNetworkRepeaterGuestQr(hass, repeater)])
+
+    _add()
+    entry.async_on_unload(repeater.async_add_listener(_add))
+
+
+class FritzNetworkRepeaterGuestQr(FritzNetworkRepeaterEntity, ImageEntity):
+    """The QR code of the guest Wi-Fi of a repeater; off by default, like the one of the box."""
+
+    _attr_translation_key = KEY_GUEST_WIFI_QR
+    _attr_content_type = "image/png"
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, hass: HomeAssistant, coordinator: RepeaterCoordinator) -> None:
+        FritzNetworkRepeaterEntity.__init__(self, coordinator, "image", KEY_GUEST_WIFI_QR)
+        ImageEntity.__init__(self, hass)
+        self._image: bytes | None = None
+        self._refreshed = 0.0
+        self._busy = False
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        await self._async_refresh()
+
+    @callback
+    def _handle_coordinator_update(self) -> None:
+        if time.monotonic() - self._refreshed >= QR_REFRESH_SECONDS:
+            self.hass.async_create_task(self._async_refresh())
+        super()._handle_coordinator_update()
+
+    async def _async_refresh(self) -> None:
+        if self._busy:
+            return
+        self._busy = True
+        try:
+            image = await self.coordinator.async_guest_qr()
+        except (FritzConnectionException, requests.RequestException, OSError, UpdateFailed) as err:
+            # the text of the error holds no password
+            _LOGGER.debug("The QR code of a repeater is unavailable: %s", type(err).__name__)
+            image = None
+        finally:
+            self._busy = False
+        self._refreshed = time.monotonic()
+        if image != self._image:
+            self._image = image
+            self._attr_image_last_updated = dt_util.utcnow() if image else None
+            self.async_write_ha_state()
+
+    async def async_image(self) -> bytes | None:
+        return self._image
 
 
 class FritzNetworkGuestWifiQr(ImageEntity):

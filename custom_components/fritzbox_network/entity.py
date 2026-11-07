@@ -11,7 +11,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
-from .const import DOMAIN, KEY_TRACKER, vpn_identifier
+from .const import CONF_SWITCH_AREAS, DOMAIN, KEY_TRACKER, SWITCH_AREAS, vpn_identifier
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .models import Host, MeshNode, mac_id
 from .repeater import RepeaterCoordinator
@@ -130,6 +130,25 @@ def async_remove_node_client_entities(
     for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
         if entity.domain == domain and entity.unique_id in wanted:
             registry.async_remove(entity.entity_id)
+
+
+@callback
+def async_remove_entities(
+    hass: HomeAssistant,
+    entry: FritzNetworkConfigEntry,
+    domain: str,
+    match: Callable[[str], bool],
+) -> None:
+    """Remove the entities of a domain whose unique id matches: an area the user turned off."""
+    registry = er.async_get(hass)
+    for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if entity.domain == domain and match(entity.unique_id):
+            registry.async_remove(entity.entity_id)
+
+
+def switch_areas(entry: FritzNetworkConfigEntry) -> set[str]:
+    """The areas that get switches: all, unless the options say otherwise."""
+    return set(entry.options.get(CONF_SWITCH_AREAS, SWITCH_AREAS))
 
 
 class FritzNetworkNodeEntity(CoordinatorEntity[FritzNetworkCoordinator]):

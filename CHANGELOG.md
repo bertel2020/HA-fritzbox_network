@@ -2,6 +2,13 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
+## Unveröffentlicht
+
+### Neu
+
+- Repeater, die du zum Steuern gewählt hast, haben jetzt auch einen Schalter **Gast-WLAN** und das Bild **Gast-WLAN-QR-Code** (standardmäßig aus), sofern der Repeater ein Gastnetz meldet.
+- Optionen: Unter **Schalter anlegen für** wählst du die Bereiche, die Schalter bekommen: Geräte (Internetzugang, Priorität, Wake on LAN), Portfreigaben, WireGuard-Verbindungen, statische Routen. Standard sind alle. Ein ausgeschalteter Bereich entfernt seine Schalter.
+
 ## 1.4.0 – 2026-11-06
 
 ### Neu

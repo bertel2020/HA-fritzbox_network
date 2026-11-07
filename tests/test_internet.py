@@ -1147,3 +1147,17 @@ async def test_there_is_no_dhcp_load_where_the_server_is_off(hass, fake_client, 
     await _setup(hass, entry)
 
     assert hass.states.get("sensor.fritz_network_dhcp_pool") is None
+
+
+async def test_an_area_turned_off_in_the_options_has_no_switches_and_loses_the_old_ones(
+    hass, fake_client, entry
+):
+    await _enable_ports(hass, entry)
+    registry = er.async_get(hass)
+    assert registry.async_get("switch.fritz_network_port_udp_51820") is not None
+
+    hass.config_entries.async_update_entry(entry, options={"switch_areas": ["vpn", "routes"]})
+    await hass.async_block_till_done()
+
+    assert registry.async_get("switch.fritz_network_port_udp_51820") is None
+    assert registry.async_get("switch.fritz_network_port_tcp_5027") is None

@@ -8,6 +8,7 @@ CONF_USE_TLS = "use_tls"
 
 CONF_SCAN_INTERVAL = "scan_interval"
 CONF_REPEATERS = "repeaters"
+CONF_SWITCH_AREAS = "switch_areas"
 CONF_CONSIDER_HOME = "consider_home"
 CONF_FILTER_MODE = "filter_mode"
 CONF_FILTER_DEVICES = "filter_devices"
@@ -25,6 +26,12 @@ FILTER_ALL = "all"
 FILTER_INCLUDE = "include"
 FILTER_EXCLUDE = "exclude"
 
+# the areas that get switches (and the Wake on LAN button); an entry of an earlier version has all
+AREA_CLIENTS = "clients"
+AREA_PORTS = "ports"
+AREA_VPN = "vpn"
+AREA_ROUTES = "routes"
+SWITCH_AREAS = [AREA_CLIENTS, AREA_PORTS, AREA_VPN, AREA_ROUTES]
 DEFAULT_SCAN_INTERVAL = 30
 DEFAULT_CONSIDER_HOME = 180
 DEFAULT_IGNORE_GUESTS = False
