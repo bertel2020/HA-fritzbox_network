@@ -184,3 +184,22 @@ def test_vpn_notes_when_a_connection_is_on_and_gives_the_chart_data():
     # a poll that does not say whether it is on notes nothing about it
     history.note_vpn(NOW + 600, "bob", True, int(NOW) + 600)
     assert history.vpn_chart("bob", NOW + 700)["enabled_periods"] == []
+
+
+def test_many_vpn_sessions_are_joined_by_the_smallest_gap_not_cut_off():
+    history = _history()
+    start = NOW
+    # 700 short sessions an hour apart; one gap of a day in the middle
+    clock = start
+    for n in range(700):
+        history.note_vpn(clock, "anna", True, int(clock))
+        history.note_vpn(clock + 600, "anna", False, None)
+        clock += 86400 if n == 300 else 3600
+    sessions = history.vpn_chart("anna", clock)["sessions"]
+    assert len(sessions) == 500
+    # the whole span is still covered, from the first start to the last end
+    assert sessions[0][0] == int(start)
+    assert sessions[-1][1] == int(clock - 3600 + 600)
+    # the one long gap is the last to go: it still divides two sessions
+    gaps = [b[0] - a[1] for a, b in zip(sessions, sessions[1:])]
+    assert max(gaps) > 80000

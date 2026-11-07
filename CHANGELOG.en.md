@@ -6,6 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- VPN page: a tunnel that connects very often no longer loses its oldest history. Past 500 sessions the two with the smallest gap are joined, so the chart still reaches back a year and only the briefest breaks are drawn as connected.
 - Panel: long grey hints under the cards are folded behind a small "Note" line (short ones stay). An opened note stays open when the page is redrawn.
 - Panel: buttons have the same corner as input fields and range switches (rounded rectangle, 10 px) instead of a pill; round chips, tags and icon buttons keep their round shape.
 - Panel: every card has the same head. The label is on the left, what belongs to the whole card (range switch, status, button) on the right, and the head has the same height everywhere, so cards side by side start on one line. On the Internet and Box pages the status moved into that head and the icon, name and details follow below it.

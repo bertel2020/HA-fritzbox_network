@@ -44,6 +44,27 @@ def _aggregate(points: list[Point], ts: float) -> Point:
     ]
 
 
+def _compact_sessions(sessions: list[list[float | None]], limit: int) -> None:
+    """Keep at most ``limit`` sessions by joining the two neighbours with the smallest gap.
+
+    A tunnel that comes and goes often would otherwise lose its oldest sessions and the chart of a
+    year would end early. Joining closes the shortest gaps first, so the picture changes least: the
+    whole span stays covered, only the briefest breaks are drawn as connected.
+    """
+    while len(sessions) > limit:
+        gaps = [
+            (sessions[i + 1][0] - sessions[i][1], i)
+            for i in range(len(sessions) - 1)
+            if sessions[i][1] is not None
+        ]
+        if not gaps:
+            del sessions[:-limit]
+            return
+        _, at = min(gaps)
+        sessions[at][1] = sessions[at + 1][1]
+        del sessions[at + 1]
+
+
 class DeviceHistory:
     """A day in small steps and a week in hours, per device.
 
@@ -148,7 +169,7 @@ class DeviceHistory:
                 changed = True
             if not is_open:
                 sessions.append([start, None])
-                del sessions[:-VPN_SESSIONS_KEPT]
+                _compact_sessions(sessions, VPN_SESSIONS_KEPT)
                 changed = True
         elif is_open:
             last[1] = now
