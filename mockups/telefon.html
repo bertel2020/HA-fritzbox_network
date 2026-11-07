@@ -1,0 +1,1093 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telefon – Mockup</title>
+<style>
+  /* ---------- Tokens wie panel-styles.js (Thema „Ozean“) ---------- */
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#f4f6f9, #0f1216);
+    --surface: light-dark(#fff, #1b1f24);
+    --soft: light-dark(#f5f7f9, #22272e);
+    --line: light-dark(#e1e5ea, #2d333b);
+    --input-line: light-dark(#c3cbd5, #3a424c);
+    --text: light-dark(#1b1f24, #e6e9ed);
+    --muted: light-dark(#5b6270, #9aa4b1);
+    --accent: light-dark(#0a6aa8, #5bb2ea);
+    --accent-hover: light-dark(#07507f, #8ccaf2);
+    --accent-soft: light-dark(#eaf3fa, #16324a);
+    --on-accent: light-dark(#fff, #0b1a26);
+    --focus: #7db8e0;
+    --up: light-dark(#7a4bc2, #b79af0);
+    --ok: light-dark(#1e6b34, #7fd49a);
+    --ok-soft: light-dark(#e6f4ea, #173a24);
+    --warn: light-dark(#8a4b00, #f2c27a);
+    --warn-soft: light-dark(#fff1de, #3a2a12);
+    --bad: light-dark(#a1261b, #f2a29a);
+    --bad-soft: light-dark(#fdecea, #3d1c19);
+    --neutral-soft: light-dark(#eef1f4, #2a3038);
+    --neutral-text: light-dark(#3a414c, #c5ccd5);
+    --radius: 18px;
+    --shadow-c: light-dark(rgb(16 24 40 / 14%), rgb(0 0 0 / 40%));
+    --shadow: 0 1px 2px var(--shadow-c), 0 6px 18px -10px var(--shadow-c);
+  }
+  :root[data-mode="light"] { color-scheme: light; }
+  :root[data-mode="dark"] { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 Roboto, "Noto Sans", system-ui, sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; background: none; border: 0; padding: 0; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .muted { color: var(--muted); }
+  a, .linklike { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+  /* Mockup-Leiste */
+  .mockbar { max-width: 1200px; margin: 12px auto 0; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; border-radius: 14px; background: var(--soft); border: 1px dashed var(--line); }
+  .mockbar > span { flex: 1 1 260px; }
+  .mockbar .ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; min-width: 0; max-width: 100%; }
+  .mockbar select { max-width: 100%; min-height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 0 10px; }
+  .subtabs { margin-bottom: 4px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex-wrap: wrap; max-width: 100%; }
+  .seg button { padding: 0 12px; min-height: 34px; font-weight: 500; color: var(--muted); border-left: 1px solid var(--line); white-space: nowrap; }
+  .seg button:first-child { border-left: 0; }
+  .seg button[aria-pressed="true"], .seg button[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+  .seg button .n { font-size: 12px; opacity: .8; margin-left: 4px; font-variant-numeric: tabular-nums; }
+  .wrap { max-width: 1200px; margin: 12px auto 40px; padding: 0 12px; }
+  .frame { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--bg); box-shadow: var(--shadow); }
+
+  /* Kopf des Panels */
+  .header { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px; padding: 0 20px; }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 10px 0; min-height: 60px; min-width: 0; flex: 1 1 auto; }
+  .logo { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-hover); display: grid; place-items: center; flex: none; }
+  .brand b { display: block; font-size: 18px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+  .brand small { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 8px 0; max-width: 100%; }
+  nav button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; font-weight: 500; color: var(--muted); white-space: nowrap; border-radius: 22px; }
+  nav button:hover { color: var(--text); background: var(--neutral-soft); }
+  nav button[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
+  nav .dot { width: 7px; height: 7px; }
+  main { padding: 16px 20px 32px; display: grid; gap: 16px; min-width: 0; }
+  @media (max-width: 600px) { .header { padding: 0 12px; } main { padding: 12px 12px 24px; } }
+
+  /* Bausteine wie im Panel */
+  .phead h1 { font-size: 24px; font-weight: 500; margin: 4px 0 2px; letter-spacing: -.01em; }
+  .lead { color: var(--muted); margin: 0; max-width: 75ch; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; }
+  .sec { padding: 16px; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .chead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 10px; }
+  .chead .label { flex: 1 1 auto; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 24px; padding: 0 10px; border-radius: 12px; background: var(--neutral-soft); color: var(--neutral-text); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .chip.ok { background: var(--ok-soft); color: var(--ok); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); }
+  .chip.info { background: var(--accent-soft); color: var(--accent-hover); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--input-line); flex: none; display: inline-block; }
+  .dot.on { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); } .dot.new { background: var(--accent); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 18px; border-radius: 20px; font-weight: 500; white-space: nowrap; border: 1px solid var(--input-line); background: var(--surface); }
+  .btn:hover { background: var(--soft); }
+  a.btn { text-decoration: none; color: inherit; }
+  .btn.p { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn.dp { background: var(--bad); border-color: var(--bad); color: var(--surface); }
+  .btn.sm { min-height: 34px; padding: 0 12px; font-size: 13px; }
+  .btn.ghost { border-color: transparent; color: var(--accent); }
+  .btn.ghost:hover { background: var(--accent-soft); }
+  .btn.ghost.danger { color: var(--bad); }
+  .btn.ghost.danger:hover { background: var(--bad-soft); }
+  .btn[disabled] { opacity: .55; cursor: default; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+  .switch { position: relative; width: 52px; height: 32px; border-radius: 16px; background: #aeb6c1; flex: none; transition: background .15s; }
+  .switch::after { content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgb(0 0 0 / 30%); }
+  .switch[aria-checked="true"] { background: var(--accent); }
+  .switch[aria-checked="true"]::after { transform: translateX(20px); }
+  .switch[disabled] { opacity: .55; cursor: default; }
+  .switch.busy::after { animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .4; } }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 130px), 1fr)); gap: 8px; }
+  .tile { background: var(--soft); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+  .tile b { display: block; font-size: 20px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-variant-numeric: tabular-nums; }
+  .tile small { display: block; font-size: 12px; color: var(--muted); }
+  .tile.bad b { color: var(--bad); }
+  .hint { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+  .hintline { display: flex; align-items: flex-start; gap: 10px; margin: 4px 0; font-size: 14px; }
+  .hintline svg { margin-top: 2px; }
+  .hintline.bad { color: var(--bad); } .hintline.warn { color: var(--warn); } .hintline.info { color: var(--muted); }
+  .empty { display: grid; justify-items: center; gap: 6px; padding: 32px 16px; text-align: center; color: var(--muted); }
+  .empty b { color: var(--text); font-weight: 500; }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 16px; align-items: start; }
+  .skel { background: linear-gradient(90deg, var(--soft), var(--neutral-soft), var(--soft)); background-size: 200% 100%; animation: sk 1.4s infinite; border-radius: 8px; color: transparent !important; }
+  @keyframes sk { to { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .skel, .switch.busy::after, .live .pulse { animation: none !important; } }
+  dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 13px; }
+  dl.kv dt { color: var(--muted); } dl.kv dd { margin: 0; overflow-wrap: anywhere; }
+  .field { display: grid; gap: 4px; margin-top: 12px; }
+  .field label { font-size: 12px; color: var(--muted); }
+  .field input, .field select, .search input { width: 100%; min-height: 40px; border-radius: 10px; border: 1px solid var(--input-line); background: var(--surface); padding: 0 12px; }
+  .search { position: relative; flex: 1 1 220px; min-width: 0; }
+  .search svg { position: absolute; left: 11px; top: 11px; color: var(--muted); pointer-events: none; }
+  .search input { padding-left: 36px; }
+  .toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
+
+  /* Telefon-Seite */
+  .live { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 16px; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent-hover); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
+  .live.spam { background: var(--bad-soft); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
+  .live.talk { background: var(--ok-soft); color: var(--ok); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }
+  .live .ico { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface); }
+  .live .pulse { animation: ring 1.2s infinite; }
+  @keyframes ring { 0%, 100% { transform: rotate(0); } 20% { transform: rotate(-14deg); } 40% { transform: rotate(14deg); } 60% { transform: rotate(-8deg); } }
+  .live b { display: block; font-size: 16px; font-weight: 500; color: var(--text); }
+  .live small { display: block; color: var(--text); opacity: .8; }
+  @media (max-width: 520px) { .live { grid-template-columns: 44px minmax(0, 1fr); } .live .btn { grid-column: 1 / -1; } }
+  .day { font-size: 12px; font-weight: 500; color: var(--muted); padding: 14px 0 4px; border-bottom: 1px solid var(--line); position: sticky; top: 0; }
+  .crow { border-bottom: 1px solid var(--line); }
+  .crow:last-child { border-bottom: 0; }
+  .crow .line { display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; }
+  .cico { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; background: var(--soft); color: var(--muted); }
+  .cico.in { color: var(--ok); background: var(--ok-soft); }
+  .cico.out { color: var(--accent-hover); background: var(--accent-soft); }
+  .cico.miss { color: var(--bad); background: var(--bad-soft); }
+  .cico.spam { color: var(--bad); background: var(--bad-soft); }
+  .cico.tam { color: var(--up); background: color-mix(in srgb, var(--up) 14%, transparent); }
+  .cmain { min-width: 0; text-align: left; display: grid; gap: 1px; padding: 4px 2px; border-radius: 8px; width: 100%; }
+  .cmain:hover { background: var(--soft); }
+  .cname { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .cname > span:first-child { font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cname .chip { min-height: 20px; padding: 0 7px; font-size: 11px; }
+  .cmeta { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .crow.miss .cname > span:first-child { color: var(--bad); }
+  .masked { letter-spacing: .1em; color: var(--muted); }
+  .cact { display: flex; gap: 4px; align-items: center; }
+  .icon-btn { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--accent); }
+  .icon-btn:hover { background: var(--accent-soft); }
+  .icon-btn[disabled] { color: var(--muted); opacity: .55; cursor: default; background: none; }
+  .icon-btn.danger { color: var(--bad); }
+  .icon-btn.danger:hover { background: var(--bad-soft); }
+  .chev { transition: transform .15s; color: var(--muted); }
+  [aria-expanded="true"] .chev { transform: rotate(180deg); }
+  .cdetail { padding: 0 0 12px 46px; }
+  .cdetail .btn-row { margin-top: 10px; }
+  @media (max-width: 520px) { .cdetail { padding-left: 0; } }
+  .vip { color: var(--warn); }
+  .player { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; margin-top: 10px; padding: 8px 10px; border-radius: 12px; background: var(--soft); }
+  .player input[type=range] { width: 100%; accent-color: var(--accent); }
+  .player .t { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .mrow.new .cname > span:first-child { font-weight: 700; }
+  .contact .nums { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .num { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 6px 0 12px; border-radius: 17px; border: 1px solid var(--line); font-size: 13px; }
+  .num small { color: var(--muted); }
+  .num .icon-btn { width: 30px; height: 30px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .legend span { display: inline-flex; gap: 6px; align-items: center; }
+  .src { font-size: 12px; color: var(--muted); }
+  .stale { display: flex; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--warn-soft); color: var(--warn); font-size: 13px; margin-bottom: 8px; }
+
+  /* Dialog und Toast wie panel-dialogs.js */
+  .backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 45%); display: none; place-items: center; z-index: 20; padding: 16px; }
+  .backdrop.open { display: grid; }
+  .dialog { background: var(--surface); border-radius: 22px; padding: 22px; max-width: 460px; width: 100%; max-height: calc(100vh - 32px); overflow: auto; box-shadow: 0 20px 40px -12px rgb(0 0 0 / 45%); }
+  .dialog h2 { font-size: 18px; font-weight: 500; margin: 0 0 10px; }
+  .dialog ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .dialog .btn-row { justify-content: flex-end; margin-top: 20px; }
+  .sugg { list-style: none; margin: 6px 0 0; padding: 0; border: 1px solid var(--line); border-radius: 10px; max-height: 180px; overflow: auto; }
+  .sugg li button { width: 100%; text-align: left; padding: 8px 12px; display: flex; justify-content: space-between; gap: 10px; }
+  .sugg li button:hover, .sugg li button:focus-visible { background: var(--accent-soft); }
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%) translateY(120px); background: var(--text); color: var(--surface); padding: 12px 16px; border-radius: 12px; transition: transform .2s; z-index: 30; max-width: calc(100% - 32px); display: flex; gap: 14px; align-items: center; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast button { color: var(--accent-soft); font-weight: 600; text-decoration: underline; }
+  .notes { font-size: 13px; color: var(--muted); margin: 0; padding-left: 18px; }
+  .notes li { margin: 3px 0; } .notes b { color: var(--text); font-weight: 500; }
+  /* Statistik: Reihen wie dataviz-Referenzpalette, hell und dunkel getrennt gewählt und geprüft */
+  :root { --s-in: light-dark(#1baf7a, #199e70); --s-out: light-dark(#2a78d6, #3987e5); --s-miss: light-dark(#eb6834, #d95926); --s-spam: light-dark(#6250d6, #9085e9);
+    --h0: light-dark(#eef1f4, #22272e); --h1: light-dark(#cde2fb, #163a63); --h2: light-dark(#9ec5f4, #184f95); --h3: light-dark(#6da7ec, #256abf); --h4: light-dark(#3987e5, #5598e7); --h5: light-dark(#1c5cab, #9ec5f4);
+    --h-ink-lo: light-dark(#1b1f24, #e6e9ed); --h-ink-hi: light-dark(#fff, #0b1a26); }
+  .viewtabs { margin: 2px 0 0; }
+  .limit { display: flex; gap: 10px; align-items: flex-start; margin: 4px 0 0; padding: 10px 12px; border-radius: 12px; background: var(--soft); font-size: 13px; color: var(--muted); }
+  .limit b { color: var(--text); font-weight: 500; }
+  .limit svg { margin-top: 1px; flex: none; }
+  .delta { font-variant-numeric: tabular-nums; color: var(--text); }
+  .vsec { margin-top: 16px; min-width: 0; }
+  .vwrap { position: relative; overflow-x: auto; }
+  .chart { display: block; max-width: 100%; }
+  .chart .grid { stroke: var(--line); stroke-width: 1; }
+  .chart .base { stroke: var(--input-line); stroke-width: 1; }
+  .chart .ax { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
+  .chart .hit { fill: transparent; }
+  .chart .bar:hover .hit, .chart .bar:focus .hit { fill: var(--neutral-soft); }
+  .chart .bar:focus, .chart .cell:focus { outline: none; }
+  .chart .bar:focus-visible .hit { stroke: var(--focus); stroke-width: 2; }
+  .chart .cell:focus-visible rect { stroke: var(--focus); stroke-width: 3; }
+  .s-in { fill: var(--s-in); background: var(--s-in); } .s-out { fill: var(--s-out); background: var(--s-out); } .s-miss { fill: var(--s-miss); background: var(--s-miss); } .s-spam { fill: var(--s-spam); background: var(--s-spam); }
+  .h0 { fill: var(--h0); } .h1 { fill: var(--h1); } .h2 { fill: var(--h2); } .h3 { fill: var(--h3); } .h4 { fill: var(--h4); } .h5 { fill: var(--h5); }
+  .chart .hv { font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; pointer-events: none; }
+  .h0t, .h1t, .h2t, .h3t { fill: var(--h-ink-lo); } .h4t, .h5t { fill: var(--h-ink-hi); }
+  .vleg { margin: 0 0 8px; }
+  .vleg .sw { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+  .vleg b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .vtip { position: absolute; z-index: 3; pointer-events: none; background: var(--text); color: var(--surface); font-size: 12px; padding: 6px 10px; border-radius: 8px; max-width: 260px; }
+  table.dt { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+  table.dt th, table.dt td { padding: 6px 8px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  table.dt th:first-child { text-align: left; }
+  table.dt thead th { color: var(--muted); font-weight: 500; font-size: 12px; }
+  .rank { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+  .rk { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 8px; align-items: center; width: 100%; text-align: left; padding: 6px 4px; border-radius: 10px; }
+  button.rk:hover { background: var(--soft); }
+  .rn { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .rw { min-width: 0; display: grid; gap: 2px; }
+  .rt { display: flex; gap: 6px; align-items: center; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rw small { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .rb { height: 6px; border-radius: 3px; background: var(--neutral-soft); overflow: hidden; }
+  .rb i { display: block; height: 100%; background: var(--accent); border-radius: 3px; }
+  .rv { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .rv small { display: block; color: var(--muted); font-weight: 400; font-size: 12px; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="mockbar">
+  <span class="muted">Mockup der Unterseite <b>Box › Telefon</b>. Sie erscheint nur, wenn die Integration <span class="mono">fritzbox_phone</span> geladen ist, liest deren Entitäten und ruft deren Dienste auf. Anrufen, Sperren, Abspielen sind simuliert. „Heute“ ist Sa., 7. Nov. 2026.</span>
+  <div class="ctl">
+    <label class="sr" for="st">Zustand</label>
+    <select id="st">
+      <option value="ok">Normal</option>
+      <option value="loading">Lädt</option>
+      <option value="short">Kurze Liste (14 Anrufe, 4 Tage)</option>
+      <option value="empty">Keine Anrufe</option>
+      <option value="privacy">Privatsphäre-Modus an</option>
+      <option value="notam">Kein Anrufbeantworter</option>
+      <option value="tamnew">AB: neue Nachrichten, Player offen</option>
+      <option value="ringing">Live: es klingelt (Spamverdacht)</option>
+      <option value="talking">Live: Gespräch läuft</option>
+      <option value="error">Fehler: Entität nicht verfügbar</option>
+      <option value="ro">Nur lesen (Box verweigert Aktionen)</option>
+      <option value="multi">Zwei Boxen mit Telefonie</option>
+      <option value="nophone">Ohne fritzbox_phone</option>
+    </select>
+    <span class="seg" role="group" aria-label="Farbschema">
+      <button data-mode="auto" aria-pressed="true">System</button>
+      <button data-mode="light" aria-pressed="false">Hell</button>
+      <button data-mode="dark" aria-pressed="false">Dunkel</button>
+    </span>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="frame">
+    <header class="header">
+      <div class="brand">
+        <div class="logo"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 17h.01M12 14V9M9 9a4.2 4.2 0 0 1 6 0"/></svg></div>
+        <div><b>FRITZ!Box Netzwerk</b><small>FRITZ-RM · FRITZ!Box 7590 AX</small></div>
+      </div>
+      <nav role="tablist" aria-label="Seiten" id="nav"></nav>
+    </header>
+    <main id="main"></main>
+  </div>
+</div>
+
+<div class="backdrop" id="backdrop"><div class="dialog" id="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<p class="sr" id="announce" role="status" aria-live="polite"></p>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const svg = (d) => `<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${d}</svg>`;
+  const I = {
+    phone: svg('<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/>'),
+    in: svg('<path d="M17 7 7 17M7 9v8h8"/>'),
+    out: svg('<path d="M7 17 17 7M9 7h8v8"/>'),
+    miss: svg('<path d="M17 7 7 17M7 9v8h8"/><path d="m15 3 6 6M21 3l-6 6"/>'),
+    ban: svg('<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>'),
+    tam: svg('<circle cx="6.5" cy="12" r="3.5"/><circle cx="17.5" cy="12" r="3.5"/><path d="M6.5 15.5h11"/>'),
+    shield: svg('<path d="M12 3 4 6v6c0 5 3.4 8.3 8 9 4.6-.7 8-4 8-9V6z"/><path d="M12 8v4M12 15h.01"/>'),
+    star: '<svg class="i vip" viewBox="0 0 24 24" aria-hidden="true" style="fill:currentColor;stroke:none"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
+    search: svg('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
+    play: svg('<path d="M7 5v14l11-7z"/>'),
+    pause: svg('<path d="M8 5v14M16 5v14"/>'),
+    speaker: svg('<path d="M11 5 6 9H3v6h3l5 4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13"/>'),
+    download: svg('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
+    trash: svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>'),
+    mail: svg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/>'),
+    userplus: svg('<circle cx="9" cy="8" r="4"/><path d="M2 21a7 7 0 0 1 14 0M19 8v6M16 11h6"/>'),
+    info: svg('<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>'),
+    alert: svg('<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/>'),
+    eye: svg('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
+    chev: '<svg class="i chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>',
+    hang: svg('<path d="M3 15c5-5 13-5 18 0l-2.5 2.5-3.5-2v-3a10 10 0 0 0-6 0v3l-3.5 2z"/>'),
+    unplug: svg('<path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4M3 3l18 18"/>'),
+  };
+
+  /* ---------- Beispieldaten im Format der Attribute von fritzbox_phone ---------- */
+  // sensor.fritz_box_7590_ax_anrufliste → attributes.calls
+  const CALLS = [
+    { id: 512, type: "incoming", name: "Mama", caller_number: "01712345678", called_number: "030 5550101", device: "Mobilteil Küche", date: "07.11.26 14:12", duration: "0:04", area_name: "Mobilfunk (D)" },
+    { id: 511, type: "missed", name: "", caller_number: "+4922198765432", called_number: "030 5550101", device: "", date: "07.11.26 13:40", duration: "0:00", area_name: "Köln", is_spam: true, spam_confidence: 87, spam_rating: "E_ADVERTISING", spam_location: "Köln" },
+    { id: 510, type: "outgoing", name: "Dr. Weber (Praxis)", caller_number: "030 5550101", called_number: "0304567890", device: "FRITZ!Fon C6", date: "07.11.26 12:05", duration: "0:02", area_name: "Berlin" },
+    { id: 509, type: "incoming", name: "", caller_number: "0401234567", called_number: "030 5550101", device: "Anrufbeantworter 1", port: 40, date: "07.11.26 10:31", duration: "0:01", area_name: "Hamburg", is_answering_machine: true, has_recording: true, tam_index: 0, tam_message_index: 2, reverse_name: "Hermes Logistik", reverse_category: "Dienstleister" },
+    { id: 508, type: "missed", name: "Oma Gerda", vip: true, caller_number: "06221123456", called_number: "030 5550101", device: "", date: "07.11.26 09:15", duration: "0:00", area_name: "Heidelberg" },
+    { id: 507, type: "outgoing", name: "Mama", caller_number: "030 5550101", called_number: "01712345678", device: "FRITZ!Fon C6", date: "06.11.26 19:48", duration: "0:12", area_name: "Mobilfunk (D)" },
+    { id: 506, type: "rejected_incoming", name: "", caller_number: "+498999990000", called_number: "030 5550101", device: "", date: "06.11.26 18:02", duration: "0:00", area_name: "München", is_spam: true, spam_confidence: 95, spam_rating: "G_FRAUD", spam_location: "München" },
+    { id: 505, type: "incoming", name: "Jonas", caller_number: "01512223344", called_number: "030 5550102", device: "Mobilteil Flur", date: "06.11.26 16:20", duration: "0:31", area_name: "Mobilfunk (D)" },
+    { id: 504, type: "incoming", name: "Oma Gerda", vip: true, caller_number: "06221123456", called_number: "030 5550101", device: "Anrufbeantworter 1", port: 40, date: "06.11.26 12:47", duration: "0:02", area_name: "Heidelberg", is_answering_machine: true, has_recording: true, tam_index: 0, tam_message_index: 1 },
+    { id: 503, type: "missed", name: "", caller_number: "08001234567", called_number: "030 5550101", device: "", date: "06.11.26 11:11", duration: "0:00", area_name: "Service-Rufnummer (gebührenfrei)", spam_confidence: 12, spam_rating: "A_LEGITIMATE" },
+    { id: 502, type: "outgoing", name: "Pizzeria Da Mario", caller_number: "030 5550101", called_number: "0307788990", device: "FRITZ!Fon C6", date: "05.11.26 20:30", duration: "0:01", area_name: "Berlin" },
+    { id: 501, type: "incoming", name: "Büro Schmidt", caller_number: "069445566", called_number: "030 5550102", device: "Mobilteil Flur", date: "05.11.26 08:55", duration: "0:18", area_name: "Frankfurt am Main" },
+    { id: 500, type: "incoming", name: "Dr. Weber (Praxis)", caller_number: "0304567890", called_number: "030 5550101", device: "Anrufbeantworter 1", port: 40, date: "04.11.26 17:45", duration: "0:01", area_name: "Berlin", is_answering_machine: true, has_recording: true, tam_index: 0, tam_message_index: 0 },
+    { id: 499, type: "missed", name: "", caller_number: "+442079460000", called_number: "030 5550101", device: "", date: "04.11.26 10:02", duration: "0:00", area_name: "Vereinigtes Königreich", is_spam: true, spam_confidence: 72, spam_rating: "C_PING", spam_location: "London" },
+  ];
+  // sensor.fritz_box_7590_ax_anrufbeantworter_1 → attributes (tam_index 0)
+  const TAM0 = { name: "Anrufbeantworter 1", tam_index: 0, enabled: true, running: true, capacity_minutes_remaining: 41, privacy_mode: false };
+  const MESSAGES = [
+    { index: 2, name: "", number: "0401234567", called: "030 5550101", date: "07.11.26 10:31", duration: "0:38", new: true, in_phonebook: false, has_recording: true, recording_path: "/api/fritzbox_phone/recording/01JC…/0/2?key=07.11.26+10%3A31%7C0401234567", key: "07.11.26 10:31|0401234567", area_name: "Hamburg", reverse_name: "Hermes Logistik", reverse_category: "Dienstleister" },
+    { index: 1, name: "Oma Gerda", number: "06221123456", called: "030 5550101", date: "06.11.26 12:47", duration: "1:12", new: true, in_phonebook: true, has_recording: true, recording_path: "/api/fritzbox_phone/recording/01JC…/0/1?key=…", key: "06.11.26 12:47|06221123456", area_name: "Heidelberg" },
+    { index: 0, name: "Dr. Weber (Praxis)", number: "0304567890", called: "030 5550101", date: "04.11.26 17:45", duration: "0:25", new: false, in_phonebook: true, has_recording: true, recording_path: "/api/fritzbox_phone/recording/01JC…/0/0?key=…", key: "04.11.26 17:45|0304567890", area_name: "Berlin" },
+  ];
+  // sensor.fritz_box_7590_ax_telefonbuch / _familie → attributes.contacts
+  const BOOKS = [
+    { name: "Telefonbuch", entity: "sensor.fritz_box_7590_ax_telefonbuch", total: 46, contacts: [
+      { name: "Büro Schmidt", vip: false, numbers: [{ number: "069445566", type: "work" }, { number: "069445567", type: "fax_work" }] },
+      { name: "Dr. Weber (Praxis)", vip: false, numbers: [{ number: "0304567890", type: "work" }] },
+      { name: "Hausnotruf Nachbarschaft", vip: false, numbers: [{ number: "0305550199", type: "home" }] },
+      { name: "Jonas", vip: false, numbers: [{ number: "01512223344", type: "mobile" }] },
+      { name: "Mama", vip: true, numbers: [{ number: "01712345678", type: "mobile" }, { number: "0331987654", type: "home" }] },
+      { name: "Nachbar Becker", vip: false, numbers: [{ number: "0305550177", type: "home" }] },
+      { name: "Oma Gerda", vip: true, numbers: [{ number: "06221123456", type: "home" }] },
+      { name: "Pizzeria Da Mario", vip: false, numbers: [{ number: "0307788990", type: "work" }] },
+      { name: "Tierarztpraxis Sonnenhof", vip: false, numbers: [{ number: "0305566778", type: "work" }, { number: "01739988776", type: "mobile" }] },
+    ] },
+    { name: "Familie", entity: "sensor.fritz_box_7590_ax_familie", total: 4, contacts: [
+      { name: "Mama", vip: true, numbers: [{ number: "01712345678", type: "mobile" }] },
+      { name: "Oma Gerda", vip: true, numbers: [{ number: "06221123456", type: "home" }] },
+      { name: "Onkel Rudi", vip: false, numbers: [{ number: "0711334455", type: "home" }] },
+      { name: "Jonas", vip: false, numbers: [{ number: "01512223344", type: "mobile" }] },
+    ] },
+  ];
+  const NUMTYPE = { home: "privat", mobile: "mobil", work: "geschäftlich", fax_work: "Fax", intern: "intern", other: "sonstige" };
+  const RATING = { A_LEGITIMATE: "Unauffällig", B_MISSED: "Negativ bewertet", C_PING: "Ping-Anruf", D_POLL: "Umfrage", E_ADVERTISING: "Werbung", F_GAMBLE: "Gewinnspiel", G_FRAUD: "Betrugsversuch" };
+  const TYPE = { incoming: "Eingehend", missed: "Verpasst", outgoing: "Ausgehend", active_incoming: "Aktiv eingehend", rejected_incoming: "Abgewiesen", active_outgoing: "Aktiv ausgehend" };
+  const MEDIA = [["media_player.kueche", "Küche (Nest Audio)"], ["media_player.wohnzimmer", "Wohnzimmer (Sonos One)"]];
+
+  /* ---------- Zustand des Mockups ---------- */
+  let state = "ok", view = "list";
+  let filter = "all", query = "", bookIx = 0, bookQuery = "";
+  let expanded = new Set();
+  const revealed = new Map(); // key -> timer (Privatsphäre: 15 s lesbar)
+  let messages = MESSAGES.map((m) => ({ ...m }));
+  let playing = null; // { index, pos, total, paused }
+  let playTimer = null;
+  let dialing = null; // { number, name }
+  let tamEnabled = true;
+  let blocked = new Set();
+
+  const privacy = () => state === "privacy";
+  const ro = () => state === "ro";
+  const offline = () => state === "error";
+  const hasTam = () => state !== "notam";
+  const calls = () => (state === "empty" ? [] : CALLS);
+  const masked = (key) => privacy() && !revealed.has(key);
+
+  /* ---------- Hilfen ---------- */
+  function parseAvm(s) { const m = /^(\d\d)\.(\d\d)\.(\d\d) (\d\d):(\d\d)$/.exec(s || ""); return m ? new Date(2000 + +m[3], m[2] - 1, +m[1], +m[4], +m[5]) : null; }
+  const TODAY = new Date(2026, 10, 7);
+  function dayLabel(d) {
+    const diff = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - TODAY) / 864e5);
+    if (diff === 0) return "Heute";
+    if (diff === -1) return "Gestern";
+    return d.toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long" });
+  }
+  const hhmm = (d) => d.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  function prettyNumber(n) {
+    if (!n) return "";
+    if (n.startsWith("+49")) n = "0" + n.slice(3);
+    if (n.startsWith("+")) return n.replace(/^(\+\d\d)(\d{2,4})(\d+)$/, "$1 $2 $3");
+    if (/^01[5-7]/.test(n)) return n.replace(/^(\d{4})(\d+)$/, "$1 $2");
+    if (/^0800/.test(n)) return n.replace(/^(0800)(\d+)$/, "$1 $2");
+    return n.replace(/^(0(?:30|40|69|89|221|331|711|6221))(\d+)$/, "$1 $2");
+  }
+  // Minuten: Dauer der Anrufliste ist "h:mm" (Minuten aufgerundet), nicht m:ss.
+  const callMinutes = (d) => { const m = /^(\d+):(\d\d)$/.exec(d || ""); return m ? +m[1] * 60 + +m[2] : 0; };
+  const fmtMinutes = (n) => (n >= 60 ? `${Math.floor(n / 60)} Std. ${n % 60} Min.` : `${n} Min.`);
+  const otherNumber = (c) => (c.type === "outgoing" || c.type === "active_outgoing" ? c.called_number : c.caller_number);
+  function displayName(c) {
+    if (c.name) return c.name;
+    if (c.reverse_name) return c.reverse_name;
+    const n = otherNumber(c);
+    return n ? prettyNumber(n) : "Unbekannt";
+  }
+  function kind(c) {
+    if (c.is_spam) return "spam";
+    if (c.is_answering_machine) return "tam";
+    if (c.type === "missed" || c.type === "rejected_incoming") return "miss";
+    if (c.type.includes("outgoing")) return "out";
+    return "in";
+  }
+  const KIND_ICON = { in: I.in, out: I.out, miss: I.miss, spam: I.shield, tam: I.tam };
+  const hiddenName = () => `<span class="masked" aria-hidden="true">••••••</span><span class="sr">Verdeckt – zum Anzeigen antippen</span>`;
+  const dis = (extra = false) => (ro() || offline() || extra ? " disabled" : "");
+  function announce(msg) { $("#announce").textContent = ""; setTimeout(() => ($("#announce").textContent = msg), 30); }
+
+  /* ---------- Navigation ---------- */
+  function nav() {
+    const ringing = state === "ringing";
+    const tabs = [["net", "Netzwerk"], ["internet", "Internet", '<i class="dot on" aria-hidden="true"></i>'], ["box", "Box", ringing ? '<i class="dot warn" aria-hidden="true"></i><span class="sr">(Anruf)</span>' : ""], ["diagnose", "Diagnose"], ["devices", "Verwalten"]];
+    $("#nav").innerHTML = tabs.map(([id, name, extra = ""]) => `<button role="tab" aria-selected="${id === "box"}">${name}${extra}</button>`).join("");
+  }
+  function subtabs(active) {
+    if (state === "nophone") return "";
+    const newMsgs = hasTam() ? messages.filter((m) => m.new).length : 0;
+    const badge = newMsgs ? ` <span class="chip info" style="min-height:18px;padding:0 6px;font-size:11px">${newMsgs}<span class="sr"> neue Nachrichten</span></span>` : "";
+    return `<div class="seg subtabs" role="tablist" aria-label="Box"><button role="tab" aria-selected="${active === "Übersicht"}">Übersicht</button><button role="tab" aria-selected="${active === "Telefon"}">Telefon${badge}</button></div>`;
+  }
+
+  /* ---------- Live-Anruf (sensor.*_anrufmonitor) ---------- */
+  function liveBanner() {
+    if (state === "ringing") {
+      return `<section class="live spam" role="status" aria-live="assertive" aria-label="Laufender Anruf">
+        <span class="ico pulse">${I.phone}</span>
+        <div><b>Es klingelt: +49 221 98765432</b><small>Köln · PhoneBlock: Spamverdacht 87 % (Werbung) · an 030 5550101 · klingelt seit 0:09</small></div>
+        <button class="btn sm" data-act="block" data-number="+4922198765432" data-name=""${dis()}>${I.ban}Sperren …</button></section>`;
+    }
+    if (state === "talking") {
+      return `<section class="live talk" role="status" aria-live="polite" aria-label="Laufendes Gespräch">
+        <span class="ico">${I.phone}</span>
+        <div><b>Gespräch mit Mama ${I.star}</b><small>0171 2345678 · Mobilteil Küche · seit 14:12 · angenommen nach 0:06</small></div>
+        <span class="chip ok"><i class="dot on"></i>läuft</span></section>`;
+    }
+    if (dialing) {
+      return `<section class="live" role="status" aria-live="polite" aria-label="Wählhilfe">
+        <span class="ico pulse">${I.out}</span>
+        <div><b>Wählhilfe: ${esc(dialing.name || prettyNumber(dialing.number))}</b><small>Dein Telefon klingelt gleich. Nimm ab, dann wählt die Box ${esc(prettyNumber(dialing.number))}.</small></div>
+        <button class="btn sm" data-act="hangup">Abbrechen</button></section>`;
+    }
+    return "";
+  }
+
+  /* ---------- Hinweise ---------- */
+  function notices() {
+    const out = [];
+    if (privacy()) out.push(["info", I.eye, "Privatsphäre-Modus ist in FRITZ!Box Telefon eingeschaltet: Namen und Nummern sind verdeckt. Antippen zeigt eine Zeile 15 Sekunden lang. Der laufende Anruf und die Tageszahlen bleiben sichtbar."]);
+    if (ro()) out.push(["warn", I.alert, "Die FRITZ!Box hat die letzte Aktion abgelehnt: „Keine Berechtigung“. Der Benutzer, mit dem FRITZ!Box Telefon angemeldet ist, darf Anrufe nicht starten und nichts sperren. Lesen geht weiter. Recht in der Box: System › FRITZ!Box-Benutzer › „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“ und „FRITZ!Box Einstellungen“."]);
+    if (state === "multi") out.push(["info", I.info, "Zwei Einträge von FRITZ!Box Telefon gefunden. Diese Seite zeigt den Eintrag mit derselben Seriennummer wie diese Box. Der andere („FRITZ!Box 7530 Ferienwohnung“) gehört zu einer Box, die hier nicht eingebunden ist."]);
+    if (!out.length) return "";
+    return `<section class="card sec" aria-label="Hinweise">${out.map(([l, ic, t]) => `<p class="hintline ${l}">${ic}<span>${t}</span></p>`).join("")}</section>`;
+  }
+
+  /* ---------- Tageszahlen ---------- */
+  function today() {
+    if (state === "loading") return `<section class="card sec" aria-busy="true"><div class="chead"><span class="label">Heute</span></div><div class="tiles">${[1, 2, 3, 4].map(() => `<div class="tile"><b class="skel">00</b><small class="skel" style="margin-top:4px">lädt</small></div>`).join("")}</div></section>`;
+    const list = calls().filter((c) => c.date.startsWith("07.11.26"));
+    const inc = list.filter((c) => c.type === "incoming").length, out = list.filter((c) => c.type === "outgoing").length, miss = list.filter((c) => c.type === "missed").length;
+    const talk = list.filter((c) => c.type === "incoming" || c.type === "outgoing").reduce((s, c) => s + callMinutes(c.duration), 0);
+    const spam = list.filter((c) => c.is_spam).length;
+    const na = offline() ? '<span class="chip warn" style="margin-left:auto">Stand 14:21</span>' : "";
+    return `<section class="card sec" aria-labelledby="today-h"><div class="chead"><span class="label" id="today-h">Heute</span>${na}<span class="src">laut Anrufliste der letzten 7 Tage</span></div>
+      <div class="tiles">
+        <div class="tile"><span class="label">Anrufe</span><b>${list.length}</b><small>${inc} eingehend · ${out} ausgehend</small></div>
+        <div class="tile ${miss ? "bad" : ""}"><span class="label">Verpasst</span><b>${miss}</b><small>${miss ? "zurückrufen: Filter „Verpasst“" : "alles angenommen"}</small></div>
+        <div class="tile"><span class="label">Gesprächszeit</span><b>${fmtMinutes(talk)}</b><small>je Anruf auf die Minute aufgerundet</small></div>
+        <div class="tile"><span class="label">Spam</span><b>${spam}</b><small>heute · 23 erkannt seit Juli</small></div>
+      </div></section>`;
+  }
+
+  /* ---------- Anrufliste ---------- */
+  function filtered() {
+    const q = query.trim().toLowerCase().replace(/\s/g, "");
+    return calls().filter((c) => {
+      if (filter === "missed" && !(c.type === "missed" || c.type === "rejected_incoming")) return false;
+      if (filter === "incoming" && !(c.type === "incoming" || c.type === "active_incoming")) return false;
+      if (filter === "outgoing" && !c.type.includes("outgoing")) return false;
+      if (filter === "spam" && !c.is_spam) return false;
+      if (!q) return true;
+      return [c.name, c.reverse_name, c.area_name, otherNumber(c)].some((v) => String(v || "").toLowerCase().replace(/\s/g, "").includes(q));
+    });
+  }
+  function callRow(c) {
+    const key = "c" + c.id, k = kind(c), d = parseAvm(c.date), num = otherNumber(c), m = masked(key);
+    const open = expanded.has(key) && !m;
+    const chips = [
+      c.vip ? `${I.star}<span class="sr">VIP</span>` : "",
+      c.is_spam ? `<span class="chip bad">Spam ${c.spam_confidence} %</span>` : "",
+      blocked.has(num) ? `<span class="chip">gesperrt</span>` : "",
+      c.is_answering_machine ? `<span class="chip" style="color:var(--up)">AB</span>` : "",
+    ].join("");
+    const meta = [hhmm(d), TYPE[c.type], m ? "" : c.area_name, c.device && !c.is_answering_machine ? c.device : "", callMinutes(c.duration) && !c.type.includes("missed") ? fmtMinutes(callMinutes(c.duration)) : ""].filter(Boolean).join(" · ");
+    const dialBtn = num ? `<button class="icon-btn" data-act="dial" data-number="${esc(num)}" data-name="${esc(c.name)}" aria-label="${c.type === "outgoing" ? "Erneut anrufen" : "Zurückrufen"}: ${m ? "verdeckter Eintrag" : esc(displayName(c))}"${dis()}>${I.phone}</button>` : "";
+    const detail = open ? `<div class="cdetail" id="d-${key}">
+        <dl class="kv">
+          <dt>Rufnummer</dt><dd class="mono">${esc(prettyNumber(num))}</dd>
+          <dt>${c.type.includes("outgoing") ? "Von" : "An"} eigene Nummer</dt><dd class="mono">${esc(c.type.includes("outgoing") ? c.caller_number : c.called_number)}</dd>
+          ${c.device ? `<dt>Gerät</dt><dd>${esc(c.device)}</dd>` : ""}
+          ${c.spam_rating ? `<dt>PhoneBlock</dt><dd>${esc(RATING[c.spam_rating])}, ${c.spam_confidence} %${c.spam_location ? `, ${esc(c.spam_location)}` : ""}</dd>` : ""}
+          ${c.reverse_name ? `<dt>Rückwärtssuche</dt><dd>${esc(c.reverse_name)} (${esc(c.reverse_category)}, Tellows)</dd>` : ""}
+        </dl>
+        <div class="btn-row">
+          ${num ? `<button class="btn sm" data-act="dial" data-number="${esc(num)}" data-name="${esc(c.name)}"${dis()}>${I.phone}${c.type === "outgoing" ? "Erneut anrufen" : "Zurückrufen"}</button>` : ""}
+          ${!c.name && num ? `<button class="btn sm" data-act="contact" data-number="${esc(num)}" data-name="${esc(c.reverse_name)}"${dis()}>${I.userplus}Ins Telefonbuch …</button>` : ""}
+          ${num ? `<button class="btn sm" data-act="lookup" data-number="${esc(num)}"${dis()}>${I.search}Nachschlagen</button>` : ""}
+          ${num && !blocked.has(num) ? `<button class="btn sm ghost danger" data-act="block" data-number="${esc(num)}" data-name="${esc(c.name || c.reverse_name)}"${dis()}>${I.ban}Sperren …</button>` : ""}
+          ${c.is_answering_machine && hasTam() ? `<button class="btn sm ghost" data-act="jump-tam" data-index="${c.tam_message_index}">${I.tam}Zur Nachricht</button>` : ""}
+        </div></div>` : "";
+    return `<div class="crow ${k}">
+      <div class="line"><span class="cico ${k}" title="${esc(TYPE[c.type])}">${KIND_ICON[k]}</span>
+        <button class="cmain" data-act="row" data-key="${key}" aria-expanded="${open}" aria-controls="d-${key}">
+          <span class="cname"><span>${m ? hiddenName() : esc(displayName(c))}</span>${m ? "" : chips}</span>
+          <span class="cmeta">${esc(meta)}</span></button>
+        <span class="cact">${m ? "" : dialBtn}<span class="icon-btn" aria-hidden="true" style="width:24px">${I.chev}</span></span></div>${detail}</div>`;
+  }
+  function callList() {
+    if (state === "loading") return `<section class="card sec" aria-busy="true"><div class="chead"><span class="label">Anrufliste</span></div>${[1, 2, 3, 4, 5].map(() => `<div class="crow"><div class="line"><span class="cico skel"></span><span><b class="skel" style="display:block;width:60%">Name</b><small class="skel" style="display:block;width:40%;margin-top:4px">lädt</small></span><span></span></div></div>`).join("")}<p class="sr" role="status">Die Anrufliste wird geladen.</p></section>`;
+    const all = calls();
+    const count = (f) => all.filter((c) => (f === "missed" ? c.type === "missed" || c.type === "rejected_incoming" : f === "incoming" ? c.type === "incoming" : f === "outgoing" ? c.type.includes("outgoing") : f === "spam" ? c.is_spam : true)).length;
+    const filters = [["all", "Alle"], ["missed", "Verpasst"], ["incoming", "Eingehend"], ["outgoing", "Ausgehend"], ["spam", "Spam"]];
+    const head = `<div class="chead"><span class="label" id="calls-h">Anrufliste</span><button class="btn sm p" data-act="dial-open"${dis()}>${I.phone}Anrufen …</button></div>`;
+    const stale = offline() ? `<div class="stale" role="status">${I.unplug}<span>Verbindung zur FRITZ!Box unterbrochen – Stand 14:21. Die Liste zeigt den letzten Stand, Aktionen sind gesperrt.</span></div>` : "";
+    if (!all.length) {
+      return `<section class="card sec" aria-labelledby="calls-h">${head}<div class="empty">${I.phone}<b>Keine Anrufe in den letzten 7 Tagen.</b><span>FRITZ!Box Telefon lädt höchstens 50 Anrufe aus 7 Tagen (Optionen der Integration). Neue Anrufe erscheinen nach spätestens 2 Minuten, mit Anrufmonitor sofort.</span></div></section>`;
+    }
+    const list = filtered();
+    let rows = "", lastDay = "";
+    for (const c of list) {
+      const lbl = dayLabel(parseAvm(c.date));
+      if (lbl !== lastDay) { rows += `<div class="day" role="heading" aria-level="3">${esc(lbl)}</div>`; lastDay = lbl; }
+      rows += callRow(c);
+    }
+    if (!list.length) rows = `<div class="empty"><b>Keine Anrufe für diese Auswahl.</b><button class="btn sm" data-act="reset">Filter zurücksetzen</button></div>`;
+    return `<section class="card sec" aria-labelledby="calls-h">${head}${stale}
+      <div class="toolbar">
+        <span class="seg" role="group" aria-label="Anrufe filtern">${filters.map(([id, n]) => `<button data-filter="${id}" aria-pressed="${filter === id}">${n}<span class="n">${count(id)}</span></button>`).join("")}</span>
+        <label class="search"><span class="sr">Anrufe durchsuchen</span>${I.search}<input type="search" id="q" value="${esc(query)}" placeholder="Name, Nummer oder Ort" autocomplete="off"></label>
+      </div>
+      <p class="sr" role="status" id="calls-count">${list.length} von ${all.length} Anrufen angezeigt</p>
+      <div>${rows}</div>
+      <div class="legend" aria-hidden="true"><span><span class="cico in" style="width:20px;height:20px">${I.in}</span>eingehend</span><span><span class="cico out" style="width:20px;height:20px">${I.out}</span>ausgehend</span><span><span class="cico miss" style="width:20px;height:20px">${I.miss}</span>verpasst/abgewiesen</span><span><span class="cico tam" style="width:20px;height:20px">${I.tam}</span>Anrufbeantworter</span><span><span class="cico spam" style="width:20px;height:20px">${I.shield}</span>Spam (PhoneBlock)</span></div>
+      <p class="hint">Die Box liefert ${all.length} Anrufe aus den letzten 7 Tagen (höchstens 50, einstellbar in FRITZ!Box Telefon). Ältere stehen im Logbuch.</p></section>`;
+  }
+
+  /* ---------- Anrufbeantworter ---------- */
+  const secs = (d) => { const m = /^(\d+):(\d\d)$/.exec(d); return m ? +m[1] * 60 + +m[2] : 0; };
+  const mmss = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+  function tamCard() {
+    if (state === "loading") return `<section class="card sec" aria-busy="true"><div class="chead"><span class="label">Anrufbeantworter</span></div><p class="hint">Wird geladen …</p></section>`;
+    if (!hasTam()) {
+      return `<section class="card sec" aria-labelledby="tam-h"><div class="chead"><span class="label" id="tam-h">Anrufbeantworter</span></div><div class="empty" style="padding:24px 8px">${I.tam}<b>Kein Anrufbeantworter eingerichtet.</b><span>Die Box meldet keinen. Einrichten geht in der Box unter Telefonie › Telefoniegeräte › Neues Gerät einrichten. FRITZ!Box Telefon erkennt ihn danach ohne Neustart.</span></div></section>`;
+    }
+    const newCount = messages.filter((m) => m.new).length;
+    const rows = messages.map((msg) => {
+      const key = "m" + msg.index, m = masked(key), d = parseAvm(msg.date);
+      const name = msg.name || msg.reverse_name || prettyNumber(msg.number);
+      const p = playing && playing.index === msg.index;
+      return `<div class="crow mrow ${msg.new ? "new" : ""}" id="msg-${msg.index}">
+        <div class="line"><span class="cico tam">${msg.new ? '<i class="dot new" aria-hidden="true"></i>' : I.tam}</span>
+          <button class="cmain" data-act="${m ? "row" : "play"}" data-key="${key}" data-index="${msg.index}" aria-label="${m ? "Verdeckte Nachricht anzeigen" : `${p && !playing.paused ? "Pause" : "Abspielen"}: ${esc(name)}, ${esc(msg.duration)}`}">
+            <span class="cname"><span>${m ? hiddenName() : esc(name)}</span>${msg.new ? '<span class="chip info">neu</span>' : ""}</span>
+            <span class="cmeta">${esc(dayLabel(d))}, ${hhmm(d)} · ${esc(msg.duration)}${m ? "" : ` · ${esc(msg.area_name)}`}</span></button>
+          <span class="cact"><button class="icon-btn" data-act="play" data-index="${msg.index}" aria-pressed="${p && !playing.paused}" aria-label="${p && !playing.paused ? "Pause" : "Abspielen"}"${offline() ? " disabled" : ""}>${p && !playing.paused ? I.pause : I.play}</button></span></div>
+        ${p ? `<div class="cdetail"><div class="player"><span class="t" id="pt">${mmss(playing.pos)}</span><input type="range" min="0" max="${playing.total}" value="${Math.floor(playing.pos)}" id="seek" aria-label="Position in der Aufnahme" aria-valuetext="${mmss(playing.pos)} von ${mmss(playing.total)}"><span class="t">${mmss(playing.total)}</span></div>
+          <div class="btn-row">
+            <button class="btn sm" data-act="speaker" data-index="${msg.index}"${dis()}>${I.speaker}Auf Lautsprecher …</button>
+            <a class="btn sm" href="#" data-act="download" data-index="${msg.index}" download="nachricht_${msg.index}.wav">${I.download}Herunterladen</a>
+            <button class="btn sm ghost" data-act="mark" data-index="${msg.index}"${dis()}>${I.mail}${msg.new ? "Als gelesen markieren" : "Als ungelesen markieren"}</button>
+            ${!msg.in_phonebook ? `<button class="btn sm ghost" data-act="contact" data-number="${esc(msg.number)}" data-name="${esc(msg.reverse_name)}"${dis()}>${I.userplus}Ins Telefonbuch …</button>` : ""}
+            <button class="btn sm ghost danger" data-act="delete" data-index="${msg.index}"${dis()}>${I.trash}Löschen …</button>
+          </div></div>` : ""}</div>`;
+    }).join("");
+    return `<section class="card sec" aria-labelledby="tam-h">
+      <div class="chead"><span class="label" id="tam-h">${esc(TAM0.name)}</span>${newCount ? `<span class="chip info">${newCount} neu</span>` : '<span class="chip ok">alles gehört</span>'}
+        <button class="switch" role="switch" aria-checked="${tamEnabled}" aria-label="${esc(TAM0.name)} eingeschaltet" data-act="tam-switch"${dis()}></button></div>
+      ${messages.length ? rows : `<div class="empty" style="padding:24px 8px">${I.tam}<b>Keine Nachrichten.</b></div>`}
+      <p class="hint">${tamEnabled ? "Nimmt an" : "Ausgeschaltet: nimmt nichts an"} · noch ${TAM0.capacity_minutes_remaining} Min. frei · Abspielen hier im Browser markiert die Nachricht als gelesen. Die Aufnahme kommt angemeldet über Home Assistant, nicht direkt von der Box.</p></section>`;
+  }
+
+  /* ---------- Telefonbuch ---------- */
+  function bookCard() {
+    if (state === "loading") return `<section class="card sec" aria-busy="true"><div class="chead"><span class="label">Telefonbuch</span></div><p class="hint">Wird geladen …</p></section>`;
+    const book = BOOKS[bookIx];
+    const q = bookQuery.trim().toLowerCase().replace(/\s/g, "");
+    const list = book.contacts.filter((c) => !q || c.name.toLowerCase().includes(q) || c.numbers.some((n) => n.number.includes(q)))
+      .sort((a, b) => (b.vip - a.vip) || a.name.localeCompare(b.name, "de"));
+    const rows = list.map((c, i) => {
+      const key = `b${bookIx}-${i}-${c.name}`, m = masked(key);
+      return `<div class="crow contact"><div class="line" style="grid-template-columns:36px minmax(0,1fr)"><span class="cico">${c.vip ? I.star : esc(c.name[0])}</span>
+        <div style="min-width:0">${m ? `<button class="cmain" data-act="row" data-key="${key}" aria-label="Verdeckten Kontakt anzeigen"><span class="cname"><span>${hiddenName()}</span></span></button>`
+          : `<span class="cname"><span>${esc(c.name)}</span>${c.vip ? '<span class="sr">VIP</span>' : ""}</span>
+          <div class="nums">${c.numbers.map((n) => `<span class="num"><span class="mono">${esc(prettyNumber(n.number))}</span><small>${esc(NUMTYPE[n.type] || n.type)}</small>${n.type === "fax_work" ? "" : `<button class="icon-btn" data-act="dial" data-number="${esc(n.number)}" data-name="${esc(c.name)}" aria-label="${esc(c.name)} anrufen, ${esc(NUMTYPE[n.type] || n.type)}"${dis()}>${I.phone}</button>`}</span>`).join("")}</div>`}
+        </div></div></div>`;
+    }).join("");
+    const more = !q && book.total > book.contacts.length ? `<p class="hint">${book.total - book.contacts.length} weitere – die Suche eingrenzen.</p>` : "";
+    return `<section class="card sec" aria-labelledby="book-h">
+      <div class="chead"><span class="label" id="book-h">Telefonbuch</span><span class="chip">${book.total} Kontakte</span></div>
+      <div class="toolbar">
+        ${BOOKS.length > 1 ? `<span class="seg" role="group" aria-label="Telefonbuch wählen">${BOOKS.map((b, i) => `<button data-book="${i}" aria-pressed="${i === bookIx}">${esc(b.name)}</button>`).join("")}</span>` : ""}
+        <label class="search"><span class="sr">Kontakte durchsuchen</span>${I.search}<input type="search" id="bq" value="${esc(bookQuery)}" placeholder="Kontakte durchsuchen" autocomplete="off"></label>
+      </div>
+      <p class="sr" role="status">${list.length} Kontakte gefunden</p>
+      ${list.length ? rows : `<div class="empty" style="padding:20px 8px"><b>Keine Treffer.</b></div>`}${more}
+      <p class="hint">VIP zuerst. Bearbeiten geht in der Box unter Telefonie › Telefonbuch; hier nur anrufen und neue Nummern aufnehmen.</p></section>`;
+  }
+
+  /* ---------- Statistik (alles im Browser aus attributes.calls gerechnet) ---------- */
+  // Beispiel-Historie: 298 erzeugte Anrufe 14.09.–03.11. plus die 14 aus CALLS = 312.
+  // In echt kommt das nur zustande, wenn call_list_days/call_list_max in
+  // FRITZ!Box Telefon hochgesetzt sind (Standard 7 Tage / 50 Anrufe).
+  const STAT_CALLS = (() => {
+    let seed = 20260914;
+    const rnd = () => { seed |= 0; seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const pick = (arr, w) => { let s = arr.reduce((a, x) => a + w(x), 0) * rnd(); for (const x of arr) { s -= w(x); if (s <= 0) return x; } return arr[0]; };
+    const PEOPLE = [["Mama", "01712345678", 14], ["Jonas", "01512223344", 9], ["Büro Schmidt", "069445566", 7], ["Oma Gerda", "06221123456", 6, true], ["Dr. Weber (Praxis)", "0304567890", 4], ["Nachbar Becker", "0305550177", 3], ["Pizzeria Da Mario", "0307788990", 3], ["Tierarztpraxis Sonnenhof", "0305566778", 2]];
+    const SPAM = ["+4922198765432", "+498999990000", "+442079460000", "01805123456", "+4940999888777"];
+    const RAT = ["E_ADVERTISING", "G_FRAUD", "C_PING", "F_GAMBLE", "D_POLL"];
+    const HOURW = [0, 0, 0, 0, 0, 0, 1, 3, 5, 6, 6, 5, 6, 5, 5, 6, 7, 8, 9, 8, 6, 4, 2, 1];
+    const fmt = (d) => `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getFullYear() % 100).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    const out = [];
+    for (let i = 0; i < 298; i++) {
+      const day = i === 0 ? 0 : Math.floor(rnd() * 51);
+      const hour = pick([...HOURW.keys()], (h) => HOURW[h] * (day % 7 >= 5 && h >= 17 ? 1.6 : 1));
+      const d = new Date(2026, 8, 14 + day, hour, Math.floor(rnd() * 60));
+      const own = rnd() < 0.75 ? "030 5550101" : "030 5550102";
+      const p = pick(PEOPLE, (x) => x[2]);
+      const unknown = "0" + String(Math.floor(2e9 + rnd() * 7e9));
+      const r = rnd(), mins = 1 + Math.floor(rnd() ** 2 * 40);
+      const dur = `${Math.floor(mins / 60)}:${String(mins % 60).padStart(2, "0")}`;
+      let c;
+      if (r < 0.08) { const k = Math.floor(rnd() * SPAM.length); c = { type: rnd() < 0.6 ? "missed" : "rejected_incoming", name: "", caller_number: SPAM[k], called_number: own, duration: "0:00", is_spam: true, spam_confidence: 60 + Math.floor(rnd() * 39), spam_rating: RAT[k] }; }
+      else if (r < 0.42) { const u = rnd() < 0.1; c = { type: "outgoing", name: u ? "" : p[0], caller_number: own, called_number: u ? unknown : p[1], duration: dur }; }
+      else if (r < 0.82) { const u = rnd() < 0.2; c = { type: "incoming", name: u ? "" : p[0], vip: !u && p[3], caller_number: u ? unknown : p[1], called_number: own, duration: dur }; }
+      else { const u = rnd() < 0.4; const tam = rnd() < 0.35; c = { type: tam ? "incoming" : "missed", name: u ? "" : p[0], vip: !u && p[3], caller_number: u ? unknown : p[1], called_number: own, duration: tam ? "0:01" : "0:00", is_answering_machine: tam }; }
+      out.push({ id: 1000 + i, date: fmt(d), device: "", ...c });
+    }
+    return [...CALLS, ...out.sort((a, b) => parseAvm(b.date) - parseAvm(a.date))];
+  })();
+
+  let statPeriod = "7", statTable = { bars: false, heat: false };
+  const statCalls = () => (state === "empty" ? [] : state === "short" ? CALLS : STAT_CALLS);
+  const DAY = 864e5;
+  const addDays = (d, n) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  const dayStart = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const short = (d) => d.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) ;
+  const SERIES = [["in", "Eingehend"], ["out", "Ausgehend"], ["miss", "Verpasst"], ["spam", "Spam"]];
+  // Eine Kategorie je Anruf: Spam vor verpasst; AB-Anrufe zählen als verpasst (niemand hat abgenommen).
+  const cat = (c) => (c.is_spam ? "spam" : c.type.includes("outgoing") ? "out" : c.type === "missed" || c.type === "rejected_incoming" || c.is_answering_machine ? "miss" : "in");
+  const connected = (c) => (c.type === "incoming" || c.type === "outgoing") && !c.is_answering_machine;
+  function periodRange(p, first) {
+    const end = addDays(TODAY, 1);
+    if (p === "today") return [TODAY, end];
+    if (p === "7") return [addDays(TODAY, -6), end];
+    if (p === "30") return [addDays(TODAY, -29), end];
+    return [dayStart(first), end];
+  }
+  function summary(list) {
+    const conn = list.filter(connected);
+    const talk = conn.reduce((s, c) => s + callMinutes(c.duration), 0);
+    const inbound = list.filter((c) => !c.type.includes("outgoing"));
+    const missed = inbound.filter((c) => cat(c) === "miss").length;
+    return { n: list.length, talk, avg: conn.length ? talk / conn.length : 0, conn: conn.length, inbound: inbound.length, missed, rate: inbound.length ? missed / inbound.length : 0, spam: list.filter((c) => c.is_spam).length, tam: list.filter((c) => c.is_answering_machine).length };
+  }
+  function deltaText(cur, prev, kind) {
+    if (prev == null) return "";
+    const d = kind === "pp" ? Math.round((cur - prev) * 100) : cur - prev;
+    if (Math.abs(d) < (kind === "pp" ? 1 : 0.5)) return `<span class="delta">± 0 ${kind === "pp" ? "Pkt." : ""}</span>`;
+    const up = d > 0;
+    const val = kind === "pp" ? `${Math.abs(d)} Pkt.` : kind === "min" ? fmtMinutes(Math.round(Math.abs(d))) : Math.round(Math.abs(d));
+    return `<span class="delta">${up ? "▲" : "▼"} ${up ? "+" : "−"}${val}<span class="sr"> gegenüber dem Zeitraum davor</span></span>`;
+  }
+  const maskName = (name, key) => (masked(key) ? hiddenName() : esc(name));
+  const shortNum = (n) => { const p = prettyNumber(n).replace(/\s/g, ""); return p.length > 6 ? `${p.slice(0, 4)} ••• ${p.slice(-2)}` : "•••"; };
+
+  function barChart(buckets, W) {
+    const H = 170, L = 30, B = 22, T = 8, iw = W - L - 4, ih = H - B - T;
+    const max = Math.max(4, ...buckets.map((b) => b.total));
+    const step = max <= 8 ? 2 : max <= 20 ? 5 : 10, top = Math.ceil(max / step) * step;
+    const y = (v) => T + ih - (v / top) * ih;
+    const bw = iw / buckets.length, w = Math.max(2, Math.min(28, bw - 2));
+    let g = "";
+    for (let v = 0; v <= top; v += step) g += `<line class="grid" x1="${L}" x2="${W - 4}" y1="${y(v)}" y2="${y(v)}"/><text class="ax" x="${L - 6}" y="${y(v) + 4}" text-anchor="end">${v}</text>`;
+    const every = Math.ceil(buckets.length / Math.max(1, Math.floor(iw / 44)));
+    buckets.forEach((b, i) => {
+      const x = L + i * bw + (bw - w) / 2;
+      let acc = 0, segs = "";
+      const present = SERIES.filter(([k]) => b[k]);
+      present.forEach(([k], j) => {
+        const h = (b[k] / top) * ih, yy = y(acc + b[k]);
+        const gap = j < present.length - 1 ? 0 : 0;
+        const hh = Math.max(0, h - (j > 0 ? 2 : 0));
+        const r = j === present.length - 1 ? Math.min(4, w / 2, hh) : 0;
+        segs += r ? `<path class="s-${k}" d="M${x},${yy + hh}V${yy + r}Q${x},${yy} ${x + r},${yy}H${x + w - r}Q${x + w},${yy} ${x + w},${yy + r}V${yy + hh}Z"/>` : `<rect class="s-${k}" x="${x}" y="${yy}" width="${w}" height="${hh}"/>`;
+        acc += b[k] + gap;
+      });
+      const label = `${b.long}: ${b.total} Anrufe – ${SERIES.map(([k, n]) => `${b[k]} ${n.toLowerCase()}`).join(", ")}`;
+      g += `<g class="bar" tabindex="0" role="img" aria-label="${esc(label)}" data-tip="${esc(label)}"><rect class="hit" x="${L + i * bw}" y="${T}" width="${bw}" height="${ih}"/>${segs}</g>`;
+      if (i % every === 0) g += `<text class="ax" x="${x + w / 2}" y="${H - 6}" text-anchor="middle">${esc(b.label)}</text>`;
+    });
+    g += `<line class="base" x1="${L}" x2="${W - 4}" y1="${y(0)}" y2="${y(0)}"/>`;
+    return `<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="group" aria-label="Anrufe je ${buckets.unit}, gestapelt nach Art">${g}</svg>`;
+  }
+  function barTable(buckets) {
+    return `<table class="dt"><caption class="sr">Anrufe je ${buckets.unit}</caption><thead><tr><th scope="col">${buckets.unit === "Stunde" ? "Stunde" : buckets.unit === "Woche" ? "Woche ab" : "Tag"}</th>${SERIES.map(([, n]) => `<th scope="col">${n}</th>`).join("")}<th scope="col">Summe</th></tr></thead><tbody>${buckets.filter((b) => b.total || buckets.length <= 31).map((b) => `<tr><th scope="row">${esc(b.label)}</th>${SERIES.map(([k]) => `<td>${b[k]}</td>`).join("")}<td><b>${b.total}</b></td></tr>`).join("")}</tbody></table>`;
+  }
+  const WD = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"], SLOTS = ["0–3", "3–6", "6–9", "9–12", "12–15", "15–18", "18–21", "21–24"];
+  function heatGrid(list) {
+    const m = WD.map(() => SLOTS.map(() => 0));
+    list.forEach((c) => { const d = c._d; m[(d.getDay() + 6) % 7][Math.floor(d.getHours() / 3)]++; });
+    return m;
+  }
+  function heatChart(m, W) {
+    const L = 30, T = 20, cw = (W - L - 2) / 8, ch = 26, H = T + 7 * ch + 2;
+    const max = Math.max(1, ...m.flat());
+    let g = SLOTS.map((s, j) => (j % (cw < 34 ? 2 : 1) === 0 ? `<text class="ax" x="${L + j * cw + cw / 2}" y="13" text-anchor="middle">${s}</text>` : "")).join("");
+    m.forEach((row, i) => {
+      g += `<text class="ax" x="${L - 6}" y="${T + i * ch + ch / 2 + 4}" text-anchor="end">${WD[i]}</text>`;
+      row.forEach((v, j) => {
+        const lvl = v === 0 ? 0 : Math.min(5, 1 + Math.floor((v / max) * 4.999));
+        g += `<g class="cell" tabindex="0" role="img" aria-label="${WD[i]} ${SLOTS[j]} Uhr: ${v} Anrufe" data-tip="${WD[i]}, ${SLOTS[j]} Uhr: ${v} Anrufe"><rect class="h${lvl}" x="${L + j * cw + 1}" y="${T + i * ch + 1}" width="${cw - 2}" height="${ch - 2}" rx="4"/>${v && cw >= 26 ? `<text class="hv h${lvl}t" x="${L + j * cw + cw / 2}" y="${T + i * ch + ch / 2 + 4}" text-anchor="middle">${v}</text>` : ""}</g>`;
+      });
+    });
+    return `<svg class="chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="group" aria-label="Anrufe nach Wochentag und Uhrzeit">${g}</svg>`;
+  }
+  function heatTable(m) {
+    return `<table class="dt"><caption class="sr">Anrufe nach Wochentag und Uhrzeit</caption><thead><tr><th scope="col">Tag</th>${SLOTS.map((s) => `<th scope="col">${s}</th>`).join("")}</tr></thead><tbody>${m.map((r, i) => `<tr><th scope="row">${WD[i]}</th>${r.map((v) => `<td>${v}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+  }
+  function rankList(items, title, keyPrefix, own = false) {
+    const max = Math.max(1, ...items.map((x) => x.n));
+    if (!items.length) return `<p class="hint">Keine Anrufe in diesem Zeitraum.</p>`;
+    return `<ol class="rank" aria-label="${esc(title)}">${items.map((x, i) => {
+      const key = `${keyPrefix}${x.number}`;
+      const who = x.name ? maskName(x.name, key) : privacy() && !own ? `<span class="mono">${esc(shortNum(x.number))}</span>` : `<span class="mono">${esc(prettyNumber(x.number))}</span>`;
+      const sub = x.name ? (masked(key) ? shortNum(x.number) : prettyNumber(x.number)) : x.spam ? "Spamverdacht" : x.area || "nicht im Telefonbuch";
+      const inner = `<span class="rn">${i + 1}.</span><span class="rw"><span class="rt">${who}${x.vip && !masked(key) ? I.star : ""}</span><small>${esc(sub)}</small><span class="rb" aria-hidden="true"><i style="width:${(x.n / max) * 100}%"></i></span></span><span class="rv">${x.n}<span class="sr"> Anrufe</span>${x.talk ? `<small>${fmtMinutes(x.talk)}</small>` : ""}</span>`;
+      return `<li>${x.name && masked(key) ? `<button class="rk" data-act="row" data-key="${key}" aria-label="Verdeckten Eintrag ${i + 1} anzeigen">${inner}</button>` : `<div class="rk">${inner}</div>`}</li>`;
+    }).join("")}</ol>`;
+  }
+  function topBy(list, numberOf, filterFn) {
+    const map = new Map();
+    list.filter(filterFn).forEach((c) => {
+      const n = numberOf(c); if (!n) return;
+      const e = map.get(n) || { number: n, name: c.name, vip: c.vip, n: 0, talk: 0, spam: c.is_spam, area: c.area_name };
+      e.n++; if (connected(c)) e.talk += callMinutes(c.duration); if (c.name) e.name = c.name;
+      map.set(n, e);
+    });
+    return [...map.values()].sort((a, b) => b.n - a.n || b.talk - a.talk).slice(0, 5);
+  }
+
+  function statsView() {
+    const head = `<div class="chead"><span class="label" id="stat-h">Statistik</span></div>`;
+    if (state === "loading") return `<section class="card sec" aria-busy="true" aria-labelledby="stat-h">${head}<div class="tiles">${[1, 2, 3, 4].map(() => `<div class="tile"><b class="skel">00</b><small class="skel" style="margin-top:4px">lädt</small></div>`).join("")}</div><div class="skel" style="height:170px;margin-top:16px"></div><p class="sr" role="status">Die Statistik wird berechnet.</p></section>`;
+    const all = statCalls().map((c) => ({ ...c, _d: parseAvm(c.date) })).filter((c) => c._d);
+    if (!all.length) return `<section class="card sec" aria-labelledby="stat-h">${head}<div class="empty">${I.phone}<b>Noch keine Daten für eine Statistik.</b><span>Die Anrufliste von FRITZ!Box Telefon ist leer. Die Statistik rechnet nur mit dem, was die Liste gerade hält; sobald es Anrufe gibt, erscheint sie hier.</span></div></section>`;
+    const first = all.reduce((a, c) => (c._d < a ? c._d : a), all[0]._d);
+    const spanDays = Math.round((TODAY - dayStart(first)) / DAY) + 1;
+    const [from, to] = periodRange(statPeriod, first);
+    const inP = all.filter((c) => c._d >= from && c._d < to);
+    const len = Math.round((to - from) / DAY);
+    const prevFrom = addDays(from, -len);
+    let prev = null, prevNote = "";
+    if (statPeriod === "all") prevNote = "Kein Vergleich: Vor dem Anfang der Liste gibt es keine Daten.";
+    else if (prevFrom < dayStart(first)) {
+      const cover = Math.max(0, Math.round((from - dayStart(first)) / DAY));
+      prevNote = cover >= len / 2 ? `Vergleich unvollständig: Die Liste reicht nur ${cover} von ${len} Tagen davor zurück.` : "Kein Vergleich: Die Liste reicht nicht so weit zurück.";
+      if (cover >= len / 2) prev = summary(all.filter((c) => c._d >= prevFrom && c._d < from));
+    } else prev = summary(all.filter((c) => c._d >= prevFrom && c._d < from));
+    const s = summary(inP);
+    const periods = [["today", "Heute"], ["7", "7 Tage"], ["30", "30 Tage"], ["all", "Alles"]];
+    const W = Math.max(260, Math.min(1100, ($("#main")?.clientWidth || 360) - (innerWidth <= 600 ? 24 : 40) - 34));
+    // Eimer: Heute je Stunde, Alles bei > 31 Tagen je Woche, sonst je Tag.
+    let buckets = [];
+    if (statPeriod === "today") { buckets = [...Array(24).keys()].map((h) => ({ label: `${h}`, long: `${h}–${h + 1} Uhr`, from: new Date(+TODAY + h * 36e5), to: new Date(+TODAY + (h + 1) * 36e5) })); buckets.unit = "Stunde"; }
+    else if (len > 31) { const n = Math.ceil(len / 7); buckets = [...Array(n).keys()].map((i) => { const a = addDays(from, i * 7), b = i === n - 1 ? to : addDays(from, i * 7 + 7); return { label: short(a), long: `Woche ab ${a.toLocaleDateString("de-DE", { day: "numeric", month: "long" })}`, from: a, to: b }; }); buckets.unit = "Woche"; }
+    else { buckets = [...Array(len).keys()].map((i) => { const a = addDays(from, i); return { label: len <= 7 ? a.toLocaleDateString("de-DE", { weekday: "short" }) : short(a), long: a.toLocaleDateString("de-DE", { weekday: "short", day: "numeric", month: "long" }), from: a, to: addDays(a, 1) }; }); buckets.unit = "Tag"; }
+    buckets.forEach((b) => { const l = inP.filter((c) => c._d >= b.from && c._d < b.to); SERIES.forEach(([k]) => (b[k] = l.filter((c) => cat(c) === k).length)); b.total = l.length; });
+    const heat = heatGrid(inP);
+    const lines = [...new Set(inP.map((c) => (c.type.includes("outgoing") ? c.caller_number : c.called_number)).filter(Boolean))].map((n) => ({ number: n, n: inP.filter((c) => (c.type.includes("outgoing") ? c.caller_number : c.called_number) === n).length })).sort((a, b) => b.n - a.n);
+    const lineNames = { "030 5550101": "Rufnummer 1 (Festnetz)", "030 5550102": "Rufnummer 2 (Büro)" };
+    const shortList = state === "short";
+    const legend = `<div class="legend vleg">${SERIES.map(([k, n]) => `<span><i class="sw s-${k}" aria-hidden="true"></i>${n} <b>${inP.filter((c) => cat(c) === k).length}</b></span>`).join("")}</div>`;
+    const toggle = (id) => `<button class="btn sm ghost" data-stat-table="${id}" aria-pressed="${statTable[id]}">${statTable[id] ? "Als Diagramm" : "Als Tabelle"}</button>`;
+    return `<section class="card sec" aria-labelledby="stat-h">
+      <div class="chead"><span class="label" id="stat-h">Statistik</span>
+        <span class="seg" role="group" aria-label="Zeitraum">${periods.map(([id, n]) => `<button data-period="${id}" aria-pressed="${statPeriod === id}">${n}</button>`).join("")}</span></div>
+      <p class="limit">${I.info}<span><b>Zeitraum: die letzten ${all.length} Anrufe, seit ${first.toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}</b>  Mehr hält die Anrufliste von FRITZ!Box Telefon nicht (Optionen: Zeitraum ${shortList ? "7 Tage, höchstens 50 Anrufe" : "60 Tage, höchstens 400 Anrufe"}). Ältere Anrufe zählen nicht mit.${shortList ? " Die Liste reicht nur " + spanDays + " Tage zurück: 7 Tage, 30 Tage und „Alles“ zeigen dasselbe." : ""}</span></p>
+      ${offline() ? `<div class="stale" role="status">${I.unplug}<span>Stand 14:21 – die Verbindung zur Box ist unterbrochen.</span></div>` : ""}
+      <div class="tiles" style="margin-top:12px">
+        <div class="tile"><span class="label">Anrufe</span><b>${s.n}</b><small>${deltaText(s.n, prev?.n)} ${len > 1 ? `· Ø ${(s.n / Math.min(len, spanDays)).toLocaleString("de-DE", { maximumFractionDigits: 1 })} am Tag` : ""}</small></div>
+        <div class="tile"><span class="label">Gesprächszeit</span><b>${fmtMinutes(s.talk)}</b><small>${deltaText(s.talk, prev?.talk, "min")} · Ø ${s.conn ? Math.round(s.avg) + " Min." : "–"} je Gespräch</small></div>
+        <div class="tile"><span class="label">Verpasst</span><b>${Math.round(s.rate * 100)} %</b><small>${s.missed} von ${s.inbound} eingehenden ${deltaText(s.rate, prev?.rate, "pp")}</small></div>
+        <div class="tile"><span class="label">Spam erkannt</span><b>${s.spam}</b><small>heute ${inP.length || statPeriod !== "today" ? all.filter((c) => c.is_spam && c._d >= TODAY).length : 0} · gesamt 23 (seit Juli)</small></div>
+        <div class="tile"><span class="label">Auf den AB</span><b>${s.tam}</b><small>Anrufe mit Nachricht · ${messages.filter((m) => m.new).length} ungehört</small></div>
+      </div>
+      ${prevNote ? `<p class="hint">${esc(prevNote)}</p>` : `<p class="hint">▲/▼: Änderung gegenüber ${statPeriod === "today" ? "gestern" : `den ${len} Tagen davor`}.</p>`}
+
+      <div class="vsec"><div class="chead"><span class="label">Anrufe je ${buckets.unit}</span>${toggle("bars")}</div>
+        ${legend}
+        <div class="vwrap">${statTable.bars ? barTable(buckets) : barChart(buckets, W)}<div class="vtip" role="tooltip" hidden></div></div></div>
+
+      <div class="two" style="margin-top:8px">
+        <div class="vsec"><div class="chead"><span class="label">Wann es klingelt</span>${toggle("heat")}</div>
+          <div class="vwrap">${statTable.heat ? heatTable(heat) : heatChart(heat, Math.min(W, 520))}<div class="vtip" role="tooltip" hidden></div></div>
+          <p class="hint">Alle Anrufe nach Wochentag und Uhrzeit (3-Stunden-Blöcke). Kräftigere Farbe heißt mehr; die Zahl steht in jedem Feld.</p></div>
+        <div class="vsec"><div class="chead"><span class="label">Je eigener Rufnummer</span></div>
+          ${rankList(lines.map((l) => ({ ...l, name: "", area: lineNames[l.number] || "eigene Nummer" })), "Anrufe je eigener Rufnummer", "own", true)}
+          <p class="hint">Aus <span class="mono">called_number</span> (eingehend) bzw. <span class="mono">caller_number</span> (ausgehend).</p></div>
+      </div>
+
+      <div class="two" style="margin-top:8px">
+        <div class="vsec"><div class="chead"><span class="label">Wer am meisten anruft</span></div>${rankList(topBy(inP, (c) => c.caller_number, (c) => !c.type.includes("outgoing")), "Häufigste Anrufer", "tin")}</div>
+        <div class="vsec"><div class="chead"><span class="label">Wen du am meisten anrufst</span></div>${rankList(topBy(inP, (c) => c.called_number, (c) => c.type.includes("outgoing")), "Am häufigsten angerufen", "tout")}</div>
+      </div>
+      ${privacy() ? `<p class="hint">Privatsphäre-Modus: Namen verdeckt, Nummern gekürzt. Antippen zeigt einen Eintrag 15 Sekunden lang.</p>` : ""}
+      <p class="hint">Gerechnet im Browser aus <span class="mono">attributes.calls</span> der Anrufliste; „Spam gesamt“ aus <span class="mono">sensor.*_erkannte_spam_anrufe</span>. Gesprächszeit je Anruf auf die Minute aufgerundet (so liefert sie die Box), der Schnitt ist daher eher zu hoch.</p>
+    </section>`;
+  }
+
+  /* ---------- Seite ---------- */
+  function sourceLine() {
+    if (state === "loading") return "";
+    const entry = state === "multi" ? `<label class="sr" for="entrysel">Eintrag von FRITZ!Box Telefon</label><select id="entrysel" class="mono" style="min-height:34px;border-radius:10px;border:1px solid var(--line);background:var(--surface);padding:0 8px;max-width:100%"><option>FRITZ!Box 7590 AX (diese Box)</option><option>FRITZ!Box 7530 Ferienwohnung</option></select>` : `Eintrag „FRITZ!Box 7590 AX“`;
+    return `<p class="src" style="margin:0">Daten von <b>FRITZ!Box Telefon</b> · ${entry} · Anrufmonitor ${offline() ? '<span class="chip warn">getrennt</span>' : '<span class="chip ok">verbunden</span>'} · <a>Zur Integration</a></p>`;
+  }
+  function render() {
+    nav();
+    if (state === "nophone") {
+      $("#main").innerHTML = `<div class="phead"><h1 id="dtitle" tabindex="-1">Box</h1><p class="lead">Ohne FRITZ!Box Telefon gibt es unter Box keine Unterreiter: Die Seite sieht aus wie in <a href="box.html">box.html</a>.</p></div>
+        <section class="card sec"><ul class="notes"><li><b>Erkennung:</b> <span class="mono">hass.config.components</span> enthält <span class="mono">fritzbox_phone</span> und es gibt mindestens eine Entität mit <span class="mono">platform: "fritzbox_phone"</span> in <span class="mono">hass.entities</span>.</li><li><b>Kein Hinweis, keine Werbung:</b> Der Unterreiter fehlt einfach. Ein Link auf die Integration steht nur in der Doku.</li><li><b>Adresse</b> <span class="mono">#/box/phone</span> ohne Integration leitet auf <span class="mono">#/box</span> um.</li></ul></section>`;
+      return;
+    }
+    const head = `${subtabs("Telefon")}<div class="phead"><h1 id="dtitle" tabindex="-1">Telefon</h1><p class="lead">Anrufe, Anrufbeantworter und Telefonbuch der Box, gelesen aus FRITZ!Box Telefon. Diese Seite zeigt die Entitäten dieser Integration und ruft deren Dienste auf; nur die Statistik zählt im Browser selbst.</p>${sourceLine()}</div>
+      <div class="seg viewtabs" role="group" aria-label="Ansicht"><button data-view="list" aria-pressed="${view === "list"}">Anrufe und Nachrichten</button><button data-view="stats" aria-pressed="${view === "stats"}">Statistik</button></div>`;
+    if (state === "error") {
+      $("#main").innerHTML = `${head}<section class="card"><div class="empty"><span style="color:var(--bad)">${I.unplug}</span><b>FRITZ!Box Telefon erreicht die Box nicht.</b><span><span class="mono">sensor.fritz_box_7590_ax_anrufliste</span> ist nicht verfügbar. Unten steht der letzte Stand von 14:21; Anrufen, Sperren und Löschen gehen erst wieder, wenn die Verbindung steht.</span><div class="btn-row"><a class="btn" href="#">Zur Integration</a></div></div></section>${view === "stats" ? statsView() : `${today()}<div class="two">${callList()}<div style="display:grid;gap:16px">${tamCard()}${bookCard()}</div></div>`}`;
+      return;
+    }
+    const body = view === "stats" ? statsView() : `${today()}<div class="two">${callList()}<div style="display:grid;gap:16px">${tamCard()}${bookCard()}</div></div>`;
+    $("#main").innerHTML = `${head}${liveBanner()}${notices()}${body}`;
+  }
+
+  /* ---------- Dialoge ---------- */
+  function dialog({ title, body, ok, danger, focus, onOpen }) {
+    return new Promise((resolve) => {
+      const before = document.activeElement;
+      $("#dialog").innerHTML = `<h2 id="dlg-title">${esc(title)}</h2><div id="dlg-body">${body}</div>
+        <div class="btn-row"><button class="btn" id="dlg-no">${ok ? "Abbrechen" : "Schließen"}</button>${ok ? `<button class="btn ${danger ? "dp" : "p"}" id="dlg-yes">${esc(ok)}</button>` : ""}</div>`;
+      $("#backdrop").classList.add("open");
+      (focus ? $(focus) : $("#dlg-no")).focus();
+      onOpen?.();
+      const focusables = () => [...$("#dialog").querySelectorAll("button:not([disabled]), input, select, a[href]")];
+      const done = (v) => { $("#backdrop").classList.remove("open"); document.removeEventListener("keydown", key); before?.focus?.(); resolve(v); };
+      const key = (e) => {
+        if (e.key === "Escape") done(false);
+        if (e.key === "Tab") {
+          const f = focusables(), i = f.indexOf(document.activeElement);
+          if (e.shiftKey && i <= 0) { e.preventDefault(); f.at(-1).focus(); }
+          else if (!e.shiftKey && i === f.length - 1) { e.preventDefault(); f[0].focus(); }
+        }
+      };
+      document.addEventListener("keydown", key);
+      $("#dlg-no").onclick = () => done(false);
+      if (ok) $("#dlg-yes").onclick = () => done(true);
+    });
+  }
+  let tt;
+  function toast(msg, undo) {
+    $("#toast").innerHTML = `<span>${esc(msg)}</span>${undo ? `<button id="undo">Rückgängig</button>` : ""}`;
+    $("#toast").classList.add("show");
+    if (undo) $("#undo").onclick = () => { undo(); $("#toast").classList.remove("show"); };
+    clearTimeout(tt); tt = setTimeout(() => $("#toast").classList.remove("show"), 5000);
+  }
+  const roFail = () => toast("Die FRITZ!Box hat abgelehnt: Keine Berechtigung (box_request_failed).");
+
+  async function dialDialog(number = "", name = "") {
+    const all = BOOKS.flatMap((b) => b.contacts.flatMap((c) => c.numbers.filter((n) => n.type !== "fax_work").map((n) => ({ name: c.name, ...n })))).filter((v, i, a) => a.findIndex((x) => x.number === v.number) === i);
+    const sugg = (q) => {
+      q = q.toLowerCase().replace(/\s/g, "");
+      const hits = q ? all.filter((c) => c.name.toLowerCase().includes(q) || c.number.includes(q)).slice(0, 6) : [];
+      return hits.length ? `<ul class="sugg" role="listbox" aria-label="Kontakte">${hits.map((h) => `<li role="option" aria-selected="false"><button type="button" data-pick="${esc(h.number)}" data-pname="${esc(h.name)}"><span>${esc(h.name)}</span><span class="mono muted">${privacy() ? "•••" : esc(prettyNumber(h.number))} ${esc(NUMTYPE[h.type] || "")}</span></button></li>`).join("")}</ul>` : "";
+    };
+    let picked = name;
+    const ok = await dialog({
+      title: "Anrufen",
+      body: `<div class="field"><label for="dial-in">Nummer oder Name aus dem Telefonbuch</label><input id="dial-in" value="${esc(number)}" inputmode="tel" autocomplete="off" aria-describedby="dial-help" aria-controls="dial-sugg"></div>
+        <div id="dial-sugg">${sugg("")}</div>
+        <p class="hint" id="dial-help">Die Box ruft zuerst <b>dein Telefon</b> an (Wählhilfe). Nimmst du ab, wählt sie die Nummer. Welches Telefon klingelt, legst du in der Box fest: Telefonie › Telefoniegeräte › Wählhilfe. Der Dienst <span class="mono">fritzbox_phone.dial</span> kennt keine Auswahl des Telefons.</p>
+        <p class="hintline bad" id="dial-err" hidden>${I.alert}<span>Nur Ziffern, Leerzeichen und + * # ( ) - / erlaubt, höchstens 32 Zeichen.</span></p>`,
+      ok: "Anrufen", focus: "#dial-in",
+      onOpen: () => {
+        const inp = $("#dial-in");
+        inp.addEventListener("input", () => { $("#dial-sugg").innerHTML = /\d/.test(inp.value) ? "" : sugg(inp.value); picked = ""; $("#dial-err").hidden = true; });
+        $("#dial-sugg").addEventListener("click", (e) => { const b = e.target.closest("[data-pick]"); if (!b) return; inp.value = b.dataset.pick; picked = b.dataset.pname; $("#dial-sugg").innerHTML = ""; inp.focus(); });
+      },
+    });
+    if (!ok) return;
+    const val = ($("#dial-in")?.value || "").trim();
+    if (!/^[0-9+*#()\-/ ]{1,32}$/.test(val)) { toast("Keine gültige Rufnummer – nichts gewählt."); return; }
+    if (ro()) return roFail();
+    dialing = { number: val.replace(/\s/g, ""), name: picked };
+    render(); announce("Wählhilfe gestartet. Dein Telefon klingelt gleich.");
+    setTimeout(() => { if (dialing) { dialing = null; render(); } }, 9000);
+  }
+
+  async function blockDialog(number, name) {
+    const ok = await dialog({
+      title: "Nummer sperren?",
+      body: `<p style="margin:0">Die FRITZ!Box nimmt <b class="mono">${esc(prettyNumber(number))}</b> in ihre Rufsperre auf. Anrufe von dieser Nummer klingeln dann auf keinem Telefon mehr und landen nicht auf dem Anrufbeantworter.</p>
+        <div class="field"><label for="blk-name">Bezeichnung in der Sperrliste (optional)</label><input id="blk-name" value="${esc(name || "")}" maxlength="64" placeholder="z. B. Werbeanruf"></div>
+        <ul><li>Gilt für alle Rufnummern der Box.</li><li>Freigeben: hier über „Rückgängig“ oder in der Box unter Telefonie › Rufbehandlung › Rufsperren.</li></ul>`,
+      ok: "Sperren", danger: true,
+    });
+    if (!ok) return;
+    if (ro()) return roFail();
+    blocked.add(number); render();
+    toast(`${prettyNumber(number)} ist gesperrt.`, () => { blocked.delete(number); render(); toast(`${prettyNumber(number)} ist wieder freigegeben.`); });
+  }
+
+  async function contactDialog(number, suggestion) {
+    const ok = await dialog({
+      title: "Ins Telefonbuch aufnehmen",
+      body: `<p style="margin:0">Nummer <b class="mono">${esc(prettyNumber(number))}</b></p>
+        <div class="field"><label for="ct-name">Name</label><input id="ct-name" value="${esc(suggestion || "")}" maxlength="64" required></div>
+        <div class="field"><label for="ct-book">Telefonbuch</label><select id="ct-book">${BOOKS.map((b, i) => `<option value="${i}">${esc(b.name)}</option>`).join("")}</select></div>
+        ${suggestion ? `<p class="hint">Vorschlag aus der Rückwärtssuche (Tellows). Bitte prüfen.</p>` : ""}`,
+      ok: "Aufnehmen", focus: "#ct-name",
+    });
+    if (!ok) return;
+    const n = ($("#ct-name")?.value || "").trim();
+    if (!n) { toast("Ohne Namen wird kein Kontakt angelegt."); return; }
+    if (ro()) return roFail();
+    toast(`${n} wurde ins Telefonbuch aufgenommen.`);
+  }
+
+  async function lookupDialog(number) {
+    const c = CALLS.find((x) => otherNumber(x) === number) || {};
+    const spam = c.spam_rating ? `${RATING[c.spam_rating]}, ${c.spam_confidence} % Spamverdacht${c.spam_location ? `, ${c.spam_location}` : ""}` : "nicht in der Datenbank";
+    await dialog({
+      title: `Nummer ${prettyNumber(number)}`,
+      body: `<p class="hint" style="margin:0 0 10px" role="status">Antwort von <span class="mono">fritzbox_phone.lookup_number</span>:</p>
+        <dl class="kv"><dt>Kanonisch</dt><dd class="mono">${esc(number.startsWith("+") ? number : "+49" + number.slice(1))}</dd>
+        <dt>Telefonbuch</dt><dd>${c.name ? esc(c.name) + (c.vip ? " (VIP)" : "") : "kein Eintrag"}</dd>
+        <dt>Ort/Land</dt><dd>${esc(c.area_name || "–")} <span class="muted">(offline)</span></dd>
+        <dt>PhoneBlock</dt><dd>${esc(spam)}</dd>
+        <dt>Tellows</dt><dd>${c.reverse_name ? `${esc(c.reverse_name)}, ${esc(c.reverse_category)}, Score 3` : "ausgeschaltet oder kein Treffer"}</dd></dl>
+        <p class="hint">PhoneBlock bekommt nur einen Hash der Nummer; Tellows (falls eingeschaltet) die Nummer selbst.</p>`,
+    });
+  }
+
+  async function speakerDialog(index) {
+    const ok = await dialog({
+      title: "Auf Lautsprecher abspielen",
+      body: `<div class="field"><label for="mp">Lautsprecher</label><select id="mp">${MEDIA.map(([id, n]) => `<option value="${id}">${esc(n)}</option>`).join("")}</select></div><p class="hint">FRITZ!Box Telefon gibt dem Lautsprecher eine 10 Minuten gültige, signierte Adresse (Dienst <span class="mono">play_message</span>). Home Assistant braucht dafür eine interne URL.</p>`,
+      ok: "Abspielen", focus: "#mp",
+    });
+    if (ok) toast(`Nachricht läuft auf ${MEDIA.find(([id]) => id === $("#mp").value)?.[1] || "dem Lautsprecher"}.`);
+  }
+
+  async function deleteDialog(index) {
+    const msg = messages.find((m) => m.index === index);
+    const ok = await dialog({ title: "Nachricht löschen?", body: `<p style="margin:0">Die Nachricht ${privacy() ? "" : `von <b>${esc(msg.name || msg.reverse_name || prettyNumber(msg.number))}</b> `}vom ${esc(msg.date)} wird auf der FRITZ!Box gelöscht. Das lässt sich nicht rückgängig machen.</p>`, ok: "Löschen", danger: true });
+    if (!ok) return;
+    if (ro()) return roFail();
+    if (playing?.index === index) stopPlay();
+    messages = messages.filter((m) => m.index !== index); render(); toast("Nachricht gelöscht.");
+  }
+
+  /* ---------- Player (Mockup: simuliert) ---------- */
+  function stopPlay() { clearInterval(playTimer); playTimer = null; playing = null; }
+  function togglePlay(index) {
+    if (playing && playing.index === index) {
+      playing.paused = !playing.paused;
+      if (playing.paused) { clearInterval(playTimer); playTimer = null; } else startTimer();
+      render(); return;
+    }
+    stopPlay();
+    const msg = messages.find((m) => m.index === index);
+    playing = { index, pos: 0, total: secs(msg.duration), paused: false };
+    if (msg.new && !ro()) { msg.new = false; announce("Wird abgespielt und als gelesen markiert."); }
+    startTimer(); render();
+  }
+  function startTimer() {
+    playTimer = setInterval(() => {
+      if (!playing) return;
+      playing.pos = Math.min(playing.total, playing.pos + 1);
+      const s = $("#seek"), t = $("#pt");
+      if (s) { s.value = playing.pos; s.setAttribute("aria-valuetext", `${mmss(playing.pos)} von ${mmss(playing.total)}`); }
+      if (t) t.textContent = mmss(playing.pos);
+      if (playing.pos >= playing.total) { playing.paused = true; clearInterval(playTimer); playTimer = null; render(); }
+    }, 1000);
+  }
+
+  /* ---------- Ereignisse ---------- */
+  function reveal(key) {
+    clearTimeout(revealed.get(key));
+    revealed.set(key, setTimeout(() => { revealed.delete(key); expanded.delete(key); render(); }, 15000));
+    expanded.add(key);
+    render();
+    document.querySelector(`[data-key="${key}"]`)?.focus();
+  }
+
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("button, a[data-act]");
+    if (!b || b.closest("#dialog")) return;
+    if (b.dataset.mode) {
+      document.documentElement.dataset.mode = b.dataset.mode === "auto" ? "" : b.dataset.mode;
+      document.querySelectorAll("[data-mode]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      return;
+    }
+    if (b.dataset.view) { view = b.dataset.view; render(); $(`[data-view="${view}"]`)?.focus(); return; }
+    if (b.dataset.period) { statPeriod = b.dataset.period; render(); $(`[data-period="${statPeriod}"]`)?.focus(); announce("Zeitraum geändert."); return; }
+    if (b.dataset.statTable) { const k = b.dataset.statTable; statTable[k] = !statTable[k]; render(); $(`[data-stat-table="${k}"]`)?.focus(); return; }
+    if (b.dataset.filter) { filter = b.dataset.filter; render(); $(`[data-filter="${filter}"]`)?.focus(); return; }
+    if (b.dataset.book) { bookIx = +b.dataset.book; render(); $(`[data-book="${bookIx}"]`)?.focus(); return; }
+    const act = b.dataset.act;
+    if (act === "row") {
+      const key = b.dataset.key;
+      if (masked(key)) return reveal(key);
+      expanded.has(key) ? expanded.delete(key) : expanded.add(key);
+      render(); document.querySelector(`[data-key="${key}"]`)?.focus(); return;
+    }
+    if (act === "reset") { filter = "all"; query = ""; render(); return; }
+    if (act === "dial-open") return dialDialog();
+    if (act === "dial") return dialDialog(b.dataset.number, b.dataset.name);
+    if (act === "hangup") { dialing = null; render(); announce("Wählvorgang abgebrochen."); return; }
+    if (act === "block") return blockDialog(b.dataset.number, b.dataset.name);
+    if (act === "contact") return contactDialog(b.dataset.number, b.dataset.name);
+    if (act === "lookup") return lookupDialog(b.dataset.number);
+    if (act === "play") { const i = +b.dataset.index; togglePlay(i); document.querySelector(`.icon-btn[data-act="play"][data-index="${i}"]`)?.focus(); return; }
+    if (act === "speaker") return speakerDialog(+b.dataset.index);
+    if (act === "download") { e.preventDefault(); toast("Download über eine signierte Adresse (auth/sign_path), im Browser gespeichert."); return; }
+    if (act === "mark") { if (ro()) return roFail(); const m = messages.find((x) => x.index === +b.dataset.index); m.new = !m.new; render(); toast(m.new ? "Als ungelesen markiert." : "Als gelesen markiert."); return; }
+    if (act === "delete") return deleteDialog(+b.dataset.index);
+    if (act === "jump-tam") { togglePlay(+b.dataset.index); $(`#msg-${b.dataset.index}`)?.scrollIntoView({ block: "center" }); return; }
+    if (act === "tam-switch") {
+      if (ro()) return roFail();
+      tamEnabled = !tamEnabled; b.classList.add("busy");
+      setTimeout(() => { render(); toast(`${TAM0.name} ${tamEnabled ? "eingeschaltet" : "ausgeschaltet"}.`, () => { tamEnabled = !tamEnabled; render(); }); }, 600);
+    }
+  });
+  document.addEventListener("input", (e) => {
+    if (e.target.id === "q") { query = e.target.value; const pos = e.target.selectionStart; render(); const q = $("#q"); q.focus(); q.setSelectionRange(pos, pos); }
+    if (e.target.id === "bq") { bookQuery = e.target.value; const pos = e.target.selectionStart; render(); const q = $("#bq"); q.focus(); q.setSelectionRange(pos, pos); }
+    if (e.target.id === "seek" && playing) { playing.pos = +e.target.value; $("#pt").textContent = mmss(playing.pos); }
+  });
+  function showTip(e) {
+    const g = e.target.closest?.("[data-tip]");
+    document.querySelectorAll(".vtip").forEach((t) => (t.hidden = true));
+    if (!g) return;
+    const wrap = g.closest(".vwrap"), tip = wrap.querySelector(".vtip"), r = g.getBoundingClientRect(), w = wrap.getBoundingClientRect();
+    tip.textContent = g.dataset.tip; tip.hidden = false;
+    const left = Math.min(Math.max(0, r.left - w.left + r.width / 2 - tip.offsetWidth / 2), w.width - tip.offsetWidth);
+    tip.style.left = left + "px"; tip.style.top = Math.max(0, r.top - w.top - tip.offsetHeight - 6) + "px";
+  }
+  document.addEventListener("mouseover", showTip);
+  document.addEventListener("focusin", showTip);
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") document.querySelectorAll(".vtip").forEach((t) => (t.hidden = true)); });
+  let rz; window.addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(() => view === "stats" && render(), 150); });
+  $("#st").addEventListener("change", (e) => {
+    state = e.target.value; stopPlay(); dialing = null; expanded = new Set(); filter = "all"; query = ""; blocked = new Set(); messages = MESSAGES.map((m) => ({ ...m })); tamEnabled = true;
+    revealed.forEach((t) => clearTimeout(t)); revealed.clear();
+    if (state === "tamnew") { playing = { index: 2, pos: 12, total: 38, paused: true }; }
+    render();
+  });
+  render();
+</script>
+</body>
+</html>
