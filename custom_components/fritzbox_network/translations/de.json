@@ -221,6 +221,24 @@
       },
       "vpn_uid": {
         "name": "{name} Kennung"
+      },
+      "internet_bytes_received": {
+        "name": "Internet-Daten empfangen"
+      },
+      "internet_bytes_sent": {
+        "name": "Internet-Daten gesendet"
+      },
+      "internet_line_rate_down": {
+        "name": "Leitungsrate Download"
+      },
+      "internet_line_rate_up": {
+        "name": "Leitungsrate Upload"
+      },
+      "dsl_max_rate_down": {
+        "name": "DSL-Maximalrate Download"
+      },
+      "dsl_max_rate_up": {
+        "name": "DSL-Maximalrate Upload"
       }
     },
     "select": {

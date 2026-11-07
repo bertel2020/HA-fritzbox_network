@@ -221,6 +221,24 @@
       },
       "vpn_uid": {
         "name": "{name} identifier"
+      },
+      "internet_bytes_received": {
+        "name": "Internet data received"
+      },
+      "internet_bytes_sent": {
+        "name": "Internet data sent"
+      },
+      "internet_line_rate_down": {
+        "name": "Line rate download"
+      },
+      "internet_line_rate_up": {
+        "name": "Line rate upload"
+      },
+      "dsl_max_rate_down": {
+        "name": "DSL attainable rate download"
+      },
+      "dsl_max_rate_up": {
+        "name": "DSL attainable rate upload"
       }
     },
     "select": {

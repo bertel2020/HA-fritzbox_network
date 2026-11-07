@@ -129,6 +129,24 @@
       },
       "vpn_uid": {
         "default": "mdi:identifier"
+      },
+      "internet_bytes_received": {
+        "default": "mdi:download-network-outline"
+      },
+      "internet_bytes_sent": {
+        "default": "mdi:upload-network-outline"
+      },
+      "internet_line_rate_down": {
+        "default": "mdi:speedometer"
+      },
+      "internet_line_rate_up": {
+        "default": "mdi:speedometer"
+      },
+      "dsl_max_rate_down": {
+        "default": "mdi:speedometer"
+      },
+      "dsl_max_rate_up": {
+        "default": "mdi:speedometer"
       }
     },
     "switch": {

@@ -219,6 +219,52 @@ async def test_a_box_without_a_dsl_line_has_no_line_sensors(hass, fake_client, e
     assert registry.async_get("sensor.fritz_network_internet_download") is not None
 
 
+async def test_the_byte_counters_and_the_reachable_rates_are_sensors_that_are_off(
+    hass, fake_client, entry
+):
+    await _setup(hass, entry)
+    registry = er.async_get(hass)
+
+    for key in (
+        "internet_bytes_received",
+        "internet_bytes_sent",
+        "dsl_max_rate_down",
+        "dsl_max_rate_up",
+    ):
+        reg = registry.async_get(f"sensor.fritz_network_{key}")
+        assert reg is not None, key
+        assert reg.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+    # a DSL line has its own rates: the line rate of the other connections is not added to it
+    assert registry.async_get("sensor.fritz_network_internet_line_rate_down") is None
+    assert registry.async_get("sensor.fritz_network_internet_line_rate_up") is None
+
+
+async def test_a_connection_that_is_not_dsl_has_a_line_rate_and_no_dsl_values(
+    hass, fake_client, entry
+):
+    del fake_client.internet_slow["X_AVM-DE_GetDSLInfo"]
+    fake_client.internet_slow["GetCommonLinkProperties"]["NewWANAccessType"] = "Ethernet"
+    await _setup(hass, entry)
+    registry = er.async_get(hass)
+
+    for key in ("internet_line_rate_down", "internet_line_rate_up", "internet_bytes_sent"):
+        reg = registry.async_get(f"sensor.fritz_network_{key}")
+        assert reg is not None, key
+        assert reg.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+    assert registry.async_get("sensor.fritz_network_dsl_max_rate_down") is None
+
+
+async def test_a_box_without_byte_counters_has_no_byte_sensors(hass, fake_client, entry):
+    for action in ("GetTotalBytesReceived", "GetTotalBytesSent"):
+        del fake_client.internet_fast[action]
+    await _setup(hass, entry)
+    registry = er.async_get(hass)
+
+    assert registry.async_get("sensor.fritz_network_internet_bytes_received") is None
+    assert registry.async_get("sensor.fritz_network_internet_bytes_sent") is None
+    assert registry.async_get("sensor.fritz_network_internet_download") is not None
+
+
 async def test_a_box_that_tells_nothing_has_no_internet_sensors(hass, fake_client, entry):
     fake_client.internet_fast = {}
     await _setup(hass, entry)
