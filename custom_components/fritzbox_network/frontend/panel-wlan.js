@@ -90,8 +90,7 @@ function qrBox(guest, ctx) {
         <button class="iconbtn" data-act="wlan-copy" data-k="wlan-copy" title="${escapeHtml(g.copy)}" aria-label="${escapeHtml(g.copy)}">${ic("copy")}</button></div>`
     : `<div class="secret"><span class="muted">${escapeHtml(text)}</span></div>`;
   return `<div class="qr"><img src="data:image/png;base64,${escapeHtml(secret.qr_png_base64 ?? "")}" alt="${escapeHtml(fill(g.qrAlt, { ssid }))}" width="180" height="180"></div>
-    ${pw}
-    <div class="btn-row tight"><button class="btn sm" data-act="wlan-hideqr" data-k="wlan-hideqr">${escapeHtml(g.hideQr)}</button></div>`;
+    ${pw}`;
 }
 
 /** The label of the way the guest network is secured, from the type the box tells; null where it does not say. */
@@ -99,15 +98,17 @@ function securityLabel(beacon, g) {
   return beacon ? g.security[beacon] ?? null : null;
 }
 
-/** The devices that are in the guest network now, as buttons that open their page. */
-function guestDevices(ctx) {
-  const g = ctx.t.wlan.guest;
-  const online = (ctx.clients ?? []).filter((c) => c.guest && c.online);
-  if (!online.length) return `<p class="gdev none">${escapeHtml(g.noDevices)}</p>`;
+/** The devices that are in the guest network now. */
+function guestOnline(ctx) {
+  return (ctx.clients ?? []).filter((c) => c.guest && c.online);
+}
+
+/** The devices that are in the guest network now, as buttons that open their page; nothing without any. */
+function guestDevices(online, g) {
+  if (!online.length) return "";
   const shown = online.slice(0, 6);
   const more = online.length - shown.length;
-  return `<div class="gdev"><span class="gl">${escapeHtml(fill(g.devices, { n: online.length }))}</span>
-    <div class="gchips">${shown.map((c) => `<button class="gchip" data-dev="${escapeHtml(c.id)}"><span class="dot on"></span>${escapeHtml(c.name)}</button>`).join("")}${more > 0 ? `<span class="gmore">${escapeHtml(fill(g.more, { n: more }))}</span>` : ""}</div></div>`;
+  return `<div class="gdev"><div class="gchips">${shown.map((c) => `<button class="gchip" data-dev="${escapeHtml(c.id)}"><span class="dot on"></span>${escapeHtml(c.name)}</button>`).join("")}${more > 0 ? `<span class="gmore">${escapeHtml(fill(g.more, { n: more }))}</span>` : ""}</div></div>`;
 }
 
 function guestCard(guest, ctx) {
@@ -121,12 +122,14 @@ function guestCard(guest, ctx) {
   const secret = ctx.secret;
   const qrShown = ctx.canWrite && guest.enabled && secret && secret !== "loading";
   const security = securityLabel(guest.beacon, g);
-  const facts = [guest.enabled ? t.wlan.on : t.wlan.off, security].filter(Boolean);
+  const online = guestOnline(ctx);
+  const count = guest.enabled ? (online.length === 1 ? g.devicesOne : online.length ? fill(g.devices, { n: online.length }) : g.noneConnected) : "";
+  const facts = [guest.enabled ? "" : t.wlan.off, security, count].filter(Boolean);
   const loading = secret === "loading";
   const actions = ctx.canWrite
     ? `<div class="btn-row">
         <button class="btn" data-act="wlan-pw" data-k="wlan-pw" aria-haspopup="dialog">${escapeHtml(g.edit)}</button>
-        ${!qrShown && guest.enabled ? `<button class="btn p" data-act="wlan-qr" data-k="wlan-qr"${loading ? " disabled" : ""}>${escapeHtml(loading ? g.loadingQr : g.showQr)}</button>` : ""}</div>`
+        ${qrShown ? `<button class="btn on" data-act="wlan-hideqr" data-k="wlan-hideqr" aria-pressed="true">${escapeHtml(g.hideQr)}</button>` : guest.enabled ? `<button class="btn" data-act="wlan-qr" data-k="wlan-qr"${loading ? " disabled" : ""}>${escapeHtml(loading ? g.loadingQr : g.showQr)}</button>` : ""}</div>`
     : `<p class="hint">${escapeHtml(g.qrLocked)}</p>`;
   return `<section class="card sec"><span class="label">${escapeHtml(g.title)}</span>
     <div class="guest${qrShown ? " withqr" : ""}"><div>
@@ -134,11 +137,11 @@ function guestCard(guest, ctx) {
         <span class="ico">${ic("guest")}</span>
         <div class="n"><b>${escapeHtml(ssid)}</b><small>${facts.map((f) => `<span>${escapeHtml(f)}</span>`).join("")}${busy ? `<span class="busyText">${escapeHtml(t.wlan.switching)}</span>` : ""}</small></div>
         <div class="end"><button class="switch${busy ? " busy" : ""}" role="switch" aria-checked="${guest.enabled}" aria-label="${escapeHtml(fill(g.switchLabel, { ssid }))}" data-act="wlan-switch" data-key="guest" data-on="${guest.enabled ? "0" : "1"}" data-k="wl-guest"${!ctx.canWrite || busy ? " disabled" : ""}></button></div></div>
-      ${guest.enabled ? guestDevices(ctx) : ""}
+      ${guest.enabled ? guestDevices(online, g) : ""}
       ${actions}
     </div>
     ${qrShown ? `<div class="qrbox">${qrBox(guest, ctx)}</div>` : ""}</div>
-    <p class="hint gfoot">${escapeHtml(g.hint)}</p></section>`;
+    <p class="hint gfoot">${ic("info")}<span>${escapeHtml(g.hint)}</span></p></section>`;
 }
 
 /**

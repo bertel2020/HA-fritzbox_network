@@ -275,7 +275,7 @@ test("the Wi-Fi page lists the networks with a switch each and the guest access,
   assert.match(html, /data-key="5ghz"/);
   assert.match(html, /Alle Bänder haben denselben Namen/);
   assert.match(html, /aria-label="Gastzugang Gäste &lt;i&gt;" data-act="wlan-switch" data-key="guest"/);
-  assert.match(html, /data-act="wlan-qr"[^>]*>QR-Code zeigen/);
+  assert.match(html, /data-act="wlan-qr"[^>]*>QR-Code<\/button>/);
   assert.doesNotMatch(html, /<img/);
   const busy = wlanPage.renderWlan(wlan, { t, busy: new Set(["5ghz"]), secret: null });
   assert.match(busy, /class="switch busy"[^>]*data-key="5ghz"[^>]*disabled/);
@@ -290,11 +290,10 @@ test("the guest card names how the network is secured and who is in it, with a b
   ];
   const guest = { ...wlan, guest: { enabled: true, ssid: "Gäste", beacon: "11iandWPA3" } };
   const html = wlanPage.renderWlan(guest, { t, busy: new Set(), secret: null, clients });
-  assert.match(html, /<span>an<\/span><span>WPA2 \+ WPA3<\/span>/);
-  assert.match(html, /1 Geräte verbunden/);
+  assert.match(html, /<span>WPA2 \+ WPA3<\/span><span>1 Gerät verbunden<\/span>/);
   assert.match(html, /data-dev="a1"><span class="dot on"><\/span>Handy &lt;b&gt;/);
   assert.doesNotMatch(html, /data-dev="a2"|data-dev="a3"/);
-  assert.match(wlanPage.renderWlan(guest, { t, busy: new Set(), secret: null, clients: [] }), /kein Gerät im Gastzugang/);
+  assert.match(wlanPage.renderWlan(guest, { t, busy: new Set(), secret: null, clients: [] }), /keine Geräte verbunden/);
   const many = Array.from({ length: 8 }, (_, i) => ({ id: `g${i}`, name: `G${i}`, guest: true, online: true }));
   assert.match(wlanPage.renderWlan(guest, { t, busy: new Set(), secret: null, clients: many }), /\+2 weitere/);
 });
