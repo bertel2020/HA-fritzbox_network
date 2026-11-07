@@ -27,6 +27,20 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Repeater, die du zum Steuern gewählt hast, haben jetzt auch einen Schalter **Gast-WLAN** und das Bild **Gast-WLAN-QR-Code** (standardmäßig aus), sofern der Repeater ein Gastnetz meldet.
 - Optionen: Unter **Schalter anlegen für** wählst du die Bereiche, die Schalter bekommen: Geräte (Internetzugang, Priorität, Wake on LAN), WLAN-Netze (Box, Repeater, Gast-WLAN und QR-Code), Portfreigaben, WireGuard-Verbindungen, statische Routen. Standard sind alle. Ein ausgeschalteter Bereich entfernt seine Schalter.
 
+### Behoben
+
+- Sicherheit: Die vier Verlaufsbefehle des Panels (`history/summary`, `history/device`, `history/traffic`, `vpn/history`) verlangen jetzt wie alle anderen einen Administrator.
+- Sicherheit: Die Aktionen (Name setzen, Wake on LAN, Route, Gast-WLAN-Passwort, Mitschnitt, VPN-Aufräumen) prüfen die Rolle des aufrufenden Benutzers; nur Administratoren dürfen sie ausführen. Aufrufe ohne Benutzer, etwa aus Automationen, bleiben erlaubt.
+- Beim Wechsel der FRITZ!Box im Panel bleibt nichts von der alten Box stehen, und verspätete Antworten der alten Box werden verworfen. Adressnotizen werden erst gesendet, wenn sie für die gewählte Box geladen sind.
+- CSV-Export: Zellen, die wie eine Formel beginnen, bekommen ein vorangestelltes `'`, damit ein Gerätename oder eine Notiz in der Tabellenkalkulation nie als Formel läuft.
+- Die Tab-Leisten lassen sich mit Pfeiltasten, Pos1 und Ende bedienen; nur der geöffnete Tab liegt in der Tab-Reihenfolge.
+- Die Leiste am unteren Rand folgt der Breite des Panels (kompakt bis 600 px) statt der Fensterbreite.
+- Das Panel erfährt, wenn der Eintrag aus jedem Grund neu geladen wird (von Hand, Neuanmeldung, Neukonfiguration), nicht nur nach geänderten Optionen. Vorher blieb die Topologie danach stehen.
+- Internetzugang und Priorität eines Geräts ohne IPv4-Adresse werden im Panel abgelehnt statt einen Erfolg zu melden; ein Fehler der Box kommt als Antwort an.
+- Die Reparatur „lange offline“ blendet nur Geräte aus, die beim Absenden noch lange offline sind.
+- Die Aktion `set_guest_wifi_password` verlangt wie das Panel druckbares ASCII. Bei mehreren Boxen wird eine Box ohne Recht zum Ändern übersprungen, wenn eine andere geändert werden kann (`set_route`, `set_guest_wifi_password`).
+- Portfreigaben: Hat die Box keine UPnP-Statusinformationen, zeigt die Seite trotzdem die von Hand angelegten Weiterleitungen.
+
 ## 1.4.0 – 2026-11-06
 
 ### Neu

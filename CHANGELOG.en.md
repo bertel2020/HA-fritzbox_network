@@ -27,6 +27,20 @@ All notable changes to this integration are recorded here.
 - Repeaters you chose to control now also have a **Guest Wi-Fi** switch and the image **Guest Wi-Fi QR code** (off by default), as long as the repeater reports a guest network.
 - Options: under **Create switches for** you choose the areas that get switches: devices (internet access, priority, Wake on LAN), Wi-Fi networks (box, repeaters, guest network and QR code), port forwardings, WireGuard connections, static routes. All are on by default. An area turned off removes its switches.
 
+### Fixed
+
+- Security: the four history commands of the panel (`history/summary`, `history/device`, `history/traffic`, `vpn/history`) now require an administrator like all the others.
+- Security: the actions (set name, Wake on LAN, route, guest Wi-Fi password, capture, VPN clean-up) check the role of the calling user; only administrators may run them. Calls without a user, such as from automations, are still allowed.
+- Switching the FRITZ!Box in the panel leaves nothing of the old box behind, and late answers of the old box are dropped. Address notes are sent only once they are loaded for the chosen box.
+- CSV export: cells that start like a formula get a leading `'`, so a device name or note never runs as a formula in a spreadsheet.
+- The tab lists take the arrow keys, Home and End; only the open tab is in the tab order.
+- The bar at the bottom follows the width of the panel (compact up to 600 px) instead of the window width.
+- The panel is told when the entry reloads for any reason (by hand, reauth, reconfigure), not only after changed options. Before, the topology stood still after that.
+- Internet access and priority of a device without an IPv4 address are refused in the panel instead of reporting a success; a failure of the box comes back as an answer.
+- The "offline for long" repair hides only the devices that are still offline for long when it is sent.
+- The action `set_guest_wifi_password` requires printable ASCII like the panel. With several boxes, one without the right to change settings is skipped when another can be changed (`set_route`, `set_guest_wifi_password`).
+- Port forwardings: if the box has no UPnP status information, the page still shows the forwardings set by hand.
+
 ## 1.4.0 – 2026-11-06
 
 ### New
