@@ -52,3 +52,19 @@ capture:
           unit_of_measurement: MB
 
 remove_unavailable_vpn:
+
+set_guest_wifi_password:
+  fields:
+    password:
+      required: false
+      selector:
+        text:
+          type: password
+    length:
+      required: false
+      default: 12
+      selector:
+        number:
+          min: 8
+          max: 63
+          mode: box

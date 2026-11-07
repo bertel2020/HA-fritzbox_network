@@ -256,6 +256,12 @@ class FakeClient:
             raise FritzActionError("refused")
         # the box shows it with a delay, like the guest network: the next read says the old value
 
+    def set_guest_wifi_password(self, password: str | None = None, length: int = 12) -> str:
+        self.calls.append(("guest_password", password, length))
+        if self.fail_actions:
+            raise FritzActionError("refused")
+        return password or "x" * length
+
     def get_guest_wifi(self) -> bool | None:
         return self.guest_wifi
 

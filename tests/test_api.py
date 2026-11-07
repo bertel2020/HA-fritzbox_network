@@ -365,6 +365,38 @@ def test_reconnect_accepts_that_the_box_is_already_hanging_up_but_not_other_refu
         _reconnect_client([]).reconnect()
 
 
+def test_the_guest_password_is_set_with_a_key_from_the_allowed_characters_and_no_wep_keys():
+    client = _wifi_client(
+        {"WLANConfiguration1": ("normal", "2400"), "WLANConfiguration2": ("guest", "2400")}
+    )
+    original = client._fc.call_action.side_effect
+
+    def call(service, action, **args):
+        if action == "GetInfo":
+            return {"NewAllowedCharsPSK": "0123456789abcdef", "NewMaxCharsPSK": 64}
+        return original(service, action, **args)
+
+    client._fc.call_action.side_effect = call
+    given = client.set_guest_wifi_password("pass word 1")
+    assert given == "pass word 1"
+    made = client.set_guest_wifi_password(None, 16)
+    assert len(made) == 16 and all(c.isalnum() or c in "@#" for c in made)
+
+    sets = [c for c in client._fc.call_action.call_args_list if c.args[1] == "SetSecurityKeys"]
+    assert len(sets) == 2 and all(c.args[0] == "WLANConfiguration2" for c in sets)
+    kwargs = sets[0].kwargs
+    assert kwargs["NewKeyPassphrase"] == "pass word 1"
+    assert len(kwargs["NewPreSharedKey"]) == 64
+    assert set(kwargs["NewPreSharedKey"]) <= set("0123456789ABCDEF")
+    assert [kwargs[f"NewWEPKey{i}"] for i in range(4)] == ["", "", "", ""]
+
+
+def test_a_box_without_a_guest_network_has_no_password_to_set():
+    client = _wifi_client({"WLANConfiguration1": ("normal", "2400")})
+    with pytest.raises(FritzServiceError):
+        client.set_guest_wifi_password("whatever 123")
+
+
 def _wifi_client(boxes: dict[str, tuple[str, str]], enabled: bool = True) -> FritzNetworkClient:
     """A box whose services have this (access point type, band), as X_AVM-DE_GetWLANExtInfo says."""
     client = FritzNetworkClient("192.168.178.1", None, "user", "secret")

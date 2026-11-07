@@ -384,6 +384,9 @@
     },
     "route_home_unknown": {
       "message": "The box does not tell its home network, so the route cannot be checked."
+    },
+    "no_guest_wifi": {
+      "message": "The box has no guest Wi-Fi."
     }
   },
   "issues": {
@@ -469,6 +472,20 @@
         "enabled": {
           "name": "On",
           "description": "Whether the route is switched on"
+        }
+      }
+    },
+    "set_guest_wifi_password": {
+      "name": "Set guest Wi-Fi password",
+      "description": "Sets the password of the guest Wi-Fi. Without a password a random one is made and returned as the response of the action. This integration does not log the password, but the request to the box shows in the log if debug logging is on for fritzconnection, and the password is part of the data of the action and shows in traces and the event log of Home Assistant if you give one. Devices on the guest network have to log in again.",
+      "fields": {
+        "password": {
+          "name": "Password",
+          "description": "8 to 63 characters. Leave empty for a random password."
+        },
+        "length": {
+          "name": "Length",
+          "description": "Length of the random password, used only if no password is given."
         }
       }
     }

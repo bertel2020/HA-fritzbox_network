@@ -384,6 +384,9 @@
     },
     "route_home_unknown": {
       "message": "Die Box nennt ihr Heimnetz nicht, deshalb lässt sich die Route nicht prüfen."
+    },
+    "no_guest_wifi": {
+      "message": "Die Box hat kein Gast-WLAN."
     }
   },
   "issues": {
@@ -469,6 +472,20 @@
         "enabled": {
           "name": "An",
           "description": "Ob die Route eingeschaltet ist"
+        }
+      }
+    },
+    "set_guest_wifi_password": {
+      "name": "Gast-WLAN-Passwort setzen",
+      "description": "Setzt das Passwort des Gast-WLANs. Ohne Passwort wird ein zufälliges erzeugt und als Antwort der Aktion zurückgegeben. Diese Integration schreibt das Passwort nicht ins Log, aber die Anfrage an die Box erscheint dort, wenn das Debug-Logging für fritzconnection an ist, und das Passwort gehört zu den Daten der Aktion und erscheint in Traces und im Ereignisprotokoll von Home Assistant, wenn du eines angibst. Geräte im Gastnetz müssen sich neu anmelden.",
+      "fields": {
+        "password": {
+          "name": "Passwort",
+          "description": "8 bis 63 Zeichen. Leer lassen für ein zufälliges Passwort."
+        },
+        "length": {
+          "name": "Länge",
+          "description": "Länge des zufälligen Passworts, nur wenn kein Passwort angegeben ist."
         }
       }
     }

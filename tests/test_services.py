@@ -6,6 +6,7 @@ from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC
 import pytest
+import voluptuous as vol
 
 from custom_components.fritzbox_network.const import DOMAIN
 
@@ -107,3 +108,70 @@ async def test_an_action_without_a_device_of_ours_is_an_error(hass, fake_client,
         await hass.services.async_call(
             DOMAIN, "wake_on_lan", {"entity_id": "light.somewhere"}, blocking=True
         )
+
+
+async def test_the_guest_password_can_be_given_or_made_and_comes_back_as_the_response(
+    hass, fake_client, entry
+):
+    await _setup(hass, entry)
+
+    given = await hass.services.async_call(
+        DOMAIN,
+        "set_guest_wifi_password",
+        {"password": "correct horse"},
+        blocking=True,
+        return_response=True,
+    )
+    assert given == {"password": "correct horse"}
+    made = await hass.services.async_call(
+        DOMAIN, "set_guest_wifi_password", {"length": 20}, blocking=True, return_response=True
+    )
+    assert len(made["password"]) == 20
+    assert ("guest_password", None, 20) in fake_client.calls
+
+
+async def test_a_guest_password_must_be_a_valid_passphrase(hass, fake_client, entry):
+    await _setup(hass, entry)
+    for data in ({"password": "short"}, {"password": "x" * 64}, {"length": 7}, {"length": 64}):
+        with pytest.raises(vol.Invalid):
+            await hass.services.async_call(
+                DOMAIN, "set_guest_wifi_password", data, blocking=True, return_response=True
+            )
+    assert not any(call[0] == "guest_password" for call in fake_client.calls)
+
+
+async def test_the_guest_password_needs_the_right_and_a_guest_network(hass, fake_client, entry):
+    fake_client.guest_wifi = None
+    await _setup(hass, entry)
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            DOMAIN, "set_guest_wifi_password", {}, blocking=True, return_response=True
+        )
+
+
+async def test_the_guest_password_is_refused_without_the_right_to_change_settings(
+    hass, fake_client, entry
+):
+    fake_client.writable = False
+    await _setup(hass, entry)
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(
+            DOMAIN, "set_guest_wifi_password", {}, blocking=True, return_response=True
+        )
+    assert not any(call[0] == "guest_password" for call in fake_client.calls)
+
+
+async def test_a_refusal_of_the_box_does_not_leak_the_password_into_the_error(
+    hass, fake_client, entry
+):
+    await _setup(hass, entry)
+    fake_client.fail_actions = True
+    with pytest.raises(HomeAssistantError) as err:
+        await hass.services.async_call(
+            DOMAIN,
+            "set_guest_wifi_password",
+            {"password": "sehr geheim 123"},
+            blocking=True,
+            return_response=True,
+        )
+    assert "sehr geheim" not in str(err.value)

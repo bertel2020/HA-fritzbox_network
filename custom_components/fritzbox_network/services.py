@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from fritzconnection.core.exceptions import FritzConnectionException
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import (
     config_validation as cv,
@@ -40,6 +40,7 @@ SERVICE_WAKE_ON_LAN = "wake_on_lan"
 SERVICE_CAPTURE = "capture"
 SERVICE_REMOVE_VPN = "remove_unavailable_vpn"
 SERVICE_SET_ROUTE = "set_route"
+SERVICE_SET_GUEST_PASSWORD = "set_guest_wifi_password"
 
 ATTR_NAME = "name"
 ATTR_NETWORK = "network"
@@ -57,6 +58,13 @@ SET_ROUTE_SCHEMA = vol.Schema(
         # the network as the panel names it, "10.8.0.0/24"
         vol.Required(ATTR_NETWORK): vol.All(cv.string, vol.Strip, vol.Match(NETWORK_RE)),
         vol.Required(ATTR_ENABLED): cv.boolean,
+    }
+)
+SET_GUEST_PASSWORD_SCHEMA = vol.Schema(
+    {
+        # a WPA passphrase is 8 to 63 characters; without one a random one is made
+        vol.Optional("password"): vol.All(cv.string, vol.Length(min=8, max=63)),
+        vol.Optional("length", default=12): vol.All(int, vol.Range(min=8, max=63)),
     }
 )
 CAPTURE_SCHEMA = vol.Schema(
@@ -100,9 +108,9 @@ def _require_rights(coordinator: FritzNetworkCoordinator) -> None:
         raise HomeAssistantError(translation_domain=DOMAIN, translation_key="no_write_rights")
 
 
-async def _async_failing(awaitable) -> None:
+async def _async_failing(awaitable):
     try:
-        await awaitable
+        return await awaitable
     except FritzConnectionException as err:
         raise HomeAssistantError(
             translation_domain=DOMAIN,
@@ -140,6 +148,22 @@ async def _async_set_route(call: ServiceCall) -> None:
     if unknown is not None:
         raise unknown
     raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_target")
+
+
+async def _async_set_guest_password(call: ServiceCall) -> dict[str, str]:
+    """Set the password of the guest Wi-Fi and answer with it; nothing here logs it."""
+    for config_entry in call.hass.config_entries.async_loaded_entries(DOMAIN):
+        coordinator = config_entry.runtime_data
+        _require_rights(coordinator)
+        if coordinator.data.guest_wifi is None:
+            continue
+        password = await _async_failing(
+            coordinator.async_set_guest_wifi_password(
+                call.data.get("password"), call.data["length"]
+            )
+        )
+        return {"password": password}
+    raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_guest_wifi")
 
 
 async def _async_capture(call: ServiceCall) -> None:
@@ -228,6 +252,13 @@ def async_register(hass: HomeAssistant) -> None:
     )
     hass.services.async_register(DOMAIN, SERVICE_CAPTURE, _async_capture, CAPTURE_SCHEMA)
     hass.services.async_register(DOMAIN, SERVICE_SET_ROUTE, _async_set_route, SET_ROUTE_SCHEMA)
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_SET_GUEST_PASSWORD,
+        _async_set_guest_password,
+        SET_GUEST_PASSWORD_SCHEMA,
+        supports_response=SupportsResponse.OPTIONAL,
+    )
     hass.services.async_register(
         DOMAIN, SERVICE_REMOVE_VPN, _async_remove_unavailable_vpn, vol.Schema({})
     )

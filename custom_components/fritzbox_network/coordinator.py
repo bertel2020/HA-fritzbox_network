@@ -176,6 +176,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.internet_rate: tuple[float, float] | None = None
         # (value, monotonic deadline) of a guest Wi-Fi switch the box has not shown yet
         self._guest_override: tuple[bool, float] | None = None
+        # when the guest password was last set from here, for what shows it (the QR code)
+        self.guest_password_changed: datetime | None = None
         # the other Wi-Fi networks, read every tenth poll; a switch just made shows at once
         self._wifi: dict[str, WifiNetwork] | None = None
         self._wifi_overrides: dict[str, tuple[bool, float]] = {}
@@ -935,6 +937,16 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._wifi_overrides[key] = (enabled, time.monotonic() + WAN_OVERRIDE_SECONDS)
         self._wifi_force = True
         self.async_set_updated_data(replace(self.data, wifi=self._apply_wifi_overrides()))
+
+    async def async_set_guest_wifi_password(self, password: str | None, length: int) -> str:
+        """Set the guest Wi-Fi password and return it; the password is never logged."""
+        if self.data.guest_wifi is None:
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_guest_wifi")
+        new = await self.hass.async_add_executor_job(
+            self.client.set_guest_wifi_password, password, length
+        )
+        self.guest_password_changed = dt_util.utcnow()
+        return new
 
     async def async_set_guest_wifi(self, enabled: bool) -> None:
         """Switch the guest Wi-Fi and show the new state until the box does."""

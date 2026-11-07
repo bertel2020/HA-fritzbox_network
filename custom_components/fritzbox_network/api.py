@@ -18,8 +18,10 @@ import ipaddress
 import json
 import logging
 import re
+import secrets
 import socket
 import ssl
+import string
 import threading
 import time
 from typing import Any
@@ -789,6 +791,36 @@ class FritzNetworkClient:
             if (service := self._find_wifi_services().get(key)) is None or key == "guest":
                 raise FritzServiceError(f"The box has no Wi-Fi network {key}")
             self._connection.call_action(service, "SetEnable", NewEnable=enabled)
+
+    def set_guest_wifi_password(self, password: str | None = None, length: int = 12) -> str:
+        """Set the password of the guest Wi-Fi, a random one of ``length`` if none is given.
+
+        The box wants a pre-shared key beside the passphrase; it is made from the characters the
+        box allows. Returns the passphrase, which is the only place it is told: the caller must not
+        log it. The WEP keys are emptied, as the web interface does.
+        """
+        with self._lock:
+            if (service := self._guest_wifi_service()) is None:
+                raise FritzServiceError("The box has no guest Wi-Fi")
+            info = self._connection.call_action(service, "GetInfo")
+            allowed = info.get("NewAllowedCharsPSK") or string.hexdigits
+            size = int(info.get("NewMaxCharsPSK") or 64)
+            if not password:
+                # letters, digits and two signs that are easy to type: strength comes from length
+                alphabet = string.ascii_letters + string.digits + "@#"
+                password = "".join(secrets.choice(alphabet) for _ in range(length))
+            preshared = "".join(secrets.choice(allowed) for _ in range(size)).upper()
+            self._connection.call_action(
+                service,
+                "SetSecurityKeys",
+                NewKeyPassphrase=password,
+                NewPreSharedKey=preshared,
+                NewWEPKey0="",
+                NewWEPKey1="",
+                NewWEPKey2="",
+                NewWEPKey3="",
+            )
+        return password
 
     def get_guest_wifi(self) -> bool | None:
         """Whether the guest Wi-Fi is on; None where the box has none."""
