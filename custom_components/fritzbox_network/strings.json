@@ -1,5 +1,6 @@
 {
   "config": {
+    "flow_title": "{name}",
     "step": {
       "user": {
         "title": "Connect FRITZ!Box",
@@ -28,6 +29,16 @@
           "use_tls": "Use an encrypted connection (TLS)",
           "port": "Port (optional, default depends on TLS)"
         }
+      },
+      "confirm": {
+        "title": "Connect {name}",
+        "description": "A FRITZ!Box was found at {host}. Enter the credentials of a user with the right \"FRITZ!Box settings\". TR-064 must be enabled under Home Network > Network > Network Settings > \"Allow access for applications\".",
+        "data": {
+          "username": "User name",
+          "password": "Password",
+          "use_tls": "Use an encrypted connection (TLS)",
+          "port": "Port (optional, default depends on TLS)"
+        }
       }
     },
     "error": {
@@ -40,7 +51,10 @@
       "already_configured": "This FRITZ!Box is already configured.",
       "reauth_successful": "The login was updated.",
       "reconfigure_successful": "The connection was updated.",
-      "wrong_device": "This is a different FRITZ!Box than the one that was set up."
+      "wrong_device": "This is a different FRITZ!Box than the one that was set up.",
+      "ignore_ip6_link_local": "The address of the box is an IPv6 link-local address, which cannot be used.",
+      "mesh_repeater": "This device is a mesh repeater. Set up the FRITZ!Box that is the mesh master; the repeaters are controlled through it.",
+      "already_in_progress": "The setup of this FRITZ!Box is already in progress."
     }
   },
   "options": {

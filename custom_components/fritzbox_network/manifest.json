@@ -10,5 +10,10 @@
   "issue_tracker": "https://github.com/bertel2020/HA-fritzbox_network/issues",
   "loggers": ["fritzconnection"],
   "requirements": ["fritzconnection>=1.15.1", "aiooui>=0.1.9", "segno>=1.6.0"],
+  "ssdp": [
+    {
+      "st": "urn:schemas-upnp-org:device:fritzbox:1"
+    }
+  ],
   "version": "1.4.0"
 }

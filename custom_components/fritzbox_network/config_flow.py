@@ -3,8 +3,11 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
+import ipaddress
 import logging
+import re
 from typing import Any
+from urllib.parse import urlparse
 
 from fritzconnection.core.exceptions import (
     FritzAuthorizationError,
@@ -15,6 +18,12 @@ from homeassistant.config_entries import ConfigFlow, ConfigFlowResult, OptionsFl
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import selector
+from homeassistant.helpers.service_info.ssdp import (
+    ATTR_UPNP_FRIENDLY_NAME,
+    ATTR_UPNP_MODEL_NAME,
+    ATTR_UPNP_UDN,
+    SsdpServiceInfo,
+)
 import voluptuous as vol
 
 from .api import FritzNetworkClient
@@ -88,6 +97,22 @@ async def _validate_input(hass: HomeAssistant, data: Mapping[str, Any]) -> dict[
     return await hass.async_add_executor_job(_connect_and_check)
 
 
+# the confirmation of a box found by discovery: its address is known, the login is not
+STEP_CONFIRM_DATA_SCHEMA = vol.Schema(
+    {
+        vol.Required(CONF_USERNAME): str,
+        vol.Required(CONF_PASSWORD): selector.TextSelector(
+            selector.TextSelectorConfig(type=selector.TextSelectorType.PASSWORD)
+        ),
+        vol.Optional(CONF_USE_TLS, default=False): bool,
+        vol.Optional(CONF_PORT): _PORT,
+    }
+)
+
+# the serial number of a box is its MAC address, which its UDN ends with: "...-<12 hex digits>"
+_UDN_SERIAL = re.compile(r"[0-9A-Fa-f]{12}$")
+
+
 def _error_for(err: Exception) -> str:
     if isinstance(err, (FritzAuthorizationError, FritzSecurityError)):
         return "invalid_auth"
@@ -100,6 +125,72 @@ class FritzNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
     """Handle a config flow for FRITZ!Box network."""
 
     VERSION = 1
+
+    _host: str | None = None
+    _name: str | None = None
+
+    async def async_step_ssdp(self, discovery_info: SsdpServiceInfo) -> ConfigFlowResult:
+        """A box found by SSDP: its address and, from the UDN, which box it is."""
+        host = urlparse(discovery_info.ssdp_location or "").hostname
+        try:
+            address = ipaddress.ip_address(host) if host else None
+        except ValueError:
+            address = None  # a name
+        if not host or (address is not None and address.is_link_local):
+            return self.async_abort(reason="ignore_ip6_link_local")
+        upnp = discovery_info.upnp
+        model = upnp.get(ATTR_UPNP_MODEL_NAME) or ""
+        if "repeater" in model.lower():
+            # only the mesh master knows all devices; the repeaters are asked through it
+            return self.async_abort(reason="mesh_repeater")
+
+        udn = (upnp.get(ATTR_UPNP_UDN) or "").removeprefix("uuid:")
+        if serial := _UDN_SERIAL.search(udn):
+            await self.async_set_unique_id(serial.group(0).upper())
+            # a box that has a new address keeps its entry and takes the address over
+            self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+        self._async_abort_entries_match({CONF_HOST: host})
+        self._host = host
+        self._name = upnp.get(ATTR_UPNP_FRIENDLY_NAME) or model or host
+        if self.hass.config_entries.flow.async_has_matching_flow(self):
+            return self.async_abort(reason="already_in_progress")
+        self.context.update(
+            {
+                "title_placeholders": {"name": self._name.replace("FRITZ!Box ", "")},
+                "configuration_url": f"http://{host}",
+            }
+        )
+        return await self.async_step_confirm()
+
+    def is_matching(self, other_flow: ConfigFlow) -> bool:
+        """Two flows for the same address are the same box."""
+        return getattr(other_flow, "_host", None) == self._host
+
+    async def async_step_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """The login for a box found by discovery."""
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            data = {CONF_HOST: self._host, **user_input}
+            try:
+                info = await _validate_input(self.hass, data)
+            except Exception as err:  # noqa: BLE001
+                errors["base"] = _error_for(err)
+                if errors["base"] == "unknown":
+                    _LOGGER.exception("Unexpected error while testing the connection")
+            else:
+                if info["repeater"]:
+                    return self.async_abort(reason="mesh_repeater")
+                await self.async_set_unique_id(str(info["serial"] or self._host))
+                self._abort_if_unique_id_configured(updates={CONF_HOST: self._host})
+                return self.async_create_entry(title=f"{info['model']} ({self._host})", data=data)
+        return self.async_show_form(
+            step_id="confirm",
+            data_schema=self.add_suggested_values_to_schema(STEP_CONFIRM_DATA_SCHEMA, user_input),
+            errors=errors,
+            description_placeholders={"name": self._name or "", "host": self._host or ""},
+        )
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
