@@ -182,6 +182,24 @@
       },
       "route_switch": {
         "default": "mdi:router-network"
+      },
+      "wifi_2_4ghz": {
+        "default": "mdi:wifi",
+        "state": {
+          "off": "mdi:wifi-off"
+        }
+      },
+      "wifi_5ghz": {
+        "default": "mdi:wifi",
+        "state": {
+          "off": "mdi:wifi-off"
+        }
+      },
+      "wifi_6ghz": {
+        "default": "mdi:wifi",
+        "state": {
+          "off": "mdi:wifi-off"
+        }
       }
     },
     "button": {

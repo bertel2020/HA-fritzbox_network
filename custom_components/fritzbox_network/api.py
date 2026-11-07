@@ -42,6 +42,7 @@ from .const import HOST_FILTER_SERVICE_PREFIX, HOSTS_SERVICE
 from .models import (
     Host,
     MeshTopology,
+    WifiNetwork,
     parse_capture_interfaces,
     parse_device_log,
     parse_filter_profiles,
@@ -56,6 +57,8 @@ from .models import (
 _LOGGER = logging.getLogger(__name__)
 
 DEVICEINFO_SERVICE = "DeviceInfo1"
+# the frequency band the box names for a WLANConfiguration service, as the key of its network
+WIFI_BANDS = {"2400": "2_4ghz", "5000": "5ghz", "6000": "6ghz"}
 # the actions that read the internet connection: (service, action), at every poll or now and then
 INTERNET_FAST = (
     ("WANIPConn1", "GetStatusInfo"),
@@ -134,11 +137,11 @@ class FritzNetworkClient:
         self._use_tls = use_tls
         self._lock = threading.Lock()
         self._fc: FritzConnection | None = None
-        # the WLANConfiguration service of the guest network: looked for once, then known
         # how long the box has run, as the last read of DeviceInfo1 said (the setup reads it)
         self.uptime: int | None = None
-        self._guest_service: str | None = None
-        self._guest_searched = False
+        # the WLANConfiguration services by network ("guest", "2_4ghz", "5ghz", "6ghz"): looked
+        # for once, then known
+        self._wifi_services: dict[str, str] | None = None
         # the session of the web interface, which the fixed addresses are read from
         self._web_sid: str | None = None
         self._web_uids: dict[str, str] = {}
@@ -730,21 +733,62 @@ class FritzNetworkClient:
                 NewSourceSubnetMask=route["source_mask"],
             )
 
-    def _guest_wifi_service(self) -> str | None:
-        """The service of the guest Wi-Fi: the one whose access point type says "guest"."""
-        if not self._guest_searched:
-            self._guest_searched = True
-            for number in range(1, 5):
+    def _find_wifi_services(self) -> dict[str, str]:
+        """The WLANConfiguration service of each network, found once.
+
+        The access point type ("guest" or "normal") and the band are told by
+        ``X_AVM-DE_GetWLANExtInfo``, not by ``GetInfo``. The index of a service differs by model,
+        so the network is named by what the box says. A service that is neither the guest network
+        nor on a band that is known, or a second one on the same band, gets no entry.
+        """
+        if self._wifi_services is None:
+            found: dict[str, str] = {}
+            for number in range(1, 6):
                 service = f"WLANConfiguration{number}"
-                # the type is told by X_AVM-DE_GetWLANExtInfo, not by GetInfo
                 try:
                     info = self._connection.call_action(service, "X_AVM-DE_GetWLANExtInfo")
                 except (FritzActionError, FritzServiceError, FritzAuthorizationError, KeyError):
                     continue
-                if info.get("NewX_AVM-DE_APType") == "guest":
-                    self._guest_service = service
-                    break
-        return self._guest_service
+                kind = info.get("NewX_AVM-DE_APType")
+                key = (
+                    "guest"
+                    if kind == "guest"
+                    else WIFI_BANDS.get(str(info.get("NewX_AVM-DE_FrequencyBand")))
+                )
+                if kind in ("guest", "normal") and key and key not in found:
+                    found[key] = service
+            self._wifi_services = found
+        return self._wifi_services
+
+    def _guest_wifi_service(self) -> str | None:
+        """The service of the guest Wi-Fi: the one whose access point type says "guest"."""
+        return self._find_wifi_services().get("guest")
+
+    def get_wifi_networks(self) -> dict[str, WifiNetwork]:
+        """The Wi-Fi networks that are no guest network, by band; one read each."""
+        networks: dict[str, WifiNetwork] = {}
+        with self._lock:
+            for key, service in self._find_wifi_services().items():
+                if key == "guest":
+                    continue
+                try:
+                    info = self._connection.call_action(service, "GetInfo")
+                except (FritzActionError, FritzServiceError, KeyError):
+                    continue
+                networks[key] = WifiNetwork(
+                    enabled=bool(info.get("NewEnable")),
+                    ssid=info.get("NewSSID") or None,
+                    bssid=info.get("NewBSSID") or None,
+                    standard=info.get("NewStandard") or None,
+                )
+        return networks
+
+    def set_wifi_enabled(self, key: str, enabled: bool) -> None:
+        """Switch the Wi-Fi network of a band on or off."""
+        with self._lock:
+            if (service := self._find_wifi_services().get(key)) is None or key == "guest":
+                raise FritzServiceError(f"The box has no Wi-Fi network {key}")
+            self._connection.call_action(service, "SetEnable", NewEnable=enabled)
 
     def get_guest_wifi(self) -> bool | None:
         """Whether the guest Wi-Fi is on; None where the box has none."""

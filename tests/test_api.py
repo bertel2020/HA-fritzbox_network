@@ -365,6 +365,69 @@ def test_reconnect_accepts_that_the_box_is_already_hanging_up_but_not_other_refu
         _reconnect_client([]).reconnect()
 
 
+def _wifi_client(boxes: dict[str, tuple[str, str]], enabled: bool = True) -> FritzNetworkClient:
+    """A box whose services have this (access point type, band), as X_AVM-DE_GetWLANExtInfo says."""
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    client._fc = MagicMock()
+
+    def call(service, action, **args):
+        if service not in boxes:
+            raise FritzServiceError("no such service")
+        if action == "X_AVM-DE_GetWLANExtInfo":
+            kind, band = boxes[service]
+            return {"NewX_AVM-DE_APType": kind, "NewX_AVM-DE_FrequencyBand": band}
+        if action == "SetEnable":
+            return {}
+        return {"NewEnable": enabled, "NewSSID": service, "NewBSSID": "AA", "NewStandard": "ax"}
+
+    client._fc.call_action.side_effect = call
+    return client
+
+
+def test_the_wifi_networks_are_named_by_what_the_box_says_not_by_the_index():
+    # the guest network is not the last one here, and the 5 GHz one is not the second
+    client = _wifi_client(
+        {
+            "WLANConfiguration1": ("normal", "5000"),
+            "WLANConfiguration2": ("guest", "2400"),
+            "WLANConfiguration3": ("normal", "2400"),
+        }
+    )
+    networks = client.get_wifi_networks()
+    assert {k: v.ssid for k, v in networks.items()} == {
+        "5ghz": "WLANConfiguration1",
+        "2_4ghz": "WLANConfiguration3",
+    }
+    assert client.get_guest_wifi() is True
+    client.set_wifi_enabled("5ghz", False)
+    client._fc.call_action.assert_any_call("WLANConfiguration1", "SetEnable", NewEnable=False)
+    client.set_guest_wifi(True)
+    client._fc.call_action.assert_any_call("WLANConfiguration2", "SetEnable", NewEnable=True)
+
+
+def test_a_second_service_on_a_band_or_an_unknown_band_gets_no_switch():
+    client = _wifi_client(
+        {
+            "WLANConfiguration1": ("normal", "2400"),
+            "WLANConfiguration2": ("normal", "5000"),
+            "WLANConfiguration3": ("normal", "5000"),
+            "WLANConfiguration4": ("normal", "60000"),
+        }
+    )
+    assert client.get_wifi_networks().keys() == {"2_4ghz", "5ghz"}
+
+
+def test_a_box_without_the_ext_info_has_no_wifi_networks_and_refuses_to_switch():
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    client._fc = MagicMock()
+    client._fc.call_action.side_effect = FritzServiceError("no such service")
+    assert client.get_wifi_networks() == {}
+    with pytest.raises(FritzServiceError):
+        client.set_wifi_enabled("5ghz", True)
+    with pytest.raises(FritzServiceError):
+        client.set_wifi_enabled("guest", True)
+
+
 def test_the_port_mappings_are_read_until_the_box_runs_out():
     client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
     client._fc = MagicMock()

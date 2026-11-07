@@ -8,6 +8,7 @@ from typing import Any
 
 from fritzconnection.core.exceptions import FritzConnectionException
 from homeassistant.components.switch import SwitchEntity
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers import entity_registry as er
@@ -23,6 +24,7 @@ from .const import (
     KEY_PRIORITY,
     KEY_ROUTE_SWITCH,
     KEY_VPN_SWITCH,
+    KEY_WIFI_PREFIX,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import (
@@ -32,7 +34,7 @@ from .entity import (
     is_mesh_node,
     vpn_device_info,
 )
-from .models import Host, VpnConnection
+from .models import Host, VpnConnection, WifiNetwork
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -72,8 +74,29 @@ async def async_setup_entry(
         ),
     )
     _async_setup_guest_wifi(entry, async_add_entities)
+    _async_setup_wifi(entry, async_add_entities)
     _async_setup_vpn(entry, async_add_entities)
     _async_setup_routes(hass, entry, async_add_entities)
+
+
+@callback
+def _async_setup_wifi(
+    entry: FritzNetworkConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
+) -> None:
+    """A switch for each Wi-Fi network of the box that is no guest network, one per band."""
+    coordinator = entry.runtime_data
+    known: set[str] = set()
+
+    @callback
+    def _add() -> None:
+        new = [key for key in coordinator.data.wifi or () if key not in known]
+        if not new:
+            return
+        known.update(new)
+        async_add_entities([FritzNetworkWifi(coordinator, key) for key in new])
+
+    _add()
+    entry.async_on_unload(coordinator.async_add_listener(_add))
 
 
 @callback
@@ -257,6 +280,63 @@ class FritzNetworkVpnSwitch(CoordinatorEntity[FritzNetworkCoordinator], SwitchEn
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self.coordinator.async_set_vpn(self._key, False)
+
+
+class FritzNetworkWifi(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity):
+    """The Wi-Fi network of one band: on or off.
+
+    The name carries the network name, because two bands often have the same one. The box can
+    be reached over Wi-Fi: switching off the network that Home Assistant uses cuts it off.
+    """
+
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.CONFIG
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, band: str) -> None:
+        super().__init__(coordinator)
+        self._band = band
+        key = f"{KEY_WIFI_PREFIX}{band}"
+        self._attr_translation_key = key
+        self._attr_unique_id = f"{coordinator.serial}_{key}"
+        self.entity_id = f"switch.fritz_network_{key}"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+        network = self._network
+        self._attr_translation_placeholders = {"ssid": (network.ssid if network else "") or ""}
+
+    @property
+    def _network(self) -> WifiNetwork | None:
+        return (self.coordinator.data.wifi or {}).get(self._band)
+
+    @property
+    def available(self) -> bool:
+        return super().available and self._network is not None
+
+    @property
+    def is_on(self) -> bool | None:
+        network = self._network
+        return network.enabled if network else None
+
+    @property
+    def extra_state_attributes(self) -> dict[str, str | None] | None:
+        if (network := self._network) is None:
+            return None
+        return {"ssid": network.ssid, "bssid": network.bssid, "standard": network.standard}
+
+    async def _set(self, value: bool) -> None:
+        try:
+            await self.coordinator.async_set_wifi(self._band, value)
+        except FritzConnectionException as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        await self._set(True)
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        await self._set(False)
 
 
 class FritzNetworkGuestWifi(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity):

@@ -102,6 +102,7 @@ KEY_DEVICES_TOTAL = "devices_total"
 # Keys of the internet connection of the box (device of the box).
 KEY_FIRMWARE = "firmware"
 KEY_GUEST_WIFI = "guest_wifi"
+KEY_WIFI_PREFIX = "wifi_"
 KEY_INTERNET_CONNECTED = "internet_connected"
 KEY_INTERNET_LINKED = "internet_linked"
 KEY_VPN = "vpn"

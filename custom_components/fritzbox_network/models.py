@@ -330,6 +330,16 @@ def parse_vpn(page: dict[str, Any] | None) -> list[VpnConnection] | None:
     return found
 
 
+@dataclass(frozen=True)
+class WifiNetwork:
+    """A Wi-Fi network of the box that is no guest network, as one band of it is switched."""
+
+    enabled: bool
+    ssid: str | None
+    bssid: str | None
+    standard: str | None
+
+
 @dataclass
 class NetworkData:
     """Result of one poll."""
@@ -339,6 +349,9 @@ class NetworkData:
     internet: InternetInfo | None = None
     # whether the guest Wi-Fi is on; None where the box has none
     guest_wifi: bool | None = None
+    # the other Wi-Fi networks by band ("2_4ghz", "5ghz", "6ghz"); None where they are not read
+    # (no right to change settings) or not yet
+    wifi: dict[str, WifiNetwork] | None = None
     firmware: FirmwareInfo | None = None
     # the WireGuard connections; None where the box does not tell them
     vpn: list[VpnConnection] | None = None

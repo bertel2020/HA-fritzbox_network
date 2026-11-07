@@ -1,5 +1,6 @@
 """The internet connection: parsing what the box says, the throughput and the events."""
 
+from dataclasses import replace
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -488,6 +489,78 @@ async def test_the_guest_wifi_is_a_switch_that_shows_the_change_at_once(hass, fa
     fake_client.guest_wifi = False
     await _poll(hass, coordinator)
     assert hass.states.get("switch.fritz_network_guest_wifi").state == "off"
+
+
+async def test_each_wifi_band_is_a_switch_named_after_its_network(hass, fake_client, entry):
+    await _setup(hass, entry)
+
+    for band in ("2_4ghz", "5ghz"):
+        state = hass.states.get(f"switch.fritz_network_wifi_{band}")
+        assert state is not None and state.state == "on"
+        assert state.attributes["ssid"] == "Home"
+    assert hass.states.get("switch.fritz_network_wifi_6ghz") is None
+    registry = er.async_get(hass)
+    assert registry.async_get("switch.fritz_network_wifi_5ghz").unique_id == "SERIAL1_wifi_5ghz"
+    assert registry.async_get("switch.fritz_network_wifi_5ghz").disabled_by is None
+
+
+async def test_a_wifi_switch_shows_the_change_at_once_and_the_box_decides_afterwards(
+    hass, fake_client, entry
+):
+    coordinator = await _setup(hass, entry)
+    entity_id = "switch.fritz_network_wifi_5ghz"
+
+    await hass.services.async_call("switch", "turn_off", {"entity_id": entity_id}, blocking=True)
+    assert ("wifi", "5ghz", False) in fake_client.calls
+    assert hass.states.get(entity_id).state == "off"
+    # the box still says on at the next poll: the switch keeps showing what was asked for
+    await _poll(hass, coordinator)
+    assert hass.states.get(entity_id).state == "off"
+    # once the box shows it too, it is the box that decides again
+    fake_client.wifi["5ghz"] = replace(fake_client.wifi["5ghz"], enabled=False)
+    await _poll(hass, coordinator)
+    assert hass.states.get(entity_id).state == "off"
+    # from then on the box is read every tenth poll: a change made at the box shows up then
+    fake_client.wifi["5ghz"] = replace(fake_client.wifi["5ghz"], enabled=True)
+    for _ in range(10):
+        await _poll(hass, coordinator)
+    assert hass.states.get(entity_id).state == "on"
+
+
+async def test_a_refused_wifi_switch_is_an_error(hass, fake_client, entry):
+    await _setup(hass, entry)
+    fake_client.fail_actions = True
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call(
+            "switch", "turn_off", {"entity_id": "switch.fritz_network_wifi_5ghz"}, blocking=True
+        )
+
+
+async def test_the_wifi_networks_are_read_every_tenth_poll(hass, fake_client, entry):
+    coordinator = await _setup(hass, entry)
+    reads = fake_client.wifi_reads
+    for _ in range(9):
+        await _poll(hass, coordinator)
+    assert fake_client.wifi_reads == reads
+    await _poll(hass, coordinator)
+    assert fake_client.wifi_reads == reads + 1
+
+
+async def test_the_first_poll_does_not_read_the_wifi_networks(hass, fake_client, entry):
+    coordinator = FritzNetworkCoordinator(hass, entry, fake_client, "SERIAL1", True, "box", None)
+    await coordinator._async_update_data()
+    assert fake_client.wifi_reads == 0
+    await coordinator._async_update_data()
+    assert fake_client.wifi_reads == 1
+
+
+async def test_without_the_right_to_change_settings_the_wifi_is_not_read_or_switched(
+    hass, fake_client, entry
+):
+    fake_client.writable = False
+    await _setup(hass, entry)
+    assert fake_client.wifi_reads == 0
+    assert hass.states.get("switch.fritz_network_wifi_5ghz") is None
 
 
 async def test_a_box_without_a_guest_network_or_a_user_without_rights_has_no_switch(

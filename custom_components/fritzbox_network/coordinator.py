@@ -82,6 +82,7 @@ from .models import (
     MeshTopology,
     NetworkData,
     VpnConnection,
+    WifiNetwork,
     dhcp_pool_of,
     parse_firmware,
     parse_internet,
@@ -175,6 +176,10 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.internet_rate: tuple[float, float] | None = None
         # (value, monotonic deadline) of a guest Wi-Fi switch the box has not shown yet
         self._guest_override: tuple[bool, float] | None = None
+        # the other Wi-Fi networks, read every tenth poll; a switch just made shows at once
+        self._wifi: dict[str, WifiNetwork] | None = None
+        self._wifi_overrides: dict[str, tuple[bool, float]] = {}
+        self._wifi_force = False
         # the firmware offer of the box, asked for now and then
         self._firmware: FirmwareInfo | None = None
         # the DHCP range of the box, asked for now and then
@@ -405,6 +410,38 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             self._vpn_empty = 0
         return found
 
+    def _fetch_wifi(self) -> None:
+        """The Wi-Fi networks by band, now and then; the last stay if the box does not answer.
+
+        Only where there are switches for them, that is with the right to change settings.
+        """
+        if not self.can_write:
+            return
+        # a switch just made is read at every poll until the box shows it, then every tenth poll
+        due = self._wifi_force or bool(self._wifi_overrides)
+        if self._wifi is not None and not due and self._polls % INTERNET_DETAIL_POLLS:
+            return
+        self._wifi_force = False
+        try:
+            found = self.client.get_wifi_networks()
+        except (*_FETCH_ERRORS, TypeError) as err:
+            _LOGGER.debug("Wi-Fi networks unavailable: %s", err)
+            return
+        self._wifi = found or self._wifi
+
+    def _apply_wifi_overrides(self) -> dict[str, WifiNetwork] | None:
+        """The networks, with a switch just made shown until the box shows it too."""
+        if self._wifi is None:
+            return None
+        shown = dict(self._wifi)
+        for key, (value, deadline) in list(self._wifi_overrides.items()):
+            network = shown.get(key)
+            if network is None or network.enabled == value or time.monotonic() > deadline:
+                del self._wifi_overrides[key]
+            else:
+                shown[key] = replace(network, enabled=value)
+        return shown
+
     def _fetch_guest_wifi(self) -> bool | None:
         try:
             return self.client.get_guest_wifi()
@@ -451,6 +488,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             self._fetch_firmware()
             self._fetch_dhcp_pool()
             self._fetch_uptime()
+            self._fetch_wifi()
             self._fetch_cpu_temperature()
             self._fetch_reservations([h for h in hosts if h.ip and not h.guest])
             self._polls += 1
@@ -492,6 +530,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             mesh=mesh,
             internet=self._update_internet(wan),
             guest_wifi=self._apply_guest_override(guest),
+            wifi=self._apply_wifi_overrides(),
             firmware=self._firmware,
             vpn=vpn,
             routes=routes,
@@ -889,6 +928,13 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         await self._async_set_by_ip(
             host, "filter_profile", profile_id, self.client.set_filter_profile
         )
+
+    async def async_set_wifi(self, key: str, enabled: bool) -> None:
+        """Switch the Wi-Fi network of a band, show it at once and read the box at the next poll."""
+        await self.hass.async_add_executor_job(self.client.set_wifi_enabled, key, enabled)
+        self._wifi_overrides[key] = (enabled, time.monotonic() + WAN_OVERRIDE_SECONDS)
+        self._wifi_force = True
+        self.async_set_updated_data(replace(self.data, wifi=self._apply_wifi_overrides()))
 
     async def async_set_guest_wifi(self, enabled: bool) -> None:
         """Switch the guest Wi-Fi and show the new state until the box does."""

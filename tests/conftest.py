@@ -10,7 +10,7 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.fritzbox_network.const import DOMAIN
-from custom_components.fritzbox_network.models import parse_hosts, parse_mesh
+from custom_components.fritzbox_network.models import WifiNetwork, parse_hosts, parse_mesh
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -87,6 +87,12 @@ class FakeClient:
         self.internet_reads: list[bool] = []
         self.fail_actions = False
         self.guest_wifi: bool | None = False
+        # the other Wi-Fi networks by band, as the box tells them
+        self.wifi = {
+            "2_4ghz": WifiNetwork(True, "Home", "02:00:00:00:00:a1", "ax"),
+            "5ghz": WifiNetwork(True, "Home", "02:00:00:00:00:a2", "ax"),
+        }
+        self.wifi_reads = 0
         self.ports: list[dict] = []
         self.port_forwardings: list[dict] | None = []
         self.routes: list[dict] = []
@@ -239,6 +245,16 @@ class FakeClient:
 
     def get_firmware(self) -> dict:
         return dict(self.firmware)
+
+    def get_wifi_networks(self) -> dict:
+        self.wifi_reads += 1
+        return dict(self.wifi)
+
+    def set_wifi_enabled(self, key: str, enabled: bool) -> None:
+        self.calls.append(("wifi", key, enabled))
+        if self.fail_actions:
+            raise FritzActionError("refused")
+        # the box shows it with a delay, like the guest network: the next read says the old value
 
     def get_guest_wifi(self) -> bool | None:
         return self.guest_wifi

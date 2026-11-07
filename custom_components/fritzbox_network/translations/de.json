@@ -270,6 +270,15 @@
       },
       "route_switch": {
         "name": "Route {network}"
+      },
+      "wifi_2_4ghz": {
+        "name": "WLAN 2,4 GHz ({ssid})"
+      },
+      "wifi_5ghz": {
+        "name": "WLAN 5 GHz ({ssid})"
+      },
+      "wifi_6ghz": {
+        "name": "WLAN 6 GHz ({ssid})"
       }
     },
     "button": {
