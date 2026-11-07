@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Box – Mockup</title>
+<style>
+  /* ---------- Tokens wie panel-styles.js (Thema „Ozean“) ---------- */
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#f4f6f9, #0f1216);
+    --surface: light-dark(#fff, #1b1f24);
+    --soft: light-dark(#f5f7f9, #22272e);
+    --line: light-dark(#e1e5ea, #2d333b);
+    --input-line: light-dark(#c3cbd5, #3a424c);
+    --text: light-dark(#1b1f24, #e6e9ed);
+    --muted: light-dark(#5b6270, #9aa4b1);
+    --accent: light-dark(#0a6aa8, #5bb2ea);
+    --accent-hover: light-dark(#07507f, #8ccaf2);
+    --accent-soft: light-dark(#eaf3fa, #16324a);
+    --on-accent: light-dark(#fff, #0b1a26);
+    --focus: #7db8e0;
+    --up: light-dark(#7a4bc2, #b79af0);
+    --ok: light-dark(#1e6b34, #7fd49a);
+    --ok-soft: light-dark(#e6f4ea, #173a24);
+    --warn: light-dark(#8a4b00, #f2c27a);
+    --warn-soft: light-dark(#fff1de, #3a2a12);
+    --bad: light-dark(#a1261b, #f2a29a);
+    --bad-soft: light-dark(#fdecea, #3d1c19);
+    --neutral-soft: light-dark(#eef1f4, #2a3038);
+    --neutral-text: light-dark(#3a414c, #c5ccd5);
+    --radius: 18px;
+    --shadow-c: light-dark(rgb(16 24 40 / 14%), rgb(0 0 0 / 40%));
+    --shadow: 0 1px 2px var(--shadow-c), 0 6px 18px -10px var(--shadow-c);
+  }
+  :root[data-mode="light"] { color-scheme: light; }
+  :root[data-mode="dark"] { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 Roboto, "Noto Sans", system-ui, sans-serif; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; background: none; border: 0; padding: 0; }
+  :focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+  svg.i { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; }
+  .muted { color: var(--muted); }
+  a, .linklike { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+
+  /* Mockup-Leiste */
+  .mockbar { max-width: 1200px; margin: 12px auto 0; padding: 10px 14px; display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; border-radius: 14px; background: var(--soft); border: 1px dashed var(--line); }
+  .mockbar > span { flex: 1 1 260px; }
+  .mockbar .ctl { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .mockbar .ctl { min-width: 0; max-width: 100%; }
+  .mockbar select { max-width: 100%; min-height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); padding: 0 10px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex-wrap: wrap; }
+  .seg button { padding: 0 12px; min-height: 34px; font-weight: 500; color: var(--muted); border-left: 1px solid var(--line); white-space: nowrap; }
+  .seg button:first-child { border-left: 0; }
+  .seg button[aria-pressed="true"], .seg button[aria-selected="true"] { background: var(--accent); color: var(--on-accent); }
+  .wrap { max-width: 1200px; margin: 12px auto 40px; padding: 0 12px; }
+  .frame { border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--bg); box-shadow: var(--shadow); }
+
+  /* Kopf des Panels */
+  .header { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px; padding: 0 20px; }
+  .brand { display: flex; align-items: center; gap: 12px; padding: 10px 0; min-height: 60px; min-width: 0; flex: 1 1 auto; }
+  .logo { width: 36px; height: 36px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-hover); display: grid; place-items: center; flex: none; }
+  .brand b { display: block; font-size: 18px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
+  .brand small { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 8px 0; max-width: 100%; }
+  nav button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px; font-weight: 500; color: var(--muted); white-space: nowrap; border-radius: 22px; }
+  nav button:hover { color: var(--text); background: var(--neutral-soft); }
+  nav button[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
+  nav button.new::after { content: "neu"; font-size: 10px; font-weight: 600; padding: 0 6px; border-radius: 8px; background: var(--ok-soft); color: var(--ok); }
+  nav .dot { width: 7px; height: 7px; }
+  main { padding: 16px 20px 32px; display: grid; gap: 16px; }
+  @media (max-width: 600px) { .header { padding: 0 12px; } main { padding: 12px 12px 24px; } }
+
+  /* Bausteine wie im Panel */
+  .phead h1 { font-size: 24px; font-weight: 500; margin: 4px 0 2px; letter-spacing: -.01em; }
+  .lead { color: var(--muted); margin: 0; max-width: 75ch; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; }
+  .sec { padding: 16px; }
+  .sec > .label { display: block; margin-bottom: 10px; }
+  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 11px; border-radius: 13px; background: var(--neutral-soft); color: var(--neutral-text); font-size: 12px; font-weight: 500; white-space: nowrap; }
+  .chip.ok { background: var(--ok-soft); color: var(--ok); }
+  .chip.warn { background: var(--warn-soft); color: var(--warn); }
+  .chip.bad { background: var(--bad-soft); color: var(--bad); }
+  .chip.info { background: var(--accent-soft); color: var(--accent-hover); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--input-line); flex: none; display: inline-block; }
+  .dot.on { background: var(--ok); } .dot.warn { background: var(--warn); } .dot.bad { background: var(--bad); }
+  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 18px; border-radius: 20px; font-weight: 500; white-space: nowrap; border: 1px solid var(--input-line); background: var(--surface); }
+  .btn:hover { background: var(--soft); }
+  .btn.p { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .btn.dp { background: var(--bad); border-color: var(--bad); color: var(--surface); }
+  .btn.sm { min-height: 34px; padding: 0 14px; font-size: 13px; }
+  .btn[disabled] { opacity: .55; cursor: default; }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; align-items: center; }
+  .switch { position: relative; width: 52px; height: 32px; border-radius: 16px; background: #aeb6c1; flex: none; transition: background .15s; }
+  .switch::after { content: ""; position: absolute; top: 4px; left: 4px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: transform .15s; box-shadow: 0 1px 2px rgb(0 0 0 / 30%); }
+  .switch[aria-checked="true"] { background: var(--accent); }
+  .switch[aria-checked="true"]::after { transform: translateX(20px); }
+  .switch[disabled] { opacity: .55; cursor: default; }
+  .switch.busy::after { animation: pulse 1s infinite; }
+  @keyframes pulse { 50% { opacity: .4; } }
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-top: 12px; }
+  .tile { background: var(--soft); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+  .tile b { display: block; font-size: 18px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile small { display: block; font-size: 12px; color: var(--muted); }
+  .tile.warn b { color: var(--warn); }
+  .tile .na { color: var(--muted); font-weight: 400; font-size: 14px; }
+  .hint { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+  .hintline { display: flex; align-items: center; gap: 10px; margin: 4px 0; font-size: 14px; }
+  .hintline.bad { color: var(--bad); } .hintline.warn { color: var(--warn); } .hintline.info { color: var(--muted); }
+  .empty { display: grid; justify-items: center; gap: 6px; padding: 40px 16px; text-align: center; color: var(--muted); }
+  .empty b { color: var(--text); font-weight: 500; }
+  .ihead { display: flex; align-items: center; gap: 12px; }
+  .ihead .ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); flex: none; }
+  .ihead .who { flex: 1; min-width: 0; }
+  .ihead .who b { display: block; font-size: 16px; font-weight: 500; }
+  .ihead .who small { color: var(--muted); }
+  .two { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 16px; align-items: start; }
+  .skel { background: linear-gradient(90deg, var(--soft), var(--neutral-soft), var(--soft)); background-size: 200% 100%; animation: sk 1.4s infinite; border-radius: 8px; color: transparent !important; }
+  @keyframes sk { to { background-position: -200% 0; } }
+  @media (prefers-reduced-motion: reduce) { .skel, .switch.busy::after { animation: none; } }
+
+  /* Box-Seite */
+  .spark { display: block; width: 100%; height: 30px; margin-top: 6px; }
+  .spark path.l { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+  .spark path.a { fill: var(--accent-soft); stroke: none; }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 14px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+  .row:first-of-type { border-top: 0; }
+  .row .n b { font-weight: 500; display: block; }
+  .row .n small { color: var(--muted); font-size: 12px; }
+  .row.off .n { opacity: .6; }
+  .act { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
+  .act:first-of-type { border-top: 0; }
+  .act .ico { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--soft); color: var(--muted); }
+  .act b { font-weight: 500; display: block; }
+  .act small { color: var(--muted); font-size: 12px; display: block; }
+  @media (max-width: 520px) { .act { grid-template-columns: 40px minmax(0, 1fr); } .act .btn { grid-column: 1 / -1; } }
+  .progress { display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: var(--accent-soft); color: var(--accent-hover); margin-top: 12px; }
+  .progress.ok { background: var(--ok-soft); color: var(--ok); }
+  .progress.bad { background: var(--bad-soft); color: var(--bad); }
+  .progress ol { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 13px; }
+  .progress li { display: flex; gap: 8px; align-items: center; color: var(--text); }
+  .progress li .dot { background: var(--input-line); }
+  .progress li.done .dot { background: var(--ok); }
+  .progress li.now .dot { background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+  .bar { height: 6px; border-radius: 3px; background: color-mix(in srgb, currentColor 18%, transparent); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: currentColor; border-radius: 3px; }
+  dl.kv { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; font-size: 13px; }
+  dl.kv dt { color: var(--muted); } dl.kv dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
+  .counter b { font-variant-numeric: tabular-nums; }
+
+  /* Dialog und Toast wie panel-dialogs.js */
+  .backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 45%); display: none; place-items: center; z-index: 20; padding: 16px; }
+  .backdrop.open { display: grid; }
+  .dialog { background: var(--surface); border-radius: 22px; padding: 22px; max-width: 460px; width: 100%; max-height: calc(100vh - 32px); overflow: auto; box-shadow: 0 20px 40px -12px rgb(0 0 0 / 45%); }
+  .dialog h2 { font-size: 18px; font-weight: 500; margin: 0 0 10px; }
+  .dialog ul { margin: 10px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .dialog .btn-row { justify-content: flex-end; margin-top: 20px; }
+  .toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%) translateY(120px); background: var(--text); color: var(--surface); padding: 12px 16px; border-radius: 12px; transition: transform .2s; z-index: 30; max-width: calc(100% - 32px); display: flex; gap: 14px; align-items: center; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast button { color: var(--accent-soft); font-weight: 600; text-decoration: underline; }
+
+  /* Dashboard-Karte */
+  .dash { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 16px; align-items: start; }
+  .hcard { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
+  .chead { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .chead b { font-size: 16px; font-weight: 500; flex: 1; }
+  .mini { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .notes { font-size: 13px; color: var(--muted); margin: 8px 2px 0; padding-left: 18px; }
+  .notes li { margin: 3px 0; } .notes b { color: var(--text); font-weight: 500; }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+<div class="mockbar">
+  <span class="muted">Mockup der neuen Seite <b>Box</b> (eigener Reiter). Neustart, Neuverbindung und Rufumleitungen sind simuliert. Beispieldaten: FRITZ!Box 7590 AX, FRITZ!OS 8.25.</span>
+  <div class="ctl">
+    <label class="sr" for="st">Zustand</label>
+    <select id="st">
+      <option value="ok">Normal</option>
+      <option value="hot">Warm (Hinweis)</option>
+      <option value="loading">Lädt</option>
+      <option value="error">Fehler: Box antwortet nicht</option>
+      <option value="ro">Nur lesen (kein Recht)</option>
+      <option value="unsup">Nicht unterstützt (Kabel-Box ohne Temperatur, ohne Telefonie)</option>
+    </select>
+    <span class="seg" role="group" aria-label="Ansicht">
+      <button data-view="panel" aria-pressed="true">Panel</button>
+      <button data-view="inet" aria-pressed="false">Internet-Seite: neu</button>
+      <button data-view="dash" aria-pressed="false">Dashboard-Karte</button>
+    </span>
+    <span class="seg" role="group" aria-label="Farbschema">
+      <button data-mode="auto" aria-pressed="true">System</button>
+      <button data-mode="light" aria-pressed="false">Hell</button>
+      <button data-mode="dark" aria-pressed="false">Dunkel</button>
+    </span>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="frame">
+    <header class="header">
+      <div class="brand">
+        <div class="logo"><svg class="i" viewBox="0 0 24 24"><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 17h.01M12 14V9M9 9a4.2 4.2 0 0 1 6 0"/></svg></div>
+        <div><b>FRITZ!Box Netzwerk</b><small>FRITZ-RM · FRITZ!Box 7590 AX</small></div>
+      </div>
+      <nav role="tablist" aria-label="Seiten" id="nav"></nav>
+    </header>
+    <main id="main"></main>
+  </div>
+</div>
+
+<div class="backdrop" id="backdrop"><div class="dialog" id="dialog" role="dialog" aria-modal="true" aria-labelledby="dlg-title"></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const I = {
+    box: '<svg class="i" viewBox="0 0 24 24"><rect x="3" y="14" width="18" height="6" rx="2"/><path d="M7 17h.01M12 14V9M9 9a4.2 4.2 0 0 1 6 0"/></svg>',
+    restart: '<svg class="i" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>',
+    plug: '<svg class="i" viewBox="0 0 24 24"><path d="M9 2v6M15 2v6M6 8h12v4a6 6 0 0 1-12 0zM12 18v4"/></svg>',
+    phone: '<svg class="i" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>',
+    alert: '<svg class="i" viewBox="0 0 24 24"><path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17h.01"/></svg>',
+    check: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></svg>',
+    globe: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/></svg>',
+    link: '<svg class="i" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>',
+  };
+
+  /* ---------- Beispieldaten ---------- */
+  const TEMP = [58, 59, 59, 60, 61, 60, 59, 58, 57, 57, 58, 60, 62, 63, 63, 62, 61, 62, 63, 64, 63, 62, 61, 61];
+  const HOT = [62, 63, 64, 66, 68, 69, 70, 71, 72, 72, 73, 74, 75, 76, 76, 77, 77, 78, 78, 78, 77, 78, 78, 78];
+  let deflections = [
+    { id: 0, kind: "Alle Anrufe", from: "Rufnummer 1 (Festnetz)", to: "Mobil 0171 •••• 23", enabled: false },
+    { id: 1, kind: "Bei besetzt", from: "Rufnummer 2 (Büro)", to: "Anrufbeantworter 1", enabled: true },
+    { id: 2, kind: "Ohne Rufnummer (unterdrückt)", from: "alle Rufnummern", to: "Anrufbeantworter 1", enabled: true },
+  ];
+  let state = "ok", view = "panel";
+  let reboot = null; // null | { phase: "down" | "back" | "late", t }
+  let reconnect = null; // null | { phase: "busy" | "done" }
+
+  /* ---------- Navigation ---------- */
+  function nav(active) {
+    const tabs = [["net", "Netzwerk"], ["internet", "Internet", '<i class="dot on" aria-hidden="true"></i>'], ["wlan", "WLAN", "", true], ["vpn", "VPN"], ["addresses", "Adressraum"], ["box", "Box", reboot && reboot.phase !== "back" ? '<i class="dot warn" aria-hidden="true"></i>' : "", true], ["diagnose", "Diagnose"], ["devices", "Verwalten"]];
+    $("#nav").innerHTML = tabs.map(([id, name, extra = "", isNew]) => `<button role="tab" class="${isNew ? "new" : ""}" aria-selected="${id === active}">${name}${extra}</button>`).join("");
+  }
+
+  function spark(vals) {
+    const min = Math.min(...vals) - 2, max = Math.max(...vals) + 2, w = 200, h = 30;
+    const pts = vals.map((v, i) => [(i / (vals.length - 1)) * w, h - ((v - min) / (max - min)) * h]);
+    const d = pts.map((p, i) => `${i ? "L" : "M"}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join("");
+    return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true"><path class="a" d="${d}L${w},${h}L0,${h}Z"/><path class="l" d="${d}"/></svg>`;
+  }
+
+  /* ---------- Seite Box ---------- */
+  function hints() {
+    const out = [];
+    if (state === "hot") out.push(["warn", "Die CPU der Box ist 78 °C warm, 14 °C mehr als ihr Mittel der letzten 7 Tage. Steht sie frei, ohne Abdeckung und nicht in der Sonne?"]);
+    if (reboot?.phase === "late") out.push(["bad", "Die Box ist seit über 10 Minuten nicht erreichbar. Prüfe Strom und Leuchtanzeigen an der Box."]);
+    if (!out.length) return "";
+    return `<section class="card sec" aria-label="Hinweise zur Box">${out.map(([l, t]) => `<p class="hintline ${l}">${I.alert}<span>${esc(t)}</span></p>`).join("")}</section>`;
+  }
+
+  function hero() {
+    if (state === "loading") {
+      return `<section class="card sec" aria-busy="true"><div class="ihead"><span class="ico">${I.box}</span><span class="who"><b class="skel" style="width:180px">FRITZ!Box 7590 AX</b><small class="skel" style="display:inline-block;width:240px;margin-top:4px">lädt</small></span></div>
+        <div class="tiles">${[1, 2, 3, 4].map(() => `<div class="tile"><b class="skel">00 Tg.</b><small class="skel" style="margin-top:4px">lädt</small></div>`).join("")}</div><p class="sr" role="status">Die Daten der Box werden geladen.</p></section>`;
+    }
+    const down = reboot && reboot.phase !== "back";
+    const unsup = state === "unsup";
+    const vals = state === "hot" ? HOT : TEMP;
+    const model = unsup ? "FRITZ!Box 6660 Cable" : "FRITZ!Box 7590 AX";
+    const uptime = reboot?.phase === "back" ? "3 Min." : down ? "–" : "23 Tg. 4 Std.";
+    const last = reboot?.phase === "back" ? "heute, 14:02 (von hier)" : "15. Okt., 03:12";
+    const temp = unsup
+      ? `<div class="tile"><span class="label">CPU-Temperatur</span><b class="na">nicht gemeldet</b><small>Diese Box nennt keine Temperatur.</small></div>`
+      : `<div class="tile ${state === "hot" ? "warn" : ""}"><span class="label">CPU-Temperatur</span><b>${down ? "–" : vals.at(-1) + " °C"}</b><small>${down ? "Box nicht erreichbar" : `24 Std.: ${Math.min(...vals)}–${Math.max(...vals)} °C`}</small>${down ? "" : spark(vals)}</div>`;
+    const stat = down ? `<span class="chip warn"><i class="dot warn"></i>startet neu</span>` : `<span class="chip ok"><i class="dot on"></i>läuft</span>`;
+    return `<section class="card sec">
+      <div class="ihead"><span class="ico">${I.box}</span>
+        <span class="who"><b>${model}</b><small>FRITZ!OS ${unsup ? "8.03" : "8.25"} · <span class="mono">192.168.178.1</span> · Benutzer <span class="mono">ha-fritz</span>${state === "ro" ? " (nur lesen)" : ""}</small></span>${stat}</div>
+      <div class="tiles">
+        <div class="tile"><span class="label">Läuft seit</span><b>${uptime}</b><small>ohne Neustart</small></div>
+        <div class="tile"><span class="label">Letzter Neustart</span><b>${last}</b><small>${reboot?.phase === "back" ? "dauerte 3:18" : "Grund nennt die Box nicht"}</small></div>
+        ${temp}
+        <div class="tile"><span class="label">FRITZ!OS</span><b>${unsup ? "8.03" : "8.25"}</b><small>${unsup ? "8.10 verfügbar · <a>Neuerungen</a>" : "aktuell"}</small></div>
+      </div></section>`;
+  }
+
+  function line() {
+    if (state === "loading") return `<section class="card sec"><span class="label">Anschluss</span><div class="tiles">${[1, 2, 3].map(() => `<div class="tile"><b class="skel">–</b><small class="skel" style="margin-top:4px">lädt</small></div>`).join("")}</div></section>`;
+    const down = reboot && reboot.phase !== "back";
+    const fresh = reboot?.phase === "back";
+    const linked = !down;
+    const rows = [
+      ["Leitung (physisch)", linked ? `<span class="chip ok"><i class="dot on"></i>synchron</span>` : `<span class="chip"><i class="dot"></i>keine Verbindung</span>`, state === "unsup" ? "Kabel · DOCSIS 3.1" : "VDSL2 · Profil 35b"],
+      ["Internet", linked ? `<span class="chip ok"><i class="dot on"></i>verbunden</span>` : `<span class="chip"><i class="dot"></i>getrennt</span>`, linked ? (reconnect?.phase === "done" ? "seit 6 Sek. · neue IPv4" : "seit 4 Tg. 7 Std.") : "–"],
+    ];
+    return `<section class="card sec"><span class="label">Anschluss</span>
+      <dl class="kv">${rows.map(([k, v, s]) => `<dt>${k}<br><small class="muted">${s}</small></dt><dd>${v}</dd>`).join("")}</dl>
+      <div class="tiles counter">
+        <div class="tile"><span class="label">↓ empfangen</span><b>${down ? "–" : fresh ? "18 MB" : "1,84 TB"}</b><small>seit dem Neustart</small></div>
+        <div class="tile"><span class="label">↑ gesendet</span><b>${down ? "–" : fresh ? "2,1 MB" : "212 GB"}</b><small>seit dem Neustart</small></div>
+      </div>
+      <p class="hint">„Leitung“ sagt, ob die Box mit der Gegenstelle synchron ist; „Internet“, ob sie eingewählt ist. Synchron, aber nicht verbunden heißt: Die Leitung steht, die Einwahl klappt nicht. Die Zähler beginnen mit jedem Neustart der Box bei null. Verlauf und Tageswerte: <a>Internet › Datenvolumen</a>.</p></section>`;
+  }
+
+  function actions() {
+    if (state === "loading") return "";
+    const ro = state === "ro";
+    const down = reboot && reboot.phase !== "back";
+    const busy = reconnect?.phase === "busy";
+    let prog = "";
+    if (reboot) {
+      const s = reboot.phase;
+      const steps = [["Neustart angefordert", "14:02:11"], ["Box nicht erreichbar", s === "down" ? "seit 0:42" : "2:51 lang"], ["Box antwortet wieder", s === "back" ? "14:05:29" : ""], ["Geräte und Mesh wieder da", s === "back" ? "31 von 34 Geräten, Repeater folgen" : ""]];
+      const at = s === "back" ? 4 : s === "late" ? 1 : 1;
+      const tone = s === "back" ? "ok" : s === "late" ? "bad" : "";
+      const title = s === "back" ? "Die Box ist wieder da (nach 3:18)." : s === "late" ? "Die Box ist seit über 10 Minuten nicht erreichbar." : "Die Box startet neu. Meist dauert das 2 bis 4 Minuten.";
+      prog = `<div class="progress ${tone}" role="status" aria-live="polite"><b>${title}</b>
+        ${s === "back" ? "" : `<div class="bar" aria-hidden="true"><i style="width:${s === "late" ? 100 : 30}%"></i></div>`}
+        <ol>${steps.map(([n, t], i) => `<li class="${i < at || s === "back" ? "done" : i === at ? "now" : ""}"><i class="dot"></i><span>${n}${t ? ` <span class="muted">· ${t}</span>` : ""}</span></li>`).join("")}</ol>
+        <small style="color:var(--text)">${s === "back" ? "Die Anwesenheit der Geräte wurde während des Neustarts gehalten: Niemand galt als abwesend." : "Solange die Box weg ist, hält die Integration die Anwesenheit der Geräte und zeigt hier die letzten Werte. Du kannst die Seite verlassen."}</small>
+        ${s !== "down" ? `<div><button class="btn sm" data-act="reboot-clear">Ausblenden</button></div>` : ""}</div>`;
+    }
+    if (reconnect) {
+      prog += reconnect.phase === "busy"
+        ? `<div class="progress" role="status" aria-live="polite"><b>Die Box wählt sich neu ein …</b><div class="bar" aria-hidden="true"><i style="width:55%"></i></div></div>`
+        : `<div class="progress ok" role="status" aria-live="polite"><b>Neu verbunden nach 6 Sekunden.</b><dl class="kv" style="color:var(--text)"><dt>IPv4 vorher</dt><dd class="mono">84.141.12.7</dd><dt>IPv4 jetzt</dt><dd class="mono">84.141.98.203</dd><dt>IPv6-Präfix</dt><dd class="mono">2003:e4:7f12:4a00::/56 (gleich)</dd></dl><div><button class="btn sm" data-act="reconnect-clear">Ausblenden</button></div></div>`;
+    }
+    const off = ro || down || busy ? " disabled" : "";
+    return `<section class="card sec"><span class="label">Neu starten und neu verbinden</span>
+      <div class="act"><span class="ico">${I.globe}</span><div><b>Internet neu verbinden</b><small>Die Box legt auf und wählt sich neu ein. Das Internet ist einige Sekunden weg, meist gibt es eine neue IPv4-Adresse. Das Heimnetz bleibt.</small></div>
+        <button class="btn" data-act="reconnect"${off}>Neu verbinden</button></div>
+      <div class="act"><span class="ico">${I.restart}</span><div><b>Box neu starten</b><small>Netz, WLAN und Telefon sind einige Minuten weg. Repeater verbinden sich danach von selbst.</small></div>
+        <button class="btn dp" data-act="reboot"${off}>Neu starten …</button></div>
+      ${prog}
+      <p class="hint">${ro ? "Der Benutzer der Integration darf in der Box nichts ändern. Beide Aktionen brauchen das Recht „FRITZ!Box Einstellungen“." : "Beide fragen vorher nach. In Automationen gibt es dafür die Buttons <span class=\"mono\">button.fritz_network_reconnect</span> und <span class=\"mono\">button.fritz_network_reboot</span> (standardmäßig aus)."}</p></section>`;
+  }
+
+  function phone() {
+    if (state === "loading") return `<section class="card sec"><span class="label">Rufumleitungen</span><p class="hint">Wird geladen …</p></section>`;
+    if (state === "unsup") return `<section class="card sec"><span class="label">Rufumleitungen</span><div class="empty" style="padding:24px 8px"><span>${I.phone}</span><b>Diese Box hat keine Telefonie.</b><span>Die FRITZ!Box 6660 Cable nennt keine Rufumleitungen. Der Abschnitt fehlt im fertigen Panel dann ganz.</span></div></section>`;
+    const ro = state === "ro";
+    const rows = deflections.map((d) => `<div class="row ${d.enabled ? "" : "off"}">
+      <div class="n"><b>${esc(d.kind)} → ${esc(d.to)}</b><small>für ${esc(d.from)}</small></div>
+      <button class="switch" role="switch" aria-checked="${d.enabled}" aria-label="Rufumleitung ${esc(d.kind)} an ${esc(d.to)}" data-defl="${d.id}"${ro ? " disabled" : ""}></button></div>`).join("");
+    return `<section class="card sec"><span class="label">Rufumleitungen</span>${rows}
+      <p class="hint">${ro ? "Nur zur Ansicht: Schalten braucht das Recht „FRITZ!Box Einstellungen“ und „Sprachnachrichten, Faxnachrichten, FRITZ!App Fon und Anrufliste“." : "Nur ein- und ausschalten; anlegen und Ziel ändern geht in der Box unter Telefonie › Rufbehandlung. Die Nummern sind gekürzt."}</p></section>`;
+  }
+
+  function errorPage() {
+    return `<section class="card"><div class="empty"><span style="color:var(--bad)">${I.alert}</span><b>Die Box antwortet nicht.</b><span>Letzte Antwort vor 4 Min. (14:21). Die übrigen Seiten zeigen die letzten Werte.</span><div class="btn-row"><button class="btn p">Erneut versuchen</button><a class="btn" href="#">Zur Integration</a></div></div></section>`;
+  }
+
+  function renderPanel() {
+    nav("box");
+    const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">Box</h1><p class="lead">Die FRITZ!Box selbst: wie lange sie läuft, wie warm sie ist, ihr Anschluss, Neustart und Neuverbindung, die Rufumleitungen.</p></div>`;
+    if (state === "error") { $("#main").innerHTML = head + errorPage(); return; }
+    $("#main").innerHTML = `${head}${hints()}${hero()}<div class="two">${actions()}${line()}</div>${phone()}`;
+  }
+
+  /* ---------- Internet-Seite: was dazukommt ---------- */
+  function renderInet() {
+    nav("internet");
+    $("#main").innerHTML = `<div class="phead"><h1>Internet</h1><p class="lead">Nur die Teile, die sich ändern. Der Rest der Seite bleibt wie heute.</p></div>
+    <section class="card sec">
+      <div class="ihead"><span class="ico">${I.globe}</span><span class="who"><b>Verbindung</b><small>VDSL · seit 4 Tg. 7 Std.</small></span><span class="chip ok">Verbunden</span></div>
+      <div class="tiles">
+        <div class="tile"><span class="label">IPv4</span><b class="mono">84.141.12.7</b></div>
+        <div class="tile"><span class="label">IPv6-Präfix</span><b class="mono">2003:e4:7f12:4a00::/56</b></div>
+        <div class="tile"><span class="label">Letzter Fehler</span><b>keiner</b></div>
+        <div class="tile" style="outline:2px dashed var(--ok);outline-offset:-2px"><span class="label">Leitung</span><b>synchron</b><small>neu: <span class="mono">is_linked</span></small></div>
+      </div>
+      <div class="btn-row"><button class="btn sm" data-act="reconnect">Neu verbinden</button><span class="muted" style="font-size:13px">Box neu starten: <a>Seite Box</a></span></div></section>
+    <section class="card sec"><span class="label">Getrennt, aber Leitung synchron (Beispiel)</span>
+      <p class="hintline bad">${I.alert}<span>Die Box ist nicht mit dem Internet verbunden. Die Leitung ist synchron: Die Einwahl scheitert (letzter Fehler <span class="mono">ERROR_AUTHENTICATION_FAILURE</span>). Prüfe die Zugangsdaten beim Anbieter.</span></p>
+      <p class="hintline warn">${I.alert}<span>Leitung nicht synchron: Die Box sieht keine Gegenstelle. Kabel, Dose und Störungsmeldung des Anbieters prüfen.</span></p>
+      <p class="hint">Der Hinweis unterscheidet die zwei Fälle jetzt an <span class="mono">is_linked</span>. Die Aktionen-Karte am Ende der Internet-Seite entfällt; „Neu verbinden“ steht im Kopf der Verbindung, „Neu starten“ auf der Seite Box.</p></section>`;
+  }
+
+  /* ---------- Dashboard-Karte ---------- */
+  function renderDash() {
+    nav("box");
+    const unsup = state === "unsup", hot = state === "hot", ro = state === "ro";
+    const vals = hot ? HOT : TEMP;
+    $("#main").innerHTML = `<div class="phead"><h1>Dashboard-Karte</h1><p class="lead"><span class="mono">custom:fritzbox-network-box-card</span>, gleiche Optionen wie die anderen Karten (<span class="mono">title</span>, <span class="mono">entry_id</span>).</p></div>
+    <div class="dash"><div>
+      <div class="hcard">
+        <div class="chead">${I.box}<b>FRITZ!Box</b>${state === "loading" ? `<span class="chip">lädt</span>` : hot ? `<span class="chip warn">warm</span>` : `<span class="chip ok">läuft</span>`}</div>
+        ${hot ? `<p class="hintline warn" style="font-size:13px">${I.alert}<span>CPU 78 °C, 14 °C über dem Mittel.</span></p>` : ""}
+        <div class="mini">
+          <div class="tile"><span class="label">Läuft seit</span><b>23 Tg. 4 Std.</b></div>
+          <div class="tile ${hot ? "warn" : ""}"><span class="label">CPU</span><b>${unsup ? '<span class="na">–</span>' : vals.at(-1) + " °C"}</b>${unsup ? "<small>nicht gemeldet</small>" : spark(vals)}</div>
+          <div class="tile"><span class="label">Leitung</span><b>synchron</b></div>
+          <div class="tile"><span class="label">Seit Neustart</span><b>1,84 TB</b><small>↑ 212 GB</small></div>
+        </div>
+        ${ro ? "" : `<div class="btn-row"><button class="btn sm" data-act="reconnect">Neu verbinden</button><button class="btn sm" data-act="reboot" style="color:var(--bad)">Neu starten …</button></div>`}
+      </div>
+      <ul class="notes">
+        <li><b>Daten</b> kommen mit dem Abonnement der Karten (<span class="mono">data.box</span>), kein eigener Abruf.</li>
+        <li><b>Knöpfe</b> nur mit <span class="mono">show_actions: true</span> (Standard aus) und nur für Administratoren: Die Befehle sind <span class="mono">require_admin</span>. Beide öffnen dieselbe Rückfrage wie im Panel.</li>
+        <li><b>Ohne Recht</b> oder für Nicht-Admins fehlen die Knöpfe ganz, statt grau dazustehen.</li>
+        <li>Ein Tipp auf den Kopf öffnet die Seite Box im Panel.</li>
+      </ul></div>
+      <div>
+      <div class="hcard">
+        <div class="chead">${I.box}<b>FRITZ!Box</b><span class="chip warn">startet neu</span></div>
+        <p style="margin:0 0 8px">Die Box startet neu. Meist dauert das 2 bis 4 Minuten.</p>
+        <div class="bar" style="color:var(--accent)"><i style="width:30%"></i></div>
+        <p class="hint">Nicht erreichbar seit 0:42 · Werte von 14:02</p>
+      </div>
+      <ul class="notes"><li><b>Während des Neustarts</b> zeigt die Karte dasselbe Band wie das Panel; danach „Wieder da nach 3:18“ für 10 Minuten.</li></ul>
+      </div>
+    </div>`;
+  }
+
+  function draw() { view === "panel" ? renderPanel() : view === "inet" ? renderInet() : renderDash(); }
+
+  /* ---------- Dialog und Toast ---------- */
+  function dialog({ title, body, list, ok, danger }) {
+    return new Promise((resolve) => {
+      const before = document.activeElement;
+      $("#dialog").innerHTML = `<h2 id="dlg-title">${esc(title)}</h2><div>${body}</div>${list ? `<ul>${list.map((l) => `<li>${esc(l)}</li>`).join("")}</ul>` : ""}
+        <div class="btn-row"><button class="btn" id="dlg-no">Abbrechen</button><button class="btn ${danger ? "dp" : "p"}" id="dlg-yes">${esc(ok)}</button></div>`;
+      $("#backdrop").classList.add("open");
+      $("#dlg-no").focus();
+      const done = (v) => { $("#backdrop").classList.remove("open"); document.removeEventListener("keydown", key); before?.focus?.(); resolve(v); };
+      const key = (e) => {
+        if (e.key === "Escape") done(false);
+        if (e.key === "Tab") { e.preventDefault(); (document.activeElement === $("#dlg-no") ? $("#dlg-yes") : $("#dlg-no")).focus(); }
+      };
+      document.addEventListener("keydown", key);
+      $("#dlg-no").onclick = () => done(false);
+      $("#dlg-yes").onclick = () => done(true);
+    });
+  }
+  let tt;
+  function toast(msg, undo) {
+    $("#toast").innerHTML = `<span>${esc(msg)}</span>${undo ? `<button id="undo">Rückgängig</button>` : ""}`;
+    $("#toast").classList.add("show");
+    if (undo) $("#undo").onclick = () => { undo(); $("#toast").classList.remove("show"); };
+    clearTimeout(tt); tt = setTimeout(() => $("#toast").classList.remove("show"), 5000);
+  }
+
+  async function doReboot() {
+    const ok = await dialog({
+      title: "Box neu starten?",
+      body: "Die FRITZ!Box startet neu. Für einige Minuten sind weg:",
+      list: ["das ganze Heimnetz und das Internet", "WLAN und Gastzugang (34 Geräte gerade verbunden)", "Telefonie, auch Notrufe über das Festnetz", "die Repeater, sie verbinden sich danach von selbst", "dieses Panel, falls Home Assistant per WLAN oder über die Box angebunden ist"],
+      ok: "Jetzt neu starten", danger: true,
+    });
+    if (!ok) return;
+    reboot = { phase: "down" }; draw();
+    setTimeout(() => { if (reboot?.phase === "down") { reboot.phase = "back"; draw(); toast("Die Box ist wieder da (nach 3:18)."); } }, 4000);
+  }
+  async function doReconnect() {
+    const ok = await dialog({ title: "Internet neu verbinden?", body: "Die Box legt auf und wählt sich neu ein. Das Internet ist einige Sekunden weg, die externe IPv4-Adresse ändert sich meist. Laufende Anrufe über das Internet brechen ab.", ok: "Neu verbinden", danger: true });
+    if (!ok) return;
+    reconnect = { phase: "busy" }; draw();
+    setTimeout(() => { reconnect = { phase: "done" }; draw(); }, 2000);
+  }
+
+  document.addEventListener("click", (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    if (b.dataset.mode) {
+      document.documentElement.dataset.mode = b.dataset.mode === "auto" ? "" : b.dataset.mode;
+      document.querySelectorAll("[data-mode]").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+      return;
+    }
+    if (b.dataset.view) { view = b.dataset.view; document.querySelectorAll("[data-view]").forEach((x) => x.setAttribute("aria-pressed", String(x === b))); draw(); return; }
+    if (b.dataset.act === "reboot") return doReboot();
+    if (b.dataset.act === "reconnect") return doReconnect();
+    if (b.dataset.act === "reboot-clear") { reboot = null; draw(); return; }
+    if (b.dataset.act === "reconnect-clear") { reconnect = null; draw(); return; }
+    if (b.dataset.defl) {
+      const d = deflections.find((x) => x.id === Number(b.dataset.defl));
+      d.enabled = !d.enabled; b.classList.add("busy");
+      setTimeout(() => { draw(); toast(`Rufumleitung „${d.kind}“ ${d.enabled ? "eingeschaltet" : "ausgeschaltet"}.`, () => { d.enabled = !d.enabled; draw(); }); }, 600);
+    }
+  });
+  $("#st").addEventListener("change", (e) => { state = e.target.value; reboot = null; reconnect = null; draw(); });
+  draw();
+</script>
+</body>
+</html>
