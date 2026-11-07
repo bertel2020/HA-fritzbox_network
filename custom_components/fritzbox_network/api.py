@@ -665,6 +665,8 @@ class FritzNetworkClient:
                     )
                 except (FritzArrayIndexError, FritzActionError):
                     break  # past the last entry the box answers with an error
+                except (FritzServiceError, KeyError):
+                    break  # no UPnP status information on the box: there is no such service
                 entries.append(
                     {
                         "description": result.get("NewPortMappingDescription") or None,

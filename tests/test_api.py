@@ -578,6 +578,13 @@ def test_the_port_mappings_are_read_until_the_box_runs_out():
     assert entries[1]["description"] is None and entries[1]["enabled"] is False
 
 
+def test_the_port_mappings_are_empty_where_the_box_has_no_upnp_service():
+    client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
+    client._fc = MagicMock()
+    client._fc.call_action.side_effect = FritzServiceError("no such service")
+    assert client.get_port_mappings() == []
+
+
 def test_the_routes_are_read_as_networks_and_say_nothing_of_type_or_status():
     client = FritzNetworkClient("192.168.178.1", None, "user", "secret")
     client._fc = MagicMock()
