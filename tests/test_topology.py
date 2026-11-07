@@ -456,3 +456,17 @@ async def test_the_panel_is_told_when_the_options_make_the_entry_reload(
         seen.append(message["event"])
     assert {"reload": True} in seen
     assert sum(event == {"reload": True} for event in seen) == 1
+
+
+async def test_the_panel_is_told_when_the_entry_is_reloaded_by_hand(
+    hass, hass_ws_client, fake_client, entry
+):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    await _subscribe(client)
+
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    message = await asyncio.wait_for(client.receive_json(), timeout=5)
+    assert message["event"] == {"reload": True}

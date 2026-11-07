@@ -227,13 +227,15 @@ async def _async_update_listener(hass: HomeAssistant, entry: FritzNetworkConfigE
     if old == new_without_hidden and old_hidden <= new_hidden:
         coordinator.options_snapshot = new
         return
-    # the panel is told: its subscription belongs to the coordinator that goes
-    async_dispatcher_send(hass, options_reload_signal(entry.entry_id))
     await hass.config_entries.async_reload(entry.entry_id)
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> bool:
     unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unloaded:
+        # the panel is told: its subscription belongs to the coordinator that goes,
+        # whatever the reason (options, reload by hand, reauth, reconfigure)
+        async_dispatcher_send(hass, options_reload_signal(entry.entry_id))
     if unloaded and not any(
         e.entry_id != entry.entry_id for e in hass.config_entries.async_loaded_entries(DOMAIN)
     ):
