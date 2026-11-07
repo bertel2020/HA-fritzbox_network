@@ -548,3 +548,50 @@ test("all new texts exist in both languages", () => {
   assert.equal(t.tabs.migrate, "Umsteigen");
   assert.equal(en.boxPage.actions.rebootList.length, t.boxPage.actions.rebootList.length);
 });
+
+// ---------- another box is chosen ----------
+
+test("an answer that comes after another box was chosen is dropped, and nothing of the old box stays", async () => {
+  let release;
+  const slow = new Promise((resolve) => (release = resolve));
+  const { p, calls } = makePanel({ "history/summary": () => slow, "address/overview": { network: null, own: null } });
+  p._subscribe = async () => false;
+  p._update = () => {};
+  p._state.history = { "aa:bb": { online: [1] } };
+  p._state.addr.status = "ready";
+  p._historyAt = 0;
+
+  const reading = p._maybeLoadHistory();
+  assert.equal(p._historyBusy, true);
+  await p._switchBox("e2");
+
+  // the state of the old box is gone, and the new box is read at once
+  assert.equal(p._state.history, null);
+  assert.equal(p._state.addr.status, "loading");
+  assert.equal(p._historyBusy, false);
+  assert.equal(p._historyAt, null);
+
+  // the old answer arrives late: it must not land in the new box
+  release({ devices: { "old:mac": { online: [1] } }, traffic: { "old:mac": [1] } });
+  await Promise.race([reading, new Promise((r) => setTimeout(r, 20))]);
+  assert.equal(p._state.history, null);
+  assert.equal(p._state.traffic, null);
+
+  // the new box asks with its own id
+  p._historyBusy = false;
+  p._hass.callWS = async (msg) => {
+    calls.push(msg);
+    return { devices: { "new:mac": { online: [1] } }, traffic: {} };
+  };
+  await p._maybeLoadHistory();
+  assert.deepEqual(Object.keys(p._state.history), ["new:mac"]);
+  assert.equal(calls.at(-1).entry_id, "e2");
+});
+
+test("the notes of an address page that is not read yet are not sent to a box", async () => {
+  const { p, calls } = makePanel({});
+  p._state.addr.status = "loading";
+  p._state.addr.own = null;
+  await p._saveOwn();
+  assert.deepEqual(calls, []);
+});

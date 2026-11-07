@@ -224,6 +224,9 @@ export function renderNav(state, t, stale, icons = false) {
   ].join("");
 }
 
+/** What the address page knows of one box: it is all gone when another box is chosen. */
+const addrState = () => ({ status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", groupsOpen: false, groupDraft: null, entryOpen: false, entryDraft: null, entryMessage: "", progress: null, exportOpts: { free: false, mac: true, map: true, poolNames: true } });
+
 class FritzboxNetworkPanel extends HTMLElement {
   constructor() {
     super();
@@ -259,7 +262,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       pageSize: rememberedPageSize(),
       history: null,
       ip: null,
-      addr: { status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", groupsOpen: false, groupDraft: null, entryOpen: false, entryDraft: null, entryMessage: "", progress: null, exportOpts: { free: false, mac: true, map: true, poolNames: true } },
+      addr: addrState(),
       traffic: null,
       trafficRange: 7,
       trend: null,
@@ -539,8 +542,18 @@ class FritzboxNetworkPanel extends HTMLElement {
     else if (this._state.tab === "phone") this._phoneSync({ parts: WS_PARTS });
   }
 
+  /**
+   * A command to the box that is chosen now. If another box is chosen before the answer comes, the
+   * answer belongs to the old one: the promise then never settles, so nothing of the caller
+   * (not its result, not its error handling) touches the state of the new box.
+   */
   _ws(type, extra = {}) {
-    return this._hass.callWS({ type: `${DOMAIN}/${type}`, entry_id: this._entryId, ...extra });
+    const entryId = this._entryId;
+    const answer = this._hass.callWS({ type: `${DOMAIN}/${type}`, entry_id: entryId, ...extra });
+    return answer.then(
+      (result) => (this._entryId === entryId ? result : new Promise(() => {})),
+      (err) => (this._entryId === entryId ? Promise.reject(err) : new Promise(() => {}))
+    );
   }
 
   /** The sparklines come from the history of the box: read now and then, not with every poll. */
@@ -921,6 +934,15 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     this._state.data = null;
     this._state.sel = null;
+    // everything read from the old box, and the marks of reads still on their way
+    Object.assign(this._state, {
+      history: null, traffic: null, trafficYear: null, trend: null, ip: null,
+      vpnHistory: null, addr: addrState(), capture: null, captureSummary: null,
+      check: null, latency: null, log: null, routesSel: null, routesFixed: {}, wlanError: "",
+    });
+    for (const busy of ["_historyBusy", "_trafficYearBusy", "_vpnHistoryBusy", "_trendBusy", "_ipBusy", "_fixedBusy"]) this[busy] = false;
+    this._historyAt = null;
+    this._vpnHistoryAt = null;
     this._state.enabling = new Set();
     this._state.cleanup = null;
     this._state.cleanupDays = null;
@@ -1429,6 +1451,8 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   async _saveOwn() {
     const addr = this._state.addr;
+    // the notes of a box are only sent once they are read from it
+    if (addr.status !== "ready") return;
     try {
       await this._ws("address/save", { own: addr.own });
     } catch (err) {
