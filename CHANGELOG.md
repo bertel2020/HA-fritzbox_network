@@ -6,6 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Telefonseite: Das **Telefonbuch** ist standardmäßig eingeklappt (ein Tipp auf die Überschrift öffnet es). Geöffnet hat es Filter (Alle, VIP, Mit Anrufen), Buchstaben-Überschriften, je Kontakt die Zahl der Anrufe und den letzten Anruf sowie den Knopf **Neuer Kontakt**, der auch nach der Nummer fragt.
 - WLAN-Seite: Die Karte „Gastzugang“ ist aufgeräumt. Sie zeigt die Verschlüsselung (zum Beispiel WPA2 + WPA3) und die Geräte, die gerade im Gastnetz sind, als Schaltflächen, die ihre Seite öffnen. Der QR-Code erscheint erst auf Wunsch neben den Angaben, statt als leere gestreifte Fläche; der lange Hinweis steht klein am Ende.
 - Repeater, die du zum Steuern gewählt hast, haben jetzt auch einen Schalter **Gast-WLAN** und das Bild **Gast-WLAN-QR-Code** (standardmäßig aus), sofern der Repeater ein Gastnetz meldet.
 - Optionen: Unter **Schalter anlegen für** wählst du die Bereiche, die Schalter bekommen: Geräte (Internetzugang, Priorität, Wake on LAN), WLAN-Netze (Box, Repeater, Gast-WLAN und QR-Code), Portfreigaben, WireGuard-Verbindungen, statische Routen. Standard sind alle. Ein ausgeschalteter Bereich entfernt seine Schalter.

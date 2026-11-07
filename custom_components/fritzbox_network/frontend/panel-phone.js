@@ -8,7 +8,7 @@
 import { escapeHtml } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
-import { BOOK_ROWS, CALL_FILTERS, HISTORY_PERIODS, PERIODS, PERIOD_DAYS, SERIES, callKind, dialable, displayName, filterCalls, filterCounts, foldHeat, heatGrid, isOutgoing, onBlocklist, phoneStats, searchBook, shortNumber, wsStats } from "./phone-model.js";
+import { BOOK_ROWS, CALL_FILTERS, digits, HISTORY_PERIODS, PERIODS, PERIOD_DAYS, SERIES, callKind, dialable, displayName, filterCalls, filterCounts, foldHeat, heatGrid, isOutgoing, onBlocklist, phoneStats, searchBook, shortNumber, wsStats } from "./phone-model.js";
 
 const esc = escapeHtml;
 const KIND_ICON = { in: "callIn", out: "callOut", miss: "callMissed", spam: "shield", tam: "tam" };
@@ -446,16 +446,48 @@ function bookCard(model, ctx) {
   if (model.booksState === "na") return `<section class="card sec"><div class="ph-chead"><span class="label">${esc(b.title)}</span></div><p class="hint">${esc(t.phone.part)}</p></section>`;
   if (!model.books.length) return `<section class="card sec"><div class="ph-chead"><span class="label">${esc(b.title)}</span></div><div class="empty ph-small"><b>${esc(b.none)}</b><span>${esc(b.noneBody)}</span></div></section>`;
   const book = model.books.find((x) => x.entityId === ui.book) ?? model.books[0];
-  const head = `<div class="ph-chead"><span class="label" id="ph-book-h">${esc(b.title)}</span>${book.ok ? `<span class="chip">${esc(fill(b.count, { n: book.count }))}</span>` : ""}</div>`;
+  const open = ui.bookOpen === true;
+  const head = `<div class="ph-chead"><button class="ph-fold" data-act="ph-bookopen" data-k="ph-bookopen" aria-expanded="${open}" aria-controls="ph-book-body"><span class="label" id="ph-book-h">${esc(b.title)}</span><span class="ph-chev" aria-hidden="true">${ic("chev")}</span></button>${book.ok ? `<span class="chip">${esc(fill(b.count, { n: book.count }))}</span>` : ""}</div>`;
+  if (!open) {
+    const vips = book.ok ? book.contacts.filter((c) => c.vip).length : 0;
+    return `<section class="card sec ph-folded" aria-labelledby="ph-book-h">${head}${book.ok && book.count ? `<p class="hint">${esc(vips ? fill(b.summaryVip, { n: vips }) : b.summary)}</p>` : ""}</section>`;
+  }
   const choose = model.books.length > 1
     ? `<span class="seg ph-seg" role="group" aria-label="${esc(b.choose)}">${model.books.map((x) => `<button data-act="ph-book" data-ph-ent="${esc(x.entityId)}" data-k="ph-b-${esc(x.entityId)}" aria-pressed="${x === book}">${esc(x.name)}</button>`).join("")}</span>`
     : "";
   if (book.loading) return `<section class="card sec" aria-busy="true" aria-labelledby="ph-book-h">${head}<div class="ph-tools">${choose}</div><p class="hint">${esc(t.loading)}</p></section>`;
   if (!book.ok) return `<section class="card sec" aria-labelledby="ph-book-h">${head}<div class="ph-tools">${choose}</div><p class="hint">${esc(book.offline || model.api === "ws" ? t.phone.part : fill(t.phone.tooOld, { attr: "contacts" }))}</p></section>`;
-  const found = searchBook(book.contacts, ui.bookQuery);
+  // how often each number called or was called, from the calls the page has
+  const seen = new Map();
+  for (const call of model.calls ?? []) {
+    const d = digits(call.number);
+    if (!d) continue;
+    const e = seen.get(d) ?? { n: 0, last: null };
+    e.n += 1;
+    if (call.date && (!e.last || call.date > e.last)) e.last = call.date;
+    seen.set(d, e);
+  }
+  const statsOf = (c) => {
+    let n = 0;
+    let last = null;
+    for (const num of c.numbers) {
+      const e = seen.get(digits(num.number));
+      if (!e) continue;
+      n += e.n;
+      if (e.last && (!last || e.last > last)) last = e.last;
+    }
+    return { n, last };
+  };
+  const mode = ui.bookFilter ?? "all";
+  const counts = { all: book.contacts.length, vip: book.contacts.filter((c) => c.vip).length, calls: book.contacts.filter((c) => statsOf(c).n).length };
+  const found = searchBook(book.contacts, ui.bookQuery).filter((c) => (mode === "vip" ? c.vip : mode === "calls" ? statsOf(c).n > 0 : true));
   const shown = found.slice(0, BOOK_ROWS);
+  let group = null;
   const rows = shown
     .map((c) => {
+      const letter = c.vip ? "★" : (c.name || "?").slice(0, 1).toUpperCase();
+      const label = letter === group ? "" : `<div class="ph-group" role="presentation">${letter === "★" ? esc(b.vip) : esc(letter)}</div>`;
+      group = letter;
       // the key holds no name: in privacy mode nothing of the contact is in the page
       const key = `b:${book.entityId}:${book.contacts.indexOf(c)}`;
       const hide = masked(ui, model.privacy, key);
@@ -470,15 +502,19 @@ function bookCard(model, ctx) {
               return `<span class="ph-num"><span class="mono">${esc(n.number)}</span>${type ? `<small>${esc(type)}</small>` : ""}${fax || !dialable(n.number) ? "" : `<button class="icon-btn" data-act="ph-dial" data-ph-num="${esc(n.number)}" data-ph-name="${esc(c.name)}" data-k="ph-bd-${esc(key)}-${esc(n.number)}" aria-label="${esc(fill(b.call, { name: c.name, type: type || "–" }))}"${off(model)}>${ic("phone")}</button>`}</span>`;
             })
             .join("")}</div>`;
-      return `<div class="ph-row ph-contact"><div class="ph-line two"><span class="ph-ico">${initial}</span><div class="ph-cbody">${body}</div></div></div>`;
+      const st = hide ? { n: 0, last: null } : statsOf(c);
+      const stat = st.n ? `<small class="ph-cstat">${esc(fill(b.calls, { n: st.n }))}${st.last ? `, ${esc(fill(b.last, { when: dayLabel(st.last, ctx.now, t, ctx.language) }))}` : ""}</small>` : "";
+      return `${label}<div class="ph-row ph-contact"><div class="ph-line two"><span class="ph-ico">${initial}</span><div class="ph-cbody">${body}${stat}</div></div></div>`;
     })
     .join("");
   const more = found.length > shown.length ? `<p class="hint">${esc(fill(b.more, { n: found.length - shown.length }))}</p>` : "";
   return `<section class="card sec" aria-labelledby="ph-book-h">${head}
-    <div class="ph-tools">${choose}<label class="search ph-search"><span class="sr">${esc(b.searchLabel)}</span>${ic("search")}<input type="search" id="ph-bq" value="${esc(ui.bookQuery)}" placeholder="${esc(b.search)}" autocomplete="off"></label></div>
+    <div id="ph-book-body">
+    <div class="ph-tools">${choose}<span class="seg ph-seg" role="group" aria-label="${esc(b.filter)}">${["all", "vip", "calls"].map((f) => `<button data-act="ph-bookfilter" data-ph-val="${f}" data-k="ph-bf-${f}" aria-pressed="${f === mode}">${esc(b.filters[f])}<span class="n">${counts[f]}</span></button>`).join("")}</span>${!model.offline ? `<button class="btn sm" data-act="ph-newcontact" data-k="ph-newcontact" aria-haspopup="dialog">${ic("userPlus")}${esc(b.newContact)}</button>` : ""}</div>
+    <div class="ph-tools"><label class="search ph-search"><span class="sr">${esc(b.searchLabel)}</span>${ic("search")}<input type="search" id="ph-bq" value="${esc(ui.bookQuery)}" placeholder="${esc(b.search)}" autocomplete="off"></label></div>
     <p class="sr" role="status">${esc(fill(b.found, { n: found.length }))}</p>
     ${book.contacts.length ? (found.length ? rows : `<div class="empty ph-small"><b>${esc(b.noMatch)}</b></div>`) : `<div class="empty ph-small"><b>${esc(b.empty)}</b></div>`}${more}
-    <p class="hint">${esc(b.hint)}</p></section>`;
+    <p class="hint">${esc(b.hint)}</p></div></section>`;
 }
 
 // ---------- block list (only with the commands) ----------

@@ -1101,6 +1101,14 @@ export const PANEL_CSS = `
   .ph-notes .hintline { align-items: flex-start; }
   .ph-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
   .ph-search { flex: 1 1 200px; min-width: 0; }
+  .ph-fold { display: inline-flex; align-items: center; gap: 8px; flex: 1 1 auto; padding: 4px 6px; margin: -4px -6px; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; border-radius: 8px; }
+  .ph-fold:hover { background: var(--soft); }
+  .ph-fold .ph-chev { display: inline-grid; transition: transform .15s; }
+  .ph-fold[aria-expanded="true"] .ph-chev { transform: rotate(180deg); }
+  .ph-folded .ph-chead { margin-bottom: 4px; }
+  .ph-folded .hint { margin: 0; }
+  .ph-group { padding: 12px 0 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .ph-cstat { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
   .ph-live { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 16px; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent-hover); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
   .ph-live.spam { background: var(--bad-soft); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 30%, transparent); }
   .ph-live.talk { background: var(--ok-soft); color: var(--ok); border-color: color-mix(in srgb, var(--ok) 30%, transparent); }

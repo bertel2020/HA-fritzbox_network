@@ -119,6 +119,8 @@ function phoneUi() {
     tables: { bars: false, heat: false },
     book: null,
     bookQuery: "",
+    bookOpen: false,
+    bookFilter: "all",
     expanded: new Set(),
     revealed: new Set(),
     play: null,
@@ -2974,6 +2976,15 @@ class FritzboxNetworkPanel extends HTMLElement {
       ui.query = "";
       return redraw("ph-f-all");
     }
+    if (act === "ph-bookopen") {
+      ui.bookOpen = !ui.bookOpen;
+      return redraw("ph-bookopen");
+    }
+    if (act === "ph-bookfilter") {
+      ui.bookFilter = ds.phVal;
+      return redraw(`ph-bf-${ds.phVal}`);
+    }
+    if (act === "ph-newcontact") return this._phoneContact("");
     if (act === "ph-book") {
       ui.book = ds.phEnt;
       return redraw(`ph-b-${ds.phEnt}`);
@@ -3118,7 +3129,8 @@ class FritzboxNetworkPanel extends HTMLElement {
   async _phoneContact(number, suggestion = "") {
     const t = this._t;
     const c = t.phone.contact;
-    if (!number) return;
+    // without a number (the button of the phone book) the dialog asks for it
+    const ask = !number;
     const all = this._phone?.books ?? [];
     const books = all.filter((b) => Number.isInteger(b.phonebookId));
     const bookName = all.length === 1 ? fill(c.bookName, { name: all[0].name }) : "";
@@ -3137,17 +3149,21 @@ class FritzboxNetworkPanel extends HTMLElement {
     };
     const answer = await openFormDialog(this.shadowRoot, t, {
       title: c.title,
-      html: `<p class="mono">${escapeHtml(fill(c.number, { number }))}</p>
+      html: `${ask ? `<label class="field"><span class="label">${escapeHtml(c.numberField)}</span><input id="ph-ct-num" type="tel" maxlength="40" inputmode="tel" autocomplete="off"></label>` : `<p class="mono">${escapeHtml(fill(c.number, { number }))}</p>`}
         <label class="field"><span class="label">${escapeHtml(c.name)}</span><input id="ph-ct-name" type="text" maxlength="64" value="${escapeHtml(suggestion.slice(0, 64))}"></label>
         ${suggestion ? `<p class="hint">${escapeHtml(c.suggestion)}</p>` : ""}
         ${bookHtml}`,
       ok: c.ok,
-      focus: "#ph-ct-name",
-      validate: (dialog) => (dialog.querySelector("#ph-ct-name").value.trim() ? null : c.noName),
-      read: (dialog) => ({ name: dialog.querySelector("#ph-ct-name").value.trim().slice(0, 64), book: pickBook(dialog) }),
+      focus: ask ? "#ph-ct-num" : "#ph-ct-name",
+      validate: (dialog) => {
+        if (ask && !dialable(dialog.querySelector("#ph-ct-num").value.trim())) return c.noNumber;
+        return dialog.querySelector("#ph-ct-name").value.trim() ? null : c.noName;
+      },
+      read: (dialog) => ({ name: dialog.querySelector("#ph-ct-name").value.trim().slice(0, 64), book: pickBook(dialog), number: ask ? dialog.querySelector("#ph-ct-num").value.trim() : number }),
     });
     if (answer === null) return;
     const { name, book } = answer;
+    number = answer.number;
     if ((await this._phoneService("add_contact", { number, name, phonebook_id: book })) === undefined) return;
     showToast(this.shadowRoot, fill(c.done, { name }));
     this._phoneSync({ parts: ["phonebooks"] });

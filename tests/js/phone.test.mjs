@@ -156,6 +156,8 @@ function makePanel(hassOpts = {}, { services = {}, ws = {}, api = "entities" } =
     },
   };
   p._state.tab = "phone";
+  // the phone book is closed by default; most tests look inside
+  if (p._state.phone) p._state.phone.bookOpen = true;
   p._state.data = { can_write: true, nodes: [], clients: [] };
   p._phoneApi = api;
   if (api) p._phoneDetectKey = [p._hass.config, p._hass.devices];
@@ -163,7 +165,7 @@ function makePanel(hassOpts = {}, { services = {}, ws = {}, api = "entities" } =
   return { p, calls, wsCalls, root: p.shadowRoot, html: () => (p._renderPhone(), p._html["phone-view"]) };
 }
 
-const ctx = (ui = {}, extra = {}) => ({ t, language: "de", now: NOW, width: 640, ui: { view: "list", filter: "all", query: "", period: "7", tables: {}, bookQuery: "", expanded: new Set(), revealed: new Set(), blocked: new Set(), busy: new Set(), ...ui }, ...extra });
+const ctx = (ui = {}, extra = {}) => ({ t, language: "de", now: NOW, width: 640, ui: { view: "list", filter: "all", query: "", period: "7", tables: {}, bookQuery: "", bookOpen: true, expanded: new Set(), revealed: new Set(), blocked: new Set(), busy: new Set(), ...ui }, ...extra });
 const read = (opts) => model.readPhone(makeHass(opts), "e1", { cache: new Map() });
 
 // ---------- detection and navigation ----------
@@ -1067,4 +1069,30 @@ test("more than 31 days of the command are drawn per week", () => {
   assert.equal(s.bars.list.length, 6);
   assert.equal(s.bars.list.reduce((n, b) => n + b.in, 0), 40);
   assert.deepEqual(s.compare, { kind: "noneAll" });
+});
+
+test("the phone book is closed by default with its count and opens with a tap; it has filters, letters and call counts", () => {
+  const closed = page.renderPhone(read(), ctx({ bookOpen: false }));
+  assert.match(closed, /class="card sec ph-folded"[\s\S]*data-act="ph-bookopen"[^>]*aria-expanded="false"/);
+  assert.doesNotMatch(closed, /id="ph-bq"|Büro Schmidt/);
+  const open = page.renderPhone(read(), ctx());
+  assert.match(open, /data-act="ph-bookopen"[^>]*aria-expanded="true"/);
+  assert.match(open, /data-act="ph-bookfilter" data-ph-val="vip"/);
+  assert.match(open, /data-act="ph-newcontact"/);
+  assert.match(open, /class="ph-group"[^>]*>VIP</);
+  const vip = page.renderPhone(read(), ctx({ bookFilter: "vip" }));
+  assert.doesNotMatch(vip, /Büro Schmidt/);
+});
+
+test("the new contact button asks for the number too", async () => {
+  const { p, calls, root } = makePanel({}, { services: { add_contact: {} }, api: null });
+  const asked = p._onPhoneClick({ act: "ph-newcontact" });
+  const dialog = root.els["#dialog"];
+  assert.match(dialog.innerHTML, /id="ph-ct-num"/);
+  dialog.querySelector("#ph-ct-num").value = "0301234567";
+  dialog.querySelector("#ph-ct-name").value = "Neu";
+  dialog.querySelector("#dlg-yes").onclick();
+  await asked;
+  await settle();
+  assert.equal(calls.find((c) => c.service === "add_contact")?.data.number, "0301234567");
 });
