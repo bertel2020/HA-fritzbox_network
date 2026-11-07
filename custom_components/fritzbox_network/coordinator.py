@@ -198,11 +198,15 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             fast, slow = self.client.get_internet(details)
             uptime = int(fast.get("GetStatusInfo", {}).get("NewUptime", 0))
             # a new connection may have a new address: read it now, not at the next round
+            status = fast.get("GetStatusInfo", {}).get("NewConnectionStatus")
             if (
                 not details
                 and previous
-                and previous.uptime is not None
-                and uptime < previous.uptime
+                and (
+                    (previous.uptime is not None and uptime < previous.uptime)
+                    # a line that dropped: its state is read now, not at the tenth poll
+                    or (previous.connected and status is not None and status != "Connected")
+                )
             ):
                 slow = self.client.get_internet(True)[1]
         except (*_FETCH_ERRORS, TypeError) as err:

@@ -286,6 +286,9 @@
       },
       "vpn": {
         "name": "{name}"
+      },
+      "internet_linked": {
+        "name": "Leitung"
       }
     },
     "update": {

@@ -179,6 +179,8 @@ class InternetInfo:
     bytes_sent: int | None
     bytes_received: int | None
     dsl: DslInfo | None
+    # whether the cable of the line is plugged in and has a signal (the physical link)
+    linked: bool | None = None
 
 
 @dataclass(frozen=True)
@@ -821,6 +823,9 @@ def parse_internet(
         bytes_sent=_counter(fast, "Sent"),
         bytes_received=_counter(fast, "Received"),
         dsl=dsl,
+        linked={"Up": True, "Down": False, "NoCarrier": False}.get(
+            link.get("NewPhysicalLinkStatus")
+        ),
     )
 
 

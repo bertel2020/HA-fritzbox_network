@@ -10,7 +10,14 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, KEY_GUEST, KEY_INTERNET_CONNECTED, KEY_MESH_CONNECTED, KEY_VPN
+from .const import (
+    DOMAIN,
+    KEY_GUEST,
+    KEY_INTERNET_CONNECTED,
+    KEY_INTERNET_LINKED,
+    KEY_MESH_CONNECTED,
+    KEY_VPN,
+)
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import (
     FritzNetworkClientEntity,
@@ -50,17 +57,29 @@ async def async_setup_entry(
 def _async_setup_internet(
     entry: FritzNetworkConfigEntry, async_add_entities: AddConfigEntryEntitiesCallback
 ) -> None:
-    """The connection sensor, once the box has told about its internet connection."""
+    """The connection sensor, once the box has told about its internet connection.
+
+    The sensor of the line only where the box tells whether the cable has a signal.
+    """
     coordinator = entry.runtime_data
-    added = False
+    connected_added = False
+    linked_added = False
 
     @callback
     def _add() -> None:
-        nonlocal added
-        if added or coordinator.data.internet is None:
+        nonlocal connected_added, linked_added
+        internet = coordinator.data.internet
+        if internet is None:
             return
-        added = True
-        async_add_entities([FritzNetworkInternetConnected(coordinator)])
+        new: list[CoordinatorEntity] = []
+        if not connected_added:
+            connected_added = True
+            new.append(FritzNetworkInternetConnected(coordinator))
+        if not linked_added and internet.linked is not None:
+            linked_added = True
+            new.append(FritzNetworkInternetLinked(coordinator))
+        if new:
+            async_add_entities(new)
 
     _add()
     entry.async_on_unload(coordinator.async_add_listener(_add))
@@ -161,6 +180,36 @@ class FritzNetworkInternetConnected(CoordinatorEntity[FritzNetworkCoordinator], 
     def is_on(self) -> bool | None:
         internet = self.coordinator.data.internet
         return internet.connected if internet else None
+
+
+class FritzNetworkInternetLinked(CoordinatorEntity[FritzNetworkCoordinator], BinarySensorEntity):
+    """On = the line of the box has a signal (the cable is plugged in); off by default.
+
+    Read together with the slow part of the connection, so it is up to ten polls old; a
+    connection that drops makes the box read it at once.
+    """
+
+    _attr_has_entity_name = True
+    _attr_translation_key = KEY_INTERNET_LINKED
+    _attr_device_class = BinarySensorDeviceClass.PLUG
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: FritzNetworkCoordinator) -> None:
+        super().__init__(coordinator)
+        self._attr_unique_id = f"{coordinator.serial}_{KEY_INTERNET_LINKED}"
+        self.entity_id = f"binary_sensor.fritz_network_{KEY_INTERNET_LINKED}"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+
+    @property
+    def available(self) -> bool:
+        internet = self.coordinator.data.internet
+        return super().available and internet is not None and internet.linked is not None
+
+    @property
+    def is_on(self) -> bool | None:
+        internet = self.coordinator.data.internet
+        return internet.linked if internet else None
 
 
 class FritzNetworkVpn(CoordinatorEntity[FritzNetworkCoordinator], BinarySensorEntity):

@@ -207,6 +207,12 @@
         "state": {
           "off": "mdi:shield-off-outline"
         }
+      },
+      "internet_linked": {
+        "default": "mdi:ethernet-cable",
+        "state": {
+          "off": "mdi:ethernet-cable-off"
+        }
       }
     },
     "select": {

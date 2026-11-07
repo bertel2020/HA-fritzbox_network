@@ -265,6 +265,38 @@ async def test_a_box_without_byte_counters_has_no_byte_sensors(hass, fake_client
     assert registry.async_get("sensor.fritz_network_internet_download") is not None
 
 
+async def test_the_line_sensor_is_off_by_default_and_follows_the_physical_link(
+    hass, fake_client, entry
+):
+    coordinator = await _setup(hass, entry)
+    reg = er.async_get(hass).async_get("binary_sensor.fritz_network_internet_linked")
+    assert reg is not None
+    assert reg.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+    assert coordinator.data.internet.linked is True
+
+
+async def test_a_line_that_drops_is_read_at_once_and_not_at_the_tenth_poll(
+    hass, fake_client, entry
+):
+    coordinator = await _setup(hass, entry)
+    await _poll(hass, coordinator)
+    fake_client.internet_reads.clear()
+
+    fake_client.internet_fast["GetStatusInfo"]["NewConnectionStatus"] = "Disconnected"
+    fake_client.internet_slow["GetCommonLinkProperties"]["NewPhysicalLinkStatus"] = "Down"
+    await _poll(hass, coordinator)
+
+    assert fake_client.internet_reads == [False, True]
+    assert coordinator.data.internet.linked is False
+
+
+async def test_a_box_that_does_not_tell_the_link_has_no_line_sensor(hass, fake_client, entry):
+    del fake_client.internet_slow["GetCommonLinkProperties"]["NewPhysicalLinkStatus"]
+    await _setup(hass, entry)
+
+    assert er.async_get(hass).async_get("binary_sensor.fritz_network_internet_linked") is None
+
+
 async def test_a_box_that_tells_nothing_has_no_internet_sensors(hass, fake_client, entry):
     fake_client.internet_fast = {}
     await _setup(hass, entry)
