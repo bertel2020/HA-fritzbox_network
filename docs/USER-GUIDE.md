@@ -93,6 +93,7 @@ Update through HACS and restart Home Assistant. Entity ids do not change.
 | Ignore devices with a private MAC address | off | Devices with a random ("private") MAC are not created (existing ones are removed). |
 | Device filter | all devices | All, only the selected, or all except the selected devices. |
 | Hidden devices | empty | Devices deleted by hand. Deselect one to show it again. |
+| Create switches for | all | The areas whose entities change something: devices (internet access, priority, Wake on LAN), Wi-Fi networks (box, repeaters, guest network and QR code), port forwardings, WireGuard connections, static routes. An area you turn off gets no switches, and the ones it had are removed when the entry reloads. Needs the right "FRITZ!Box settings". |
 
 The box itself and its **repeaters** are never filtered.
 
@@ -417,7 +418,8 @@ In the options of the box, choose under **Repeaters to control** the repeaters f
 
 - the sensor **Last restart** (on),
 - the button **Restart** (off),
-- the **Wi-Fi switches** per band (on),
+- the **Wi-Fi switches** per band (on) and, if the repeater reports a guest network, the **Guest Wi-Fi** switch (on),
+- the image **Guest Wi-Fi QR code** (off, because it shows the password, like the one of the box),
 - the sensor **CPU temperature** (off; only for repeaters that show it, and only read while it is on),
 - the **Update** entity "Firmware" with the Install button.
 

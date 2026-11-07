@@ -93,6 +93,7 @@ Host (Standard `192.168.178.1`), Benutzer und Kennwort eingeben, optional Port u
 | Geräte mit privater MAC-Adresse ignorieren | aus | Geräte mit zufälliger („privater“) MAC werden nicht angelegt (vorhandene werden entfernt). |
 | Gerätefilter | alle Geräte | Alle, nur die ausgewählten oder alle außer den ausgewählten Geräten. |
 | Ausgeblendete Geräte | leer | Von Hand gelöschte Geräte. Abwählen blendet ein Gerät wieder ein. |
+| Schalter anlegen für | alle | Die Bereiche, deren Entitäten etwas ändern: Geräte (Internetzugang, Priorität, Wake on LAN), WLAN-Netze (Box, Repeater, Gast-WLAN und QR-Code), Portfreigaben, WireGuard-Verbindungen, statische Routen. Ein ausgeschalteter Bereich bekommt keine Schalter, und die vorhandenen werden beim Neuladen des Eintrags entfernt. Braucht das Recht „FRITZ!Box Einstellungen“. |
 
 Die Box selbst und ihre **Repeater** sind nie gefiltert.
 
@@ -417,7 +418,8 @@ In den Optionen der Box wählst du unter **Repeater steuern** die Repeater aus d
 
 - den Sensor **Letzter Neustart** (an),
 - den Button **Neu starten** (aus),
-- die **WLAN-Schalter** je Band (an),
+- die **WLAN-Schalter** je Band (an) und, wenn der Repeater ein Gastnetz meldet, den Schalter **Gast-WLAN** (an),
+- das Bild **Gast-WLAN-QR-Code** (aus, weil es das Passwort zeigt, wie das der Box),
 - den Sensor **CPU-Temperatur** (aus; nur bei Repeatern, die ihn zeigen, und nur gelesen, solange er an ist),
 - die **Update**-Entität „Firmware“ mit dem Knopf Installieren.
 
