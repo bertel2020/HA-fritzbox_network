@@ -136,3 +136,19 @@ async def test_a_guest_password_must_be_8_to_63_ascii_characters(
 
     assert not result["success"]
     assert not any(call[0] == "guest_password" for call in fake_client.calls)
+
+
+async def test_box_info_is_an_error_while_the_box_does_not_answer(
+    hass, hass_ws_client, fake_client, entry, monkeypatch
+):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    def _down():
+        raise OSError("no route")
+
+    monkeypatch.setattr(fake_client, "read_uptime", _down)
+    result = await _call(client, entry, "box/info")
+
+    assert not result["success"]
+    assert result["error"]["code"] == "unknown_error"

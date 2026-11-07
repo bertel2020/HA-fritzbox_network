@@ -680,9 +680,9 @@ async def test_the_last_restart_stays_put_while_the_reads_differ_by_less_than_a_
 ):
     coordinator = await _setup(hass, entry)
     boot = coordinator.box_boot
-    coordinator._note_uptime(3 * 3600 + 30)
+    coordinator.note_uptime(3 * 3600 + 30)
     assert coordinator.box_boot == boot
-    coordinator._note_uptime(2 * 3600)
+    coordinator.note_uptime(2 * 3600)
     assert coordinator.box_boot != boot
 
 

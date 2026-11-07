@@ -1066,6 +1066,12 @@ async def ws_box_info(
         return
     _, coordinator = found
     client = coordinator.client
+    # asked now: a box that restarts must not show the numbers of before it went down
+    try:
+        coordinator.note_uptime(await hass.async_add_executor_job(client.read_uptime))
+    except (FritzConnectionException, OSError, ValueError):
+        connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, "The box does not answer")
+        return
     temperature = None
     if coordinator.cpu_supported is not False:
         # asked now, not from the last poll: the page shows what the box says at this moment

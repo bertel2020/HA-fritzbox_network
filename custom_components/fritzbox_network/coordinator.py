@@ -162,7 +162,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.cpu_temperature: int | None = None
         self._cpu_demand = 0
         self._cpu_stale = False
-        self._note_uptime(getattr(client, "uptime", None))
+        self.note_uptime(getattr(client, "uptime", None))
         # The first poll reads only what the devices and the internet card need, so the setup is
         # not held up by the web interface of the box; a second poll right after it reads the rest.
         self._lean = True
@@ -255,7 +255,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         if offer is not None:
             self._firmware = offer
 
-    def _note_uptime(self, seconds: int | None) -> None:
+    def note_uptime(self, seconds: int | None) -> None:
         """When the box started, from how long it has run; kept while it moves by a minute."""
         if seconds is None:
             return
@@ -272,7 +272,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         if not self._uptime_stale and (self._polls == 0 or self._polls % FIRMWARE_REFRESH_POLLS):
             return
         try:
-            self._note_uptime(self.client.read_uptime())
+            self.note_uptime(self.client.read_uptime())
         except (*_FETCH_ERRORS, TypeError) as err:
             _LOGGER.debug("Uptime unavailable: %s", err)
             return
