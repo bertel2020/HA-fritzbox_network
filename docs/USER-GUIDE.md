@@ -60,7 +60,7 @@ Copy the directory `custom_components/fritzbox_network` to `/config/custom_compo
 
 ### Setup
 
-Enter the host (default `192.168.178.1`), user and password, optionally the port and TLS. The serial number of the box becomes the identifier of the entry; the same box cannot be set up twice.
+Enter the host (default `192.168.178.1`), user and password, optionally the port and TLS. The serial number of the box becomes the identifier of the entry; the same box cannot be set up twice. Home Assistant also finds a FRITZ!Box on the network by itself (SSDP) and offers it with the login form; if a known box has a new address, the entry takes it over. Repeaters are not offered.
 
 - **New address of the box**: ⋮ on the entry → **Reconfigure**. Address, port and TLS can be changed, the login stays. A different box is refused.
 - **New password**: Home Assistant shows "Re-authenticate"; follow the notice.
@@ -130,11 +130,29 @@ The FRITZ!Box device also counts the devices of your network (after the filters)
 
 The box and every repeater also have diagnostic sensors for each of their Wi-Fi bands, off by default: **Channel**, **Channel utilization** (in percent, as the box reports it) and **Noise** (in dBm). They answer "why is the Wi-Fi bad tonight": a busy channel or a high noise level at the access point the device sits on. The guest network shares the radio and is not listed twice. They come from the mesh data that is polled anyway, so they cost no extra request.
 
-The box also has an **Update** entity "Firmware": it shows the running version and a newer one when the box offers it (with a link to what is new). The integration asks about once an hour; installing still happens in the box itself. The panel names the new version in the notes on the network. If the model says nothing about it, there is no entity. Repeaters have no display of their own, the box only says something about itself.
+The box also has an **Update** entity "Firmware": it shows the running version and a newer one when the box offers it (with a link to what is new). The integration asks about once an hour; With the right "FRITZ!Box settings" the entity also has the **Install** button: the box installs the offered firmware, restarts and is out of reach for a few minutes. The panel names the new version in the notes on the network. If the model says nothing about it, there is no entity. Repeaters have no display of their own, the box only says something about itself.
 
-If the box has a guest network, there is a **Guest Wi-Fi** switch on the device of the box when the user may change settings. It shows the state from the box (also when you change it there) and switches the guest network on and off, for example by automation at night. The integration finds the guest network by the type "guest" the box reports for the access point.
+If the box has a guest network, there is a **Guest Wi-Fi** switch on the device of the box when the user may change settings. It shows the state from the box (also when you change it there) and switches the guest network on and off, for example by automation at night. The integration finds the guest network by the type "guest" the box reports for the access point (`X_AVM-DE_GetWLANExtInfo`).
 
-The box also has sensors for its **internet connection** once it reports one: the connection state (binary sensor "Internet connection") and the **throughput** for download and upload in Mbit/s, both on by default so the history in Home Assistant is there from the start. The throughput is worked out from the byte counters of the box between two updates. Off by default are the connection time, the external IPv4 address and, on DSL, line rate, noise margin, attenuation and FEC and CRC errors, each for download and upload. They let you build automations ("the address changed", "noise margin below 8 dB") and look at the course over days. They cost no extra request, the values come from the read behind the internet page.
+With the same right every other Wi-Fi network has a switch on the device of the box, one per band: **Wi-Fi 2.4 GHz (network name)** and **Wi-Fi 5 GHz (network name)**, and 6 GHz on boxes that have it. They are on by default, show the state from the box and have the attributes `ssid`, `bssid` and `standard`. The box says which network is on which band; the number of the service does not matter. The state is read every 10 updates, shown at once after a switch and read at every update until the box confirms it. **Careful:** if you switch off the Wi-Fi that Home Assistant uses to reach the box, you lock yourself out. Whether the box passes a switch on to the repeaters has not been checked.
+
+The **Guest Wi-Fi QR code** entity (an image) shows the code a phone scans to join the guest network. It is off by default **because the picture contains the password**: whoever may see the entity can join the guest network. The code is made when the entity is added, then hourly and at once after a new password from the action; for an open network no password is asked for. The image needs the library `segno`, which Home Assistant installs itself.
+
+The box also has sensors for its **internet connection** once it reports one: the connection state (binary sensor "Internet connection") and the **throughput** for download and upload in Mbit/s, both on by default so the history in Home Assistant is there from the start. The throughput is worked out from the byte counters of the box between two updates. Off by default are the connection time, the external IPv4 address and, on DSL, line rate, noise margin, attenuation and FEC and CRC errors, each for download and upload. They let you build automations ("the address changed", "noise margin below 8 dB") and look at the course over days. They cost no extra request, the values come from the read behind the internet page. If "Transmit status information over UPnP" is switched off in the box, Home Assistant shows a notice under **Repairs**; the integration goes on, but internet values may be missing.
+
+More values of the box, all without an extra request unless noted:
+
+| Entity | Default | Note |
+|---|---|---|
+| Sensor **Last restart** | on | when the box last started; the setup reads the uptime along, then hourly and after an outage |
+| Sensors **Internet data received / sent** | off | byte counters since the box started |
+| Sensors **Line rate download / upload** | off | only on cable, fibre and mobile; DSL has its own values |
+| Sensors **DSL attainable rate download / upload** | off | the rate the DSL line could reach |
+| Binary sensor **Line** | off | whether the WAN port has a signal; a connection that drops makes it read at once |
+| Sensor **CPU temperature** | off | from the web interface of the box; one web request every 10 updates, **only while the entity is on**; boxes without the sensor get no entity |
+| Buttons **Restart box** and **Reconnect to the internet** | off | need the right "FRITZ!Box settings"; a button does not ask, the panel does |
+
+**Switching port forwardings.** With the right "FRITZ!Box settings" every port forwarding of the box has a switch `switch.fritz_network_port_<protocol>_<port>`, **off** by default because switching one on opens a port to the internet. The box has no action of its own for this: the integration enters the forwarding again with the same protocol and port and the other state, after reading the entry afresh. The forwardings are read only while at least one switch is on, every 10 updates. Forwardings a device opened by UPnP are in the list too; the device may enter them again. If a forwarding disappears from the box its switch becomes unavailable. IPv6 forwardings (firewall) are not switched.
 
 **WireGuard (VPN).** If the box has WireGuard connections, each one gets a binary sensor "VPN <name>": on while the tunnel stands, with the attributes `kind` (`device` or `site` for a link between two networks), `enabled`, `connected_since` and `remote_network`. A new connection set up on the box appears by itself. Besides the binary sensor, each connection has a **status** sensor (connected, on but not connected, off) and a **connected since** sensor; a diagnostic **identifier** sensor (the place of the connection in the box's list) is off until you enable it. The entities know a connection by its **name**: the box numbers its connections by place, so deleting one moves the others up, and the name keeps each entity on its own connection. If you rename a connection on the box, you get a new entity and the old one stays unavailable (remove it by hand); if two connections have the same name, the identifier is added to the key. The dashboard shows the same with switches in the [VPN card](#vpn-card), and the side panel then has a **VPN** tab (`#/vpn`) with the connections, their state (connected, on but not connected, off) and the devices that come into the home network by VPN. The data comes from the web interface of the box, so it needs the same account as the other web reads. The box tells no data volume and no last contact for a tunnel; for the traffic, record the WireGuard interface on the Diagnosis page. The private key and the pre-shared keys that the same page of the box carries are never read. Each connection also has a switch "VPN <name> enabled" (and the VPN tab a button), if the account may change settings. Switching off ends the tunnel; the integration reads the connection back and reports an error if the box did not take the change.
 
@@ -151,6 +169,7 @@ The box device also has three diagnostic, off by default: **Last update** (the l
 | `fritzbox_network.set_name` | Renames the device in the FRITZ!Box itself (`name`). The name in Home Assistant follows if names are taken over; entity ids never change. Refused for devices whose name the box does not let change. |
 | `fritzbox_network.wake_on_lan` | Sends the Wake on LAN signal of the box to the device, without the (off by default) button. |
 | `fritzbox_network.set_route` | Switches a static IPv4 route of the box on or off (`network`, for example `10.8.0.0/24`, and `enabled`). Needs the right "FRITZ!Box settings" and no target; the box is asked afterwards whether the route has the state, and the action reports an error if not. The panel shows the routes under Address space › Routes; they are added and deleted in the panel (the input is checked, deleting asks first). |
+| `fritzbox_network.set_guest_wifi_password` | Sets the password of the guest Wi-Fi: `password` (8 to 63 characters) or, without one, a random password of `length` characters (8 to 63, default 12). Answers with the password (`return_response`). Needs the right "FRITZ!Box settings". The integration does not write the password to the log; with debug logging on for `fritzconnection` the request to the box shows there, and a password you give is in traces and the event log. |
 | `fritzbox_network.capture` | Starts a packet capture in the background: `interface` (name of the interface in the box, preset `1-lan`; the panel lists them under Diagnosis), `duration` in seconds (5 to 600) and `size` in MB. With a device as the target only its traffic is kept. Fails if a capture is already running. The file appears in the panel under Diagnosis. |
 | `fritzbox_network.remove_unavailable_vpn` | Removes the entities of WireGuard connections that no longer exist on the box (deleted or renamed ones). Does nothing while the box tells no list of connections. |
 
@@ -366,9 +385,29 @@ The schedule needs the right "FRITZ!Box settings". If the address of a device ch
 
 ## Next to the core integration
 
-The core integration "AVM FRITZ!Box Tools" can run in parallel. Since Home Assistant 2026.8 every device belongs to exactly one integration; you therefore get **two separate devices** per network device, with duplicate trackers and double the load on the box. Turn off device tracking in the core integration or remove it once you have switched to this one.
+The core integration "AVM FRITZ!Box Tools" can run in parallel. Since Home Assistant 2026.8 every device belongs to exactly one integration; you therefore get **two separate devices** per network device, with duplicate trackers and double the load on the box (each integration loads the description of the box and keeps asking it; a slow load can come from that). Turn off device tracking in the core integration or remove it once you have switched to this one.
 
 Automations that refer to core entity ids have to be changed to the new ids; there is no automatic migration.
+
+### What the core integration does and where it is here
+
+| Core "FRITZ!Box Tools" | Here |
+|---|---|
+| Device trackers | Device trackers by MAC, with "Consider home" |
+| Internet connection, IP, throughput, bytes, DSL values | Internet sensors and card; throughput on, the rest off |
+| Line (`is_linked`) | Binary sensor "Line" (off) |
+| Restart, reconnect | Buttons (off) and the panel with a confirmation |
+| Uptime, CPU temperature | "Last restart" and "CPU temperature" |
+| Firmware update | Update entity, with Install |
+| Wi-Fi switches, guest Wi-Fi | A switch per band and the guest Wi-Fi |
+| Guest Wi-Fi QR, set password | Image (off) and the action `set_guest_wifi_password` |
+| Internet access, priority, Wake on LAN per device | yes, plus access profiles as a selection |
+| Port forwarding switches (only for the Home Assistant computer) | A switch per port forwarding, off by default |
+| Discovery | SSDP |
+| Call deflections, `dial` | **not covered**; telephony stays with `fritzbox_phone` and the core integration "FRITZ!Box" |
+| Repeater as an entry of its own (restart, Wi-Fi, update of the repeaters) | **not yet**: repeaters are devices of the box with mesh data but no controls of their own. Whoever needs that keeps the core entry of the repeater |
+
+On top of that there are VPN, routes, mesh topology, history and the side panel here.
 
 ## Privacy and security
 
@@ -406,6 +445,7 @@ The integration ships its own icon in the local directory `custom_components/fri
 - Anything beyond TR-064 (VPN, address assignment, capture) is read from the web interface of the box. AVM can change it with a FRITZ!OS update; the entities then become unavailable or stay empty until the integration is adapted.
 - Private (randomized) MAC addresses count as new devices when they change.
 - Settings can only be changed by a user with the right "FRITZ!Box settings".
+- A repeater cannot be set up as an entry or controlled yet (see above).
 - Only one FRITZ!Box per entry; the core integration "AVM FRITZ!Box Tools" has to be separated (see above).
 
 ## Troubleshooting

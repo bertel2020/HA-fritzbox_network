@@ -60,7 +60,7 @@ Das Verzeichnis `custom_components/fritzbox_network` nach `/config/custom_compon
 
 ### Einrichtung
 
-Host (Standard `192.168.178.1`), Benutzer und Kennwort eingeben, optional Port und TLS. Die Seriennummer der Box wird zur Kennung des Eintrags; dieselbe Box lässt sich nicht zweimal einrichten.
+Host (Standard `192.168.178.1`), Benutzer und Kennwort eingeben, optional Port und TLS. Die Seriennummer der Box wird zur Kennung des Eintrags; dieselbe Box lässt sich nicht zweimal einrichten. Home Assistant findet eine FRITZ!Box im Netz auch von selbst (SSDP) und bietet sie mit dem Anmeldeformular an; hat eine bekannte Box eine neue Adresse, übernimmt der Eintrag sie. Repeater werden nicht angeboten.
 
 - **Neue Adresse der Box**: ⋮ am Eintrag → **Neu konfigurieren**. Adresse, Port und TLS lassen sich ändern, die Anmeldung bleibt. Eine andere Box wird abgewiesen.
 - **Neues Kennwort**: Home Assistant meldet „Neu anmelden“; dem Hinweis folgen.
@@ -130,11 +130,29 @@ Das Gerät der FRITZ!Box zählt außerdem die Geräte im Netz (nach den Filtern)
 
 Die Box und jeder Repeater haben außerdem Diagnose-Sensoren für jedes ihrer WLAN-Bänder, standardmäßig aus: **Kanal**, **Kanalauslastung** (in Prozent, wie die Box sie meldet) und **Rauschen** (in dBm). Sie beantworten „warum ist das WLAN heute Abend schlecht“: ein voller Kanal oder ein hoher Rauschpegel an dem Access Point, an dem das Gerät hängt. Das Gastnetz teilt sich die Funkeinheit und steht nicht doppelt da. Sie kommen aus den Mesh-Daten, die ohnehin abgerufen werden, kosten also keine zusätzliche Anfrage.
 
-Die Box hat außerdem eine **Update**-Entität „Firmware“: Sie zeigt die laufende Version und eine neue, wenn die Box eine anbietet (mit Link zu den Neuerungen). Die Integration fragt etwa stündlich; installiert wird weiter in der Box selbst. Das Panel nennt die neue Version in den Hinweisen zum Netz. Meldet das Modell nichts dazu, gibt es die Entität nicht. Repeater haben keine eigene Anzeige, die Box sagt nur etwas zu sich selbst.
+Die Box hat außerdem eine **Update**-Entität „Firmware“: Sie zeigt die laufende Version und eine neue, wenn die Box eine anbietet (mit Link zu den Neuerungen). Die Integration fragt etwa stündlich; Mit dem Recht „FRITZ!Box Einstellungen“ hat die Entität auch den Knopf **Installieren**: Die Box spielt die angebotene Firmware ein, startet dabei neu und ist einige Minuten nicht erreichbar. Das Panel nennt die neue Version in den Hinweisen zum Netz. Meldet das Modell nichts dazu, gibt es die Entität nicht. Repeater haben keine eigene Anzeige, die Box sagt nur etwas zu sich selbst.
 
-Besitzt die Box ein Gastnetz, gibt es einen Schalter **Gast-WLAN** am Gerät der Box, wenn der Benutzer Einstellungen ändern darf. Er zeigt den Zustand aus der Box (auch wenn du ihn dort änderst) und schaltet das Gastnetz ein und aus, zum Beispiel per Automation nachts. Die Integration findet das Gastnetz an dem Typ „guest“, den die Box für den Zugangspunkt meldet.
+Besitzt die Box ein Gastnetz, gibt es einen Schalter **Gast-WLAN** am Gerät der Box, wenn der Benutzer Einstellungen ändern darf. Er zeigt den Zustand aus der Box (auch wenn du ihn dort änderst) und schaltet das Gastnetz ein und aus, zum Beispiel per Automation nachts. Die Integration findet das Gastnetz an dem Typ „guest“, den die Box für den Zugangspunkt meldet (`X_AVM-DE_GetWLANExtInfo`).
 
-Die Box hat außerdem Sensoren für ihre **Internetverbindung**, sobald sie diese meldet: den Verbindungsstatus (Binärsensor „Internetverbindung“) und den **Durchsatz** für Download und Upload in Mbit/s, beide standardmäßig an, damit der Verlauf in Home Assistant von Anfang an da ist. Der Durchsatz wird aus den Byte-Zählern der Box zwischen zwei Abfragen berechnet. Standardmäßig aus sind die Verbindungszeit, die externe IPv4-Adresse und bei DSL Leitungsrate, Störabstand, Dämpfung sowie FEC- und CRC-Fehler, je für Download und Upload. Damit lassen sich Automationen bauen („IP hat sich geändert“, „Störabstand unter 8 dB“) und Verläufe über Tage ansehen. Sie kosten keine zusätzliche Anfrage, die Werte kommen aus der Abfrage der Internet-Seite.
+Mit demselben Recht gibt es für jedes andere WLAN-Netz einen Schalter am Gerät der Box, je Band einen: **WLAN 2,4 GHz (Netzname)** und **WLAN 5 GHz (Netzname)**, bei Boxen mit 6 GHz auch dafür. Sie sind standardmäßig an, zeigen den Zustand aus der Box und haben die Attribute `ssid`, `bssid` und `standard`. Welches Netz zu welchem Band gehört, sagt die Box; die Nummer des Dienstes spielt keine Rolle. Der Zustand wird alle 10 Abfragen gelesen, nach dem Schalten sofort angezeigt und bis zur Bestätigung durch die Box bei jeder Abfrage gelesen. **Vorsicht:** Schaltest du das WLAN aus, über das Home Assistant mit der Box verbunden ist, sperrst du dich aus. Ob die Box das Schalten an die Repeater weitergibt, ist nicht geprüft.
+
+Die Entität **Gast-WLAN-QR-Code** (Bild) zeigt den Code, mit dem ein Handy das Gastnetz beitritt. Sie ist standardmäßig aus, **weil das Bild das Passwort enthält**: Wer die Entität sehen darf, kann dem Gastnetz beitreten. Der Code wird beim Hinzufügen erzeugt, danach stündlich und sofort nach einem neuen Passwort aus der Aktion; für ein offenes Netz wird kein Passwort abgefragt. Das Bild braucht die Bibliothek `segno`, die Home Assistant selbst installiert.
+
+Die Box hat außerdem Sensoren für ihre **Internetverbindung**, sobald sie diese meldet: den Verbindungsstatus (Binärsensor „Internetverbindung“) und den **Durchsatz** für Download und Upload in Mbit/s, beide standardmäßig an, damit der Verlauf in Home Assistant von Anfang an da ist. Der Durchsatz wird aus den Byte-Zählern der Box zwischen zwei Abfragen berechnet. Standardmäßig aus sind die Verbindungszeit, die externe IPv4-Adresse und bei DSL Leitungsrate, Störabstand, Dämpfung sowie FEC- und CRC-Fehler, je für Download und Upload. Damit lassen sich Automationen bauen („IP hat sich geändert“, „Störabstand unter 8 dB“) und Verläufe über Tage ansehen. Sie kosten keine zusätzliche Anfrage, die Werte kommen aus der Abfrage der Internet-Seite. Ist bei der Box „Statusinformationen über UPnP übertragen“ ausgeschaltet, zeigt Home Assistant unter **Reparaturen** einen Hinweis; die Integration arbeitet weiter, aber Internet-Werte können fehlen.
+
+Weitere Werte der Box, alle ohne zusätzliche Abfrage, wenn nichts anderes steht:
+
+| Entität | Standard | Hinweis |
+|---|---|---|
+| Sensor **Letzter Neustart** | an | Zeitpunkt des letzten Starts; die Betriebszeit liest das Setup mit, danach stündlich und nach einem Ausfall |
+| Sensoren **Internet-Daten empfangen / gesendet** | aus | Byte-Zähler seit dem Start der Box |
+| Sensoren **Leitungsrate Download / Upload** | aus | nur bei Kabel, Glasfaser und Mobilfunk; bei DSL gibt es die DSL-Werte |
+| Sensoren **DSL-Maximalrate Download / Upload** | aus | die erreichbare Rate der DSL-Leitung |
+| Binärsensor **Leitung** | aus | ob am WAN-Anschluss ein Signal anliegt; bricht die Verbindung ab, wird er sofort gelesen |
+| Sensor **CPU-Temperatur** | aus | aus der Weboberfläche der Box; ein Web-Aufruf alle 10 Abfragen, **nur solange die Entität eingeschaltet ist**; Boxen ohne den Sensor bekommen keine Entität |
+| Buttons **Box neu starten** und **Internetverbindung neu aufbauen** | aus | brauchen das Recht „FRITZ!Box Einstellungen“; ein Button fragt nicht nach, das Panel schon |
+
+**Portfreigaben schalten.** Mit dem Recht „FRITZ!Box Einstellungen“ gibt es für jede Portfreigabe der Box einen Schalter `switch.fritz_network_port_<protokoll>_<port>`, standardmäßig **aus**, weil Einschalten einen Port ins Internet öffnet. Die Box hat dafür keine eigene Aktion: Die Integration trägt die Freigabe mit demselben Protokoll und Port neu ein, mit dem anderen Zustand, nachdem sie den Eintrag frisch gelesen hat. Gelesen werden die Freigaben nur, solange mindestens ein Schalter eingeschaltet ist, alle 10 Abfragen. Auch Freigaben, die ein Gerät per UPnP geöffnet hat, stehen in der Liste; das Gerät kann sie wieder eintragen. Verschwindet eine Freigabe aus der Box, wird ihr Schalter nicht verfügbar. IPv6-Freigaben (Firewall) werden nicht geschaltet.
 
 **WireGuard (VPN).** Hat die Box WireGuard-Verbindungen, bekommt jede einen Binärsensor „VPN <Name>“: an, solange der Tunnel steht, mit den Attributen `kind` (`device` oder `site` für eine Kopplung zweier Netze), `enabled`, `connected_since` und `remote_network`. Eine neu auf der Box angelegte Verbindung erscheint von selbst. Neben dem Binärsensor hat jede Verbindung einen **Status**-Sensor (verbunden, ein aber nicht verbunden, aus) und einen Sensor **verbunden seit**; ein Diagnose-Sensor **Kennung** (die Stelle der Verbindung in der Liste der Box) ist aus, bis du ihn einschaltest. Die Entitäten kennen eine Verbindung an ihrem **Namen**: Die Box nummeriert ihre Verbindungen nach der Stelle in der Liste, ein Löschen schiebt die übrigen nach oben, und der Name hält jede Entität bei ihrer Verbindung. Benennst du eine Verbindung auf der Box um, entsteht eine neue Entität und die alte bleibt nicht verfügbar (von Hand entfernen); heißen zwei Verbindungen gleich, kommt die Kennung zum Schlüssel dazu. Auf dem Dashboard zeigt die [VPN-Karte](#vpn-karte) dasselbe mit Schaltern. Im Seitenpanel gibt es dann den Reiter **VPN** (`#/vpn`) mit den Verbindungen, ihrem Zustand (verbunden, ein aber nicht verbunden, aus) und den Geräten, die per VPN ins Heimnetz kommen. Die Daten kommen aus der Oberfläche der Box, sie braucht dasselbe Konto wie die anderen Lesezugriffe darauf. Datenmenge und letzten Kontakt je Tunnel nennt die Box nicht; für den Verkehr nimm auf der Diagnose-Seite die WireGuard-Schnittstelle auf. Der private Schlüssel und die Pre-Shared-Keys, die dieselbe Seite der Box enthält, werden nie gelesen. Jede Verbindung hat außerdem einen Schalter „VPN <Name> aktiviert“ (und der VPN-Reiter eine Schaltfläche), sofern das Konto Einstellungen ändern darf. Ausschalten beendet den Tunnel; die Integration liest die Verbindung zurück und meldet einen Fehler, wenn die Box die Änderung nicht übernommen hat.
 
@@ -151,6 +169,7 @@ Das Gerät der FRITZ!Box hat außerdem drei Diagnose-Sensoren, standardmäßig a
 | `fritzbox_network.set_name` | Benennt das Gerät in der FRITZ!Box selbst um (`name`). Der Name in Home Assistant folgt, wenn Namen übernommen werden; Entity-IDs ändern sich nie. Abgelehnt bei Geräten, deren Namen die Box nicht ändern lässt. |
 | `fritzbox_network.wake_on_lan` | Sendet das Wake-on-LAN-Signal der Box an das Gerät, ohne den (standardmäßig deaktivierten) Button. |
 | `fritzbox_network.set_route` | Schaltet eine statische IPv4-Route der Box ein oder aus (`network`, zum Beispiel `10.8.0.0/24`, und `enabled`). Braucht das Recht „FRITZ!Box Einstellungen“ und keinen Zielbereich; die Box wird danach gefragt, ob die Route den Zustand hat, und die Aktion meldet einen Fehler, wenn nicht. Die Routen zeigt das Panel unter Adressraum › Routen; angelegt und gelöscht werden sie im Panel (mit Prüfung der Eingaben und Rückfrage beim Löschen). |
+| `fritzbox_network.set_guest_wifi_password` | Setzt das Passwort des Gast-WLANs: `password` (8 bis 63 Zeichen) oder, ohne Passwort, ein zufälliges der Länge `length` (8 bis 63, vorbelegt 12). Antwortet mit dem Passwort (`return_response`). Braucht das Recht „FRITZ!Box Einstellungen“. Die Integration schreibt das Passwort nicht ins Log; bei eingeschaltetem Debug-Logging für `fritzconnection` steht aber die Anfrage an die Box dort, und ein von dir angegebenes Passwort steht in Traces und im Ereignisprotokoll. |
 | `fritzbox_network.capture` | Startet einen Paketmitschnitt im Hintergrund: `interface` (Name der Schnittstelle in der Box, vorbelegt `1-lan`; die Liste zeigt das Panel unter Diagnose), `duration` in Sekunden (5 bis 600) und `size` in MB. Mit einem Gerät als Ziel bleibt nur dessen Verkehr. Meldet einen Fehler, wenn schon ein Mitschnitt läuft. Die Datei erscheint im Panel unter Diagnose. |
 | `fritzbox_network.remove_unavailable_vpn` | Entfernt die Entitäten von WireGuard-Verbindungen, die es auf der Box nicht mehr gibt (gelöschte oder umbenannte). Tut nichts, solange die Box keine Liste der Verbindungen nennt. |
 
@@ -366,9 +385,29 @@ Der Zeitplan braucht das Recht „FRITZ!Box Einstellungen“. Hat sich die Adres
 
 ## Zusammen mit der Core-Integration
 
-Die Core-Integration „AVM FRITZ!Box Tools“ kann parallel laufen. Seit Home Assistant 2026.8 gehört jedes Gerät genau einer Integration; es entstehen also **zwei getrennte Geräte** pro Netzwerkgerät, mit doppelten Trackern und doppelter Last auf der Box. Schalte im Core das Gerätetracking aus oder entferne die Core-Integration, sobald du auf diese umgestiegen bist.
+Die Core-Integration „AVM FRITZ!Box Tools“ kann parallel laufen. Seit Home Assistant 2026.8 gehört jedes Gerät genau einer Integration; es entstehen also **zwei getrennte Geräte** pro Netzwerkgerät, mit doppelten Trackern und doppelter Last auf der Box (jede Integration lädt die Beschreibung der Box und fragt sie ständig ab; ein langsames Laden kann daran liegen). Schalte im Core das Gerätetracking aus oder entferne die Core-Integration, sobald du auf diese umgestiegen bist.
 
 Automationen, die auf Core-Entity-IDs verweisen, musst du auf die neuen IDs umstellen; eine automatische Übernahme gibt es nicht.
+
+### Was die Core-Integration kann und wo es hier steht
+
+| Core „FRITZ!Box Tools“ | Hier |
+|---|---|
+| Gerätetracker | Gerätetracker nach MAC, mit „Als anwesend werten“ |
+| Internetverbindung, IP, Durchsatz, Bytes, DSL-Werte | Internet-Sensoren und -Karte; Durchsatz an, der Rest aus |
+| Leitung (`is_linked`) | Binärsensor „Leitung“ (aus) |
+| Neustart, Neu verbinden | Buttons (aus) und Panel mit Rückfrage |
+| Betriebszeit, CPU-Temperatur | „Letzter Neustart“ und „CPU-Temperatur“ |
+| Firmware-Update | Update-Entität, mit Installieren |
+| WLAN-Schalter, Gast-WLAN | Schalter je Band und Gast-WLAN |
+| Gast-WLAN-QR, Passwort setzen | Bild (aus) und Aktion `set_guest_wifi_password` |
+| Internetzugang, Priorität, Wake on LAN je Gerät | ja, dazu Zugangsprofile als Auswahl |
+| Portfreigabe-Schalter (nur für den Home-Assistant-Rechner) | Schalter je Portfreigabe, standardmäßig aus |
+| Entdeckung | SSDP |
+| Rufumleitungen, `dial` | **nicht**; Telefonie bleibt bei `fritzbox_phone` bzw. der Core-Integration „FRITZ!Box“ |
+| Repeater als eigener Eintrag (Neustart, WLAN, Update der Repeater) | **noch nicht**: Repeater sind Geräte der Box mit Mesh-Daten, aber ohne eigene Steuerung. Wer das braucht, behält den Core-Eintrag des Repeaters |
+
+Darüber hinaus gibt es hier VPN, Routen, Mesh-Topologie, Verläufe und das Seitenpanel.
 
 ## Datenschutz und Sicherheit
 
@@ -406,6 +445,7 @@ Die Integration enthält ein eigenes Symbol im von Home Assistant unterstützten
 - Was über TR-064 hinausgeht (VPN, Adressvergabe, Mitschnitt), wird aus der Weboberfläche der Box gelesen. AVM kann sie mit einem FRITZ!OS-Update ändern; die Entitäten sind dann nicht verfügbar oder bleiben leer, bis die Integration angepasst ist.
 - Private (zufällige) MAC-Adressen gelten nach einem Wechsel als neue Geräte.
 - Einstellungen kann nur ein Benutzer mit dem Recht „FRITZ!Box-Einstellungen" ändern.
+- Ein Repeater lässt sich noch nicht als Eintrag einrichten oder steuern (siehe oben).
 - Nur eine FRITZ!Box je Eintrag; die Core-Integration „AVM FRITZ!Box Tools" ist zu trennen (siehe oben).
 
 ## Fehlerbehebung
