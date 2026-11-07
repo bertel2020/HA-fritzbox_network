@@ -689,8 +689,9 @@ class FritzNetworkClient:
             self._guest_searched = True
             for number in range(1, 5):
                 service = f"WLANConfiguration{number}"
+                # the type is told by X_AVM-DE_GetWLANExtInfo, not by GetInfo
                 try:
-                    info = self._connection.call_action(service, "GetInfo")
+                    info = self._connection.call_action(service, "X_AVM-DE_GetWLANExtInfo")
                 except (FritzActionError, FritzServiceError, FritzAuthorizationError, KeyError):
                     continue
                 if info.get("NewX_AVM-DE_APType") == "guest":

@@ -299,7 +299,10 @@ def _guest_client(types: dict[str, str]) -> FritzNetworkClient:
         if action == "SetEnable":
             state["NewEnable"] = args["NewEnable"]
             return {}
-        return {"NewX_AVM-DE_APType": types[service], **state}
+        if action == "X_AVM-DE_GetWLANExtInfo":
+            # as in the description of the box: the type is here and not in GetInfo
+            return {"NewX_AVM-DE_APType": types[service], "NewX_AVM-DE_APEnabled": True}
+        return dict(state)
 
     client._fc.call_action.side_effect = call
     return client
@@ -319,7 +322,9 @@ def test_the_guest_wifi_is_the_service_whose_type_says_so():
     client._fc.call_action.assert_any_call("WLANConfiguration3", "SetEnable", NewEnable=True)
     # the services are searched once, not at every read
     searches = [
-        c for c in client._fc.call_action.call_args_list if c.args[0] == "WLANConfiguration1"
+        c
+        for c in client._fc.call_action.call_args_list
+        if c.args[0] == "WLANConfiguration1" and c.args[1] == "X_AVM-DE_GetWLANExtInfo"
     ]
     assert len(searches) == 1
 
