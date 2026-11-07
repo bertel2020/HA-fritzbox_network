@@ -441,6 +441,10 @@
     "internet_reconnects": {
       "title": "The internet connection keeps dropping",
       "description": "The box set up its internet connection {count} times in the last 24 hours. Check the line and the cable, and ask the provider if it continues. The internet page of the FRITZ!Box Network panel shows the events."
+    },
+    "upnp_disabled": {
+      "title": "The box does not pass status information over UPnP",
+      "description": "The FRITZ!Box has \"Transmit status information over UPnP\" switched off. The values of the internet connection come from there, so the internet card and some sensors are missing or incomplete. Switch it on under Home Network > Network > Network Settings > Further settings > \"Transmit status information over UPnP\"."
     }
   },
   "services": {

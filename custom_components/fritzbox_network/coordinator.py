@@ -153,6 +153,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._uptime_stale = False
         # the CPU temperature: whether the box has the sensor (None = not asked yet), the last
         # value, and how many entities want it; it is read only while one does
+        # whether the box passes status information over UPnP (the internet values come from it)
+        self.upnp_enabled: bool | None = None
         self.cpu_supported: bool | None = None
         self.cpu_temperature: int | None = None
         self._cpu_demand = 0
@@ -306,6 +308,18 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             return
         self.cpu_supported = True
         self.cpu_temperature = value
+
+    def _fetch_upnp(self) -> None:
+        """Whether UPnP status information is on, now and then; the last answer stays otherwise."""
+        if self._polls % FIRMWARE_REFRESH_POLLS:
+            return
+        try:
+            enabled = self.client.get_upnp_enabled()
+        except (*_FETCH_ERRORS, TypeError) as err:
+            _LOGGER.debug("UPnP status unavailable: %s", err)
+            return
+        if enabled is not None:
+            self.upnp_enabled = enabled
 
     def _fetch_dhcp_pool(self) -> None:
         """The DHCP range, now and then; what was known stays if the box does not answer."""
@@ -489,6 +503,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             routes = self._fetch_routes()
             self._fetch_firmware()
             self._fetch_dhcp_pool()
+            self._fetch_upnp()
             self._fetch_uptime()
             self._fetch_wifi()
             self._fetch_cpu_temperature()

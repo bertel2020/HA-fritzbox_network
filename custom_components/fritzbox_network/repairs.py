@@ -33,6 +33,7 @@ ISSUE_STALE_DEVICES = "stale_devices"
 ISSUE_INTERNET_LINE = "internet_line"
 ISSUE_INTERNET_RECONNECTS = "internet_reconnects"
 ISSUE_MESH_REPEATER_LOST = "mesh_repeater_lost"
+ISSUE_UPNP_DISABLED = "upnp_disabled"
 
 
 def last_online(hass: HomeAssistant, host: Host) -> datetime | None:
@@ -129,6 +130,32 @@ def async_update_mesh_issue(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
         severity=ir.IssueSeverity.WARNING,
         translation_key=ISSUE_MESH_REPEATER_LOST,
         translation_placeholders={"count": str(len(names)), "names": ", ".join(names)},
+    )
+
+
+@callback
+def async_remove_upnp_issue(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
+    ir.async_delete_issue(hass, DOMAIN, f"{ISSUE_UPNP_DISABLED}_{entry.entry_id}")
+
+
+@callback
+def async_update_upnp_issue(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
+    """A repair while the box does not pass status information over UPnP.
+
+    The values of the internet connection come from there; without them the internet card and
+    the reconnect are missing or incomplete. Nothing is refused, the integration works on.
+    """
+    issue_id = f"{ISSUE_UPNP_DISABLED}_{entry.entry_id}"
+    if entry.runtime_data.upnp_enabled is not False:
+        ir.async_delete_issue(hass, DOMAIN, issue_id)
+        return
+    ir.async_create_issue(
+        hass,
+        DOMAIN,
+        issue_id,
+        is_fixable=False,
+        severity=ir.IssueSeverity.WARNING,
+        translation_key=ISSUE_UPNP_DISABLED,
     )
 
 

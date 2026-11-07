@@ -525,6 +525,20 @@ class FritzNetworkClient:
             except (FritzActionError, FritzServiceError, FritzAuthorizationError, KeyError):
                 return {}
 
+    def service_names(self) -> list[str]:
+        """The TR-064 services the box offers; from the description read at the connection."""
+        return sorted(self._connection.services)
+
+    def get_upnp_enabled(self) -> bool | None:
+        """Whether the box passes status information over UPnP; None where it does not say."""
+        with self._lock:
+            try:
+                info = self._connection.call_action("X_AVM-DE_UPnP1", "GetInfo")
+            except (FritzActionError, FritzServiceError, KeyError):
+                return None
+        enabled = info.get("NewEnable")
+        return None if enabled is None else bool(enabled)
+
     def get_cpu_temperature(self) -> int | None:
         """The CPU temperature in degrees Celsius from the web interface; None where it has none.
 

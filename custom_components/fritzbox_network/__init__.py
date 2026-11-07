@@ -44,9 +44,11 @@ from .repairs import (
     async_remove_internet_issues,
     async_remove_mesh_issue,
     async_remove_stale_issue,
+    async_remove_upnp_issue,
     async_update_internet_issues,
     async_update_mesh_issue,
     async_update_stale_issue,
+    async_update_upnp_issue,
 )
 from .services import async_register as async_register_services
 from .vendor import async_load as async_load_vendors
@@ -148,6 +150,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
         coordinator.async_add_listener(lambda: async_update_mesh_issue(hass, entry))
     )
     entry.async_on_unload(lambda: async_remove_mesh_issue(hass, entry))
+    entry.async_on_unload(
+        coordinator.async_add_listener(lambda: async_update_upnp_issue(hass, entry))
+    )
+    entry.async_on_unload(lambda: async_remove_upnp_issue(hass, entry))
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_ensure_panel(hass)
     # the first poll left out what the web interface of the box tells; read it now, not 30 s later

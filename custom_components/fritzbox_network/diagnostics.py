@@ -37,6 +37,15 @@ async def async_get_config_entry_diagnostics(
         },
         "internet": _internet(coordinator),
         "guest_wifi": coordinator.data.guest_wifi,
+        # what this box offers and what the integration found of it, for a report of a model
+        # that behaves differently; nothing here is read from the box for the download
+        "box": {
+            "services": _services(coordinator),
+            "upnp_enabled": coordinator.upnp_enabled,
+            "cpu_temperature_supported": coordinator.cpu_supported,
+            "uptime_known": coordinator.box_boot is not None,
+            "wifi_networks": sorted(coordinator.data.wifi or ()),
+        },
         "firmware": asdict(firmware) if (firmware := coordinator.data.firmware) else None,
         "host_count": len(coordinator.all_hosts),
         "selected_count": len(coordinator.data.hosts),
@@ -53,6 +62,13 @@ async def async_get_config_entry_diagnostics(
             "linked_clients": len(mesh.links),
         },
     }
+
+
+def _services(coordinator: Any) -> list[str]:
+    try:
+        return coordinator.client.service_names()
+    except Exception:  # noqa: BLE001 - a diagnostic must not fail for a service list
+        return []
 
 
 def _internet(coordinator: Any) -> dict[str, Any] | None:

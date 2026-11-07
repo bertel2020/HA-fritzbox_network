@@ -95,6 +95,9 @@ class FakeClient:
             "5ghz": WifiNetwork(True, "Home", "02:00:00:00:00:a2", "ax"),
         }
         self.wifi_reads = 0
+        # whether the box passes status information over UPnP (None: it does not say)
+        self.upnp: bool | None = True
+        self.upnp_reads = 0
         self.ports: list[dict] = []
         self.port_forwardings: list[dict] | None = []
         self.routes: list[dict] = []
@@ -284,6 +287,13 @@ class FakeClient:
         self.calls.append(("reconnect",))
         if self.fail_actions:
             raise FritzActionError("refused")
+
+    def get_upnp_enabled(self) -> bool | None:
+        self.upnp_reads += 1
+        return self.upnp
+
+    def service_names(self) -> list[str]:
+        return ["DeviceInfo1", "WLANConfiguration1"]
 
     def get_cpu_temperature(self) -> int | None:
         self.calls.append(("cpu_temperature",))

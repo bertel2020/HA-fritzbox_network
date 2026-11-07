@@ -752,6 +752,56 @@ async def test_the_first_poll_does_not_ask_for_the_temperature(hass, fake_client
     assert ("cpu_temperature",) in fake_client.calls
 
 
+async def test_a_box_without_upnp_status_is_a_repair_and_not_a_refusal(hass, fake_client, entry):
+    fake_client.upnp = False
+    await _setup(hass, entry)
+    issue_id = f"upnp_disabled_{entry.entry_id}"
+
+    issue = ir.async_get(hass).async_get_issue("fritzbox_network", issue_id)
+    assert issue is not None and issue.is_fixable is False
+    # the integration works on: the devices are there
+    assert hass.states.get("sensor.fritz_network_devices_total") is not None
+
+
+async def test_the_upnp_repair_goes_away_when_the_box_passes_the_status(hass, fake_client, entry):
+    fake_client.upnp = False
+    coordinator = await _setup(hass, entry)
+    issue_id = f"upnp_disabled_{entry.entry_id}"
+    assert ir.async_get(hass).async_get_issue("fritzbox_network", issue_id) is not None
+
+    fake_client.upnp = True
+    coordinator._polls = 120  # the box is asked again hourly
+    await _poll(hass, coordinator)
+    assert ir.async_get(hass).async_get_issue("fritzbox_network", issue_id) is None
+
+
+async def test_a_box_that_does_not_say_has_no_upnp_repair_and_is_asked_hourly(
+    hass, fake_client, entry
+):
+    fake_client.upnp = None
+    coordinator = await _setup(hass, entry)
+    assert (
+        ir.async_get(hass).async_get_issue("fritzbox_network", f"upnp_disabled_{entry.entry_id}")
+        is None
+    )
+    reads = fake_client.upnp_reads
+    for _ in range(5):
+        await _poll(hass, coordinator)
+    assert fake_client.upnp_reads == reads
+
+
+async def test_the_diagnostics_list_what_the_box_offers_without_a_request(hass, fake_client, entry):
+    await _setup(hass, entry)
+    reads = fake_client.upnp_reads
+    result = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert result["box"]["services"] == ["DeviceInfo1", "WLANConfiguration1"]
+    assert result["box"]["upnp_enabled"] is True
+    assert result["box"]["uptime_known"] is True
+    assert result["box"]["wifi_networks"] == ["2_4ghz", "5ghz"]
+    assert fake_client.upnp_reads == reads
+
+
 async def test_a_box_that_does_not_answer_about_firmware_has_no_update_entity(
     hass, fake_client, entry
 ):

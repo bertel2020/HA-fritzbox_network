@@ -441,6 +441,10 @@
     "internet_reconnects": {
       "title": "Die Internetverbindung bricht immer wieder ab",
       "description": "Die Box hat ihre Internetverbindung in den letzten 24 Stunden {count} Mal neu aufgebaut. Prüfe Leitung und Kabel und frage beim Anbieter nach, wenn es anhält. Die Internet-Seite im Panel „FRITZ!Box Netzwerk“ zeigt die Ereignisse."
+    },
+    "upnp_disabled": {
+      "title": "Die Box überträgt keine Statusinformationen über UPnP",
+      "description": "Bei der FRITZ!Box ist \"Statusinformationen über UPnP übertragen\" ausgeschaltet. Die Werte der Internetverbindung kommen von dort, deshalb fehlen die Internet-Karte und einige Sensoren oder sind unvollständig. Schalte es unter Heimnetz > Netzwerk > Netzwerkeinstellungen > Weitere Einstellungen > \"Statusinformationen über UPnP übertragen\" ein."
     }
   },
   "services": {
