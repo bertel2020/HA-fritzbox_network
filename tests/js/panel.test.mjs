@@ -523,7 +523,8 @@ test("the internet page shows the connection, the load, the line and the events"
   assert.match(html, /of 56\.3 Mbit\/s line rate/);
   assert.match(html, /18 h 10 min/);
   assert.match(html, /VDSL, profile 17a/);
-  assert.match(html, /FEC 96 · CRC 0/);
+  assert.match(html, /FEC errors since sync<\/span><b>96<\/b>/);
+  assert.match(html, /CRC errors since sync<\/span><b>0<\/b>/);
   assert.match(html, /External IPv4 changed to 203\.0\.113\.9/);
   assert.match(html, /aria-valuenow="68"/);
   assert.match(html, /<svg class="spark"/);

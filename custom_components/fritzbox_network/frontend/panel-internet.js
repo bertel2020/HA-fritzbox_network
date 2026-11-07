@@ -72,20 +72,47 @@ function chart(internet, language, t) {
       <span class="grow">${escapeHtml(fill(t.inet.historySpan, { time: span }))} · max ${escapeHtml(formatRate(paths.top, language))}</span></div>`;
 }
 
+/** A rate split into its number and unit, for a table cell: "56,3" and "Mbit/s". */
+function rateParts(kbit, language) {
+  const text = formatRate(kbit, language);
+  const cut = text.lastIndexOf(" ");
+  return cut > 0 ? { value: text.slice(0, cut), unit: text.slice(cut + 1) } : { value: text, unit: "" };
+}
+
+/** The tone of a noise margin in dB: from 10 good, from 6 fine, under it poor; none without a value. */
+function noiseTone(db) {
+  if (typeof db !== "number") return "";
+  return db >= 10 ? "ok" : db >= 6 ? "warn" : "bad";
+}
+
 function lineQuality(dsl, language, t) {
   const i = t.inet;
-  const pair = (a, b, unit) => (a === null && b === null ? "–" : `${a ?? "–"} / ${b ?? "–"} ${unit}`);
-  const errors = dsl.fec_errors === null && dsl.crc_errors === null ? "–" : `FEC ${dsl.fec_errors ?? "–"} · CRC ${dsl.crc_errors ?? "–"}`;
+  const cell = (value, unit, tone = "") =>
+    value === null || value === undefined
+      ? `<span class="v">–</span>`
+      : `<span class="v">${tone ? `<i class="ldot ${tone}" aria-hidden="true"></i>` : ""}${escapeHtml(String(value))}${unit ? `<small>${escapeHtml(unit)}</small>` : ""}</span>`;
+  const rate = (kbit, kbitMax) => {
+    const { value, unit } = rateParts(kbit ?? null, language);
+    const max = typeof kbitMax === "number" ? `<span class="s">${escapeHtml(formatRate(kbitMax, language))}</span>` : "";
+    return typeof kbit === "number" ? `<span class="v">${escapeHtml(value)}<small>${escapeHtml(unit)}</small>${max ? `<br>${max}` : ""}</span>` : `<span class="v">–</span>`;
+  };
   const kind = [dsl.modulation, dsl.profile].filter(Boolean).length
     ? fill(i.lineProfile, { modulation: dsl.modulation ?? "", profile: dsl.profile ?? "–" })
     : "";
-  return `<section class="card sec"><span class="label">${escapeHtml(i.line)}</span>
-    ${kind ? `<p class="hint">${escapeHtml(kind)}</p>` : ""}
-    <div class="tiles">
-      ${tile(i.lineSync, pairRate(dsl.rate_down, dsl.rate_up, language), fill(i.lineMax, { down: formatRate(dsl.max_rate_down, language), up: formatRate(dsl.max_rate_up, language) }))}
-      ${tile(i.lineNoise, pair(dsl.noise_margin_down, dsl.noise_margin_up, "dB"))}
-      ${tile(i.lineAtt, pair(dsl.attenuation_down, dsl.attenuation_up, "dB"))}
-      ${tile(i.lineErrors, errors)}
+  const hasMax = typeof dsl.max_rate_down === "number" || typeof dsl.max_rate_up === "number";
+  const error = (label, value, note, tone = "") =>
+    `<div class="tile err ${tone}"><span class="label">${escapeHtml(label)}</span><b>${escapeHtml(value === null || value === undefined ? "–" : String(value))}</b>${note ? `<small>${escapeHtml(note)}</small>` : ""}</div>`;
+  const crcTone = typeof dsl.crc_errors === "number" && dsl.crc_errors > 0 ? "warn" : "";
+  return `<section class="card sec"><span class="label lq">${escapeHtml(i.line)}${kind ? `<span class="chip info">${escapeHtml(kind)}</span>` : ""}</span>
+    <div class="ltable" role="table">
+      <span class="h"></span><span class="h"><span aria-hidden="true">↓</span> ${escapeHtml(i.down)}</span><span class="h"><span aria-hidden="true">↑</span> ${escapeHtml(i.up)}</span>
+      <span class="n">${escapeHtml(i.lineRate)}${hasMax ? `<small>${escapeHtml(i.lineMaxShort)}</small>` : ""}</span>${rate(dsl.rate_down, dsl.max_rate_down)}${rate(dsl.rate_up, dsl.max_rate_up)}
+      <span class="n">${escapeHtml(i.lineNoise)}</span>${cell(dsl.noise_margin_down, "dB", noiseTone(dsl.noise_margin_down))}${cell(dsl.noise_margin_up, "dB", noiseTone(dsl.noise_margin_up))}
+      <span class="n">${escapeHtml(i.lineAtt)}</span>${cell(dsl.attenuation_down, "dB")}${cell(dsl.attenuation_up, "dB")}
+    </div>
+    <div class="tiles errs">
+      ${error(i.lineFec, dsl.fec_errors, i.lineFecNote)}
+      ${error(i.lineCrc, dsl.crc_errors, crcTone ? i.lineCrcSome : i.lineCrcNone, crcTone)}
     </div>
     ${spectrum(dsl, t, language)}
     <p class="hint">${escapeHtml(i.lineHint)}</p></section>`;

@@ -700,6 +700,25 @@ export const PANEL_CSS = `
   .copybtn svg.i { width: 16px; height: 16px; }
   .copybtn:hover { background: var(--accent-soft); color: var(--accent-hover); }
   .hero .dnstile { margin-top: 10px; }
+  .label.lq { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .label.lq .chip { text-transform: none; letter-spacing: 0; }
+  .ltable { display: grid; grid-template-columns: minmax(110px, 1.2fr) 1fr 1fr; align-items: center; background: var(--soft); border-radius: 12px; padding: 4px 14px; margin-top: 8px; }
+  .ltable > * { padding: 9px 0; border-top: 1px solid var(--line-2); min-width: 0; }
+  .ltable > .h { border-top: 0; font-size: 12px; color: var(--muted); }
+  .ltable > .n { color: var(--muted); }
+  .ltable > .n small { display: block; font-size: 12px; }
+  .ltable > .v { font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; }
+  .ltable > .v small { font-size: 12px; font-weight: 400; color: var(--muted); margin-left: 3px; }
+  .ltable > .v .s { font-size: 12px; font-weight: 400; color: var(--muted); }
+  .ldot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 7px; background: var(--muted); }
+  .ldot.ok { background: var(--ok); }
+  .ldot.warn { background: var(--warn); }
+  .ldot.bad { background: var(--bad); }
+  .tiles.errs { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+  .tile.err .label { display: block; font-size: 12px; }
+  .tile.err small { white-space: normal; }
+  .tile.err.warn b { color: var(--warn); }
+  @container app (max-width: 420px) { .ltable { grid-template-columns: 1fr 1fr; } .ltable > .n { grid-column: 1 / -1; padding-bottom: 0; } .ltable > .v { border-top: 0; } }
   .ihead .who b { display: block; font-size: 18px; font-weight: 500; }
   .ihead .who small { color: var(--muted); }
   .stat.warn { background: var(--warn-soft); color: var(--warn); }
