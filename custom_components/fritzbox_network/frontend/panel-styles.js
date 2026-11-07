@@ -67,17 +67,36 @@ export const PANEL_CSS = `
   nav button:hover { color: var(--text); background: var(--neutral-soft); }
   nav button[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
   nav em { font-style: normal; font-size: 11px; font-weight: 600; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--warn-soft); color: var(--warn); }
-  .header-end { display: flex; align-items: center; gap: 14px; flex: none; }
-  .intlink { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 18px; border: 1px solid var(--input-line); border-radius: 22px; background: var(--surface); color: var(--accent-hover); font-weight: 500; text-decoration: none; white-space: nowrap; }
-  .intlink:hover { background: var(--accent-soft); border-color: var(--accent); }
-  .intlink svg.i { width: 18px; height: 18px; }
+  .header-end { display: flex; align-items: center; gap: 6px; flex: none; }
+  .intlink { text-decoration: none; }
+  .subline { display: flex; align-items: center; flex-wrap: wrap; gap: 0 10px; }
+  .subline #sub:empty { display: none; }
   .fresh { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; white-space: nowrap; }
   .fresh .dot { width: 8px; height: 8px; box-shadow: 0 0 0 3px var(--ok-soft); }
   nav .dot { width: 7px; height: 7px; }
   /* six pages need about 1180 px next to the title and the link; below that they get a row of their own */
   @container app (max-width: 1180px) { nav { order: 3; flex: 1 1 100%; padding-bottom: 8px; } }
   @container app (max-width: 760px) { .menu { display: grid; } }
-  @container app (max-width: 520px) { .fresh .t { display: none; } .intlink span { display: none; } .intlink { padding: 0 12px; } .header-end { gap: 10px; } }
+  @container app (max-width: 520px) { .header-end { gap: 4px; } }
+
+  .callbar { max-width: 1200px; margin: 0 auto; padding: 16px 24px 0; }
+  @container app (max-width: 600px) { .callbar { padding: 12px 16px 0; } }
+
+  /* on a phone the pages are a bar at the bottom of the screen; it sits outside .app, which contains fixed boxes */
+  #bnav { display: none; }
+  @media (max-width: 640px) {
+    #nav { display: none; }
+    #bnav { display: flex; position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; background: var(--surface); border-top: 1px solid var(--line);
+      padding: 4px 4px max(4px, env(safe-area-inset-bottom)); gap: 2px; }
+    #bnav button { flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: 2px; min-height: 52px; padding: 4px 2px; border-radius: 14px; font-size: 11px; font-weight: 500; color: var(--muted); display: flex; align-items: center; background: none; }
+    #bnav button[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
+    #bnav .ni { position: relative; display: inline-grid; place-items: center; }
+    #bnav .ni svg.i { width: 22px; height: 22px; }
+    #bnav .ni .dot, #bnav .ni em { position: absolute; top: -2px; right: -8px; }
+    #bnav .ni em { top: -6px; right: -14px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10px; }
+    #bnav .nl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    main { padding-bottom: 96px !important; }
+  }
 
   main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; }
   @container app (max-width: 600px) { main { padding: 16px 16px 56px; } }
@@ -421,6 +440,11 @@ export const PANEL_CSS = `
   .pill2.bad { background: var(--bad-soft); color: var(--bad); }
   #internet-view .card + .card, #internet-view .card + .two, #internet-view .two + .card { margin-top: 16px; }
   #internet-view .two > .card { margin-top: 0; }
+  .icols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+  @container app (min-width: 900px) { .icols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  .icol { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  #internet-view .icol > .card { margin-top: 0; }
+  #internet-view .hero + .icols, #internet-view .icols + .card, #internet-view .icols + section { margin-top: 16px; }
   .hero { background: linear-gradient(135deg, var(--accent-soft), transparent 70%), var(--surface); }
   .live { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
   .live b { display: block; font-size: 26px; font-weight: 500; line-height: 1.2; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
@@ -449,8 +473,8 @@ export const PANEL_CSS = `
   .plot .tip { position: absolute; top: 4px; transform: translateX(-50%); padding: 3px 8px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 500; white-space: nowrap; pointer-events: none; z-index: 1; }
   #internet-view svg.spark { width: 100%; height: 72px; }
   #internet-view svg.spark.days { height: 90px; }
-  .live ~ .gauge .gv { display: none; }
-  .live ~ .gauge .gs { grid-column: 2 / 4; }
+  .gauge .gv { display: none; }
+  .gauge .gs { grid-column: 2 / 4; }
   .spark.days rect.bd { fill: var(--accent); }
   .spark.days rect.bu { fill: var(--up); }
   .topdev .rank { display: none; }
@@ -489,6 +513,11 @@ export const PANEL_CSS = `
   .aphead small { color: var(--muted); }
   ul.radios { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 12px; }
   .vpntiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 16px 0; }
+  .vpnstats { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+  .vpnstats th { text-align: left; font-weight: 400; font-size: 12px; color: var(--muted); padding: 0 8px 8px 0; }
+  .vpnstats td { padding: 8px 8px 8px 0; border-top: 1px solid var(--line); white-space: nowrap; }
+  .vpnstats td:first-child { white-space: normal; font-weight: 500; }
+  .tablewrap { overflow-x: auto; }
   .vpnlist { list-style: none; margin: 8px 0 0; padding: 0; }
   .vpnrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); }
   .vpnrow:first-child { border-top: 0; }
@@ -706,6 +735,7 @@ export const PANEL_CSS = `
   .dialog .btn-row { justify-content: flex-end; margin-top: 20px; }
   .toast { position: fixed; left: 50%; bottom: 24px; transform: translate(-50%, 20px); opacity: 0; transition: .2s; background: var(--text); color: var(--surface); padding: 10px 18px; border-radius: 12px; max-width: min(560px, calc(100vw - 32px)); z-index: 30; pointer-events: none; }
   .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  @media (max-width: 640px) { .toast { bottom: 84px; } }
 
   /* the flat list as a table */
   .tablecard { margin-top: 16px; overflow: hidden; }
@@ -978,12 +1008,16 @@ export const PANEL_CSS = `
   .net .end { display: flex; align-items: center; gap: 10px; }
   .net .end .chip { display: none; }
   @container app (min-width: 640px) { .net .end .chip { display: inline-flex; } }
-  .guest { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 20px; align-items: start; }
+  .guest { display: grid; grid-template-columns: minmax(0, 1fr) 232px; gap: 20px; align-items: stretch; }
+  .guest > div:first-child { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; min-width: 0; }
+  .guest > div:first-child .btn-row, .guest > div:first-child .hint { margin: 0; }
+  .guest > div:first-child .hint { margin-top: auto; padding-top: 4px; max-width: 52ch; }
+  .guest .net { grid-template-columns: 40px minmax(0, auto) auto; justify-content: start; gap: 4px 16px; }
   @container app (max-width: 720px) { .guest { grid-template-columns: minmax(0, 1fr); } }
-  .qrbox { border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; justify-items: center; gap: 10px; background: var(--soft); text-align: center; }
+  .qrbox { border: 1px solid var(--line); border-radius: 14px; padding: 14px; display: grid; justify-items: center; align-content: center; gap: 12px; background: var(--soft); text-align: center; }
   .qr { width: 180px; height: 180px; background: #fff; border-radius: 10px; padding: 8px; box-sizing: border-box; }
   .qr img { width: 100%; height: 100%; display: block; image-rendering: pixelated; }
-  .qrveil { width: 180px; min-height: 180px; box-sizing: border-box; border-radius: 10px; display: grid; place-items: center; gap: 6px; background: repeating-linear-gradient(45deg, var(--neutral-soft) 0 8px, var(--soft) 8px 16px); color: var(--muted); font-size: 13px; padding: 12px; }
+  .qrveil { width: 180px; min-height: 132px; box-sizing: border-box; border-radius: 10px; display: grid; place-items: center; gap: 6px; background: repeating-linear-gradient(45deg, var(--neutral-soft) 0 8px, var(--soft) 8px 16px); color: var(--muted); font-size: 13px; padding: 12px; }
   .secret { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center; }
   .secret .mono { font-size: 15px; letter-spacing: .04em; padding: 4px 10px; border-radius: 8px; background: var(--surface); border: 1px solid var(--line); overflow-wrap: anywhere; }
   .iconbtn[aria-pressed="true"] { color: var(--accent-hover); background: var(--accent-soft); }

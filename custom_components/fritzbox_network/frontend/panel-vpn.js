@@ -28,6 +28,47 @@ export function vpnModel(data) {
   };
 }
 
+/** What the tunnels did in the last 30 days, summed up from what was recorded per connection. */
+export function vpnStatsModel(connections) {
+  const rows = connections.filter((c) => c.stats);
+  return {
+    rows,
+    sessions: rows.reduce((n, c) => n + c.stats.sessions_30d, 0),
+    seconds: rows.reduce((n, c) => n + c.stats.seconds_30d, 0),
+    longest: rows.reduce((n, c) => Math.max(n, c.stats.longest), 0),
+    trackedSince: rows.map((c) => c.stats.tracked_since).filter(Boolean).sort((a, b) => a - b)[0] ?? null,
+  };
+}
+
+function statsSection(m, ctx) {
+  const { t, now } = ctx;
+  const v = t.vpnPage;
+  const s = vpnStatsModel(m.connections);
+  if (!s.rows.length) return "";
+  const dur = (sec) => (sec > 0 ? formatDuration(sec, t.inet.units) : "–");
+  const tiles = [
+    [String(s.sessions), v.statSessions],
+    [dur(s.seconds), v.statTime],
+    [dur(s.longest), v.statLongest],
+  ]
+    .map(([value, label]) => `<div class="tile"><b>${escapeHtml(value)}</b><small>${escapeHtml(label)}</small></div>`)
+    .join("");
+  const head = [v.statName, v.statSessions7, v.statSessions30, v.statTime30, v.statLongest, v.statLast]
+    .map((h) => `<th>${escapeHtml(h)}</th>`)
+    .join("");
+  const body = s.rows
+    .map((c) => {
+      const st = c.stats;
+      const last = c.connected ? v.state.up : st.last_end ? fill(v.ago, { time: formatDuration(Math.max(0, now - st.last_end), t.inet.units) }) : "–";
+      return `<tr><td>${escapeHtml(c.name)}</td><td>${st.sessions_7d}</td><td>${st.sessions_30d}</td><td>${escapeHtml(dur(st.seconds_30d))}</td><td>${escapeHtml(dur(st.longest))}</td><td>${escapeHtml(last)}</td></tr>`;
+    })
+    .join("");
+  const since = s.trackedSince ? `<p class="hint">${escapeHtml(fill(v.statSince, { time: formatDuration(Math.max(0, now - s.trackedSince), t.inet.units) }))}</p>` : "";
+  return `<section class="card sec"><span class="label">${escapeHtml(v.statsTitle)}</span>
+    <div class="vpntiles">${tiles}</div>
+    <div class="tablewrap"><table class="vpnstats"><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>${since}</section>`;
+}
+
 function card(connection, ctx) {
   const { t, now } = ctx;
   const v = t.vpnPage;
@@ -75,5 +116,5 @@ export function renderVpn(data, ctx) {
         )
         .join("")}</ul></section>`
     : "";
-  return `${head}<div class="vpntiles">${tiles}</div>${group(v.devices, m.devices, ctx)}${group(v.sites, m.sites, ctx)}${remote}<p class="hint">${escapeHtml(v.hint)}</p>`;
+  return `${head}<div class="vpntiles">${tiles}</div>${group(v.devices, m.devices, ctx)}${group(v.sites, m.sites, ctx)}${remote}${statsSection(m, ctx)}<p class="hint">${escapeHtml(v.hint)}</p>`;
 }

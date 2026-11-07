@@ -150,3 +150,19 @@ def test_the_connection_events_are_kept_newest_first_and_limited():
     events = history.connection_events()
     assert len(events) == 200
     assert events[0]["time"] == "t249"
+
+
+def test_vpn_sessions_are_counted_and_summed():
+    history = _history()
+    history.note_vpn(NOW, "anna", True, int(NOW) - 600)
+    history.note_vpn(NOW + 300, "anna", True, int(NOW) - 600)
+    history.note_vpn(NOW + 1200, "anna", False, None)
+    # up again, then the box tells another start although no poll saw it down
+    history.note_vpn(NOW + 2000, "anna", True, int(NOW) + 1800)
+    history.note_vpn(NOW + 4000, "anna", True, int(NOW) + 3900)
+    stats = history.vpn_stats("anna", NOW + 4100)
+    assert stats["sessions_7d"] == stats["sessions_30d"] == 3
+    assert stats["longest"] == 2100  # the second session, NOW + 1800 until NOW + 3900
+    assert stats["seconds_7d"] == 1800 + 2100 + 200
+    assert stats["last_end"] == int(NOW) + 3900
+    assert history.vpn_stats("nobody", NOW)["sessions_30d"] == 0

@@ -599,6 +599,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 self.last_active[host.mac] = now
 
         self._record_history(selected, mesh)
+        self._record_vpn(vpn)
         self._remove_filtered_devices(selected)
         self._sync_names(selected)
         return NetworkData(
@@ -635,6 +636,14 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
                 if counted := mesh.traffic.get(mac):
                     self.history.record_traffic(day, mac, *counted)
         self.history.prune(now)
+
+    def _record_vpn(self, vpn: list[VpnConnection] | None) -> None:
+        """Note which WireGuard tunnels stand, for the statistics of the VPN page."""
+        if self.history is None or vpn is None:
+            return
+        now = dt_util.utcnow().timestamp()
+        for connection in vpn:
+            self.history.note_vpn(now, connection.key, connection.connected, connection.since)
 
     def _apply_guest_override(self, polled: bool | None) -> bool | None:
         """Show a guest Wi-Fi switch just made until the box shows it too."""

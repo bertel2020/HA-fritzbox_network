@@ -422,25 +422,29 @@ export function renderInternet(internet, ctx) {
       <div class="ihead"><span class="ico">${ic("globe")}</span>
         <span class="who"><b>${escapeHtml(i.connection)}</b><small>${escapeHtml(sub)}</small></span>
         <span class="stat ${up ? "ok" : "warn"}">${escapeHtml(up ? i.state.up : i.state.down)}</span></div>
+      <div class="live"><div class="dn"><span class="gl">↓ ${escapeHtml(i.down)}</span><b>${escapeHtml(formatRate(rate?.down ?? null, language))}</b></div>
+        <div class="upl"><span class="gl">↑ ${escapeHtml(i.up)}</span><b>${escapeHtml(formatRate(rate?.up ?? null, language))}</b></div></div>
       <div class="tiles">
         ${tile(i.ipv4, internet.external_ipv4 ?? "–")}
         ${tile(i.ipv6, prefix)}
         ${tile(i.lastError, internet.last_error && internet.last_error !== "ERROR_NONE" ? internet.last_error : i.noError)}
       </div>
       ${dnsTile(internet.dns, t)}</section>
-    <div class="two">
-    <section class="card sec"><span class="label">${escapeHtml(i.load)}</span>
-      <div class="live"><div class="dn"><span class="gl">↓ ${escapeHtml(i.down)}</span><b>${escapeHtml(formatRate(rate?.down ?? null, language))}</b></div>
-        <div class="upl"><span class="gl">↑ ${escapeHtml(i.up)}</span><b>${escapeHtml(formatRate(rate?.up ?? null, language))}</b></div></div>
-      ${gauge("dn", i.down, rate?.down, internet.rate_down, language, t)}
-      ${gauge("upl", i.up, rate?.up, internet.rate_up, language, t)}
-      ${chart(internet, language, t)}
-      <p class="hint">${escapeHtml(i.measureNote)}</p></section>
-    ${volumeCard({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}
+    <div class="icols">
+      <div class="icol">
+        <section class="card sec"><span class="label">${escapeHtml(i.load)}</span>
+          ${gauge("dn", i.down, rate?.down, internet.rate_down, language, t)}
+          ${gauge("upl", i.up, rate?.up, internet.rate_up, language, t)}
+          ${chart(internet, language, t)}
+          <p class="hint">${escapeHtml(i.measureNote)}</p></section>
+        ${internet.dsl ? lineQuality(internet.dsl, language, t) : ""}
+        ${events(internet, t, now)}
+      </div>
+      <div class="icol">
+        ${volumeCard({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}
+        ${addressHistory(internet.addresses, language, t)}
+      </div>
     </div>
-    ${internet.dsl ? lineQuality(internet.dsl, language, t) : ""}
-    ${addressHistory(internet.addresses, language, t)}
-    ${events(internet, t, now)}
     ${renderPorts(portState, { t, filter: ctx.portsFilter })}
     ${actions(canWrite, t)}`;
 }

@@ -72,7 +72,7 @@ async def async_ensure_panel(hass: HomeAssistant) -> None:
         hass,
         frontend_url_path=PANEL_PATH,
         webcomponent_name=PANEL_ELEMENT,
-        sidebar_title="FRITZ!Box Netzwerk",
+        sidebar_title="FRITZ!Box",
         sidebar_icon="mdi:lan",
         module_url=f"{base}/{PANEL_FILE.name}",
         require_admin=True,

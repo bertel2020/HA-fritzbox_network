@@ -212,8 +212,11 @@ def _vpn(coordinator: FritzNetworkCoordinator) -> list[dict[str, Any]] | None:
     connections = coordinator.data.vpn
     if connections is None:
         return None
+    history = coordinator.history
+    now = dt_util.utcnow().timestamp()
     return [
         {
+            "stats": history.vpn_stats(c.key, now) if history else None,
             "key": c.key,
             "uid": c.uid,
             "name": c.name,

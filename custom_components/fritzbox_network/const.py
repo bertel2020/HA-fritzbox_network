@@ -64,6 +64,8 @@ HISTORY_DAYS = 7
 # the data volume per day is kept for this many days
 TRAFFIC_DAYS = 35
 HISTORY_SAVE_DELAY = 300
+# sessions kept per WireGuard connection
+VPN_SESSIONS_KEPT = 200
 INTERNET_EVENTS = 20
 # what the history keeps of the connection: events, and the addresses per kind
 INTERNET_EVENTS_KEPT = 200

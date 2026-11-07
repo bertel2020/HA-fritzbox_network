@@ -17,6 +17,7 @@ from .const import (
     INTERNET_ADDRESSES_KEPT,
     INTERNET_EVENTS_KEPT,
     TRAFFIC_DAYS,
+    VPN_SESSIONS_KEPT,
 )
 
 STORAGE_VERSION = 1
@@ -54,6 +55,7 @@ class DeviceHistory:
         data: dict[str, dict[str, list[Point]]],
         traffic: dict[str, dict[str, Any]] | None = None,
         connection: dict[str, Any] | None = None,
+        vpn: dict[str, Any] | None = None,
     ) -> None:
         self._store = store
         self._data = data
@@ -63,6 +65,9 @@ class DeviceHistory:
         self._connection = connection if connection is not None else {}
         self._connection.setdefault("events", [])
         self._connection.setdefault("addresses", {})
+        # the WireGuard connections: per key the sessions [start, end or None], and since when noted
+        self._vpn = vpn if vpn is not None else {}
+        self._vpn.setdefault("sessions", {})
 
     @classmethod
     async def async_load(cls, hass: HomeAssistant, entry_id: str) -> DeviceHistory:
@@ -71,11 +76,13 @@ class DeviceHistory:
         data = stored.get("devices") if isinstance(stored, dict) else None
         traffic = stored.get("traffic") if isinstance(stored, dict) else None
         connection = stored.get("connection") if isinstance(stored, dict) else None
+        vpn = stored.get("vpn") if isinstance(stored, dict) else None
         return cls(
             store,
             data if isinstance(data, dict) else {},
             traffic if isinstance(traffic, dict) else {},
             connection if isinstance(connection, dict) else {},
+            vpn if isinstance(vpn, dict) else {},
         )
 
     def record_connection_event(self, time: str, kind: str, detail: str | None) -> None:
@@ -111,6 +118,58 @@ class DeviceHistory:
         """Per kind the addresses that were in use, the newest first."""
         return {
             kind: list(reversed(periods)) for kind, periods in self._connection["addresses"].items()
+        }
+
+    def note_vpn(self, now: float, key: str, connected: bool, since: int | None) -> None:
+        """Note whether a WireGuard tunnel stands; a session runs from its start to its end.
+
+        The box tells when a tunnel came up (``since``); a different time while a session is open
+        means the tunnel was down and up again between two polls.
+        """
+        self._vpn.setdefault("since", now)
+        sessions = self._vpn["sessions"].setdefault(key, [])
+        last = sessions[-1] if sessions else None
+        is_open = last is not None and last[1] is None
+        changed = False
+        if connected:
+            start = float(since or now)
+            if is_open and since and abs(last[0] - since) > 60:
+                last[1] = min(float(since), now)
+                is_open = False
+                changed = True
+            if not is_open:
+                sessions.append([start, None])
+                del sessions[:-VPN_SESSIONS_KEPT]
+                changed = True
+        elif is_open:
+            last[1] = now
+            changed = True
+        if changed:
+            self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
+
+    def vpn_stats(self, key: str, now: float) -> dict[str, Any]:
+        """What was noted of a tunnel: sessions and time connected in 7 and 30 days, the longest."""
+        limit30, limit7 = now - 30 * _DAY, now - 7 * _DAY
+        sessions = self._vpn["sessions"].get(key) or []
+        seconds = {7: 0.0, 30: 0.0}
+        count = {7: 0, 30: 0}
+        longest = 0.0
+        for start, end in sessions:
+            end = now if end is None else end
+            longest = max(longest, end - start)
+            for days, limit in ((7, limit7), (30, limit30)):
+                if end > limit:
+                    seconds[days] += end - max(start, limit)
+                    count[days] += 1
+        last_end = next((e for _, e in reversed(sessions) if e is not None), None)
+        return {
+            "sessions_7d": count[7],
+            "sessions_30d": count[30],
+            "seconds_7d": round(seconds[7]),
+            "seconds_30d": round(seconds[30]),
+            "longest": round(longest),
+            "last_end": round(last_end) if last_end else None,
+            "tracked_since": round(self._vpn["since"]) if "since" in self._vpn else None,
         }
 
     def record_traffic(self, day: str, mac: str, received: int, sent: int) -> None:
@@ -166,7 +225,12 @@ class DeviceHistory:
         self._store.async_delay_save(self._snapshot, HISTORY_SAVE_DELAY)
 
     def _snapshot(self) -> dict[str, Any]:
-        return {"devices": self._data, "traffic": self._traffic, "connection": self._connection}
+        return {
+            "devices": self._data,
+            "traffic": self._traffic,
+            "connection": self._connection,
+            "vpn": self._vpn,
+        }
 
     async def async_flush(self) -> None:
         await self._store.async_save(self._snapshot())
@@ -177,6 +241,12 @@ class DeviceHistory:
         for mac in [m for m, s in self._data.items() if not s["f"] or s["f"][-1][0] < limit]:
             del self._data[mac]
             self._traffic.pop(mac, None)
+        old = now - 35 * _DAY
+        sessions = self._vpn["sessions"]
+        for key in list(sessions):
+            sessions[key] = [x for x in sessions[key] if x[1] is None or x[1] > old]
+            if not sessions[key]:
+                del sessions[key]
 
     def forget(self, mac: str) -> None:
         if (self._data.pop(mac, None) is not None) | (self._traffic.pop(mac, None) is not None):

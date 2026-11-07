@@ -1439,6 +1439,19 @@ test("the VPN page lists devices and sites with their state and escapes names", 
   assert.match(html, /Geräte im Heimnetz per VPN/);
 });
 
+test("the VPN page sums up the recorded sessions per connection", () => {
+  const stats = (n, sec) => ({ sessions_7d: n, sessions_30d: n + 2, seconds_7d: sec, seconds_30d: sec * 3, longest: sec, last_end: 7000, tracked_since: 1000 });
+  const data = { ...vpnData, vpn: vpnData.vpn.map((c, i) => ({ ...c, stats: stats(i + 1, 3600) })) };
+  const s = vpnPage.vpnStatsModel(vpnPage.vpnModel(data).connections);
+  assert.equal(s.sessions, 3 + 4 + 5);
+  assert.equal(s.seconds, 3 * 3600 * 3);
+  const html = vpnPage.renderVpn(data, { t, now: 8200 });
+  assert.match(html, /class="vpnstats"/);
+  assert.match(html, /<td>Haus &lt;b&gt;<\/td><td>1<\/td><td>3<\/td><td>3 Std\. 0 Min\.<\/td>/);
+  assert.match(html, /vor 20 Min\./);
+  assert.doesNotMatch(vpnPage.renderVpn(vpnData, { t, now: 8200 }), /class="vpnstats"/);
+});
+
 test("the VPN page says so where the box tells nothing or has no connection", () => {
   assert.match(vpnPage.renderVpn({ vpn: null }, { t, now: 0 }), /nennt ihre VPN-Verbindungen nicht/);
   assert.match(vpnPage.renderVpn({ vpn: [] }, { t, now: 0 }), /Keine WireGuard-Verbindung/);

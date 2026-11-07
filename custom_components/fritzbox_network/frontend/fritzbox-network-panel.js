@@ -42,7 +42,7 @@ import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice } from "./panel-device.js";
 import { openDialog, openFormDialog, openPasswordDialog, showToast } from "./panel-dialogs.js";
-import { dialSuggestions, lookupBody, mmss, renderPhone } from "./panel-phone.js";
+import { dialSuggestions, liveBand, lookupBody, mmss, renderPhone } from "./panel-phone.js";
 import { HISTORY_PERIODS, PERIODS, PERIOD_DAYS, PHONE_DOMAIN, REVEAL_MS, SIGN_EXPIRES_S, SIGN_REUSE_MS, WS_PARTS, dialable, fetchPhoneWs, parseWsEntries, phoneLoaded, phoneTrigger, readPhoneModel, wsCode } from "./phone-model.js";
 import { RESTART_POLL_MS, minSec, nextRestart, renderBoxPage, restarted } from "./panel-box.js";
 import { isLastNetwork, passwordRules, randomPassword, renderWlan } from "./panel-wlan.js";
@@ -287,6 +287,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       phoneFound: false,
       phoneUnread: 0,
       phoneRinging: false,
+      phoneLive: "",
       phone: phoneUi(),
     };
     // the device page was opened from the list or the map: back is a step back in the history
@@ -968,17 +969,17 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div class="brand">
             <ha-menu-button></ha-menu-button>
             <img class="logo" src="${ICON_URL}" alt="" width="40" height="40">
-            <div><b>${t.title}</b><small id="sub"></small></div>
+            <div><b>${t.title}</b><small class="subline"><span id="sub"></span><span class="fresh" id="live-chip" hidden><span class="dot on"></span><span class="t" id="live"></span></span></small></div>
           </div>
           <nav role="tablist" id="nav" aria-label="${t.navLabel}"></nav>
           <div class="header-end">
             <select id="box" aria-label="${t.box}" hidden></select>
-            <span class="fresh" id="live-chip" hidden><span class="dot on"></span><span class="t" id="live"></span></span>
             <span id="lookhost"></span>
-            <a class="intlink" href="/config/integrations/integration/${DOMAIN}" data-act="integration" title="${escapeHtml(t.integrationTitle)}">${ic("external")}<span>${t.integration}</span></a>
+            <a class="iconbtn intlink" href="/config/integrations/integration/${DOMAIN}" data-act="integration" title="${escapeHtml(t.integrationTitle)}" aria-label="${escapeHtml(t.integrationTitle)}">${ic("external")}</a>
           </div>
         </header>
         <div id="lookmenuhost"></div>
+        <div id="callbar"></div>
         <main>
           <div id="migbanner"></div>
           <div id="note"></div>
@@ -1096,6 +1097,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const netView = root.querySelector("#net-view");
     if (!netView) return;
     this._readPhone();
+    this._renderCallBar(ready);
     // without FRITZ!Box Telefon there is no phone page: its address leads to the box
     if (state.tab === "phone" && !state.phoneFound && this._hass && Object.keys(this._hass.entities ?? {}).length) {
       state.tab = "box";
@@ -2668,10 +2670,18 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   // ---------- the phone page (Box › Phone, from FRITZ!Box Telefon) ----------
 
+  /** A call that is going on is shown at the top of every page but the phone page, which has its own band. */
+  _renderCallBar(ready) {
+    const state = this._state;
+    const show = ready && state.tab !== "phone" && state.phoneFound && this._phone?.monitor;
+    const band = show ? liveBand(this._phone, { t: this._t, language: this._hass?.language, now: new Date(), ui: state.phone }) : "";
+    this._set("callbar", band ? `<div class="callbar">${band}</div>` : "");
+  }
+
   /** What the tabs show of the phone: whether it is there, rings, has new messages. */
   _phoneSignature() {
     const state = this._state;
-    return `${state.phoneFound}|${state.phoneUnread}|${state.phoneRinging}`;
+    return `${state.phoneFound}|${state.phoneUnread}|${state.phoneRinging}|${state.phoneLive}`;
   }
 
   /**
@@ -2695,6 +2705,8 @@ class FritzboxNetworkPanel extends HTMLElement {
     state.phoneFound = model.found;
     state.phoneUnread = model.found ? model.unread : 0;
     state.phoneRinging = Boolean(model.found && model.ringing);
+    const m = model.found ? model.monitor : null;
+    state.phoneLive = m && m.state !== "idle" ? [m.state, m.from, m.fromName, m.with, m.withName, m.to, m.toName].join("~") : "";
     return true;
   }
 
