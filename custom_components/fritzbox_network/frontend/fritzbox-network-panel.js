@@ -42,7 +42,7 @@ import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice } from "./panel-device.js";
 import { openDialog, openFormDialog, openPasswordDialog, showToast } from "./panel-dialogs.js";
-import { dialSuggestions, liveBand, lookupBody, mmss, renderPhone } from "./panel-phone.js";
+import { dialSuggestions, liveBand, lookupBody, mmss, renderPhone, sinceText } from "./panel-phone.js";
 import { HISTORY_PERIODS, PERIODS, PERIOD_DAYS, PHONE_DOMAIN, REVEAL_MS, SIGN_EXPIRES_S, SIGN_REUSE_MS, WS_PARTS, dialable, fetchPhoneWs, parseWsEntries, phoneLoaded, phoneTrigger, readPhoneModel, wsCode } from "./phone-model.js";
 import { RESTART_POLL_MS, minSec, nextRestart, renderBoxPage, restarted } from "./panel-box.js";
 import { isLastNetwork, passwordRules, randomPassword, renderWlan } from "./panel-wlan.js";
@@ -386,6 +386,7 @@ class FritzboxNetworkPanel extends HTMLElement {
   connectedCallback() {
     globalThis.addEventListener("hashchange", this._onHash);
     this._clock = setInterval(() => this._tick(), 5000);
+    this._callClock = setInterval(() => this._tickCall(), 1000);
     this._resize?.observe(this);
     if (this._hass && !this._started) this._start();
     if (this._state.boxRestart?.phase === "down") this._pollRestart();
@@ -394,6 +395,7 @@ class FritzboxNetworkPanel extends HTMLElement {
   disconnectedCallback() {
     globalThis.removeEventListener("hashchange", this._onHash);
     clearInterval(this._clock);
+    clearInterval(this._callClock);
     clearTimeout(this._enableTimer);
     clearTimeout(this._captureTimer);
     clearTimeout(this._latencyTimer);
@@ -1075,6 +1077,17 @@ class FritzboxNetworkPanel extends HTMLElement {
           `<option value="${escapeHtml(e.entry_id)}" ${e.entry_id === this._entryId ? "selected" : ""}>${escapeHtml(e.title)}</option>`
       )
       .join("");
+  }
+
+  /** The running seconds of a call, in the card, the list row and the bar. */
+  _tickCall() {
+    const els = this.shadowRoot?.querySelectorAll("[data-ph-since]");
+    if (!els?.length) return;
+    const now = new Date();
+    for (const el of els) {
+      const text = sinceText(el.dataset.phSince, now);
+      if (text && el.textContent !== text) el.textContent = text;
+    }
   }
 
   _tick() {

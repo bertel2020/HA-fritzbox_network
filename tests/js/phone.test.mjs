@@ -409,24 +409,35 @@ test("the live band follows the call monitor: ringing with spam, talking, dialli
   let m = model.readPhone(hass, "e1");
   assert.equal(m.ringing, true);
   let html = page.renderPhone(m, ctx());
-  assert.match(html, /class="ph-live spam" role="status" aria-live="assertive"/);
-  assert.match(html, /Es klingelt: \+4922198765432/);
-  assert.match(html, /Spamverdacht 87 % \(Werbung\) · an 030 5550101 · seit 14:59/);
+  // the page shows the call as a card of its own and as the first row of the list
+  assert.match(html, /class="card ph-now spam" role="status" aria-live="assertive"/);
+  assert.match(html, /\+4922198765432/);
+  assert.match(html, /Spamverdacht 87 % \(Werbung\)/);
+  assert.match(html, /<dt>Angerufen<\/dt><dd>030 5550101<\/dd>/);
+  assert.match(html, /data-ph-since="2026-11-07T14:59:00"/);
+  assert.match(html, /ph-livrow/);
+  // the band stays for the other pages
+  const band0 = page.liveBand(m, ctx());
+  assert.match(band0, /class="ph-live spam" role="status" aria-live="assertive"/);
+  assert.match(band0, /Es klingelt: \+4922198765432/);
+  assert.match(band0, /Spamverdacht 87 % \(Werbung\) · an 030 5550101 · seit 14:59/);
   assert.match(html, /data-act="ph-block" data-ph-num="\+4922198765432"/);
   hass.states["sensor.fb_anrufmonitor"] = st("talking", { with: "01712345678", with_name: "Mama", vip: true, device: "Mobilteil", accepted: "2026-11-07T14:12:00" });
   html = page.renderPhone(model.readPhone(hass, "e1"), ctx());
-  assert.match(html, /class="ph-live talk" role="status" aria-live="polite"/);
-  assert.match(html, /Gespräch mit Mama/);
+  assert.match(html, /class="card ph-now talk" role="status" aria-live="polite"/);
+  assert.match(html, /<b>Mama/);
+  assert.match(page.liveBand(model.readPhone(hass, "e1"), ctx()), /class="ph-live talk" role="status" aria-live="polite"[\s\S]*Gespräch mit Mama/);
   assert.doesNotMatch(html, /ph-hangup/);
   // the monitor is never masked
   hass.states["sensor.fb_anrufliste"].attributes.privacy_mode = true;
-  assert.match(page.renderPhone(model.readPhone(hass, "e1"), ctx()), /Gespräch mit Mama/);
+  assert.match(page.renderPhone(model.readPhone(hass, "e1"), ctx()), /<b>Mama/);
   hass.states["sensor.fb_anrufmonitor"] = st("idle", { with: "01712345678", with_name: "Mama" });
   m = model.readPhone(hass, "e1");
   assert.equal(page.liveBand(m, ctx()), "");
   // hangup is only offered after an own dial
   const band = page.liveBand(m, ctx({ dial: { number: "030 123", name: "", at: NOW.getTime() - 1000 } }));
   assert.match(band, /Wählhilfe: 030 123[\s\S]*data-act="ph-hangup"/);
+  assert.match(page.liveCard(m, ctx({ dial: { number: "030 123", name: "", at: NOW.getTime() - 1000 } })), /ph-now[\s\S]*data-act="ph-hangup"/);
   assert.equal(page.liveBand(m, ctx({ dial: { number: "030 123", name: "", at: NOW.getTime() - 100000 } })), "");
 });
 
@@ -549,7 +560,7 @@ test("dial checks the number like the service, calls fritzbox_phone.dial with th
   await asked;
   assert.deepEqual(sent[0], { domain: "fritzbox_phone", service: "dial", data: { number: "030 123456" }, target: { device_id: "dph1" }, notify: false, response: false });
   assert.match(root.els["#toast"].textContent, /Wählhilfe gestartet/);
-  assert.match(p._html["phone-view"], /Wählhilfe: 030 123456[\s\S]*data-act="ph-hangup"/);
+  assert.match(p._html["phone-view"], /ph-now[\s\S]*Wählhilfe[\s\S]*030 123456[\s\S]*data-act="ph-hangup"/);
   await p._onPhoneClick({ act: "ph-hangup" });
   assert.deepEqual(sent[1], { domain: "fritzbox_phone", service: "hangup", data: {}, target: { device_id: "dph1" }, notify: false, response: false });
   assert.equal(p._state.phone.dial, null);

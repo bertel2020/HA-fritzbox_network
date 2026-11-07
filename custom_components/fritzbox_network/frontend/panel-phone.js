@@ -61,6 +61,116 @@ function sourceLine(model, ctx) {
   return `<p class="ph-src">${esc(p.source)} · ${entryText} · ${esc(p.monitor)} ${mon} · <a href="/config/integrations/integration/fritzbox_phone" data-act="integration" data-k="ph-int">${esc(p.openIntegration)}</a></p>`;
 }
 
+/** Seconds since an ISO time, as m:ss (with hours from one hour on); "" when the time is unknown. */
+export function sinceText(iso, now = new Date()) {
+  const ms = iso ? new Date(iso).getTime() : NaN;
+  if (Number.isNaN(ms)) return "";
+  const sec = Math.max(0, Math.floor((now.getTime() - ms) / 1000));
+  const h = Math.floor(sec / 3600);
+  const rest = sec % 3600;
+  return `${h ? `${h}:` : ""}${String(Math.floor(rest / 60)).padStart(h ? 2 : 1, "0")}:${String(rest % 60).padStart(2, "0")}`;
+}
+
+/** The running call as a card of its own: who, how long, where it stands, what can be done. */
+export function liveCard(model, ctx) {
+  const { t, ui, now } = ctx;
+  const l = t.phone.live;
+  const m = model.monitor;
+  const ownDial = ui.dial && now.getTime() - ui.dial.at < 90000 ? ui.dial : null;
+  const talking = m.state === "talking";
+  const ringing = m.state === "ringing";
+  const dialing = m.state === "dialing" || (!ringing && !talking && Boolean(ownDial));
+  if (!ringing && !talking && !dialing) return "";
+  const spamText = m.isSpam ? fill(l.spam, { p: m.spamConfidence ?? "–" }) + (m.spamRating ? ` (${ratingText(m.spamRating, t)})` : "") : "";
+  let name;
+  let number;
+  let since;
+  let sinceLabel;
+  let step;
+  let head;
+  let tone;
+  let icon;
+  const info = [];
+  const acts = [];
+  if (ringing) {
+    name = m.fromName || m.from || t.phone.calls.unknown;
+    number = m.fromName ? m.from : "";
+    since = m.initiated;
+    sinceLabel = l.ringingFor;
+    step = 0;
+    head = m.isSpam ? l.headSpam : l.headIn;
+    tone = m.isSpam ? "spam" : "ring";
+    icon = "phone";
+    if (m.to) info.push([l.called, m.to]);
+    if (m.area) info.push([l.place, m.area]);
+    if (spamText) info.push([l.rating, spamText]);
+    if (m.from && dialable(m.from)) acts.push(`<button class="btn sm" data-act="ph-block" data-ph-num="${esc(m.from)}" data-ph-name="${esc(m.fromName)}" data-k="ph-live-block"${off(model)}>${ic("ban")}${esc(l.block)}</button>`);
+    if (m.from && dialable(m.from) && !m.fromName) acts.push(`<button class="btn sm" data-act="ph-contact" data-ph-num="${esc(m.from)}" data-ph-name="" data-k="ph-live-contact" aria-haspopup="dialog"${off(model)}>${ic("userPlus")}${esc(t.phone.calls.addContact)}</button>`);
+  } else if (talking) {
+    name = m.withName || m.with || t.phone.calls.unknown;
+    number = m.withName ? m.with : "";
+    since = m.accepted || m.initiated;
+    sinceLabel = l.talkFor;
+    step = 1;
+    head = l.headTalk;
+    tone = "talk";
+    icon = "phone";
+    if (m.device) info.push([l.device, m.device]);
+    if (m.to) info.push([l.called, m.to]);
+    if (m.initiated && m.accepted) {
+      const wait = Math.max(0, Math.round((new Date(m.accepted).getTime() - new Date(m.initiated).getTime()) / 1000));
+      if (Number.isFinite(wait)) info.push([l.acceptedAfter, mmss(wait)]);
+    }
+    if (m.with && dialable(m.with)) acts.push(`<button class="btn sm" data-act="ph-block" data-ph-num="${esc(m.with)}" data-ph-name="${esc(m.withName)}" data-k="ph-live-block"${off(model)}>${ic("ban")}${esc(l.blockNumber)}</button>`);
+  } else {
+    const number0 = m.state === "dialing" ? m.to || ownDial?.number || "" : ownDial.number;
+    name = (m.state === "dialing" ? m.toName : "") || ownDial?.name || number0;
+    number = name !== number0 ? number0 : "";
+    since = m.state === "dialing" ? m.initiated : new Date(ownDial.at).toISOString();
+    sinceLabel = l.waitingFor;
+    step = 0;
+    head = ownDial ? l.headHelper : l.headOut;
+    tone = "ring";
+    icon = "callOut";
+    info.push(ownDial ? [l.process, fill(l.helperBody, { number: number0 })] : [l.device, m.device].filter(Boolean));
+    if (ownDial) acts.push(`<button class="btn sm" data-act="ph-hangup" data-k="ph-hangup">${esc(l.cancelDial)}</button>`);
+  }
+  const steps = [dialing ? l.stepPick : l.stepRing, l.stepTalk, l.stepEnd]
+    .map((x, i) => `<li class="${i < step ? "dn" : i === step ? "cur" : ""}"><i aria-hidden="true"></i>${esc(x)}</li>`)
+    .join("");
+  const tags = [
+    talking ? `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${esc(l.running)}</span>` : "",
+    m.isSpam ? `<span class="chip bad">${esc(spamText)}</span>` : "",
+  ].join("");
+  const star = m.vip ? ` ${ic("star")}<span class="sr">${esc(t.phone.calls.vip)}</span>` : "";
+  const initial = ringing && !m.fromName ? ic(icon) : esc([...name][0]?.toUpperCase() ?? "?");
+  const infoHtml = info.filter((x) => x.length > 1 && x[1]).map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("");
+  return `<section class="card ph-now ${tone}" role="status" aria-live="${m.isSpam ? "assertive" : "polite"}" aria-label="${esc(l.label)}">
+    <div class="ph-now-head"><span><i class="dot pulse" aria-hidden="true"></i>${esc(l.title)}</span><span>${esc(head)}</span></div>
+    <div class="ph-now-body">
+      <span class="ph-av${ringing ? " ring" : ""}">${initial}</span>
+      <div class="ph-who"><b>${esc(name)}${star}</b>${number ? `<span class="ph-whonum">${esc(number)}</span>` : ""}${tags ? `<div class="ph-tags">${tags}</div>` : ""}</div>
+      <div class="ph-timer"><b data-ph-since="${esc(since ?? "")}">${esc(sinceText(since, now) || "–")}</b><small>${esc(sinceLabel)}</small></div>
+    </div>
+    <ol class="ph-steps" aria-label="${esc(l.steps)}">${steps}</ol>
+    ${infoHtml ? `<dl class="ph-now-info">${infoHtml}</dl>` : ""}
+    ${acts.length ? `<div class="ph-now-act">${acts.join("")}</div>` : ""}</section>`;
+}
+
+/** The row for the running call at the top of the call list. */
+function liveRow(model, ctx) {
+  const { t, now } = ctx;
+  const l = t.phone.live;
+  const m = model.monitor;
+  const talking = m.state === "talking";
+  if (!talking && m.state !== "ringing" && m.state !== "dialing") return "";
+  const dial = m.state === "dialing";
+  const name = (talking ? m.withName || m.with : dial ? m.toName || m.to : m.fromName || m.from) || t.phone.calls.unknown;
+  const sub = [talking ? l.talkingShort : dial ? l.dialingShort : l.ringingShort, talking ? m.device : m.area].filter(Boolean).join(" · ");
+  const since = talking ? m.accepted || m.initiated : m.initiated;
+  return `<div class="ph-row ph-livrow${talking ? " talk" : ""}"><div class="ph-line"><span class="ph-ico ${talking ? "in" : "tam"}">${ic(dial ? "callOut" : "phone")}</span><div class="ph-main"><b>${esc(name)}</b><small>${esc(sub)}</small></div><span class="ph-livtime" data-ph-since="${esc(since ?? "")}">${esc(sinceText(since, now) || "–")}</span></div></div>`;
+}
+
 /** The band of the call monitor: ringing, dialling, talking; nothing while idle. Never masked. */
 export function liveBand(model, ctx) {
   const { t, ui, language, now } = ctx;
@@ -91,7 +201,7 @@ export function liveBand(model, ctx) {
     return `<section class="ph-live talk" role="status" aria-live="polite" aria-label="${esc(l.label)}">
       <span class="ico">${ic("phone")}</span>
       <div><b>${esc(fill(l.talking, { name }))}${m.vip ? ` ${ic("star")}<span class="sr">${esc(t.phone.calls.vip)}</span>` : ""}</b><small>${esc(parts.join(" · "))}</small></div>
-      <span class="chip ok"><i class="dot on" aria-hidden="true"></i>${esc(l.running)}</span></section>`;
+      <span class="ph-bartime" data-ph-since="${esc(m.accepted || m.initiated || "")}">${esc(sinceText(m.accepted || m.initiated, now))}</span></section>`;
   }
   if (m.state === "dialing" || ownDial) {
     const number = m.state === "dialing" ? m.to || ownDial?.number || "" : ownDial.number;
@@ -236,7 +346,7 @@ function callCard(model, ctx) {
       <label class="search ph-search"><span class="sr">${esc(p.calls.searchLabel)}</span>${ic("search")}<input type="search" id="ph-q" value="${esc(ui.query)}" placeholder="${esc(p.calls.search)}" autocomplete="off"></label>
     </div>
     <p class="sr" role="status">${esc(fill(p.calls.shown, { n: list.length, total: all.length }))}</p>
-    <div class="ph-rows">${rows}</div>
+    <div class="ph-rows">${ui.query || filter === "spam" || filter === "missed" || filter === "blocked" ? "" : liveRow(model, ctx)}${rows}</div>
     <div class="ph-legend" aria-hidden="true">${legend}</div>
     <p class="hint">${esc(callHint(model, all.length, t))}</p></section>`;
 }
@@ -651,7 +761,7 @@ export function renderPhone(model, ctx) {
   const { t, ui } = ctx;
   const p = t.phone;
   const legacy = model?.legacy ? `<p class="ph-src ph-legacy">${esc(p.legacy)}</p>` : "";
-  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">${esc(p.title)}</h1><p class="lead">${esc(p.lead)}</p>${model?.entry ? sourceLine(model, ctx) : ""}${legacy}</div>`;
+  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">${esc(p.title)}</h1>${model?.entry ? sourceLine(model, ctx) : ""}${legacy}</div>`;
   if (!model?.found) return `${head}<div class="card"><div class="empty"><b>${esc(p.missing)}</b></div></div>`;
   const view = `<div class="seg ph-seg ph-view" role="group" aria-label="${esc(p.view.label)}"><button data-act="ph-view" data-ph-val="list" data-k="ph-v-list" aria-pressed="${ui.view !== "stats"}">${esc(p.view.list)}</button><button data-act="ph-view" data-ph-val="stats" data-k="ph-v-stats" aria-pressed="${ui.view === "stats"}">${esc(p.view.stats)}</button></div>`;
   const integration = `<div class="btn-row"><a class="btn" href="/config/integrations/integration/fritzbox_phone" data-act="integration" data-k="ph-int2">${esc(p.openIntegration)}</a></div>`;
@@ -661,11 +771,11 @@ export function renderPhone(model, ctx) {
   const offline = model.offline && !model.list.ok
     ? `<section class="card"><div class="empty"><span class="bad-ico">${ic("unplug")}</span><b>${esc(p.offline)}</b><span>${esc(p.offlineBody)}</span>${integration}</div></section>`
     : "";
-  if (offline) return `${head}${liveBand(model, ctx)}${offline}`;
+  if (offline) return `${head}${liveCard(model, ctx)}${offline}`;
   const body = ui.view === "stats"
     ? statsView(model, ctx)
     : `${todayCard(model, ctx)}<div class="two ph-two">${callCard(model, ctx)}<div class="ph-col">${tamCards(model, ctx)}${bookCard(model, ctx)}${blockCard(model, ctx)}</div></div>`;
-  return `${head}${view}${liveBand(model, ctx)}${notices(model, ctx)}${body}`;
+  return `${head}${view}${liveCard(model, ctx)}${notices(model, ctx)}${body}`;
 }
 
 // ---------- dialog bodies ----------
