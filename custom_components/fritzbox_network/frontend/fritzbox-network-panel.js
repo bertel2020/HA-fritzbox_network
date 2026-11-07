@@ -55,6 +55,7 @@ const DOMAIN = "fritzbox_network";
 const BOX_KEY = `${DOMAIN}_panel_box`;
 const VIEW_KEY = `${DOMAIN}_panel_view`;
 const HISTORY_REFRESH_MS = 300000;
+const VPN_HISTORY_REFRESH_MS = 60000;
 const PAGE_KEY = "fritzbox_network_page_size";
 const VIEWS = ["list", "map"];
 
@@ -458,6 +459,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           this._updatedAt = Date.now();
           this._update();
           this._maybeLoadHistory();
+          if (this._state.tab === "vpn" && Date.now() - (this._vpnHistoryAt ?? 0) > VPN_HISTORY_REFRESH_MS) this._loadVpnHistory();
           if (this._state.tab === "cleanup") this._loadCleanup();
           if (this._state.tab === "addresses" && this._state.addr.status === "ready") this._loadFixed();
         },
@@ -527,6 +529,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     else if (this._state.tab === "addresses") this._loadAddresses();
     else if (this._state.tab === "routes") this._loadRoutes();
+    else if (this._state.tab === "vpn") this._loadVpnHistory();
     else if (this._state.tab === "box") this._loadBox();
     else if (this._state.tab === "wlan") this._loadWlan();
     else if (this._state.tab === "migrate") this._loadMigrate();
@@ -578,6 +581,21 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._state.ports = "failed";
     }
     this._update();
+  }
+
+  /** The sessions of the tunnels for their chart: read when the VPN page opens and now and then while it stays open. */
+  async _loadVpnHistory() {
+    if (this._vpnHistoryBusy) return;
+    this._vpnHistoryBusy = true;
+    try {
+      this._state.vpnHistory = await this._ws("vpn/history");
+      this._vpnHistoryAt = Date.now();
+    } catch {
+      this._state.vpnHistory ??= {};
+    } finally {
+      this._vpnHistoryBusy = false;
+    }
+    if (this._state.tab === "vpn") this._update();
   }
 
   /** The routes are read when their page opens, not with every update. */
@@ -1066,8 +1084,25 @@ class FritzboxNetworkPanel extends HTMLElement {
     const active = this.shadowRoot.activeElement;
     const ds = active && el.contains(active) ? active.dataset : null;
     const again = ds?.k ? `[data-k="${CSS.escape(ds.k)}"]` : ds?.dev ? `[data-dev="${CSS.escape(ds.dev)}"]` : null;
+    // a tip that is open on a chart stays open: the pointer has not moved, only the drawing was renewed
+    const hadTip = Boolean(this._pointer && el.querySelector(".plot .tip:not([hidden]), .vbar .tip:not([hidden])"));
     el.innerHTML = html;
     if (again) el.querySelector(again)?.focus({ preventScroll: true });
+    if (hadTip) {
+      const hit = this.shadowRoot.elementFromPoint?.(this._pointer.x, this._pointer.y);
+      if (hit?.closest?.(".plot, .vbar")) this._onPlot({ target: hit, clientX: this._pointer.x });
+    }
+  }
+
+  /** The parsed data of a chart, kept per element: the pointer moves far more often than a chart is drawn. */
+  _chartData(el, key) {
+    this._chartCache ??= new WeakMap();
+    let cached = this._chartCache.get(el);
+    if (!cached || cached.raw !== el.dataset[key]) {
+      cached = { raw: el.dataset[key], value: JSON.parse(el.dataset[key]) };
+      this._chartCache.set(el, cached);
+    }
+    return cached.value;
   }
 
   _renderBox() {
@@ -1176,12 +1211,13 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   /** The value under the pointer on a chart of the trend: a cursor line and the time with the value. */
   _onPlot(event) {
+    if (event.type === "pointermove") this._pointer = { x: event.clientX, y: event.clientY };
     const vbar = event.target?.closest?.(".vbar");
     if (vbar) return this._onVbar(vbar, event);
     this._hideVbars();
     const plot = event.target?.closest?.(".plot");
     if (!plot) return this._hidePlots();
-    const pts = JSON.parse(plot.dataset.pts);
+    const pts = this._chartData(plot, "pts");
     const box = plot.getBoundingClientRect();
     if (pts.length < 2 || !box.width) return;
     const ratio = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
@@ -1214,7 +1250,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const to = Number(bar.dataset.to);
     const ratio = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
     const moment = from + ratio * (to - from);
-    const segment = JSON.parse(bar.dataset.segs).find(([a, b]) => moment >= a && moment <= b);
+    const segment = this._chartData(bar, "segs").find(([a, b]) => moment >= a && moment <= b);
     if (!segment) return;
     const t = this._t.vpnPage;
     const language = this._hass?.language;
@@ -1237,6 +1273,7 @@ class FritzboxNetworkPanel extends HTMLElement {
   }
 
   _hidePlots() {
+    this._pointer = null;
     this._hideVbars();
     for (const el of this.shadowRoot.querySelectorAll(".plot .cursor, .plot .tip")) el.hidden = true;
   }
@@ -1268,7 +1305,7 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _renderVpn() {
     const state = this._state;
-    this._set("vpn-view", renderVpn(state.data, { t: this._t, now: Date.now() / 1000, language: this._hass?.language, vpnRange: state.vpnRange, canWrite: Boolean(state.data?.can_write), busy: state.vpnBusy }));
+    this._set("vpn-view", renderVpn(state.data, { t: this._t, now: Date.now() / 1000, language: this._hass?.language, vpnRange: state.vpnRange, vpnHistory: state.vpnHistory, canWrite: Boolean(state.data?.can_write), busy: state.vpnBusy }));
   }
 
   /** Switches a WireGuard connection; the button waits until the box shows the new state. */

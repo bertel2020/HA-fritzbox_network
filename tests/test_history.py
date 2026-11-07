@@ -175,9 +175,10 @@ def test_vpn_notes_when_a_connection_is_on_and_gives_the_chart_data():
     history.note_vpn(NOW + 200, "anna", False, None, False)
     history.note_vpn(NOW + 300, "anna", False, None, False)
     history.note_vpn(NOW + 400, "anna", False, None, True)
-    stats = history.vpn_stats("anna", NOW + 500)
-    assert stats["sessions"] == [[int(NOW) + 50, int(NOW) + 200]]
-    assert stats["enabled_periods"] == [[int(NOW), int(NOW) + 200], [int(NOW) + 400, None]]
+    chart = history.vpn_chart("anna", NOW + 500)
+    assert chart["sessions"] == [[int(NOW) + 50, int(NOW) + 200]]
+    assert chart["enabled_periods"] == [[int(NOW), int(NOW) + 200], [int(NOW) + 400, None]]
+    assert "sessions" not in history.vpn_stats("anna", NOW + 500)
     # a poll that does not say whether it is on notes nothing about it
     history.note_vpn(NOW + 600, "bob", True, int(NOW) + 600)
-    assert history.vpn_stats("bob", NOW + 700)["enabled_periods"] == []
+    assert history.vpn_chart("bob", NOW + 700)["enabled_periods"] == []

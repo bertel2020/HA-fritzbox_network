@@ -181,21 +181,24 @@ class DeviceHistory:
                     seconds[days] += end - max(start, limit)
                     count[days] += 1
         last_end = next((e for _, e in reversed(sessions) if e is not None), None)
-        horizon = now - _VPN_CHART_DAYS * _DAY
         return {
-            # for the chart: the sessions and the periods the connection was on, as far back as it shows
-            "sessions": [[round(a), None if b is None else round(b)] for a, b in sessions if b is None or b > horizon],
-            "enabled_periods": [
-                [round(a), None if b is None else round(b)]
-                for a, b in (self._vpn.get("enabled", {}).get(key) or [])
-                if b is None or b > horizon
-            ],
             "sessions_7d": count[7],
             "sessions_30d": count[30],
             "seconds_7d": round(seconds[7]),
             "seconds_30d": round(seconds[30]),
             "longest": round(longest),
             "last_end": round(last_end) if last_end else None,
+            "tracked_since": round(self._vpn["since"]) if "since" in self._vpn else None,
+        }
+
+    def vpn_chart(self, key: str, now: float) -> dict[str, Any]:
+        """What the chart of a tunnel draws: its sessions and the periods it was on, up to a year back."""
+        horizon = now - _VPN_CHART_DAYS * _DAY
+        sessions = self._vpn["sessions"].get(key) or []
+        periods = self._vpn.get("enabled", {}).get(key) or []
+        return {
+            "sessions": [[round(a), None if b is None else round(b)] for a, b in sessions if b is None or b > horizon],
+            "enabled_periods": [[round(a), None if b is None else round(b)] for a, b in periods if b is None or b > horizon],
             "tracked_since": round(self._vpn["since"]) if "since" in self._vpn else None,
         }
 

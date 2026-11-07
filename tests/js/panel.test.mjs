@@ -1450,7 +1450,10 @@ test("the VPN page draws one bar per connection with sessions, switched-off time
   // without notes of the switch the whole recorded time counts as on
   assert.deepEqual(vpnPage.vpnSegments({ sessions: [[10, 20]], tracked_since: 0 }, 0, 30), [[0, 10, "idle"], [10, 20, "up"], [20, 30, "idle"]]);
   const data = { ...vpnData, vpn: vpnData.vpn.map((c, i) => ({ ...c, stats: { ...stats, tracked_since: 8000 - 3600 * (i + 1) } })) };
-  const html = vpnPage.renderVpn(data, { t, now: 8200, vpnRange: "day" });
+  const vpnHistory = Object.fromEntries(data.vpn.map((c) => [c.key, stats]));
+  // until the sessions are read the chart says so
+  assert.match(vpnPage.renderVpn(data, { t, now: 8200, vpnRange: "day" }), /Lädt|Wird geladen|Loading|Lade/i);
+  const html = vpnPage.renderVpn(data, { t, now: 8200, vpnRange: "day", vpnHistory });
   assert.equal((html.match(/class="vbar"/g) ?? []).length, 3);
   assert.match(html, /data-vrange="week" aria-pressed="false"/);
   assert.match(html, /data-vrange="day" aria-pressed="true"/);

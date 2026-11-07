@@ -80,8 +80,10 @@ export function vpnShare(segments) {
 function statsSection(m, ctx) {
   const { t, now } = ctx;
   const v = t.vpnPage;
-  const rows = m.connections.filter((c) => c.stats);
+  const rows = m.connections.filter((c) => c.stats).map((c) => ({ ...c, stats: { ...c.stats, ...(ctx.vpnHistory?.[c.key] ?? {}) } }));
   if (!rows.length) return "";
+  // the sessions come with their own request: until they are there the chart says so
+  if (!ctx.vpnHistory) return `<section class="card sec"><span class="label">${escapeHtml(v.statsTitle)}</span><div class="empty"><span>${escapeHtml(t.loading)}</span></div></section>`;
   const range = VPN_RANGES[ctx.vpnRange] ? ctx.vpnRange : "week";
   const to = Math.round(now);
   const from = to - VPN_RANGES[range];

@@ -106,6 +106,26 @@ async def test_the_panel_gets_the_connections_without_any_key(
     assert "SECRET" not in json.dumps(event)
 
 
+async def test_the_chart_data_is_not_pushed_but_served_on_request(
+    hass, hass_ws_client, fake_client, entry
+):
+    fake_client.vpn = {"data": {"init": {"boxConnections": PAGE["data"]["init"]["boxConnections"]}}}
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    await client.send_json_auto_id({"type": COMMAND, "entry_id": entry.entry_id})
+    await client.receive_json()
+    event = await client.receive_json()
+    assert all("sessions" not in (c["stats"] or {}) for c in event["event"]["vpn"])
+
+    await client.send_json_auto_id({"type": "fritzbox_network/vpn/history", "entry_id": entry.entry_id})
+    result = (await client.receive_json())["result"]
+    assert set(result) == {c["key"] for c in event["event"]["vpn"]}
+    one = result["Holiday house"]
+    assert set(one) == {"sessions", "enabled_periods", "tracked_since"}
+    assert one["enabled_periods"][0][1] is None  # switched on, still
+
+
 async def test_a_failing_read_keeps_what_was_known(hass, fake_client, entry):
     fake_client.vpn = {"data": {"init": {"boxConnections": PAGE["data"]["init"]["boxConnections"]}}}
     coordinator = await _setup(hass, entry)

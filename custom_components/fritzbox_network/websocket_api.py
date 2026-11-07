@@ -93,6 +93,7 @@ ADDRESS_SAVE_COMMAND = f"{DOMAIN}/address/save"
 ADDRESS_POOL_COMMAND = f"{DOMAIN}/address/pool"
 HISTORY_COMMAND = f"{DOMAIN}/history/summary"
 HISTORY_DEVICE_COMMAND = f"{DOMAIN}/history/device"
+VPN_HISTORY_COMMAND = f"{DOMAIN}/vpn/history"
 LATENCY_COMMAND = f"{DOMAIN}/diagnose/latency"
 LATENCY_SWITCH_COMMAND = f"{DOMAIN}/diagnose/latency/switch"
 LOG_COMMAND = f"{DOMAIN}/diagnose/log"
@@ -931,6 +932,26 @@ def ws_history_device(
     )
 
 
+@websocket_api.websocket_command(
+    {vol.Required("type"): VPN_HISTORY_COMMAND, vol.Required("entry_id"): str}
+)
+@callback
+def ws_vpn_history(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """The sessions and on-periods of every WireGuard tunnel for its chart, read when the page opens."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    coordinator = found[1]
+    history = coordinator.history
+    now = dt_util.utcnow().timestamp()
+    connections = coordinator.data.vpn or []
+    connection.send_result(
+        msg["id"],
+        {c.key: history.vpn_chart(c.key, now) for c in connections} if history else {},
+    )
+
+
 async def _box_action(
     hass: HomeAssistant,
     connection: websocket_api.ActiveConnection,
@@ -1639,6 +1660,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_address_pool)
     websocket_api.async_register_command(hass, ws_history_summary)
     websocket_api.async_register_command(hass, ws_history_device)
+    websocket_api.async_register_command(hass, ws_vpn_history)
     websocket_api.async_register_command(hass, ws_reconnect)
     websocket_api.async_register_command(hass, ws_vpn_switch)
     websocket_api.async_register_command(hass, ws_device_action)
