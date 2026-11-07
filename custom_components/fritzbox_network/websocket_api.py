@@ -894,6 +894,7 @@ async def ws_address_pool(
 @websocket_api.websocket_command(
     {vol.Required("type"): HISTORY_COMMAND, vol.Required("entry_id"): str}
 )
+@websocket_api.require_admin
 @callback
 def ws_history_summary(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
@@ -918,6 +919,7 @@ def ws_history_summary(
         vol.Required("mac"): str,
     }
 )
+@websocket_api.require_admin
 @callback
 def ws_history_device(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
@@ -937,6 +939,7 @@ def ws_history_device(
 @websocket_api.websocket_command(
     {vol.Required("type"): HISTORY_TRAFFIC_COMMAND, vol.Required("entry_id"): str}
 )
+@websocket_api.require_admin
 @callback
 def ws_history_traffic(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
@@ -951,6 +954,7 @@ def ws_history_traffic(
 @websocket_api.websocket_command(
     {vol.Required("type"): VPN_HISTORY_COMMAND, vol.Required("entry_id"): str}
 )
+@websocket_api.require_admin
 @callback
 def ws_vpn_history(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]

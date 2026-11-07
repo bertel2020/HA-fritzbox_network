@@ -203,3 +203,25 @@ def test_many_vpn_sessions_are_joined_by_the_smallest_gap_not_cut_off():
     # the one long gap is the last to go: it still divides two sessions
     gaps = [b[0] - a[1] for a, b in zip(sessions, sessions[1:])]
     assert max(gaps) > 80000
+
+
+async def test_the_history_commands_need_an_administrator(
+    hass, fake_client, entry, hass_ws_client, hass_admin_user
+):
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    mac = fake_client.hosts[0].mac
+    hass_admin_user.groups = []
+    client = await hass_ws_client(hass)
+
+    for command, extra in (
+        ("history/summary", {}),
+        ("history/device", {"mac": mac}),
+        ("history/traffic", {}),
+        ("vpn/history", {}),
+    ):
+        await client.send_json_auto_id(
+            {"type": f"fritzbox_network/{command}", "entry_id": entry.entry_id, **extra}
+        )
+        result = await client.receive_json()
+        assert result["error"]["code"] == "unauthorized", command
