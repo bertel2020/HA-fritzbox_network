@@ -105,11 +105,22 @@ CAPTURE_READ_TIMEOUT = 20
 
 VPN_UID_RE = re.compile(r"[A-Za-z0-9_]{1,64}")
 
+WEB_LOGIN_MIN_ROUNDS = 10000
+WEB_LOGIN_MIN_ROUNDS_2 = 2000
+WEB_LOGIN_MAX_ROUNDS = 1_000_000
+
 
 def web_login_response(challenge: str, password: str) -> str:
     """The answer to the challenge of the login of the web interface (PBKDF2 or the old MD5)."""
     if challenge.startswith("2$"):
         _, iterations_1, salt_1, iterations_2, salt_2 = challenge.split("$")
+        # a box asks for 10000 and 2000 rounds; a host that asks for far fewer would get an answer
+        # that is cheap to crack, one that asks for far more would hold the executor
+        if not (
+            WEB_LOGIN_MIN_ROUNDS <= int(iterations_1) <= WEB_LOGIN_MAX_ROUNDS
+            and WEB_LOGIN_MIN_ROUNDS_2 <= int(iterations_2) <= WEB_LOGIN_MAX_ROUNDS
+        ):
+            raise PermissionError("the box asks for an unusual number of rounds at the login")
         hash_1 = hashlib.pbkdf2_hmac(
             "sha256", password.encode(), bytes.fromhex(salt_1), int(iterations_1)
         )

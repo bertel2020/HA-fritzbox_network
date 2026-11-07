@@ -207,7 +207,7 @@ async def test_the_confirmation_shows_a_wrong_login_and_goes_on(hass, fake_clien
     assert result["errors"] == {"base": "invalid_auth"}
 
 
-async def test_a_box_already_set_up_is_not_offered_again_and_takes_a_new_address(hass, fake_client):
+async def test_a_box_already_set_up_is_not_offered_again_and_keeps_its_address(hass, fake_client):
     # the UDN ends with the MAC, which is the serial number of the box
     known = MockConfigEntry(
         domain=DOMAIN,
@@ -219,7 +219,8 @@ async def test_a_box_already_set_up_is_not_offered_again_and_takes_a_new_address
     result = await _discover(hass, _ssdp(host="192.168.178.77"))
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "already_configured"
-    assert known.data["host"] == "192.168.178.77"
+    # whoever claims the UDN does not get the login: the address stays as it was
+    assert known.data["host"] == "192.168.178.1"
 
 
 async def test_a_box_at_an_address_that_is_set_up_is_not_offered_again(hass, fake_client, entry):

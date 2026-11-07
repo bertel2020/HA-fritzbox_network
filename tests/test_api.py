@@ -727,7 +727,7 @@ def test_the_web_login_asks_for_the_challenge_with_a_get():
 
     from custom_components.fritzbox_network.api import FritzNetworkClient, web_login_response
 
-    challenge = "2$10$aa$10$bb"
+    challenge = "2$10000$aa$2000$bb"
     calls = []
 
     class Response:

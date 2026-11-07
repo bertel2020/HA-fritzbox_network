@@ -150,8 +150,10 @@ class FritzNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
         udn = (upnp.get(ATTR_UPNP_UDN) or "").removeprefix("uuid:")
         if serial := _UDN_SERIAL.search(udn):
             await self.async_set_unique_id(serial.group(0).upper())
-            # a box that has a new address keeps its entry and takes the address over
-            self._abort_if_unique_id_configured(updates={CONF_HOST: host})
+            # a known box is not offered again. Its address is NOT taken over from the answer: any
+            # device of the network can claim the UDN (it is the public MAC), and the next login
+            # would then go to it. A new address is entered under "Reconfigure".
+            self._abort_if_unique_id_configured()
         self._async_abort_entries_match({CONF_HOST: host})
         self._host = host
         self._name = upnp.get(ATTR_UPNP_FRIENDLY_NAME) or model or host

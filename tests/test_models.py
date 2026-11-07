@@ -242,6 +242,9 @@ def test_the_login_of_the_web_interface_answers_both_kinds_of_challenge():
     assert web_login_response("1234567z", "äbc") == "1234567z-9e224a41eeefa284df7bb0f26c2913e2"
     answer = web_login_response("2$10000$aabbccdd$2000$11223344", "geheim")
     assert answer.startswith("11223344$") and len(answer) == 9 + 64
+    for odd in ("2$1$aabbccdd$2000$11223344", "2$10000$aabbccdd$1$11223344", "2$99999999$aabbccdd$2000$11223344"):
+        with pytest.raises(PermissionError):
+            web_login_response(odd, "geheim")
 
 
 def test_the_event_log_is_read_with_its_groups_and_limited():
