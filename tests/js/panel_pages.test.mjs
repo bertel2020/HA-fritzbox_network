@@ -652,3 +652,57 @@ test("the bar at the bottom follows the width of the panel, not of the window", 
   }
   assert.deepEqual(flags, [["compact", false], ["compact", true], ["compact", false], ["compact", false]]);
 });
+
+// ---------- keyboard on the charts ----------
+
+test("a key moves along the points of a chart, not past its ends", async () => {
+  const { plotKeyTarget, plotAttrs } = await import(`${base}shared.js`);
+  assert.equal(plotKeyTarget(10, 4, "ArrowRight"), 5);
+  assert.equal(plotKeyTarget(10, 4, "ArrowLeft"), 3);
+  assert.equal(plotKeyTarget(10, 9, "ArrowRight"), 9);
+  assert.equal(plotKeyTarget(10, 0, "ArrowLeft"), 0);
+  assert.equal(plotKeyTarget(10, 4, "Home"), 0);
+  assert.equal(plotKeyTarget(10, 4, "End"), 9);
+  assert.equal(plotKeyTarget(100, 50, "PageUp"), 60);
+  assert.equal(plotKeyTarget(10, 4, "a"), null);
+  assert.equal(plotKeyTarget(0, 0, "Home"), null);
+  assert.match(plotAttrs('Speed "now"'), /role="slider" tabindex="0" aria-orientation="horizontal" aria-label="Speed &quot;now&quot;"/);
+});
+
+test("every chart of the pages is drawn with the attributes for the keyboard", async () => {
+  const { readFileSync } = await import("node:fs");
+  for (const file of ["panel-internet.js", "panel-device.js"]) {
+    const source = readFileSync(new URL(`${base}${file}`, import.meta.url), "utf8");
+    const plots = source.match(/class="plot"/g) ?? [];
+    assert.ok(plots.length > 0, file);
+    assert.equal((source.match(/class="plot" \$\{plotAttrs\(/g) ?? []).length, plots.length, file);
+  }
+});
+
+test("a key on a chart shows the point and tells it to a screen reader", () => {
+  const { p } = makePanel({}, "net");
+  const attrs = {};
+  const tip = { hidden: true, style: {}, offsetWidth: 40, textContent: "" };
+  const cursor = { hidden: true, style: {} };
+  const plot = {
+    dataset: { pts: JSON.stringify([[1000, 10], [1060, 20], [1120, 30]]), unit: "dBm", range: "day" },
+    classList: { contains: (c) => c === "plot" },
+    getAttribute: (n) => (n === "role" ? "slider" : null),
+    setAttribute: (n, v) => (attrs[n] = v),
+    getBoundingClientRect: () => ({ width: 300, left: 0 }),
+    querySelector: (s) => (s === ".tip" ? tip : cursor),
+  };
+  let prevented = 0;
+  const key = (k) => p._onKey({ key: k, target: plot, preventDefault: () => prevented++ });
+  key("ArrowLeft"); // the first key starts at the latest point
+  assert.equal(attrs["aria-valuenow"], "1");
+  assert.match(attrs["aria-valuetext"], /20 dBm/);
+  assert.equal(tip.hidden, false);
+  key("Home");
+  assert.equal(attrs["aria-valuenow"], "0");
+  key("End");
+  assert.equal(attrs["aria-valuenow"], "2");
+  assert.equal(prevented, 3);
+  key("x");
+  assert.equal(prevented, 3);
+});

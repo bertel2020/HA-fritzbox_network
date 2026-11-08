@@ -479,6 +479,7 @@ export const PANEL_CSS = `
   .month .meter .u { background: var(--up); }
   .subhead { margin: 16px 0 6px; font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
   .plot { position: relative; touch-action: pan-y; }
+  .plot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
   .plot .cursor { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--muted); pointer-events: none; }
   .plot .tip { position: absolute; top: 4px; transform: translateX(-50%); padding: 3px 8px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 500; white-space: nowrap; pointer-events: none; z-index: 1; }
   #internet-view svg.spark { width: 100%; height: 72px; }

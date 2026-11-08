@@ -12,6 +12,7 @@ import {
   isBlocked,
   pageHash,
   panelCounts,
+  plotKeyTarget,
   plotText,
   routeFromHash,
   toggleMac,
@@ -364,6 +365,10 @@ class FritzboxNetworkPanel extends HTMLElement {
     this.shadowRoot.addEventListener("pointerleave", () => this._hidePlots());
     this.shadowRoot.addEventListener("pointerover", (event) => this._phoneTip(event));
     this.shadowRoot.addEventListener("focusin", (event) => this._phoneTip(event));
+    this.shadowRoot.addEventListener("focusin", (event) => this._onPlotFocus(event));
+    this.shadowRoot.addEventListener("focusout", (event) => {
+      if (event.target?.classList?.contains("plot")) this._hidePlots();
+    });
     this.shadowRoot.addEventListener("pointerout", (event) => {
       if (!event.relatedTarget?.closest?.(".plot, .vbar")) this._hidePlots();
     });
@@ -1284,23 +1289,66 @@ class FritzboxNetworkPanel extends HTMLElement {
     const ratio = Math.min(1, Math.max(0, (event.clientX - box.left) / box.width));
     // a chart drawn by time (the load of the line) is read by time, the others by the number of the point
     let i = Math.round(ratio * (pts.length - 1));
-    let x = (i / (pts.length - 1)) * box.width;
     if (plot.dataset.mode === "time") {
       const first = pts[0][0];
-      const span = Math.max(pts[pts.length - 1][0] - first, 1);
-      const wanted = first + ratio * span;
+      const wanted = first + ratio * Math.max(pts[pts.length - 1][0] - first, 1);
       i = pts.reduce((best, p, k) => (Math.abs(p[0] - wanted) < Math.abs(pts[best][0] - wanted) ? k : best), 0);
-      x = ((pts[i][0] - first) / span) * box.width;
     } else if (plot.dataset.mode === "bars") {
       i = Math.min(pts.length - 1, Math.floor(ratio * pts.length));
-      x = ((i + 0.5) / pts.length) * box.width;
     }
+    this._showPlotPoint(plot, pts, i, box.width);
+  }
+
+  /** The cursor and the tip at point i of a chart; a slider also says it to a screen reader. */
+  _showPlotPoint(plot, pts, i, width) {
+    let x = (i / (pts.length - 1)) * width;
+    if (plot.dataset.mode === "time") {
+      const first = pts[0][0];
+      x = ((pts[i][0] - first) / Math.max(pts[pts.length - 1][0] - first, 1)) * width;
+    } else if (plot.dataset.mode === "bars") {
+      x = ((i + 0.5) / pts.length) * width;
+    }
+    const text = plotText(pts[i], plot.dataset, this._hass?.language);
     const cursor = plot.querySelector(".cursor");
     const tip = plot.querySelector(".tip");
-    tip.textContent = plotText(pts[i], plot.dataset, this._hass?.language);
+    tip.textContent = text;
     cursor.style.left = `${x}px`;
     cursor.hidden = tip.hidden = false;
-    tip.style.left = `${Math.min(Math.max(x, tip.offsetWidth / 2), box.width - tip.offsetWidth / 2)}px`;
+    tip.style.left = `${Math.min(Math.max(x, tip.offsetWidth / 2), width - tip.offsetWidth / 2)}px`;
+    if (plot.getAttribute?.("role") === "slider") {
+      plot.setAttribute("aria-valuemin", "0");
+      plot.setAttribute("aria-valuemax", String(pts.length - 1));
+      plot.setAttribute("aria-valuenow", String(i));
+      plot.setAttribute("aria-valuetext", text);
+    }
+    plot.dataset.at = String(i);
+  }
+
+  /** A chart read with the keyboard: arrows, Home, End and the pages move along its points. */
+  _onPlotKey(plot, event) {
+    const pts = this._chartData(plot, "pts");
+    const width = plot.getBoundingClientRect().width;
+    if (event.key === "Escape") {
+      this._hidePlots();
+      return true;
+    }
+    if (pts.length < 2 || !width) return false;
+    const from = plot.dataset.at === undefined ? pts.length - 1 : Number(plot.dataset.at);
+    const to = plotKeyTarget(pts.length, from, event.key);
+    if (to === null) return false;
+    event.preventDefault();
+    this._showPlotPoint(plot, pts, to, width);
+    return true;
+  }
+
+  /** A chart that gets the focus from the keyboard shows its latest point. */
+  _onPlotFocus(event) {
+    const plot = event.target;
+    if (!plot?.classList?.contains("plot") || plot.matches?.(":focus-visible") === false) return;
+    const pts = this._chartData(plot, "pts");
+    const width = plot.getBoundingClientRect().width;
+    if (pts.length < 2 || !width) return;
+    this._showPlotPoint(plot, pts, plot.dataset.at === undefined ? pts.length - 1 : Number(plot.dataset.at), width);
   }
 
   /** What a tunnel did where the pointer is: its state there and, for a connection, when and how long. */
@@ -1919,6 +1967,9 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (event.key === "Escape" && state.addr?.entryOpen) return this._closeEntry();
     if (event.key === "Escape" && state.addr?.groupsOpen) return this._closeGroups();
     const target = event.target;
+    if (target?.classList?.contains("plot") && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      if (this._onPlotKey(target, event)) return;
+    }
     const menu = root.querySelector("#fmenu");
     if (state.menu && menu?.contains(target)) {
       const items = [...menu.querySelectorAll('[role="menuitemradio"]')];

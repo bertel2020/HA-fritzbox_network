@@ -657,6 +657,33 @@ export function plotText(point, { unit = "", fmt = "", range = "day", unused = "
   return `${when} · ${values.map((v, k) => `${arrows[k] ?? ""}${show(v)}`).join(" · ")}`;
 }
 
+/** The attributes that make a chart something the keyboard can read: a slider along its points. */
+export function plotAttrs(label) {
+  const text = escapeHtml(label);
+  return `role="slider" tabindex="0" aria-orientation="horizontal" aria-label="${text}" data-k="plot-${text}"`;
+}
+
+/**
+ * The point a key moves a chart to: the arrows one step, Home and End the ends, PageUp and PageDown
+ * a tenth of the way. Not past the ends; null for any other key.
+ */
+export function plotKeyTarget(length, from, key) {
+  if (!(length > 0)) return null;
+  const last = length - 1;
+  const page = Math.max(1, Math.round(length / 10));
+  const to = {
+    ArrowRight: from + 1,
+    ArrowUp: from + 1,
+    ArrowLeft: from - 1,
+    ArrowDown: from - 1,
+    PageUp: from + page,
+    PageDown: from - page,
+    Home: 0,
+    End: last,
+  }[key];
+  return to === undefined ? null : Math.min(last, Math.max(0, to));
+}
+
 /** The days the table column of the data volume adds up. */
 export const TABLE_DAYS = 7;
 

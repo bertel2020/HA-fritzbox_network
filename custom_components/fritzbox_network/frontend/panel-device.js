@@ -1,6 +1,6 @@
 /* The device page of the panel: a page of its own with the connection, the actions and the master data, as HTML. */
 
-import { BANDS, escapeHtml, formatBytes, hintNote, isBlocked, isWeak, pointColumn, seriesStats, sparkLine, trafficSum, uplinkStyle } from "./shared.js";
+import { BANDS, escapeHtml, plotAttrs, formatBytes, hintNote, isBlocked, isWeak, pointColumn, seriesStats, sparkLine, trafficSum, uplinkStyle } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { weakPercent, whenText } from "./panel-network.js";
@@ -270,7 +270,7 @@ function trendChart(title, values, unit, t, times, range, tone = null) {
   const gid = tone ? `tone-${range}` : "";
   const defs = tone ? signalGradient(gid, tone) : "";
   return `<div class="trend"><span class="label">${escapeHtml(title)}</span>
-    <div class="plot" data-pts="${escapeHtml(JSON.stringify(values.map((v, i) => [times[i], typeof v === "number" ? Math.round(v * 10) / 10 : null])))}" data-unit="${escapeHtml(unit)}" data-range="${range}">
+    <div class="plot" ${plotAttrs(title)} data-pts="${escapeHtml(JSON.stringify(values.map((v, i) => [times[i], typeof v === "number" ? Math.round(v * 10) / 10 : null])))}" data-unit="${escapeHtml(unit)}" data-range="${range}">
       <svg viewBox="0 0 300 90" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(title)}">${defs}<path class="area" d="${path.area}"${tone ? ` style="fill:url(#${gid})"` : ""}/><path d="${path.line}"${tone ? ` style="stroke:url(#${gid})"` : ""}/></svg>
       <i class="cursor" hidden></i><b class="tip" hidden></b></div>
     <span class="hint">${escapeHtml(fill(t.trendStats, { min: round(stats.min), mean: round(stats.mean), max: round(stats.max), unit }))}</span></div>`;

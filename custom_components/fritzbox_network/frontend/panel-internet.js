@@ -1,6 +1,6 @@
 /* The internet page of the panel: the connection of the box, its load and, on a DSL line, its quality. */
 
-import { dailyTotals, escapeHtml, formatBytes, formatDuration, formatRate, hintNote, sparkPaths, trafficByDevice, trafficMonth, trafficSummary, usedPercent } from "./shared.js";
+import { dailyTotals, escapeHtml, plotAttrs, formatBytes, formatDuration, formatRate, hintNote, sparkPaths, trafficByDevice, trafficMonth, trafficSummary, usedPercent } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { whenText } from "./panel-network.js";
@@ -63,8 +63,9 @@ function chart(internet, language, t) {
   if (!paths) return `<p class="hint">${escapeHtml(t.inet.historyNone)}</p>`;
   const span = formatDuration(paths.seconds, t.inet.units);
   // the rates are kbit/s: the tooltip reads them as rates
-  return `<div class="plot" data-mode="time" data-fmt="rate" data-range="day" data-pts="${escapeHtml(JSON.stringify(internet.samples))}">
-    <svg class="spark" viewBox="0 0 ${CHART.width} ${CHART.height}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(`${t.inet.history}, ${fill(t.inet.historySpan, { time: span })}`)}">
+  const label = `${t.inet.history}, ${fill(t.inet.historySpan, { time: span })}`;
+  return `<div class="plot" ${plotAttrs(label)} data-mode="time" data-fmt="rate" data-range="day" data-pts="${escapeHtml(JSON.stringify(internet.samples))}">
+    <svg class="spark" viewBox="0 0 ${CHART.width} ${CHART.height}" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(label)}">
       <line x1="0" y1="${CHART.height - 0.5}" x2="${CHART.width}" y2="${CHART.height - 0.5}"/>
       <path class="dn-area" d="${paths.area}"/><path class="dn" d="${paths.down}"/><path class="upl" d="${paths.up}"/></svg>
     <i class="cursor" hidden></i><b class="tip" hidden></b></div>
@@ -175,7 +176,7 @@ function spectrumChart({ points, average }, { max, mhz, label, cls, t, language 
   const avgY = (100 - (average / max) * 100).toFixed(1);
   return `<figure class="spec ${cls}"><figcaption>${escapeHtml(label)} <small>${escapeHtml(fill(t.inet.spectrumAverage, { n: oneDecimal(average, language) }))}</small></figcaption>
     <div class="specbox"><div class="yax" aria-hidden="true">${y}</div>
-      <div class="plot" data-mode="bars" data-fmt="spec" data-unused="${escapeHtml(t.inet.spectrumUnused)}" data-pts="${escapeHtml(JSON.stringify(points))}">
+      <div class="plot" ${plotAttrs(label)} data-mode="bars" data-fmt="spec" data-unused="${escapeHtml(t.inet.spectrumUnused)}" data-pts="${escapeHtml(JSON.stringify(points))}">
         <svg viewBox="0 0 ${n} 100" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(label)}"><g class="sgrid">${grid}</g>${bars}<line class="savg" x1="0" x2="${n}" y1="${avgY}" y2="${avgY}"/></svg>
         <i class="cursor" hidden></i><b class="tip" hidden></b></div></div>
     <div class="xax" aria-hidden="true">${x}</div></figure>`;
@@ -227,7 +228,7 @@ function dayBars(rows, language, t) {
     .join("");
   const first = new Date(rows[0].ts * 1000).toLocaleDateString(language, { day: "numeric", month: "short" });
   const last = new Date(rows[rows.length - 1].ts * 1000).toLocaleDateString(language, { day: "numeric", month: "short" });
-  return `<div class="plot" data-mode="bars" data-fmt="bytes" data-range="date" data-pts="${escapeHtml(JSON.stringify(rows.map((r) => [r.ts, r.down, r.up])))}">
+  return `<div class="plot" ${plotAttrs(t.inet.perDay)} data-mode="bars" data-fmt="bytes" data-range="date" data-pts="${escapeHtml(JSON.stringify(rows.map((r) => [r.ts, r.down, r.up])))}">
     <svg class="spark days" viewBox="0 0 300 90" preserveAspectRatio="none" role="img" aria-label="${escapeHtml(t.inet.perDay)}"><line x1="0" y1="89.5" x2="300" y2="89.5"/>${bars}</svg>
     <i class="cursor" hidden></i><b class="tip" hidden></b></div>
     <div class="legend2"><span><i></i>${escapeHtml(t.inet.down)}</span><span><i class="upl"></i>${escapeHtml(t.inet.up)}</span>
