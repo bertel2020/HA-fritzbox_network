@@ -124,7 +124,7 @@ function card(connection, ctx) {
   const busy = ctx.busy?.has(connection.key);
   const control =
     ctx.canWrite && connection.editable
-      ? `<button class="btn vpnswitch" data-act="vpn-switch" data-key="${escapeHtml(connection.key)}" data-on="${connection.enabled ? "0" : "1"}"${busy ? " disabled" : ""}>${escapeHtml(connection.enabled ? v.turnOff : v.turnOn)}</button>`
+      ? `<button class="switch vpnswitch${busy ? " busy" : ""}" role="switch" aria-checked="${connection.enabled}" aria-label="${escapeHtml(fill(v.switchLabel, { name: connection.name }))}" title="${escapeHtml(connection.enabled ? v.turnOff : v.turnOn)}" data-act="vpn-switch" data-key="${escapeHtml(connection.key)}" data-on="${connection.enabled ? "0" : "1"}"${busy ? " disabled" : ""}></button>`
       : "";
   return `<li class="vpnrow ${connection.state}">
     <span aria-hidden="true">${ic(connection.kind === "site" ? "network" : "shield")}</span>

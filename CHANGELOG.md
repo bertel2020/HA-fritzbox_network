@@ -6,6 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- VPN-Seite: Ein- und Ausschalten einer Verbindung ist ein Schalter wie bei WLAN-Netzen und Routen (statt eines Textknopfes „Ein-/Ausschalten“).
 - Neue Option **Zertifikat der Box prüfen** (bei der Einrichtung und unter „Verbindung ändern“, standardmäßig aus, nur mit TLS). Ist sie an, prüfen die Verbindungen zur Box, zum Webinterface und zum Mitschnitt das Zertifikat. Das Zertifikat einer FRITZ!Box ist selbstsigniert, solange du ihr kein vertrauenswürdiges gegeben hast, und gilt nur für ihren Namen; schalte die Option daher nur ein, wenn die Box unter diesem Namen erreichbar ist.
 - VPN-Seite: Ein Tunnel, der sehr oft verbindet, verliert seinen ältesten Verlauf nicht mehr. Ab 500 Sitzungen werden die zwei mit dem kleinsten Abstand zusammengefasst, sodass der Verlauf weiter ein Jahr zurückreicht und nur die kürzesten Unterbrechungen als verbunden gezeichnet werden.
 - Panel: Lange graue Hinweise unter den Karten sind hinter einer kleinen Zeile „Hinweis“ eingeklappt (kurze bleiben stehen). Ein geöffneter Hinweis bleibt beim Neuzeichnen der Seite offen.

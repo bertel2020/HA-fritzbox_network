@@ -6,6 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- VPN page: switching a connection on or off is a switch like for Wi-Fi networks and routes (instead of a "Switch on/off" text button).
 - New option **Check the certificate of the box** (at setup and under "Change the connection", off by default, with TLS only). When on, the connections to the box, to its web interface and to the capture check the certificate. The certificate of a FRITZ!Box is self-signed until you give it a trusted one, and valid only for its name; turn the option on only if the box is reachable under that name.
 - VPN page: a tunnel that connects very often no longer loses its oldest history. Past 500 sessions the two with the smallest gap are joined, so the chart still reaches back a year and only the briefest breaks are drawn as connected.
 - Panel: long grey hints under the cards are folded behind a small "Note" line (short ones stay). An opened note stays open when the page is redrawn.

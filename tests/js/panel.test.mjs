@@ -1477,13 +1477,13 @@ test("the VPN page says so where the box tells nothing or has no connection", ()
 test("the VPN page offers the switch only with the right to write and for connections the box lets us change", () => {
   const data = { ...vpnData, vpn: vpnData.vpn.map((c, i) => ({ ...c, editable: i !== 2 })) };
   const rw = vpnPage.renderVpn(data, { t, now: 0, canWrite: true });
-  assert.match(rw, /data-act="vpn-switch" data-key="a" data-on="0">Ausschalten/);
+  assert.match(rw, /role="switch" aria-checked="true" aria-label="[^"]*eingeschaltet" title="Ausschalten" data-act="vpn-switch" data-key="a" data-on="0"/);
   assert.match(rw, /data-act="vpn-switch" data-key="b"/);
   assert.doesNotMatch(rw, /data-act="vpn-switch" data-key="c"/);
   assert.equal((rw.match(/data-act="vpn-switch"/g) ?? []).length, 2);
   assert.doesNotMatch(vpnPage.renderVpn(data, { t, now: 0, canWrite: false }), /vpn-switch/);
   const off = vpnPage.renderVpn({ ...data, vpn: [{ ...data.vpn[0], enabled: false, connected: false, editable: true }] }, { t, now: 0, canWrite: true });
-  assert.match(off, /data-on="1">Einschalten/);
+  assert.match(off, /aria-checked="false"[^>]*title="Einschalten"[^>]*data-on="1"/);
   assert.match(vpnPage.renderVpn(data, { t, now: 0, canWrite: true, busy: new Set(["a"]) }), /data-key="a" data-on="0" disabled/);
 });
 
