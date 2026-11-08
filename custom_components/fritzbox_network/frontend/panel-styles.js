@@ -857,7 +857,8 @@ export const PANEL_CSS = `
     .chead .seg button { min-height: 44px; }
     .tpager select, .tpager .btn { min-height: 44px; }
     .switch::before { content: ""; position: absolute; inset: -6px -4px; }
-    .hint a { display: inline-block; padding: 12px 0; margin: -12px 0; }
+    .hint a, .ahint a, dd a { display: inline-block; padding: 12px 0; margin: -12px 0; }
+    .devtable th > button { padding-top: 14px; padding-bottom: 14px; }
   }
   .sec > .label { display: flex; align-items: center; min-height: 34px; }
   .trends { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px 24px; margin-top: 8px; }
