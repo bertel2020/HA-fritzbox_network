@@ -1197,6 +1197,13 @@ export const PANEL_CSS = `
   .ph-fold[aria-expanded="true"] .ph-chev { transform: rotate(180deg); }
   .ph-folded .chead { margin-bottom: 4px; }
   .ph-folded .hint { margin: 0; }
+  /* on a phone the figures of today sit two by two, and the link and the fold head are as tall as a finger */
+  @container app (max-width: 600px) {
+    #phone-view .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    #phone-view .tile small { white-space: normal; overflow: visible; text-overflow: clip; }
+    .ph-fold { min-height: 44px; }
+    .ph-src a { display: inline-block; padding: 12px 0; margin: -12px 0; }
+  }
   .ph-group { padding: 12px 0 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
   .ph-cstat { display: block; margin-top: 4px; color: var(--muted); font-size: 12px; }
   .ph-live { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 14px 16px; border-radius: var(--radius); background: var(--accent-soft); color: var(--accent-hover); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
