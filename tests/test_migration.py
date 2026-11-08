@@ -3,7 +3,13 @@
 from homeassistant.helpers import entity_registry as er
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
-from custom_components.fritzbox_network.migration import counterpart, scan
+from custom_components.fritzbox_network.migration import (
+    counterpart,
+    port_counterpart,
+    repeater_counterpart,
+    scan,
+)
+from custom_components.fritzbox_network.models import PortRule
 
 from .conftest import LAN
 
@@ -61,7 +67,7 @@ def test_what_is_about_the_same_is_marked_and_what_has_no_counterpart_says_why()
     assert target == f"{SERIAL}_dsl_max_rate_up" and notes == ["approximate"]
     assert counterpart(f"{SERIAL}-connection_uptime", SERIAL)[2] == "incompatible"
     assert counterpart(f"{SERIAL}-cleanup", SERIAL)[2] == "not_covered"
-    assert counterpart(f"{SERIAL}-port_forward_web", SERIAL)[2] == "not_covered"
+    assert counterpart(f"{SERIAL}-port_forward_web", SERIAL)[2] == "unknown"
     assert counterpart(f"{SERIAL}-call_deflection_1", SERIAL)[2] == "not_covered"
     assert counterpart("OTHER-update", SERIAL)[2] == "other_box"
     assert counterpart(f"{SERIAL}-something_new", SERIAL)[2] == "unknown"
@@ -198,3 +204,55 @@ async def test_the_panel_can_ask_for_the_preview(hass, hass_ws_client, fake_clie
     assert result["result"]["rows"][0]["status"] == "migrate"
     await client.send_json_auto_id({"type": COMMAND, "entry_id": "nope"})
     assert (await client.receive_json())["error"]["code"] == "not_found"
+
+
+def _rule(key, description):
+    return PortRule(key, description, "TCP", 1, 1, "192.0.2.2", "", 0, True)
+
+
+def test_a_port_forwarding_of_the_core_integration_is_found_by_its_description():
+    rules = {"tcp_80": _rule("tcp_80", "Web Server"), "udp_51820": _rule("udp_51820", "WireGuard")}
+    assert port_counterpart(f"{SERIAL}-port_forward_web_server", SERIAL, rules) == (
+        f"{SERIAL}_port_tcp_80"
+    )
+    # the core name may carry more after the description
+    assert port_counterpart(f"{SERIAL}-port_forward_wireguard_ipv4", SERIAL, rules) == (
+        f"{SERIAL}_port_udp_51820"
+    )
+    assert port_counterpart(f"{SERIAL}-port_forward_other", SERIAL, rules) is None
+    # a description that fits two forwardings tells none of them
+    rules["tcp_81"] = _rule("tcp_81", "Web Server")
+    assert port_counterpart(f"{SERIAL}-port_forward_web_server", SERIAL, rules) is None
+
+
+def test_the_entities_of_a_repeater_go_to_the_one_controlled_here():
+    repeaters = {"11:22:33:44:55:66": "aa:bb:cc:dd:ee:ff"}
+    uid = "112233445566"
+    assert repeater_counterpart(f"{uid}-reboot", SERIAL, repeaters) == (
+        f"{SERIAL}_aa:bb:cc:dd:ee:ff_reboot",
+        "",
+    )
+    assert repeater_counterpart(f"{uid}-wi_fi_main_5ghz", SERIAL, repeaters)[0] == (
+        f"{SERIAL}_aa:bb:cc:dd:ee:ff_wifi_5ghz"
+    )
+    assert repeater_counterpart(f"{uid}-device_uptime", SERIAL, repeaters)[0] == (
+        f"{SERIAL}_aa:bb:cc:dd:ee:ff_box_uptime"
+    )
+    assert repeater_counterpart(f"{uid}-reconnect", SERIAL, repeaters) == (None, "not_covered")
+    assert repeater_counterpart(f"{uid}-something_new", SERIAL, repeaters) == (None, "unknown")
+    # a repeater that is not controlled here is another box, as before
+    assert repeater_counterpart("665544332211-reboot", SERIAL, repeaters)[1] == (
+        "repeater_not_controlled"
+    )
+
+
+async def test_a_port_forwarding_is_taken_over_by_its_description(hass, fake_client, entry):
+    await _setup(hass, entry)
+    description = fake_client.port_rules["tcp_5027"].description
+    assert description
+    slug = description.lower().replace(" ", "_")
+    _, made = _core(hass, ("switch", f"{SERIAL}-port_forward_{slug}"))
+
+    row = _rows(scan(hass, entry))[made[f"{SERIAL}-port_forward_{slug}"].entity_id]
+    assert row["status"] == "migrate"
+    assert row["target_entity_id"] == "switch.fritz_network_port_tcp_5027"

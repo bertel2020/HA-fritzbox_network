@@ -20,8 +20,9 @@ from typing import Any
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import format_mac
+from homeassistant.util import slugify
 
-from .const import DOMAIN
+from .const import DOMAIN, KEY_PORT_PREFIX
 from .coordinator import FritzNetworkConfigEntry
 from .models import client_uid
 
@@ -67,8 +68,21 @@ APPROXIMATE = {
     "link_kb_s_received",
 }
 # no counterpart on purpose, by the key of the core integration or its start
-NOT_COVERED_PREFIXES = ("port_forward_", "call_deflection_")
+NOT_COVERED_PREFIXES = ("call_deflection_",)
 NOT_COVERED_KEYS = {"cleanup", "firmware_update"}
+# the entities of a repeater the core integration made an entry for, by its key ("<serial>-<key>"):
+# the key here. A repeater has no reconnect, no clean-up and none of the internet entities.
+REPEATER_KEYS: dict[str, str] = {
+    "reboot": "reboot",
+    "device_uptime": "box_uptime",
+    "cpu_temperature": "cpu_temperature",
+    "update": "firmware",
+    "wi_fi_guest": "guest_wifi",
+    "guest_wifi_qr_code": "guest_wifi_qr",
+}
+REPEATER_KEY_PREFIXES = {"wi_fi_main_": "wifi_"}
+REPEATER_NOT_COVERED = {"reconnect", "cleanup", "firmware_update"}
+PORT_FORWARD_PREFIX = "port_forward_"
 # a counterpart exists but the state means something else: moving it would break the history
 INCOMPATIBLE_KEYS = {"connection_uptime"}
 # the entities of a device, by the key behind the MAC ("<mac>_<key>"); the tracker has no key
@@ -143,6 +157,52 @@ def counterpart(unique_id: str, serial: str) -> tuple[str | None, str, str, list
     return None, "client", "unknown", notes
 
 
+def port_counterpart(unique_id: str, serial: str, rules: dict[str, Any]) -> str | None:
+    """The unique id here of a port forwarding of the core integration, by its description.
+
+    The core integration names the switch after the description of the forwarding; here the
+    forwarding is named by protocol and port. The description is what both know, so it must tell
+    exactly one forwarding. None where it tells none or several.
+    """
+    prefix = f"{serial}-{PORT_FORWARD_PREFIX}"
+    if not unique_id.startswith(prefix):
+        return None
+    wanted = unique_id[len(prefix) :]
+    found = [
+        rule.key
+        for rule in rules.values()
+        if rule.description
+        and (slug := slugify(rule.description))
+        and (wanted == slug or wanted.startswith(f"{slug}_"))
+    ]
+    return f"{serial}_{KEY_PORT_PREFIX}{found[0]}" if len(found) == 1 else None
+
+
+def repeater_counterpart(
+    unique_id: str, serial: str, repeaters: dict[str, str]
+) -> tuple[str | None, str]:
+    """(unique id here, reason) of an entity of a repeater entry of the core integration.
+
+    ``repeaters`` maps the MACs of the mesh nodes (as ``format_mac`` writes them) to the MAC the
+    repeater is controlled by here. A repeater that is not controlled here has no entities to
+    take it over; the reason says so.
+    """
+    prefix, _, key = unique_id.partition("-")
+    mac = repeaters.get(format_mac(prefix))
+    if mac is None:
+        return None, "repeater_not_controlled"
+    if key in REPEATER_NOT_COVERED:
+        return None, "not_covered"
+    target = REPEATER_KEYS.get(key)
+    if target is None:
+        for core_prefix, here in REPEATER_KEY_PREFIXES.items():
+            if key.startswith(core_prefix):
+                target = f"{here}{key[len(core_prefix) :]}"
+    if target is None:
+        return None, "unknown"
+    return client_uid(serial, mac, target), ""
+
+
 def _automations_using(hass: HomeAssistant, entity_id: str) -> list[str]:
     try:
         from homeassistant.components.automation import (  # noqa: PLC0415
@@ -168,12 +228,28 @@ def scan(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> dict[str, Any]:
         if e.platform == DOMAIN
     }
     core = core_entries(hass)
+    coordinator = entry.runtime_data
+    rules = (coordinator.data.port_rules if coordinator.data else None) or {}
+    repeaters: dict[str, str] = {}
+    for repeater in getattr(coordinator, "repeaters", {}).values():
+        node = repeater.node
+        for node_mac in (node.macs if node else None) or (repeater.mac,):
+            repeaters[format_mac(node_mac)] = repeater.mac
     rows: list[MigrationRow] = []
     claimed: dict[str, MigrationRow] = {}
     same_box = False
     for core_entry in core:
         for core_entity in er.async_entries_for_config_entry(registry, core_entry.entry_id):
             target_uid, group, reason, notes = counterpart(core_entity.unique_id, serial)
+            if reason == "unknown" and (
+                port_uid := port_counterpart(core_entity.unique_id, serial, rules)
+            ):
+                target_uid, reason = port_uid, ""
+            elif reason == "other_box" and (
+                (found := repeater_counterpart(core_entity.unique_id, serial, repeaters))[0]
+                or found[1] != "repeater_not_controlled"
+            ):
+                target_uid, reason = found
             if group == "box" and reason != "other_box" and target_uid is not None:
                 same_box = True
             if core_entity.unique_id.startswith(f"{serial}-"):

@@ -2,6 +2,12 @@
 
 All notable changes to this integration are recorded here.
 
+## Unreleased
+
+### Changed
+
+- Taking over FRITZ!Box Tools: port forwardings are now matched to the new switches (by the description of the forwarding, as long as it fits exactly one). The entities of a repeater (restart, uptime, CPU temperature, Wi-Fi switches, guest Wi-Fi, QR code, firmware update) go to the entities of the repeater you chose under "Control repeaters". A repeater that is not controlled here stays "skipped", and the note now names that option.
+
 ## 1.5.0 – 2026-11-08
 
 ### New

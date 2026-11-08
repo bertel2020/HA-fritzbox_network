@@ -745,7 +745,7 @@ const en = {
     keeps: "stays as it is",
     usedBy: "Used in {n} automations: {names}",
     reasons: {
-      other_box: "Belongs to another box.",
+      other_box: "Belongs to another box, or to a repeater that is not controlled here (Options › Control repeaters).",
       incompatible: "The entity here measures something else; taking over would distort the history.",
       not_covered: "There is no entity for this here.",
       unknown: "No counterpart found.",
@@ -2182,7 +2182,7 @@ const de = {
     keeps: "bleibt, wie sie ist",
     usedBy: "In {n} Automationen benutzt: {names}",
     reasons: {
-      other_box: "Gehört zu einer anderen Box.",
+      other_box: "Gehört zu einer anderen Box oder zu einem Repeater, der hier nicht gesteuert wird (Optionen › Repeater steuern).",
       incompatible: "Die Entität hier misst etwas anderes; Übernehmen würde den Verlauf verfälschen.",
       not_covered: "Dafür gibt es hier keine Entität.",
       unknown: "Kein Gegenstück gefunden.",

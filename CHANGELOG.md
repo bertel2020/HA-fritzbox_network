@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
+## Unveröffentlicht
+
+### Geändert
+
+- Übernahme von FRITZ!Box Tools: Portfreigaben werden jetzt den neuen Schaltern zugeordnet (über die Beschreibung der Freigabe, solange sie genau eine Freigabe trifft). Die Entitäten eines Repeaters (Neustart, Betriebszeit, CPU-Temperatur, WLAN-Schalter, Gast-WLAN, QR-Code, Firmware-Update) gehen auf die Entitäten des Repeaters, den du unter „Repeater steuern“ gewählt hast. Ein Repeater, der hier nicht gesteuert wird, bleibt „übersprungen“, und der Hinweis nennt jetzt diese Möglichkeit.
+
 ## 1.5.0 – 2026-11-08
 
 ### Neu
