@@ -51,7 +51,7 @@ async def test_topology_groups_the_devices_by_access_point(
     assert devices[WLAN]["link_type"] == "wlan"
     assert devices[LAN]["ap_mac"] == BOX
     assert devices[LAN]["online"] is True
-    tracker = er.async_get(hass).async_get_entity_id("device_tracker", DOMAIN, WLAN)
+    tracker = er.async_get(hass).async_get_entity_id("device_tracker", DOMAIN, f"SERIAL1_{WLAN}")
     assert devices[WLAN]["entity_id"] == tracker == "device_tracker.fritz_020000000003"
 
 

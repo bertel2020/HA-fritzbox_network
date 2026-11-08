@@ -27,7 +27,7 @@ from .const import (
     MESH_REPEATER_LOST_SECONDS,
 )
 from .coordinator import FritzNetworkConfigEntry
-from .models import Host
+from .models import Host, client_uid
 
 ISSUE_STALE_DEVICES = "stale_devices"
 ISSUE_INTERNET_LINE = "internet_line"
@@ -36,10 +36,12 @@ ISSUE_MESH_REPEATER_LOST = "mesh_repeater_lost"
 ISSUE_UPNP_DISABLED = "upnp_disabled"
 
 
-def last_online(hass: HomeAssistant, host: Host) -> datetime | None:
+def last_online(hass: HomeAssistant, serial: str, host: Host) -> datetime | None:
     """When the device was last online, from its "Last online" sensor; None if unknown."""
     registry = er.async_get(hass)
-    entity_id = registry.async_get_entity_id("sensor", DOMAIN, f"{host.mac}_{KEY_LAST_ONLINE}")
+    entity_id = registry.async_get_entity_id(
+        "sensor", DOMAIN, client_uid(serial, host.mac, KEY_LAST_ONLINE)
+    )
     state = hass.states.get(entity_id) if entity_id else None
     return dt_util.parse_datetime(state.state) if state else None
 
@@ -57,7 +59,7 @@ def stale_hosts(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> list[tup
     for host in coordinator.data.hosts.values():
         if coordinator.is_connected(host) or (mesh and mesh.node_of(host)):
             continue
-        last = last_online(hass, host)
+        last = last_online(hass, coordinator.serial, host)
         if last is not None and now - last > limit:
             stale.append((host, last))
     stale.sort(key=lambda item: item[1])

@@ -32,6 +32,7 @@ All notable changes to this integration are recorded here.
 
 ### Fixed
 
+- Several FRITZ!Boxes: the unique ids of the device entities (tracker, switches, sensors) now carry the serial number of the box. Before, they were the MAC only, so a device that two boxes know could be set up for one box only, and the actions (name, Wake on LAN) reached both boxes. Existing entries are renamed at start; entity ids, histories and automations stay. The actions reach only the box the chosen entity belongs to.
 - Discovery (SSDP) no longer takes over the address of a known box, because any device of the network can fake the UDN (the public MAC) and the next login would go to it. Enter a new address under "Change the connection". The web login also refuses a challenge with an unusual number of rounds.
 - Security: the four history commands of the panel (`history/summary`, `history/device`, `history/traffic`, `vpn/history`) now require an administrator like all the others.
 - Security: the actions (set name, Wake on LAN, route, guest Wi-Fi password, capture, VPN clean-up) check the role of the calling user; only administrators may run them. Calls without a user, such as from automations, are still allowed.

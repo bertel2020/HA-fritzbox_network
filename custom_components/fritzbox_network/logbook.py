@@ -37,7 +37,18 @@ def async_describe_events(
     def entry(event: Event, message: str) -> dict[str, Any]:
         # the device tracker of the device, when there is one: the entry then
         # shows in its history too
-        entity_id = registry.async_get_entity_id("device_tracker", DOMAIN, event.data["mac"])
+        # the id of a tracker is the box and the MAC; the event does not say which box
+        mac = event.data["mac"]
+        entity_id = next(
+            (
+                e.entity_id
+                for e in registry.entities.values()
+                if e.platform == DOMAIN
+                and e.domain == "device_tracker"
+                and e.unique_id.endswith(f"_{mac}")
+            ),
+            None,
+        )
         return {
             LOGBOOK_ENTRY_NAME: NAME,
             LOGBOOK_ENTRY_MESSAGE: message,

@@ -23,6 +23,7 @@ from homeassistant.helpers.device_registry import format_mac
 
 from .const import DOMAIN
 from .coordinator import FritzNetworkConfigEntry
+from .models import client_uid
 
 CORE_DOMAIN = "fritz"
 
@@ -138,7 +139,7 @@ def counterpart(unique_id: str, serial: str) -> tuple[str | None, str, str, list
         if key in CLIENT_KEYS:
             suffix = CLIENT_KEYS[key]
             wanted = format_mac(mac)
-            return (f"{wanted}_{suffix}" if suffix else wanted), "client", "", notes
+            return client_uid(serial, wanted, suffix or None), "client", "", notes
     return None, "client", "unknown", notes
 
 

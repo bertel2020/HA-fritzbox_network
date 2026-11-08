@@ -10,7 +10,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from .const import KEY_TRACKER
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import FritzNetworkClientEntity, async_setup_client_entities
-from .models import Host
+from .models import Host, client_uid
 
 PARALLEL_UPDATES = 0
 
@@ -34,6 +34,12 @@ class FritzNetworkTracker(FritzNetworkClientEntity, ScannerEntity):
 
     def __init__(self, coordinator: FritzNetworkCoordinator, host: Host) -> None:
         super().__init__(coordinator, host, "device_tracker", KEY_TRACKER)
+        # ScannerEntity makes the MAC its unique id; with several boxes it is the box and the MAC
+        self._attr_unique_id = client_uid(coordinator.serial, host.mac)
+
+    @property
+    def unique_id(self) -> str:
+        return self._attr_unique_id
 
     @property
     def device_info(self) -> DeviceInfo:

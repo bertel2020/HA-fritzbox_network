@@ -13,7 +13,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import CONF_SWITCH_AREAS, DOMAIN, KEY_TRACKER, SWITCH_AREAS, vpn_identifier
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
-from .models import Host, MeshNode, mac_id
+from .models import Host, MeshNode, client_uid, mac_id
 from .repeater import RepeaterCoordinator
 
 
@@ -35,7 +35,7 @@ class FritzNetworkClientEntity(CoordinatorEntity[FritzNetworkCoordinator]):
     ) -> None:
         super().__init__(coordinator)
         self._mac = host.mac
-        self._attr_unique_id = f"{host.mac}_{key}"
+        self._attr_unique_id = client_uid(coordinator.serial, host.mac, key)
         suffix = "" if key == KEY_TRACKER else f"_{key}"
         self.entity_id = f"{platform_domain}.fritz_{mac_id(host.mac)}{suffix}"
         info = DeviceInfo(
@@ -125,7 +125,13 @@ def async_remove_node_client_entities(
     mesh = entry.runtime_data.data.mesh
     if not mesh:
         return
-    wanted = {f"{mac}_{key}" for node in mesh.nodes.values() for mac in node.macs for key in keys}
+    serial = entry.runtime_data.serial
+    wanted = {
+        client_uid(serial, mac, key)
+        for node in mesh.nodes.values()
+        for mac in node.macs
+        for key in keys
+    }
     registry = er.async_get(hass)
     for entity in er.async_entries_for_config_entry(registry, entry.entry_id):
         if entity.domain == domain and entity.unique_id in wanted:
@@ -165,7 +171,7 @@ class FritzNetworkNodeEntity(CoordinatorEntity[FritzNetworkCoordinator]):
     ) -> None:
         super().__init__(coordinator)
         self._mac = node.mac
-        self._attr_unique_id = f"{node.mac}_{key}"
+        self._attr_unique_id = client_uid(coordinator.serial, node.mac, key)
         self.entity_id = f"{platform_domain}.fritz_{mac_id(node.mac)}_{key}"
         if node.role == "master":
             # the box device is created in async_setup_entry
@@ -220,7 +226,7 @@ class FritzNetworkRepeaterEntity(CoordinatorEntity[RepeaterCoordinator]):
     def __init__(self, coordinator: RepeaterCoordinator, platform_domain: str, key: str) -> None:
         super().__init__(coordinator)
         mac = coordinator.mac
-        self._attr_unique_id = f"{mac}_{key}"
+        self._attr_unique_id = client_uid(coordinator.main.serial, mac, key)
         self.entity_id = f"{platform_domain}.fritz_{mac_id(mac)}_{key}"
         node = coordinator.node
         self._attr_device_info = DeviceInfo(

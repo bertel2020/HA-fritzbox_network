@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from fritzconnection.core.exceptions import FritzConnectionException
+from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant, ServiceCall, SupportsResponse
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError, Unauthorized
 from homeassistant.helpers import (
@@ -31,7 +32,7 @@ from .const import (
     vpn_identifier,
 )
 from .coordinator import FritzNetworkCoordinator
-from .models import Host
+from .models import Host, split_client_uid
 
 NETWORK_RE = r"^\d{1,3}(\.\d{1,3}){3}/\d{1,2}$"
 
@@ -88,17 +89,24 @@ async def _async_targets(
 ) -> list[tuple[FritzNetworkCoordinator, Host]]:
     """The devices of this integration a call aims at, by device, area or entity."""
     registry = er.async_get(hass)
-    macs: set[str] = set()
+    # (box, MAC): an entity belongs to one box, and only that box is asked about its device
+    wanted: set[tuple[str, str]] = set()
     for entity_id in await async_extract_entity_ids(call):
         entry = registry.async_get(entity_id)
-        if entry is not None and entry.platform == DOMAIN:
-            # unique ids of client entities are "<mac>" or "<mac>_<key>"
-            macs.add(entry.unique_id.split("_")[0])
+        if entry is None or entry.platform != DOMAIN or entry.config_entry_id is None:
+            continue
+        config_entry = hass.config_entries.async_get_entry(entry.config_entry_id)
+        if config_entry is None or config_entry.state is not ConfigEntryState.LOADED:
+            continue
+        # unique ids of client entities are "<box>_<mac>" or "<box>_<mac>_<key>"
+        serial = config_entry.runtime_data.serial
+        if (parts := split_client_uid(entry.unique_id, serial)) is not None:
+            wanted.add((config_entry.entry_id, parts[0]))
     targets = [
         (config_entry.runtime_data, host)
         for config_entry in hass.config_entries.async_loaded_entries(DOMAIN)
         for host in config_entry.runtime_data.all_hosts.values()
-        if host.mac in macs
+        if (config_entry.entry_id, host.mac) in wanted
     ]
     if not targets:
         raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_target")

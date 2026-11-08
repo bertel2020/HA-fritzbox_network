@@ -32,6 +32,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Behoben
 
+- Mehrere FRITZ!Boxen: Die eindeutigen IDs der Geräte-Entitäten (Tracker, Schalter, Sensoren) tragen jetzt die Seriennummer der Box. Vorher war es nur die MAC, sodass ein Gerät, das zwei Boxen kennen, nur für eine Box eingerichtet werden konnte, und die Aktionen (Name, Wake on LAN) beide Boxen trafen. Bestehende Einträge werden beim Start umbenannt; Entitäts-IDs, Verläufe und Automationen bleiben. Die Aktionen sprechen nur die Box an, zu der die gewählte Entität gehört.
 - Die Erkennung (SSDP) übernimmt die Adresse einer bekannten Box nicht mehr, denn jedes Gerät im Netz kann die UDN (die öffentliche MAC) vortäuschen, und der nächste Login ginge an dieses Gerät. Eine neue Adresse trägst du unter „Verbindung ändern“ ein. Außerdem lehnt der Login am Webinterface eine Challenge mit ungewöhnlich vielen oder wenigen Runden ab.
 - Sicherheit: Die vier Verlaufsbefehle des Panels (`history/summary`, `history/device`, `history/traffic`, `vpn/history`) verlangen jetzt wie alle anderen einen Administrator.
 - Sicherheit: Die Aktionen (Name setzen, Wake on LAN, Route, Gast-WLAN-Passwort, Mitschnitt, VPN-Aufräumen) prüfen die Rolle des aufrufenden Benutzers; nur Administratoren dürfen sie ausführen. Aufrufe ohne Benutzer, etwa aus Automationen, bleiben erlaubt.

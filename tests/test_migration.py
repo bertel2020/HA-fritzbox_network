@@ -44,15 +44,15 @@ def test_a_core_unique_id_becomes_the_one_of_the_same_thing_here():
     assert counterpart(f"{SERIAL}-wi_fi_main_5ghz", SERIAL)[0] == f"{SERIAL}_wifi_5ghz"
     assert counterpart(f"{SERIAL}-wi_fi_guest", SERIAL)[0] == f"{SERIAL}_guest_wifi"
     assert counterpart(f"{SERIAL}-update", SERIAL)[0] == f"{SERIAL}_firmware"
-    # a device is the MAC, as this integration writes it
+    # a device is the box and the MAC, as this integration writes it
     assert counterpart("02:00:00:00:00:0B_tracker", SERIAL) == (
-        "02:00:00:00:00:0b",
+        f"{SERIAL}_02:00:00:00:00:0b",
         "client",
         "",
         [],
     )
     assert counterpart("02:00:00:00:00:0B_internet_access", SERIAL)[0] == (
-        "02:00:00:00:00:0b_internet_access"
+        f"{SERIAL}_02:00:00:00:00:0b_internet_access"
     )
 
 

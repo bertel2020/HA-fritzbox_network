@@ -44,7 +44,9 @@ async def test_entries_read_well_and_point_at_the_tracker(hass, fake_client, ent
     await hass.config_entries.async_setup(entry.entry_id)
     await hass.async_block_till_done()
     describe = _describers(hass)
-    tracker = er.async_get(hass).async_get_entity_id("device_tracker", "fritzbox_network", WLAN)
+    tracker = er.async_get(hass).async_get_entity_id(
+        "device_tracker", "fritzbox_network", f"SERIAL1_{WLAN}"
+    )
 
     new = describe["fritzbox_network_new_device"](
         Event("x", {"mac": WLAN, "name": "tablet", "ip": "192.0.2.9", "vendor": "Espressif Inc."})

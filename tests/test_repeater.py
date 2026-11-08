@@ -139,7 +139,10 @@ async def test_the_repeater_gets_its_entities_on_the_device_the_mesh_made(hass, 
     device = dr.async_get(hass).async_get_device(identifiers={(DOMAIN, REPEATER)})
     assert device is not None
     entities = er.async_entries_for_device(registry, device.id, include_disabled_entities=True)
-    assert {e.unique_id for e in entities} >= {f"{REPEATER}_wifi_5ghz", f"{REPEATER}_box_uptime"}
+    assert {e.unique_id for e in entities} >= {
+        f"SERIAL1_{REPEATER}_wifi_5ghz",
+        f"SERIAL1_{REPEATER}_box_uptime",
+    }
 
 
 async def test_a_repeater_that_is_not_chosen_is_not_asked_and_has_no_controls(

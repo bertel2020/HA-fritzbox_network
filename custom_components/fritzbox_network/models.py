@@ -24,6 +24,35 @@ def mac_id(mac: str) -> str:
     return format_mac(mac).replace(":", "")
 
 
+_CLIENT_UID_MAC = re.compile(r"[0-9a-f]{2}(?::[0-9a-f]{2}){5}")
+
+
+def client_uid(serial: str, mac: str, key: str | None = None) -> str:
+    """The unique id of an entity of a device: the box first, so two boxes never meet in one id.
+
+    The tracker has no key; its id is the box and the MAC.
+    """
+    return f"{serial}_{mac}" if key is None else f"{serial}_{mac}_{key}"
+
+
+def split_client_uid(unique_id: str, serial: str) -> tuple[str, str | None] | None:
+    """(MAC, key) of the unique id of an entity of a device of that box; None for anything else."""
+    prefix = f"{serial}_"
+    if not unique_id.startswith(prefix):
+        return None
+    rest = unique_id[len(prefix) :]
+    if not _CLIENT_UID_MAC.fullmatch(rest[:17]) or rest[17:18] not in ("", "_"):
+        return None
+    return rest[:17], (rest[18:] or None)
+
+
+def legacy_client_uid(unique_id: str) -> tuple[str, str | None] | None:
+    """(MAC, key) of a unique id from before they carried the box: "<mac>" or "<mac>_<key>"."""
+    if not _CLIENT_UID_MAC.fullmatch(unique_id[:17]) or unique_id[17:18] not in ("", "_"):
+        return None
+    return unique_id[:17], (unique_id[18:] or None)
+
+
 def _mac(value: Any) -> str | None:
     """The MAC in the usual format, or None where it is not a valid MAC address."""
     if not isinstance(value, str):

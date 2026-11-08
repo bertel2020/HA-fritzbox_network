@@ -37,7 +37,7 @@ async def test_entity_ids_follow_the_mac(hass, fake_client, entry):
     await _setup(hass, entry)
     registry = er.async_get(hass)
 
-    assert registry.async_get("device_tracker.fritz_020000000003").unique_id == WLAN
+    assert registry.async_get("device_tracker.fritz_020000000003").unique_id == f"SERIAL1_{WLAN}"
     assert registry.async_get("sensor.fritz_020000000003_ip_address")
     assert registry.async_get("sensor.fritz_020000000003_access_point")
     assert registry.async_get("switch.fritz_020000000003_internet_access")
@@ -527,12 +527,16 @@ async def test_radio_sensors_of_an_access_point(hass, fake_client, entry):
     await _setup(hass, entry)
     registry = er.async_get(hass)
     ids = {
-        key: registry.async_get_entity_id("sensor", "fritzbox_network", f"{BOX}_{key}_2_4ghz")
+        key: registry.async_get_entity_id(
+            "sensor", "fritzbox_network", f"SERIAL1_{BOX}_{key}_2_4ghz"
+        )
         for key in ("radio_channel", "radio_utilization", "radio_noise")
     }
     assert all(ids.values())
     assert all(registry.async_get(i).disabled_by for i in ids.values())
-    assert registry.async_get_entity_id("sensor", "fritzbox_network", f"{BOX}_radio_noise_5ghz")
+    assert registry.async_get_entity_id(
+        "sensor", "fritzbox_network", f"SERIAL1_{BOX}_radio_noise_5ghz"
+    )
 
     for entity_id in ids.values():
         _enable(hass, entity_id)
@@ -627,3 +631,50 @@ async def test_wake_on_lan_for_wifi_devices_is_an_option(hass, fake_client, entr
     await hass.async_block_till_done()
     assert registry.async_get(f"button.fritz_{wifi}_wake_on_lan")
     assert registry.async_get(f"switch.fritz_{wifi}_auto_wake_on_lan")
+
+
+async def test_unique_ids_from_before_they_carried_the_box_are_renamed_in_place(
+    hass, fake_client, entry
+):
+    from custom_components.fritzbox_network.models import (
+        client_uid,
+        legacy_client_uid,
+        split_client_uid,
+    )
+
+    registry = er.async_get(hass)
+    entry.add_to_hass(hass)
+    old = {
+        "device_tracker": WLAN,
+        "sensor": f"{WLAN}_ip_address",
+        "switch": f"{LAN}_internet_access",
+    }
+    made = {
+        domain: registry.async_get_or_create(
+            domain, "fritzbox_network", uid, config_entry=entry, suggested_object_id=f"old_{domain}"
+        ).entity_id
+        for domain, uid in old.items()
+    }
+    box_level = registry.async_get_or_create(
+        "sensor", "fritzbox_network", "SERIAL1_internet_download", config_entry=entry
+    )
+
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    # the entity ids stay, the unique ids carry the box now
+    assert registry.async_get(made["device_tracker"]).unique_id == f"SERIAL1_{WLAN}"
+    assert registry.async_get(made["sensor"]).unique_id == f"SERIAL1_{WLAN}_ip_address"
+    assert registry.async_get(made["switch"]).unique_id == f"SERIAL1_{LAN}_internet_access"
+    assert registry.async_get(box_level.entity_id).unique_id == "SERIAL1_internet_download"
+
+    # and the helpers read them back, for a box whose serial has an underscore too
+    assert split_client_uid(client_uid("A_1", WLAN, "ip_address"), "A_1") == (WLAN, "ip_address")
+    assert split_client_uid(client_uid("A_1", WLAN), "A_1") == (WLAN, None)
+    assert split_client_uid(client_uid("B", WLAN), "A_1") is None
+    assert split_client_uid("SERIAL1_internet_download", "SERIAL1") is None
+    assert legacy_client_uid(f"{WLAN}_ip_address") == (WLAN, "ip_address")
+    assert legacy_client_uid(WLAN) == (WLAN, None)
+    assert legacy_client_uid("SERIAL1_internet_download") is None
+    # two boxes never share the id of one device
+    assert client_uid("A", WLAN, "ip_address") != client_uid("B", WLAN, "ip_address")

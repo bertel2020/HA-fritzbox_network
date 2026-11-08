@@ -11,11 +11,12 @@ from fritzconnection.core.exceptions import (
     FritzSecurityError,
 )
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_PORT, CONF_USERNAME, Platform
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import ConfigEntryAuthFailed, ConfigEntryNotReady
 from homeassistant.helpers import (
     config_validation as cv,
     device_registry as dr,
+    entity_registry as er,
     issue_registry as ir,
 )
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceEntry
@@ -40,6 +41,7 @@ from .const import (
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .history import DeviceHistory
 from .latency import LatencyMonitor
+from .models import client_uid, legacy_client_uid
 from .panel import async_drop_panel, async_ensure_panel, async_serve_frontend
 from .repairs import (
     async_remove_internet_issues,
@@ -161,6 +163,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
         # the repeaters the user chose to control: each asks its own repeater, slowly, on its own
         for mac in repeater_macs(entry):
             coordinator.repeaters[mac] = RepeaterCoordinator(hass, entry, coordinator, mac)
+    await _async_migrate_client_unique_ids(hass, entry, serial)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     await async_ensure_panel(hass)
     for repeater in coordinator.repeaters.values():
@@ -171,6 +174,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
     entry.async_create_task(hass, coordinator.async_refresh(), "fritzbox_network_second_poll")
     _setup_stale_check(hass, entry)
     return True
+
+
+async def _async_migrate_client_unique_ids(
+    hass: HomeAssistant, entry: FritzNetworkConfigEntry, serial: str
+) -> None:
+    """Give the entities of devices the box in their unique id.
+
+    They were "<mac>" and "<mac>_<key>", so a device that two boxes know could be set up for one
+    box only. Entities of the box itself start with its serial number and stay as they are.
+    """
+
+    @callback
+    def _renamed(registry_entry: er.RegistryEntry) -> dict[str, str] | None:
+        if (parts := legacy_client_uid(registry_entry.unique_id)) is None:
+            return None
+        mac, key = parts
+        new = client_uid(serial, mac, key)
+        if er.async_get(hass).async_get_entity_id(registry_entry.domain, DOMAIN, new):
+            return None  # already there: leave the old one for the user to remove
+        return {"new_unique_id": new}
+
+    await er.async_migrate_entries(hass, entry.entry_id, _renamed)
 
 
 def _drop_capture(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
