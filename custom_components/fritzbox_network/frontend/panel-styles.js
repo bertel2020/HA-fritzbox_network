@@ -852,6 +852,13 @@ export const PANEL_CSS = `
   .chead > .label { flex: 1 1 auto; }
   .chead .seg { grid-auto-flow: column; width: auto; }
   .chead .seg button { min-height: 32px; text-align: center; border-top: 0; }
+  /* on a phone a finger needs about 44 px: the look stays, the area to hit grows */
+  @container app (max-width: 600px) {
+    .chead .seg button { min-height: 44px; }
+    .tpager select, .tpager .btn { min-height: 44px; }
+    .switch::before { content: ""; position: absolute; inset: -6px -4px; }
+    .hint a { display: inline-block; padding: 12px 0; margin: -12px 0; }
+  }
   .sec > .label { display: flex; align-items: center; min-height: 34px; }
   .trends { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px 24px; margin-top: 8px; }
   .topdev { list-style: none; margin: 8px 0 0; padding: 0; }
