@@ -1010,7 +1010,10 @@ test("privacy mode follows privacy_mode of the answers", async () => {
   assert.doesNotMatch(out, /Mama|Hermes|Gewinnspiel|0900123/);
 });
 
-test("statistics from fritzbox_phone/stats: source and window, a partial comparison, the hint on the call history, 7 × 24 hours", async () => {
+test("statistics from fritzbox_phone/stats: source and window, a partial comparison, the hint on the call history, 7 × 24 hours", async (t) => {
+  // the view takes "today" from the clock: fix it to the day of the fixtures
+  mock.timers.enable({ apis: ["Date"], now: NOW });
+  t.after(() => mock.timers.reset());
   const { p, wsCalls: sent, html } = await makeWsPanel();
   const before = sent.length;
   p._onPhoneClick({ act: "ph-view", phVal: "stats" });
