@@ -1202,6 +1202,8 @@ export const PANEL_CSS = `
     #phone-view .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #phone-view .tile small { white-space: normal; overflow: visible; text-overflow: clip; }
     .ph-fold { min-height: 44px; }
+    .ph-name { flex-wrap: wrap; row-gap: 2px; }
+    .ph-name > span:first-child { max-width: 100%; }
     .ph-src a { display: inline-block; padding: 12px 0; margin: -12px 0; }
   }
   .ph-group { padding: 12px 0 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
