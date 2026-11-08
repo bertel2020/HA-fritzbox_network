@@ -405,6 +405,7 @@ export const PANEL_CSS = `
     .seg.subtabs { display: flex; grid-auto-flow: column; overflow-x: auto; scrollbar-width: none; }
     .seg.subtabs button { flex: 1 0 auto; border-top: 0; border-left: 1px solid var(--input-line); text-align: center; }
     .seg.subtabs button:first-child { border-left: 0; } }
+  @container app (max-width: 380px) { .seg.subtabs button { padding: 0 8px; } }
   .opts { margin: 16px 0; }
   .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .stat { border-radius: 12px; padding: 12px; background: var(--soft); }
@@ -427,12 +428,19 @@ export const PANEL_CSS = `
   .crow .since { flex: none; color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
   .crow:has(input:checked) { background: var(--accent-soft); margin: 0 -12px; padding-left: 12px; padding-right: 12px; border-radius: 8px; }
   .sticky { position: sticky; bottom: 12px; z-index: 2; box-shadow: var(--shadow); }
+  /* the bar of the pages sits above the bar at the bottom of the phone, not under it, and its buttons share the width */
+  :host([compact]) .sticky { bottom: calc(76px + env(safe-area-inset-bottom)); }
+  :host([compact]) .selbar { gap: 8px; padding: 10px 12px; }
+  :host([compact]) .selbar .btn-row, :host([compact]) .applybar .btn-row { width: 100%; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  :host([compact]) .selbar .btn-row .btn.p { grid-column: 1 / -1; }
+  :host([compact]) .selbar .btn, :host([compact]) .applybar .btn { padding: 0 10px; }
   .btn.danger, .btn.p.danger { background: var(--bad); border-color: var(--bad); color: var(--bg); }
   .btn.p.danger:hover { filter: brightness(1.08); }
   .foldhead { display: flex; align-items: center; gap: 10px; width: 100%; padding: 0; font: inherit; font-size: 16px; font-weight: 500; color: var(--text); text-align: left; }
   .foldhead em { font-style: normal; font-size: 12px; color: var(--muted); background: var(--neutral-soft); border-radius: 10px; padding: 1px 8px; }
   .foldhead .chev { margin-left: auto; color: var(--muted); }
   button.foldhead { cursor: pointer; }
+  @container app (max-width: 600px) { button.foldhead { min-height: 44px; } }
   #hidden .hint { margin: 8px 0 0; }
   #hidden .lead { margin: 10px 0 4px; }
   .modecards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
