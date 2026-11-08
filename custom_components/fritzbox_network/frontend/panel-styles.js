@@ -921,6 +921,11 @@ export const PANEL_CSS = `
   .achip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
   .achip em { font-style: normal; color: var(--muted); }
   .agrid { display: grid; grid-template-columns: 28px repeat(16, minmax(0, 1fr)); gap: 3px; margin-top: 12px; }
+  /* 256 cells do not fit a phone at a size one can hit: the grid keeps cells of 30 px and is wiped sideways */
+  @container app (max-width: 600px) {
+    .achip { min-height: 40px; }
+    .agrid { grid-template-columns: 28px repeat(16, 30px); overflow-x: auto; padding: 4px 4px 8px 0; scrollbar-width: thin; touch-action: pan-x pan-y; }
+  }
   .rowlab, .collab { font-size: 10px; color: var(--muted); font-family: ui-monospace, Menlo, monospace; }
   .rowlab { display: grid; place-items: center; }
   .collab { text-align: center; }
