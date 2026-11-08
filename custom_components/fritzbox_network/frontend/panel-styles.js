@@ -75,7 +75,7 @@ export const PANEL_CSS = `
   nav em { font-style: normal; font-size: 11px; font-weight: 600; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--warn-soft); color: var(--warn); }
   .header-end { display: flex; align-items: center; gap: 6px; flex: none; }
   .intlink { text-decoration: none; }
-  .subline { display: flex; align-items: center; flex-wrap: wrap; gap: 0 10px; }
+  .brand small.subline { display: flex; align-items: center; flex-wrap: wrap; gap: 0 10px; }
   .subline #sub:empty { display: none; }
   .fresh { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); font-size: 13px; white-space: nowrap; }
   .fresh .dot { width: 8px; height: 8px; box-shadow: 0 0 0 3px var(--ok-soft); }
@@ -83,7 +83,7 @@ export const PANEL_CSS = `
   /* six pages need about 1180 px next to the title and the link; below that they get a row of their own */
   @container app (max-width: 1180px) { nav { order: 3; flex: 1 1 100%; padding-bottom: 8px; } }
   @container app (max-width: 760px) { .menu { display: grid; } }
-  @container app (max-width: 520px) { .header-end { gap: 4px; } }
+  @container app (max-width: 520px) { .header-end { gap: 0; } .header { gap: 0 8px; flex-wrap: nowrap; } .brand { min-height: 56px; flex: 1 1 0; } .brand small.subline { white-space: normal; overflow: visible; row-gap: 2px; } .header-end .iconbtn { width: 44px; height: 44px; } }
 
   .callbar { max-width: 1200px; margin: 0 auto; padding: 16px 24px 0; }
   @container app (max-width: 600px) { .callbar { padding: 12px 16px 0; } }
@@ -167,7 +167,8 @@ export const PANEL_CSS = `
   .fchip .x { margin-right: -4px; display: inline-grid; }
   @container app (max-width: 600px) {
     .chips { gap: 6px; }
-    .fchip { padding: 0 9px; }
+    .fchip { padding: 0 9px; min-height: 44px; }
+    .tlink { padding: 12px 0; margin: -8px 0; }
     .fchip.more > svg.i:first-child, .fchip.more b { display: none; }
     .maphead .aslist { display: none; }
   }
@@ -400,7 +401,10 @@ export const PANEL_CSS = `
   .seg button { padding: 0 14px; min-height: 40px; font-weight: 500; color: var(--muted); border-left: 1px solid var(--input-line); white-space: nowrap; }
   .seg button:first-child { border-left: 0; }
   .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
-  @container app (max-width: 600px) { .seg { grid-auto-flow: row; width: 100%; } .seg button { border-left: 0; border-top: 1px solid var(--input-line); text-align: left; } .seg button:first-child { border-top: 0; } }
+  @container app (max-width: 600px) { .seg { grid-auto-flow: row; width: 100%; } .seg button { border-left: 0; border-top: 1px solid var(--input-line); text-align: left; } .seg button:first-child { border-top: 0; }
+    .seg.subtabs { display: flex; grid-auto-flow: column; overflow-x: auto; scrollbar-width: none; }
+    .seg.subtabs button { flex: 1 0 auto; border-top: 0; border-left: 1px solid var(--input-line); text-align: center; }
+    .seg.subtabs button:first-child { border-left: 0; } }
   .opts { margin: 16px 0; }
   .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
   .stat { border-radius: 12px; padding: 12px; background: var(--soft); }
