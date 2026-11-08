@@ -202,9 +202,7 @@ async def test_the_actions_refuse_a_user_who_is_no_administrator(
     assert not [c for c in fake_client.calls if c[0] == "name"]
 
 
-async def test_the_actions_run_for_an_administrator(
-    hass, fake_client, entry, hass_admin_user
-):
+async def test_the_actions_run_for_an_administrator(hass, fake_client, entry, hass_admin_user):
     await _setup(hass, entry)
     await hass.services.async_call(
         DOMAIN,

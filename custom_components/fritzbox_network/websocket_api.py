@@ -314,9 +314,11 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
         actions = {
             name: entity_id
             for name, (platform, key) in DEVICE_ACTIONS.items()
-            if (entity_id := registry.async_get_entity_id(
-                platform, DOMAIN, client_uid(coordinator.serial, host.mac, key)
-            ))
+            if (
+                entity_id := registry.async_get_entity_id(
+                    platform, DOMAIN, client_uid(coordinator.serial, host.mac, key)
+                )
+            )
         }
         # a group is a label on the "Internet access" switch, not on the device: a label on
         # the device would also reach its priority switch
