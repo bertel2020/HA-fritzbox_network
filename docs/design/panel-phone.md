@@ -122,7 +122,7 @@ Quelle je AB `sensor.*_<name>` (`translation_key: answering_machine`), Zustand =
 | Abspielen im Browser | `hass.callWS({ type: "auth/sign_path", path: message.recording_path, expires: 3600 })` → `<audio src>`; die Aufnahme kommt über `FritzBoxRecordingView` (`/api/fritzbox_phone/recording/<entry_id>/<tam_index>/<message_index>?key=…`, `requires_auth`), nie direkt von der Box. Signierte Adresse ~50 Min. wiederverwenden (wie die Karte). |
 | Als gelesen beim Abspielen | `fritzbox_phone.mark_message_read` `{ entity_id, message_index, message_key: message.key, read: true }` |
 | Gelesen/ungelesen | dasselbe mit `read: true/false` |
-| Auf Lautsprecher … | `fritzbox_phone.play_message` `{ entity_id, message_index, message_key, media_player }`; braucht eine interne URL in HA (`no_internal_url`) |
+| Lautsprecher … | `fritzbox_phone.play_message` `{ entity_id, message_index, message_key, media_player }`; braucht eine interne URL in HA (`no_internal_url`) |
 | Herunterladen | **nicht** `download_message` (veraltet, legt die Datei **ohne Anmeldung** unter `/local` ab), sondern die signierte Adresse als `<a download>` |
 | Löschen … (Rückfrage) | `fritzbox_phone.delete_message` `{ entity_id, message_index, message_key }` |
 | AB ein/aus | `switch.turn_on/turn_off` auf `switch.*` mit `translation_key: tam_enabled` (Zuordnung über dasselbe Gerät und den Namen; siehe Offene Fragen) |

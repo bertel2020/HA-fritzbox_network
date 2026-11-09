@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aktionen einer Nachricht – Mockup</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: light-dark(#f4f6f9, #0f1216);
+    --surface: light-dark(#fff, #1b1f24);
+    --line: light-dark(#e1e5ea, #2d333b);
+    --line-2: light-dark(#ccd0da, #3b434d);
+    --text: light-dark(#1b1f24, #e6e9ed);
+    --muted: light-dark(#5b6270, #9aa4b1);
+    --accent: light-dark(#0a6aa8, #5bb2ea);
+    --accent-soft: light-dark(#eaf3fa, #16324a);
+    --bad: light-dark(#a3281e, #f0877d);
+    --neutral-soft: light-dark(#eef1f4, #2a3038);
+    --ok-soft: light-dark(#e6f4ea, #173a24);
+    --ok: light-dark(#1e6b34, #7fd49a);
+    --shadow: 0 1px 2px rgb(16 24 40 / 14%), 0 6px 18px -10px rgb(16 24 40 / 30%);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 14px/1.45 Roboto, "Noto Sans", system-ui, sans-serif; padding: 20px; }
+  h1 { font-size: 18px; font-weight: 500; margin: 0 0 4px; }
+  p.lead { color: var(--muted); margin: 0 0 8px; max-width: 72ch; }
+  .label { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 26px 0 8px; display: flex; gap: 10px; align-items: center; }
+  .label b { background: var(--neutral-soft); color: var(--text); border-radius: 10px; padding: 1px 10px; letter-spacing: 0; text-transform: none; font-size: 12px; }
+  .label b.new { background: var(--ok-soft); color: var(--ok); }
+  .grid { display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start; }
+  .frame { border: 1px solid var(--line); border-radius: 14px; background: var(--surface); box-shadow: var(--shadow); padding: 14px 16px; }
+  .frame.wide { width: 100%; max-width: 640px; }
+  .frame.phone { width: 360px; max-width: 100%; }
+  .msg { display: flex; justify-content: space-between; gap: 8px; padding-bottom: 8px; }
+  .msg small { color: var(--muted); display: block; }
+  .ico { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .btn { font: inherit; font-weight: 500; color: var(--text); background: var(--surface); border: 1px solid var(--line-2); border-radius: 12px; min-height: 38px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; white-space: nowrap; }
+  .btn.d { border-color: var(--bad); color: var(--bad); }
+  .btn.icon { padding: 0; width: 38px; }
+
+  /* vorher */
+  .old .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+  /* nachher */
+  .new .row { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+  .new .row .btn.d { margin-left: auto; }
+  .new.phone .row { display: grid; grid-template-columns: 1fr 1fr; }
+  .new.phone .row .btn.d { grid-column: 1 / -1; margin-left: 0; }
+  .new.phone .btn { padding: 0 8px; min-height: 44px; }
+  .note { margin-top: 26px; padding: 14px 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); max-width: 640px; }
+  .note ul { margin: 6px 0 0; padding-left: 18px; color: var(--muted); }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="spk" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></symbol>
+  <symbol id="dl" viewBox="0 0 24 24"><path d="M12 4v12M7 11l5 5 5-5M5 20h14"/></symbol>
+  <symbol id="mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+  <symbol id="bin" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></symbol>
+</defs></svg>
+
+<h1>Aktionen einer Nachricht</h1>
+<p class="lead">Aufgeklappte Nachricht im Anrufbeantworter. Vorher gleich breite Kacheln mit einem verirrten „Löschen“, nachher Knöpfe in ihrer eigenen Breite und Löschen abgesetzt am Zeilenende.</p>
+
+<div class="label"><b>Vorher</b> Desktop (so wie im Screenshot)</div>
+<div class="frame wide old">
+  <div class="msg"><div><b>Anna Beispiel</b><small>Gestern, 18:42 · 0:23</small></div></div>
+  <div class="row">
+    <button class="btn"><svg class="ico"><use href="#spk"/></svg>Auf Lautsprecher …</button>
+    <button class="btn"><svg class="ico"><use href="#dl"/></svg>Herunterladen</button>
+    <button class="btn"><svg class="ico"><use href="#mail"/></svg>Als gelesen markieren</button>
+    <button class="btn d"><svg class="ico"><use href="#bin"/></svg>Löschen …</button>
+  </div>
+</div>
+
+<div class="label"><b class="new">Nachher</b> Desktop</div>
+<div class="frame wide new">
+  <div class="msg"><div><b>Anna Beispiel</b><small>Gestern, 18:42 · 0:23</small></div></div>
+  <div class="row">
+    <button class="btn"><svg class="ico"><use href="#spk"/></svg>Auf Lautsprecher …</button>
+    <button class="btn"><svg class="ico"><use href="#dl"/></svg>Herunterladen</button>
+    <button class="btn"><svg class="ico"><use href="#mail"/></svg>Gelesen</button>
+    <button class="btn d"><svg class="ico"><use href="#bin"/></svg>Löschen …</button>
+  </div>
+</div>
+
+<div class="label"><b class="new">Nachher</b> Handy (360 px): zwei mal zwei, Löschen über die ganze Breite</div>
+<div class="grid">
+  <div class="frame phone new">
+    <div class="msg"><div><b>Anna Beispiel</b><small>Gestern, 18:42 · 0:23</small></div></div>
+    <div class="row">
+      <button class="btn"><svg class="ico"><use href="#spk"/></svg>Lautsprecher …</button>
+      <button class="btn"><svg class="ico"><use href="#dl"/></svg>Herunterladen</button>
+      <button class="btn"><svg class="ico"><use href="#mail"/></svg>Gelesen</button>
+      <button class="btn d"><svg class="ico"><use href="#bin"/></svg>Löschen …</button>
+    </div>
+  </div>
+</div>
+
+<div class="note"><b>Zum Abwägen</b>
+<ul>
+  <li>Die Beschriftungen „Gelesen“ und „Ungelesen“ ersetzen „Als gelesen markieren“ und „Als ungelesen markieren“; der Zustand steht schon am Eintrag.</li>
+  <li>Auf dem Handy heißt der erste Knopf nur „Lautsprecher …“, damit er bei 360 px in die halbe Breite passt.</li>
+  <li>Die Auslassungspunkte bleiben bei „Lautsprecher …“ und „Löschen …“, weil beide einen Dialog öffnen.</li>
+</ul></div>
+</body>
+</html>
