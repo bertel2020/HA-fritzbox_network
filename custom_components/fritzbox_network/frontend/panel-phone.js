@@ -650,7 +650,7 @@ export function heatChart(grid, width, ctx) {
     row.forEach((v, j) => {
       const lvl = v === 0 ? 0 : Math.min(5, 1 + Math.floor((v / max) * 4.999));
       const label = fill(s.heatLabel, { day: s.weekdays[i], slot: slots[j]?.slot ?? "", n: v });
-      g += `<g class="cell" tabindex="0" role="img" aria-label="${esc(label)}" data-tip="${esc(label)}"><rect class="h${lvl}" x="${(L + j * cw + 1).toFixed(1)}" y="${T + i * ch + 1}" width="${(cw - 2).toFixed(1)}" height="${ch - 2}" rx="4"/>${v && cw >= 18 ? `<text class="hv h${lvl}t" x="${(L + j * cw + cw / 2).toFixed(1)}" y="${T + i * ch + ch / 2 + 4}" text-anchor="middle">${v}</text>` : ""}</g>`;
+      g += `<g class="ph-cell" tabindex="0" role="img" aria-label="${esc(label)}" data-tip="${esc(label)}"><rect class="h${lvl}" x="${(L + j * cw + 1).toFixed(1)}" y="${T + i * ch + 1}" width="${(cw - 2).toFixed(1)}" height="${ch - 2}" rx="4"/>${v && cw >= 18 ? `<text class="hv h${lvl}t" x="${(L + j * cw + cw / 2).toFixed(1)}" y="${T + i * ch + ch / 2 + 4}" text-anchor="middle">${v}</text>` : ""}</g>`;
     });
   });
   return `<svg class="ph-chart" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="group" aria-label="${esc(s.heatChart)}">${g}</svg>`;

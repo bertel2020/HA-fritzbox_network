@@ -1338,9 +1338,9 @@ export const PANEL_CSS = `
   .ph-chart .ax { fill: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
   .ph-chart .hit { fill: transparent; }
   .ph-chart .bar:hover .hit, .ph-chart .bar:focus .hit { fill: var(--neutral-soft); }
-  .ph-chart .bar:focus, .ph-chart .cell:focus { outline: none; }
+  .ph-chart .bar:focus, .ph-chart .ph-cell:focus { outline: none; }
   .ph-chart .bar:focus-visible .hit { stroke: var(--focus); stroke-width: 2; }
-  .ph-chart .cell:focus-visible rect { stroke: var(--focus); stroke-width: 3; }
+  .ph-chart .ph-cell:focus-visible rect { stroke: var(--focus); stroke-width: 3; }
   .ph-chart .hv { font-size: 11px; font-weight: 500; font-variant-numeric: tabular-nums; pointer-events: none; }
   #phone-view .s-in { fill: var(--s-in); background: var(--s-in); }
   #phone-view .s-out { fill: var(--s-out); background: var(--s-out); }

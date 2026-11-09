@@ -544,8 +544,8 @@ test("the charts fit narrow screens: at 375 px the labels are thinned out", () =
   assert.match(narrow, /width="309"/);
   assert.match(page.heatChart(s.heat, 260, { t }), /width="260"/);
   // 24 columns where each gets 20 px, else eight blocks
-  assert.equal([...page.heatChart(s.heat, 700, { t }).matchAll(/<g class="cell"/g)].length, 7 * 24);
-  assert.equal([...page.heatChart(s.heat, 309, { t }).matchAll(/<g class="cell"/g)].length, 7 * 8);
+  assert.equal([...page.heatChart(s.heat, 700, { t }).matchAll(/<g class="ph-cell"/g)].length, 7 * 24);
+  assert.equal([...page.heatChart(s.heat, 309, { t }).matchAll(/<g class="ph-cell"/g)].length, 7 * 8);
   assert.equal(page.heatShape(s.heat, 500).hourly, false);
 });
 
