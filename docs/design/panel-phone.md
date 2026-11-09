@@ -10,7 +10,7 @@ Das widerspricht nicht dem Beschluss in [`panel-core-gap.md`](panel-core-gap.md)
 
 **Netzwerk · Internet · Box (Übersicht | Telefon) · Diagnose · Verwalten**
 
-- Ohne `fritzbox_phone` hat Box **keine Unterreiter**; die Seite sieht aus wie in `mockups/box.html`. Kein Hinweis, keine Werbung. `#/box/phone` leitet dann auf `#/box` um.
+- Telefon ist ein **eigener Tab** zwischen Box und Diagnose (`mockups/telefon-tab.html`), nur sichtbar mit `fritzbox_phone`; Box hat keine Unterreiter. Kein Hinweis, keine Werbung. Der Klingel-Punkt und der Zähler neuer Nachrichten sitzen am Telefon-Tab. `#/phone` leitet ohne die Integration auf `#/box` um; die alte Adresse `#/box/phone` führt weiter zur Telefonseite.
 - Erkannt wird `fritzbox_phone`, wenn `hass.config.components` den Eintrag `"fritzbox_phone"` enthält **und** `hass.entities` mindestens eine Entität mit `platform === "fritzbox_phone"` hat. Beides wird bei jedem `hass`-Wechsel neu bewertet (die Integration kann nachträglich geladen oder entladen werden).
 - Der Unterreiter trägt die Zahl ungehörter Nachrichten als Plakette (aus `binary_sensor.*_ungelesene_nachrichten`, Attribut `count`). Klingelt es, bekommt der Reiter Box einen Punkt (wie der Neustart-Punkt).
 
@@ -291,7 +291,7 @@ Wie in `panel-core-gap.md` §8, dazu:
 
 **Stufe 1 — nur Entitäten und Dienste (kein Code in `fritzbox_phone` nötig)**
 
-1. Erkennung und Unterreiter; `#/box/phone`; ohne Integration unsichtbar.
+1. Erkennung und Tab; `#/phone`; ohne Integration unsichtbar.
 2. Modul `phone-model.js`: Entitäten über `platform`/`translation_key` finden, Box über Seriennummer zuordnen, Attribute defensiv in ein eigenes Modell übersetzen (Datum, Dauer, Nummer, Typ). Tests mit Fixture.
 3. Seite mit Tageszahlen, Anrufliste (Filter, Suche, Tage), AB (Browser-Player über `auth/sign_path`, gelesen/löschen/Lautsprecher), Telefonbuch, Live-Band.
 4. Aktionen über die Dienste, immer mit `device_id`; Rückfragen, Toasts, Fehlertexte.

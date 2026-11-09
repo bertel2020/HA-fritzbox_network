@@ -161,13 +161,14 @@ const ICON_URL = new URL("./brand/icon.png", import.meta.url).href;
 export const TAB_GROUPS = {
   net: ["net", "wlan", "addresses", "routes"],
   internet: ["internet", "vpn"],
-  box: ["box", "phone"],
+  box: ["box"],
+  phone: ["phone"],
   diagnose: ["diagnose"],
   devices: ["filter", "cleanup", "migrate"],
 };
 export const TABS = Object.keys(TAB_GROUPS);
 // a page named like its tab is called differently in the switch: "Network" › "Devices"
-const SUB_LABELS = { net: "netDevices", internet: "connection", box: "boxOverview" };
+const SUB_LABELS = { net: "netDevices", internet: "connection" };
 
 /** The tab a page belongs to. */
 export function groupOf(page) {
@@ -202,17 +203,17 @@ export function renderSubTabs(active, t, state = {}) {
   if (pages.length < 2) return "";
   return `<div class="seg subtabs" role="tablist" aria-label="${escapeHtml(t.tabs[group])}">${pages
     .map((id) => {
-      const unread = id === "phone" && state.phoneUnread > 0 ? ` <span class="chip info sub-badge">${state.phoneUnread}<span class="sr"> ${escapeHtml(fill(t.phone.unread, { n: "" }).trim())}</span></span>` : "";
-      return `<button role="tab" tabindex="${id === active ? 0 : -1}" data-tab="${id}" aria-selected="${id === active}" aria-pressed="${id === active}">${escapeHtml(t.tabs[SUB_LABELS[id] ?? id])}${unread}</button>`;
+      return `<button role="tab" tabindex="${id === active ? 0 : -1}" data-tab="${id}" aria-selected="${id === active}" aria-pressed="${id === active}">${escapeHtml(t.tabs[SUB_LABELS[id] ?? id])}</button>`;
     })
     .join("")}</div>`;
 }
 
 /** The icons of the five tabs, shown in the bar at the bottom of a narrow screen. */
-const NAV_ICONS = { net: "network", internet: "globe", box: "router", diagnose: "search", devices: "list" };
+const NAV_ICONS = { net: "network", internet: "globe", box: "router", phone: "phone", diagnose: "search", devices: "list" };
 
 /**
- * The five tabs. Internet carries a dot for the state of the line, Box one while it restarts,
+ * The tabs. Internet carries a dot for the state of the line, Box one while it restarts, Phone
+ * (only where FRITZ!Box Telefon is there) one while it rings or else the number of new messages,
  * Manage the number of devices gone for long.
  */
 export function renderNav(state, t, stale, icons = false) {
@@ -223,13 +224,16 @@ export function renderNav(state, t, stale, icons = false) {
   const dot = line ? `<i class="dot ${line.connected === false ? "" : "on"}" aria-hidden="true"></i>` : "";
   const label = line ? `${t.tabs.internet}, ${line.connected === false ? t.inet.state.down : t.inet.state.up}` : "";
   const restarting = state.boxRestart && state.boxRestart.phase !== "back";
-  // a dot on the box while it restarts, or while a phone rings (from FRITZ!Box Telefon)
+  // the phone tab: a dot while it rings, else the number of new messages (from FRITZ!Box Telefon)
   const ringing = Boolean(state.phoneRinging);
-  const boxNote = [restarting ? t.boxPage.restarting : "", ringing ? t.phone.ringingTab : ""].filter(Boolean).join(", ");
+  const unread = Number(state.phoneUnread) > 0 ? Number(state.phoneUnread) : 0;
+  const phoneNote = ringing ? t.phone.ringingTab : unread ? fill(t.phone.unread, { n: unread }) : "";
+  const phoneExtra = ringing ? `<i class="dot warn" aria-hidden="true"></i>` : unread ? `<em>${unread}</em>` : "";
   return [
     tab("net"),
     tab("internet", dot, label),
-    tab("box", restarting || ringing ? `<i class="dot warn" aria-hidden="true"></i>` : "", boxNote ? `${t.tabs.box}, ${boxNote}` : ""),
+    tab("box", restarting ? `<i class="dot warn" aria-hidden="true"></i>` : "", restarting ? `${t.tabs.box}, ${t.boxPage.restarting}` : ""),
+    state.phoneFound ? tab("phone", phoneExtra, phoneNote ? `${t.tabs.phone}, ${phoneNote}` : "") : "",
     tab("diagnose"),
     tab("devices", stale ? `<em>${stale}</em>` : ""),
   ].join("");

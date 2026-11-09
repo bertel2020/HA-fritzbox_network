@@ -170,38 +170,41 @@ const read = (opts) => model.readPhone(makeHass(opts), "e1", { cache: new Map() 
 
 // ---------- detection and navigation ----------
 
-test("without fritzbox_phone the box has no sub-tabs, with it Overview and Phone, and #/box/phone is a route", () => {
+test("without fritzbox_phone there is no phone tab, with it the tab sits between Box and Diagnosis, and #/phone is a route", () => {
   assert.equal(model.phoneLoaded(makeHass({ phone: false })), false);
   // listed as a component, but no entity: not there either
   assert.equal(model.phoneLoaded({ ...makeHass({ phone: false }), config: { components: ["fritzbox_phone"] } }), false);
   assert.equal(model.phoneLoaded(makeHass()), true);
-  assert.deepEqual(panel.pagesOf("box", { phoneFound: false }), ["box"]);
-  assert.equal(panel.renderSubTabs("box", t, { phoneFound: false }), "");
-  assert.deepEqual(panel.pagesOf("box", { phoneFound: true }), ["box", "phone"]);
-  const sub = panel.renderSubTabs("phone", t, { phoneFound: true, phoneUnread: 2 });
-  assert.match(sub, /role="tablist" aria-label="Box"/);
-  assert.match(sub, /data-tab="box" aria-selected="false" aria-pressed="false">Übersicht<\/button>/);
-  assert.match(sub, /data-tab="phone" aria-selected="true" aria-pressed="true">Telefon <span class="chip info sub-badge">2<span class="sr"> neue Nachrichten/);
+  assert.deepEqual(panel.pagesOf("box", { phoneFound: true }), ["box"]);
+  assert.deepEqual(panel.pagesOf("phone", { phoneFound: false }), []);
+  assert.deepEqual(panel.pagesOf("phone", { phoneFound: true }), ["phone"]);
+  assert.equal(panel.renderSubTabs("phone", t, { phoneFound: true }), "");
+  assert.equal(panel.renderSubTabs("box", t, { phoneFound: true }), "");
+  assert.doesNotMatch(panel.renderNav({ tab: "net", data: {}, phoneFound: false }, t, 0), /data-tab="phone"/);
+  const nav = panel.renderNav({ tab: "phone", data: {}, phoneFound: true, phoneUnread: 2 }, t, 0);
+  assert.match(nav, /data-tab="box"[^>]*>Box<\/button><button role="tab" tabindex="0" data-tab="phone" aria-selected="true" aria-label="Telefon, 2 neue Nachrichten">Telefon<em>2<\/em><\/button><button[^>]*data-tab="diagnose"/);
+  assert.deepEqual(shared.routeFromHash("#/phone"), { tab: "phone", device: null });
   assert.deepEqual(shared.routeFromHash("#/box/phone"), { tab: "phone", device: null });
   assert.deepEqual(shared.routeFromHash("#/box/nonsense"), { tab: "net", device: null });
-  assert.equal(shared.pageHash("phone"), "#/box/phone");
+  assert.equal(shared.pageHash("phone"), "#/phone");
   assert.equal(shared.pageHash("box"), "#/box");
   assert.equal(shared.pageHash("net"), "#/");
-  assert.equal(panel.groupOf("phone"), "box");
+  assert.equal(panel.groupOf("phone"), "phone");
 });
 
-test("the box tab carries a dot while the phone rings", () => {
-  const nav = panel.renderNav({ tab: "net", data: {}, phoneRinging: true }, t, 0);
-  assert.match(nav, /data-tab="box" aria-selected="false" aria-label="Box, es klingelt">Box<i class="dot warn"/);
+test("the phone tab carries a dot while the phone rings, the box tab none", () => {
+  const nav = panel.renderNav({ tab: "net", data: {}, phoneFound: true, phoneRinging: true, phoneUnread: 2 }, t, 0);
+  assert.match(nav, /data-tab="phone" aria-selected="false" aria-label="Telefon, es klingelt">Telefon<i class="dot warn"/);
+  assert.doesNotMatch(nav, /data-tab="box"[^>]*>Box<i/);
   assert.doesNotMatch(panel.renderNav({ tab: "net", data: {} }, t, 0), /dot warn/);
 });
 
-test("the panel finds the phone from the registries; without it #/box/phone leads to the box", () => {
+test("the panel finds the phone from the registries; without it #/phone leads to the box", () => {
   const { p } = makePanel();
   assert.equal(p._state.phoneFound, true);
   assert.equal(p._state.phoneUnread, 1);
   const none = makePanel({ phone: false });
-  globalThis.location = { hash: "#/box/phone", replace(h) { this.hash = h; } };
+  globalThis.location = { hash: "#/phone", replace(h) { this.hash = h; } };
   none.p._state.box = "failed";
   none.p._update();
   assert.equal(none.p._state.tab, "box");

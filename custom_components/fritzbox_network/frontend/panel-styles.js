@@ -1174,8 +1174,6 @@ export const PANEL_CSS = `
   }
   #phone-view[hidden] { display: none; }
   #phone-view .card + .card, #phone-view .two > .card, #phone-view .ph-col > .card { margin-top: 0; }
-  .sub-badge { min-height: 18px; padding: 0 6px; font-size: 11px; margin-left: 4px; }
-  .seg button[aria-pressed="true"] .sub-badge { background: var(--surface); }
   .toast.act { pointer-events: auto; display: flex; gap: 14px; align-items: center; }
   .toast-act { color: var(--accent-soft); font-weight: 600; text-decoration: underline; }
   .ph-src { font-size: 12px; color: var(--muted); margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
