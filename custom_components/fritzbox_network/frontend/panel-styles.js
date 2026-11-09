@@ -1294,10 +1294,10 @@ export const PANEL_CSS = `
   .ph-new { background: var(--accent); }
   .ph-detail { padding: 0 0 12px 46px; min-width: 0; }
   .ph-detail dl.kv { display: grid; }
-  .ph-detail .btn-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-2); }
+  .ph-detail .btn-row { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-2); }
   .ph-detail .btn-row .btn { justify-content: center; white-space: nowrap; min-height: 38px; }
   .ph-detail .btn-row .btn.d { margin-left: auto; }
-  @container app (max-width: 520px) {
+  @container app (max-width: 700px) {
     .ph-detail .btn-row { display: grid; grid-template-columns: 1fr 1fr; }
     .ph-detail .btn-row .btn { min-height: 44px; padding-left: 8px; padding-right: 8px; }
     .ph-detail .btn-row .btn.d { grid-column: 1 / -1; margin-left: 0; }
