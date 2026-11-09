@@ -1297,10 +1297,15 @@ export const PANEL_CSS = `
   .ph-detail .btn-row { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 8px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line-2); }
   .ph-detail .btn-row .btn { justify-content: center; white-space: nowrap; min-height: 38px; }
   .ph-detail .btn-row .btn.d { margin-left: auto; }
-  @container app (max-width: 700px) {
+  /* the delete button of a message is a square with the bin; the text shows where the buttons sit in a grid */
+  .ph-detail .btn-row .ph-del { width: 38px; padding: 0; }
+  .ph-detail .btn-row .ph-del .ph-del-t { display: none; }
+  @container app (max-width: 520px) {
     .ph-detail .btn-row { display: grid; grid-template-columns: 1fr 1fr; }
     .ph-detail .btn-row .btn { min-height: 44px; padding-left: 8px; padding-right: 8px; }
     .ph-detail .btn-row .btn.d { grid-column: 1 / -1; margin-left: 0; }
+    .ph-detail .btn-row .ph-del { width: auto; padding-left: 8px; padding-right: 8px; }
+    .ph-detail .btn-row .ph-del .ph-del-t { display: inline; }
   }
   .ph-detail .btn-row .btn.pri { background: var(--accent-soft); color: var(--accent-hover); border-color: var(--accent); }
   .ph-detail .btn-row .btn.d { border-color: var(--bad); }

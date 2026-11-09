@@ -395,7 +395,7 @@ function messageRow(msg, tam, model, ctx) {
           <button class="btn sm" data-act="ph-download" data-ph-ent="${esc(tam.entityId)}" data-ph-idx="${msg.index}" data-k="ph-md-${esc(key)}"${off(model, !usableIdx)}>${ic("download")}${esc(a.download)}</button>` : ""}
           <button class="btn sm" data-act="ph-mark" data-ph-ent="${esc(tam.entityId)}" data-ph-idx="${msg.index}" data-k="ph-mm-${esc(key)}"${off(model, !usableIdx)}>${ic("mail")}${esc(msg.isNew ? a.markRead : a.markUnread)}</button>
           ${!msg.inPhonebook && dialable(msg.number) ? `<button class="btn sm" data-act="ph-contact" data-ph-num="${esc(msg.number)}" data-ph-name="${esc(msg.reverseName)}" data-k="ph-mc-${esc(key)}" aria-haspopup="dialog"${off(model)}>${ic("userPlus")}${esc(t.phone.calls.addContact)}</button>` : ""}
-          <button class="btn sm d" data-act="ph-delete" data-ph-ent="${esc(tam.entityId)}" data-ph-idx="${msg.index}" data-k="ph-mx-${esc(key)}" aria-haspopup="dialog"${off(model, !usableIdx)}>${ic("trash")}${esc(a.delete)}</button>
+          <button class="btn sm d ph-del" data-act="ph-delete" data-ph-ent="${esc(tam.entityId)}" data-ph-idx="${msg.index}" data-k="ph-mx-${esc(key)}" aria-haspopup="dialog" aria-label="${esc(a.delete)}" title="${esc(a.delete)}"${off(model, !usableIdx)}>${ic("trash")}<span class="ph-del-t">${esc(a.delete)}</span></button>
         </div></div>`
     : "";
   return `<div class="ph-row ph-msg${msg.isNew ? " new" : ""}" id="ph-msg-${tam.tamIndex ?? "x"}-${msg.index}">
