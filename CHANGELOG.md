@@ -2,6 +2,20 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
+## 1.7.0 – 2026-11-10
+
+### Neu
+
+- Panel: Telefon ist ein eigener Tab zwischen Box und Diagnose (nur mit FRITZ!Box Telefon). Der Punkt für „es klingelt“ und die Zahl neuer Nachrichten sitzen am Tab, der Tab Box hat keine Unterseiten mehr. Die Adresse ist `#/phone`; `#/box/phone` führt weiter dorthin.
+
+### Geändert
+
+- Panel, Anrufbeantworter: Die Aktionen einer Nachricht haben ihre eigene Breite, „Löschen“ ist ein Knopf mit Papierkorb am Zeilenende, und auf dem Handy stehen die Knöpfe zu zweit. Kürzere Beschriftungen („Lautsprecher …“, „Gelesen“, „Ungelesen“).
+
+### Behoben
+
+- Panel, Telefonstatistik: Die Zellen der Heatmap sprangen beim Darüberfahren mit der Maus weg und überdeckten ihre Nachbarn, weil sie wie die Zellen des Adressraums gestaltet wurden.
+
 ## 1.6.0 – 2026-11-09
 
 ### Geändert

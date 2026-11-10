@@ -2,6 +2,20 @@
 
 All notable changes to this integration are recorded here.
 
+## 1.7.0 – 2026-11-10
+
+### New
+
+- Panel: Phone is a tab of its own between Box and Diagnosis (only with FRITZ!Box Telefon). The dot for a ringing phone and the number of new messages sit on the tab, and the Box tab has no sub-pages any more. The address is `#/phone`; `#/box/phone` leads there.
+
+### Changed
+
+- Panel, answering machine: the actions of a message keep their own width, "Delete" is a button with a bin at the end of the row, and on a phone the buttons go two by two. Shorter labels ("Speaker …", "Mark read", "Mark unread").
+
+### Fixed
+
+- Panel, phone statistics: the cells of the heat map jumped away on a mouse over and covered their neighbours, because they were styled like the cells of the address space.
+
 ## 1.6.0 – 2026-11-09
 
 ### Changed
