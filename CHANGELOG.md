@@ -6,6 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Geändert
 
+- Die Integration heißt jetzt „FRITZ!Box Cockpit“ (vorher „FRITZ!Box Netzwerk“), weil sie längst mehr als das Netzwerk zeigt: Internet, WLAN, VPN, Diagnose und Telefon. Der technische Name `fritzbox_network`, die Entitäten und der Name des Repositorys bleiben.
 - Panel und Karte: „Schwach“ richtet sich jetzt nach dem Signal (−75 dBm oder schwächer, nur WLAN) statt nach der Rate. Das passt zu den Signalbalken in der Zeile. Die Option `weak_threshold` der Netzkarte ist jetzt ein dBm-Wert (Standard −75); ein alter Prozentwert wird verworfen und durch den Standard ersetzt.
 - Panel, Telefon: Der Tab ist immer da (blasser, solange „FRITZ!Box Telefon“ fehlt). Seine Seite sagt, ob die Integration nicht installiert oder nur nicht eingerichtet ist, zeigt, was sie bringt, und verlinkt auf HACS (Repository hinzufügen) und auf das Einrichten. „Tab ausblenden“ merkt sich der Browser.
 - Panel, Internet: Die Verbindungskachel ist ein schlanker Statusstreifen (Zustand, Live-Rate mit Auslastung, Adressen in einer Zeile, DNS-Server eingeklappt). Das Datenvolumen hat die volle Breite: vier Kacheln (Heute, 7 Tage, 30 Tage, Monat) mit Download und Upload gleichwertig, daneben Tagesbalken und die Geräte mit dem meisten Verbrauch. Die Auslastung zeigt nur noch den Verlauf.

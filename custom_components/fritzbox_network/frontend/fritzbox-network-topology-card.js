@@ -1,4 +1,4 @@
-/* FRITZ!Box Network cards: the topology of the network, its Wi-Fi radios, chosen devices, the VPN connections and the routes. */
+/* FRITZ!Box Cockpit cards: the topology of the network, its Wi-Fi radios, chosen devices, the VPN connections and the routes. */
 
 import {
   WEAK_SIGNAL_DBM,
@@ -87,7 +87,7 @@ const TEXT = {
       hide_rate: "Hide the rate",
       hide_signal: "Hide the signal",
       entities: "Devices",
-      entities_help: "Devices of the FRITZ!Box Network integration.",
+      entities_help: "Devices of the FRITZ!Box Cockpit integration.",
       label: "Group (label)",
       label_help: "Also shows every device of this group, not only the ones named above.",
       hide_noise: "Hide the noise",
@@ -161,7 +161,7 @@ const TEXT = {
       hide_rate: "Rate ausblenden",
       hide_signal: "Signal ausblenden",
       entities: "Geräte",
-      entities_help: "Geräte der Integration FRITZ!Box Netzwerk.",
+      entities_help: "Geräte der Integration FRITZ!Box Cockpit.",
       label: "Gruppe (Label)",
       label_help: "Zeigt zusätzlich jedes Gerät dieser Gruppe, nicht nur die oben genannten.",
       hide_noise: "Rauschen ausblenden",
@@ -1146,31 +1146,31 @@ const CARDS = [
   {
     type: "fritzbox-network-topology-card",
     element: FritzboxNetworkTopologyCard,
-    name: "FRITZ!Box Network topology",
+    name: "FRITZ!Box Cockpit topology",
     description: "The devices of the network by access point, with Wi-Fi or LAN and signal.",
   },
   {
     type: "fritzbox-network-radio-card",
     element: FritzboxNetworkRadioCard,
-    name: "FRITZ!Box Network Wi-Fi",
+    name: "FRITZ!Box Cockpit Wi-Fi",
     description: "Channel, load and noise of the Wi-Fi radios of the box and its repeaters.",
   },
   {
     type: "fritzbox-network-device-card",
     element: FritzboxNetworkDeviceCard,
-    name: "FRITZ!Box Network devices",
+    name: "FRITZ!Box Cockpit devices",
     description: "Chosen devices with their link, block or allow internet, and Wake on LAN.",
   },
   {
     type: "fritzbox-network-vpn-card",
     element: FritzboxNetworkVpnCard,
-    name: "FRITZ!Box Network VPN",
+    name: "FRITZ!Box Cockpit VPN",
     description: "The WireGuard connections of the box with their state and a switch, and the devices dialled in.",
   },
   {
     type: "fritzbox-network-routes-card",
     element: FritzboxNetworkRoutesCard,
-    name: "FRITZ!Box Network routes",
+    name: "FRITZ!Box Cockpit routes",
     description: "The static routes of the box with their gateway and a switch each.",
   },
 ];

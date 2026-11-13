@@ -1,5 +1,5 @@
 blueprint:
-  name: FRITZ!Box Network – internet access schedule
+  name: FRITZ!Box Cockpit – internet access schedule
   description: >-
     Blocks the internet access of devices at one time and allows it again at
     another, for example for a child's tablet at night. Needs the right

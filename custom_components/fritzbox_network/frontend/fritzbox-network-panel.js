@@ -1,4 +1,4 @@
-/* FRITZ!Box Network panel: the whole network in the sidebar, for administrators. */
+/* FRITZ!Box Cockpit panel: the whole network in the sidebar, for administrators. */
 
 import {
   STALE_STEPS,

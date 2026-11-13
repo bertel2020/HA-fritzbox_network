@@ -28,8 +28,8 @@ body:
     attributes:
       label: Diagnostics (optional) / Diagnosedaten (optional)
       description: |
-        Settings → Devices & services → FRITZ!Box Network → ⋮ → Download diagnostics. MAC addresses, IP addresses and names are removed; look through the file before you share it.
-        Einstellungen → Geräte & Dienste → FRITZ!Box Netzwerk → ⋮ → Diagnose herunterladen. MAC- und IP-Adressen sowie Namen sind entfernt; sieh die Datei vor dem Teilen durch.
+        Settings → Devices & services → FRITZ!Box Cockpit → ⋮ → Download diagnostics. MAC addresses, IP addresses and names are removed; look through the file before you share it.
+        Einstellungen → Geräte & Dienste → FRITZ!Box Cockpit → ⋮ → Diagnose herunterladen. MAC- und IP-Adressen sowie Namen sind entfernt; sieh die Datei vor dem Teilen durch.
   - type: textarea
     id: log
     attributes:

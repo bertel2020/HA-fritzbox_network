@@ -1,6 +1,6 @@
 {
   "domain": "fritzbox_network",
-  "name": "FRITZ!Box Netzwerk",
+  "name": "FRITZ!Box Cockpit",
   "after_dependencies": ["frontend", "http", "panel_custom"],
   "codeowners": ["@bertel2020"],
   "config_flow": true,

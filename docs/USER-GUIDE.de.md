@@ -1,4 +1,4 @@
-# FRITZ!Box Netzwerk für Home Assistant – Anleitung
+# FRITZ!Box Cockpit für Home Assistant – Anleitung
 
 [← Zurück zur Übersicht](../README.md)
 
@@ -46,11 +46,11 @@ Voraussetzung auf der Home-Assistant-Seite ist **Home Assistant 2026.8 oder neue
 ### Über HACS (empfohlen)
 
 [![HACS-Repository in My Home Assistant öffnen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bertel2020&repository=HA-fritzbox_network&category=integration)
-[![FRITZ!Box Netzwerk zu My Home Assistant hinzufügen](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=fritzbox_network)
+[![FRITZ!Box Cockpit zu My Home Assistant hinzufügen](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=fritzbox_network)
 
 1. Über den ersten Button das FRITZ!Box-Netzwerk-Repository in HACS öffnen.
-2. **FRITZ!Box Netzwerk** herunterladen und Home Assistant neu starten.
-3. Über den zweiten Button die Integration hinzufügen. Alternativ in Home Assistant **Einstellungen → Geräte & Dienste → Integration hinzufügen → FRITZ!Box Netzwerk** öffnen.
+2. **FRITZ!Box Cockpit** herunterladen und Home Assistant neu starten.
+3. Über den zweiten Button die Integration hinzufügen. Alternativ in Home Assistant **Einstellungen → Geräte & Dienste → Integration hinzufügen → FRITZ!Box Cockpit** öffnen.
 
 Falls der erste Button nicht funktioniert, in HACS unter **Integrationen → Benutzerdefinierte Repositories** `https://github.com/bertel2020/HA-fritzbox_network` als Kategorie **Integration** eintragen.
 
@@ -72,13 +72,13 @@ Host (Standard `192.168.178.1`), Benutzer und Kennwort eingeben, optional Port u
 ## Entfernen
 
 1. Automationen, Dashboards und Blueprints entfernen, die Entitäten der Integration nutzen.
-2. **Einstellungen → Geräte & Dienste → FRITZ!Box Netzwerk → ⋮ → Löschen.** Geräte und Entitäten des Eintrags verschwinden damit.
-3. In HACS: **FRITZ!Box Netzwerk → ⋮ → Entfernen**, danach Home Assistant neu starten. Bei manueller Installation den Ordner `custom_components/fritzbox_network` löschen.
+2. **Einstellungen → Geräte & Dienste → FRITZ!Box Cockpit → ⋮ → Löschen.** Geräte und Entitäten des Eintrags verschwinden damit.
+3. In HACS: **FRITZ!Box Cockpit → ⋮ → Entfernen**, danach Home Assistant neu starten. Bei manueller Installation den Ordner `custom_components/fritzbox_network` löschen.
 4. Optional: den Ordner `/config/fritzbox_captures` (Mitschnitte) und in der FRITZ!Box den für die Integration angelegten Benutzer löschen.
 
 ## Optionen
 
-**Einstellungen → Geräte & Dienste → FRITZ!Box Netzwerk → Konfigurieren**
+**Einstellungen → Geräte & Dienste → FRITZ!Box Cockpit → Konfigurieren**
 
 | Option | Standard | Bedeutung |
 |--------|----------|-----------|
@@ -209,7 +209,7 @@ Schließt ein Filter in den Optionen ein Gerät aus, werden dessen Gerät und En
 
 Mit der Integration kommen fünf Dashboard-Karten, die Topologie-Karte und vier weitere: [Funk](#funk-karte), [Geräte](#geräte-karte), [VPN](#vpn-karte) und [Routen](#routen-karte). Die Topologie-Karte zeigt auf einen Blick, wer an welchem Access Point hängt: die Box und jeder Repeater als Gruppe, darunter die Geräte mit Online-Punkt, WLAN oder LAN und Signal. Geräte, die online sind, stehen oben. Suche, Filter, Details und Aktionen gibt es im [Seitenpanel](#seitenpanel): Ein Tipp auf ein Gerät öffnet dessen Seite dort, ein Tipp auf die Überschrift die Übersicht.
 
-Füge sie im Dashboard-Editor unter **Karte hinzufügen → FRITZ!Box Network topology** hinzu, oder per YAML:
+Füge sie im Dashboard-Editor unter **Karte hinzufügen → FRITZ!Box Cockpit topology** hinzu, oder per YAML:
 
 ```yaml
 type: custom:fritzbox-network-topology-card
@@ -308,7 +308,7 @@ type: custom:fritzbox-network-routes-card
 
 ## Seitenpanel
 
-Mit der Integration kommt ein Eintrag **FRITZ!Box Netzwerk** in der Seitenleiste. Er zeigt das ganze Netz auf einer Seite und ist nur für Administratoren sichtbar. Das Panel holt seine Daten über dieselbe Verbindung wie die Dashboard-Karten und fragt die Box nicht zusätzlich ab.
+Mit der Integration kommt ein Eintrag **FRITZ!Box Cockpit** in der Seitenleiste. Er zeigt das ganze Netz auf einer Seite und ist nur für Administratoren sichtbar. Das Panel holt seine Daten über dieselbe Verbindung wie die Dashboard-Karten und fragt die Box nicht zusätzlich ab.
 
 **Telefon.** Ist die Integration „FRITZ!Box Telefon“ (`fritzbox_phone`) eingerichtet, hat das Panel einen Reiter **Telefon** zwischen Box und Diagnose. Er liest nur deren Entitäten und ruft deren Aktionen auf: Tageszahlen, Anrufliste mit Filtern, Anrufbeantworter mit Player, Telefonbuch (standardmäßig eingeklappt; ein Tipp auf die Überschrift öffnet es, dann nach Alle, VIP oder Mit Anrufen filtern, suchen, anrufen, sehen, wie oft ein Kontakt angerufen hat, und einen neuen Kontakt anlegen; „Ins Telefonbuch“ an einem Anruf kann die Nummer auch zu einem vorhandenen Kontakt hinzufügen, das braucht ein aktuelles `fritzbox_phone`), ein Banner für laufende Anrufe, Wählen, Sperren und eine Statistik (Anrufe pro Tag, Stoßzeiten, Gesprächszeit, Verpasst-Quote, Top-Anrufer). Die Statistik reicht nur so weit, wie die Anrufliste dort reicht (Standard 7 Tage und 50 Anrufe); die Seite nennt das Datum des ältesten Eintrags. Der Datenschutzmodus von `fritzbox_phone` gilt auch hier: Namen und Nummern erscheinen als Punkte, bis du eine Zeile antippst. Welches Telefon klingelt, bestimmt die Wählhilfe der Box. Ohne `fritzbox_phone` bleibt der Reiter, ist aber etwas blasser: Seine Seite sagt, ob die Integration fehlt oder nur noch eingerichtet werden muss, und verlinkt auf HACS (Repository hinzufügen) und auf das Einrichten. **Tab ausblenden** versteckt den Reiter in diesem Browser, bis die Integration läuft; unter `#/phone` ist die Seite weiter erreichbar und blendet ihn wieder ein.
 

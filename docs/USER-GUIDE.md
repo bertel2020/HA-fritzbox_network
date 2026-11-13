@@ -1,4 +1,4 @@
-# FRITZ!Box Network for Home Assistant – User guide
+# FRITZ!Box Cockpit for Home Assistant – User guide
 
 [← Back to the overview](../README.en.md)
 
@@ -46,11 +46,11 @@ On the Home Assistant side, **Home Assistant 2026.8 or newer** is required.
 ### Via HACS (recommended)
 
 [![Open the HACS repository in My Home Assistant](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bertel2020&repository=HA-fritzbox_network&category=integration)
-[![Add FRITZ!Box Network to My Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=fritzbox_network)
+[![Add FRITZ!Box Cockpit to My Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=fritzbox_network)
 
-1. Use the first button to open the FRITZ!Box Network repository in HACS.
-2. Download **FRITZ!Box Network** and restart Home Assistant.
-3. Use the second button to add the integration. Alternatively open **Settings → Devices & services → Add integration → FRITZ!Box Network** in Home Assistant.
+1. Use the first button to open the FRITZ!Box Cockpit repository in HACS.
+2. Download **FRITZ!Box Cockpit** and restart Home Assistant.
+3. Use the second button to add the integration. Alternatively open **Settings → Devices & services → Add integration → FRITZ!Box Cockpit** in Home Assistant.
 
 If the first button does not work, add `https://github.com/bertel2020/HA-fritzbox_network` in HACS under **Integrations → Custom repositories** with the category **Integration**.
 
@@ -72,13 +72,13 @@ Update through HACS and restart Home Assistant. Entity ids do not change.
 ## Removal
 
 1. Remove automations, dashboards and blueprints that use entities of the integration.
-2. **Settings → Devices & services → FRITZ!Box Network → ⋮ → Delete.** The devices and entities of the entry are removed with it.
-3. In HACS: **FRITZ!Box Network → ⋮ → Remove**, then restart Home Assistant. With a manual installation delete the folder `custom_components/fritzbox_network`.
+2. **Settings → Devices & services → FRITZ!Box Cockpit → ⋮ → Delete.** The devices and entities of the entry are removed with it.
+3. In HACS: **FRITZ!Box Cockpit → ⋮ → Remove**, then restart Home Assistant. With a manual installation delete the folder `custom_components/fritzbox_network`.
 4. Optional: delete the folder `/config/fritzbox_captures` (packet captures) and, on the FRITZ!Box, the user you created for the integration.
 
 ## Options
 
-**Settings → Devices & services → FRITZ!Box Network → Configure**
+**Settings → Devices & services → FRITZ!Box Cockpit → Configure**
 
 | Option | Default | Meaning |
 |--------|---------|---------|
@@ -209,7 +209,7 @@ When a filter in the options excludes a device, its device and entities are remo
 
 The integration ships five dashboard cards, the topology card and four more: [Wi-Fi](#wi-fi-card), [devices](#devices-card), [VPN](#vpn-card) and [routes](#routes-card). The topology card shows at a glance who hangs on which access point: the box and every repeater as a group, the devices below with an online dot, Wi-Fi or LAN and signal. Online devices come first. Search, filters, details and actions live in the [side panel](#side-panel): a tap on a device opens its page there, a tap on the heading opens the overview.
 
-Add it in the dashboard editor under **Add card → FRITZ!Box Network topology**, or in YAML:
+Add it in the dashboard editor under **Add card → FRITZ!Box Cockpit topology**, or in YAML:
 
 ```yaml
 type: custom:fritzbox-network-topology-card
@@ -308,7 +308,7 @@ type: custom:fritzbox-network-routes-card
 
 ## Side panel
 
-The integration adds a **FRITZ!Box Network** entry to the sidebar. It shows the whole network on one page and is only visible to administrators. The panel gets its data over the same connection as the dashboard cards and does not query the box additionally.
+The integration adds a **FRITZ!Box Cockpit** entry to the sidebar. It shows the whole network on one page and is only visible to administrators. The panel gets its data over the same connection as the dashboard cards and does not query the box additionally.
 
 **Phone.** If the integration "FRITZ!Box Telefon" (`fritzbox_phone`) is set up, the panel has a **Phone** tab between Box and Diagnosis. It only reads that integration's entities and calls its actions: today's numbers, the call list with filters, the answering machine with a player, the phone book (closed by default; open it with a tap on the heading, then filter by All, VIP or With calls, search, call, see how often a contact called and add a new one; "Add to phone book" on a call can also add the number to an existing contact, which needs a current `fritzbox_phone`), a banner for a call in progress, dialling, blocking and statistics (calls per day, busiest times, talk time, missed rate, top callers). The statistics reach only as far as the call list there does (default 7 days and 50 calls); the page names the date of the oldest entry. The privacy mode of `fritzbox_phone` applies here too: names and numbers show as dots until you tap a row. Which phone rings is decided by the dial help of the box. Without `fritzbox_phone` the tab stays but is a little paler: its page says whether the integration is missing or only needs to be set up, and links to HACS (add the repository) and to the setup. **Hide tab** hides it in this browser until the integration runs; the page stays reachable at `#/phone` and shows the tab again.
 

@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bertel2020/HA-fritzbox_network/main/custom_components/fritzbox_network/brand/logo.png" alt="FRITZ!Box Network" width="160">
+  <img src="https://raw.githubusercontent.com/bertel2020/HA-fritzbox_network/main/custom_components/fritzbox_network/brand/logo.png" alt="FRITZ!Box Cockpit" width="160">
 </p>
 
-<h1 align="center">FRITZ!Box Network</h1>
+<h1 align="center">FRITZ!Box Cockpit</h1>
 
 <p align="center">
   The network devices of your FRITZ!Box in Home Assistant, tracked by MAC address: stable entity ids, names that follow the box, and the most useful info and actions per device.
@@ -25,7 +25,9 @@
 
 <p align="center"><em><a href="README.md">Deutsche Version</a></em></p>
 
-**FRITZ!Box Network** shows the devices of your home network in Home Assistant the way they are listed in the FRITZ!Box, and tracks every device by its **MAC address**. That is why entity ids never change, even when you rename a device in the box; the device name, on the other hand, follows the box. On top of that you get presence, connection data and actions such as blocking a device's internet access.
+**FRITZ!Box Cockpit** shows the devices of your home network in Home Assistant the way they are listed in the FRITZ!Box, and tracks every device by its **MAC address**. That is why entity ids never change, even when you rename a device in the box; the device name, on the other hand, follows the box. On top of that you get presence, connection data and actions such as blocking a device's internet access.
+
+> The integration used to be called "FRITZ!Box Network". The technical name `fritzbox_network` and the name of the repository stay, so existing installations, entities and automations keep working unchanged.
 
 The integration works locally with the FRITZ!Box (TR-064) and makes no connections to the internet. It is an alternative to the device tracking of the core integration "AVM FRITZ!Box Tools", built from the ground up around MAC addresses.
 
@@ -87,9 +89,9 @@ The integration works locally with the FRITZ!Box (TR-064) and makes no connectio
 
    [![Open the HACS repository in My Home Assistant](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bertel2020&repository=HA-fritzbox_network&category=integration)
 
-3. **Add the integration**: *Settings → Devices & services → Add integration → FRITZ!Box Network* or with the button.
+3. **Add the integration**: *Settings → Devices & services → Add integration → FRITZ!Box Cockpit* or with the button.
 
-   [![Add FRITZ!Box Network to My Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=fritzbox_network)
+   [![Add FRITZ!Box Cockpit to My Home Assistant](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=fritzbox_network)
 
 **Home Assistant 2026.8 or newer** is required. Everything else (manual installation, options, entities, troubleshooting) is covered in the [user guide](docs/USER-GUIDE.md).
 
@@ -113,7 +115,7 @@ See [CHANGELOG.en.md](CHANGELOG.en.md).
 
 ## Disclaimer
 
-FRITZ!Box Network is a privately developed, free open-source project provided without warranty. Use is at your own risk. The integration can change settings in the FRITZ!Box (for example block a device's internet access). It is an unofficial project and not affiliated with AVM; FRITZ! and FRITZ!Box are trademarks of their owners (see [trademark notice](docs/USER-GUIDE.md#trademark-notice)).
+FRITZ!Box Cockpit is a privately developed, free open-source project provided without warranty. Use is at your own risk. The integration can change settings in the FRITZ!Box (for example block a device's internet access). It is an unofficial project and not affiliated with AVM; FRITZ! and FRITZ!Box are trademarks of their owners (see [trademark notice](docs/USER-GUIDE.md#trademark-notice)).
 
 ## License
 

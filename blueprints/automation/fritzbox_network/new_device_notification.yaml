@@ -1,5 +1,5 @@
 blueprint:
-  name: FRITZ!Box Network – notify about a new device
+  name: FRITZ!Box Cockpit – notify about a new device
   description: >-
     Sends a notification when the FRITZ!Box lists a device it did not list before.
     Devices that joined while Home Assistant was down and devices excluded by a

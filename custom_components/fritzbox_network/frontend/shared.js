@@ -1,4 +1,4 @@
-/* The parts of the FRITZ!Box Network frontend that need no DOM: used by the cards and the panel. */
+/* The parts of the FRITZ!Box Cockpit frontend that need no DOM: used by the cards and the panel. */
 
 // A Wi-Fi device is on a weak link when its signal is this strong (in dBm) or weaker.
 export const WEAK_SIGNAL_DBM = -75;

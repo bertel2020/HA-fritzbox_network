@@ -454,7 +454,7 @@
     },
     "internet_line": {
       "title": "The DSL line is weak",
-      "description": "The noise margin of the DSL line has been below 10 dB for over an hour (now {margin} dB). The connection may drop or slow down. Check the cable and the socket, and ask the provider if it stays. The internet page of the FRITZ!Box Network panel shows the line."
+      "description": "The noise margin of the DSL line has been below 10 dB for over an hour (now {margin} dB). The connection may drop or slow down. Check the cable and the socket, and ask the provider if it stays. The internet page of the FRITZ!Box Cockpit panel shows the line."
     },
     "mesh_repeater_lost": {
       "title": "A repeater is missing in the mesh",
@@ -462,7 +462,7 @@
     },
     "internet_reconnects": {
       "title": "The internet connection keeps dropping",
-      "description": "The box set up its internet connection {count} times in the last 24 hours. Check the line and the cable, and ask the provider if it continues. The internet page of the FRITZ!Box Network panel shows the events."
+      "description": "The box set up its internet connection {count} times in the last 24 hours. Check the line and the cable, and ask the provider if it continues. The internet page of the FRITZ!Box Cockpit panel shows the events."
     },
     "upnp_disabled": {
       "title": "The box does not pass status information over UPnP",

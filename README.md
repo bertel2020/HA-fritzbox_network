@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/bertel2020/HA-fritzbox_network/main/custom_components/fritzbox_network/brand/logo.png" alt="FRITZ!Box Netzwerk" width="160">
+  <img src="https://raw.githubusercontent.com/bertel2020/HA-fritzbox_network/main/custom_components/fritzbox_network/brand/logo.png" alt="FRITZ!Box Cockpit" width="160">
 </p>
 
-<h1 align="center">FRITZ!Box Netzwerk</h1>
+<h1 align="center">FRITZ!Box Cockpit</h1>
 
 <p align="center">
   Die Netzwerkgeräte deiner FRITZ!Box in Home Assistant, geführt über die MAC-Adresse: stabile Entity-IDs, Namen, die der Box folgen, und die wichtigsten Infos und Aktionen pro Gerät.
@@ -25,7 +25,9 @@
 
 <p align="center"><em><a href="README.en.md">English version</a></em></p>
 
-**FRITZ!Box Netzwerk** zeigt die Geräte deines Heimnetzes so in Home Assistant, wie sie in der FRITZ!Box stehen, und führt jedes Gerät über seine **MAC-Adresse**. Dadurch ändern sich die Entity-IDs nie, auch wenn du ein Gerät in der Box umbenennst; der Gerätename folgt dagegen der Box. Dazu kommen Anwesenheit, Verbindungsdaten und Aktionen wie das Sperren des Internetzugangs.
+**FRITZ!Box Cockpit** zeigt die Geräte deines Heimnetzes so in Home Assistant, wie sie in der FRITZ!Box stehen, und führt jedes Gerät über seine **MAC-Adresse**. Dadurch ändern sich die Entity-IDs nie, auch wenn du ein Gerät in der Box umbenennst; der Gerätename folgt dagegen der Box. Dazu kommen Anwesenheit, Verbindungsdaten und Aktionen wie das Sperren des Internetzugangs.
+
+> Früher hieß die Integration „FRITZ!Box Netzwerk“. Der technische Name `fritzbox_network` und der Name des Repositorys bleiben, damit bestehende Installationen, Entitäten und Automationen unverändert weiterlaufen.
 
 Die Integration arbeitet lokal mit der FRITZ!Box (TR-064) und baut keine Internetverbindungen auf. Sie ist eine Alternative zum Gerätetracking der Core-Integration „AVM FRITZ!Box Tools“ und wird dafür von Grund auf nach MAC-Adressen geführt.
 
@@ -87,9 +89,9 @@ Die Integration arbeitet lokal mit der FRITZ!Box (TR-064) und baut keine Interne
 
    [![HACS-Repository in My Home Assistant öffnen](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=bertel2020&repository=HA-fritzbox_network&category=integration)
 
-3. **Integration hinzufügen**: *Einstellungen → Geräte & Dienste → Integration hinzufügen → FRITZ!Box Netzwerk* oder über den Button.
+3. **Integration hinzufügen**: *Einstellungen → Geräte & Dienste → Integration hinzufügen → FRITZ!Box Cockpit* oder über den Button.
 
-   [![FRITZ!Box Netzwerk zu My Home Assistant hinzufügen](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=fritzbox_network)
+   [![FRITZ!Box Cockpit zu My Home Assistant hinzufügen](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=fritzbox_network)
 
 Voraussetzung ist **Home Assistant 2026.8 oder neuer**. Alles Weitere (Installation von Hand, Optionen, Entitäten, Fehlerbehebung) steht in der **[Anleitung](docs/USER-GUIDE.de.md)**.
 
@@ -113,7 +115,7 @@ Siehe [CHANGELOG.md](CHANGELOG.md).
 
 ## Haftungsausschluss
 
-FRITZ!Box Netzwerk ist ein privat entwickeltes, kostenloses Open-Source-Projekt und wird ohne Gewähr bereitgestellt. Die Nutzung erfolgt auf eigene Gefahr. Die Integration kann Einstellungen in der FRITZ!Box ändern (etwa den Internetzugang eines Geräts sperren). Sie ist ein inoffizielles Projekt und steht in keiner Verbindung zu AVM; FRITZ! und FRITZ!Box sind Marken ihrer Inhaber (siehe [Markenhinweis](docs/USER-GUIDE.de.md#markenhinweis)).
+FRITZ!Box Cockpit ist ein privat entwickeltes, kostenloses Open-Source-Projekt und wird ohne Gewähr bereitgestellt. Die Nutzung erfolgt auf eigene Gefahr. Die Integration kann Einstellungen in der FRITZ!Box ändern (etwa den Internetzugang eines Geräts sperren). Sie ist ein inoffizielles Projekt und steht in keiner Verbindung zu AVM; FRITZ! und FRITZ!Box sind Marken ihrer Inhaber (siehe [Markenhinweis](docs/USER-GUIDE.de.md#markenhinweis)).
 
 ## Lizenz
 

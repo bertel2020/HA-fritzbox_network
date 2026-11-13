@@ -23,7 +23,7 @@ from .const import (
     EVENT_NEW_DEVICE,
 )
 
-NAME = "FRITZ!Box Network"
+NAME = "FRITZ!Box Cockpit"
 
 
 @callback

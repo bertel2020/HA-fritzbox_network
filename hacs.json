@@ -1,5 +1,5 @@
 {
-  "name": "FRITZ!Box Netzwerk",
+  "name": "FRITZ!Box Cockpit",
   "homeassistant": "2026.8.0",
   "render_readme": true
 }

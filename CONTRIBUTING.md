@@ -7,7 +7,7 @@ or German.
 
 Open an issue with the bug report form. Include the versions asked for there and,
 if you can, the diagnostics of the integration (**Settings → Devices & services →
-FRITZ!Box Network → ⋮ → Download diagnostics**). MAC and IP addresses and names
+FRITZ!Box Cockpit → ⋮ → Download diagnostics**). MAC and IP addresses and names
 are removed from it; still look through the file before you share it.
 
 ## Local development

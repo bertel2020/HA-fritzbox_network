@@ -1,7 +1,7 @@
 /* The texts of the panel, German and English. */
 
 const en = {
-  title: "FRITZ!Box Network",
+  title: "FRITZ!Box Cockpit",
   live: "updated {n} s ago",
   liveShort: "{n} s ago",
   integration: "Integration",
@@ -747,7 +747,7 @@ const en = {
     filters: { all: "All", migrate: "Take over", conflict: "Conflicts", none: "No counterpart", skip: "Skipped" },
     filterLabel: "Filter",
     groups: { box: "Box", client: "Network devices" },
-    cols: { core: "FRITZ!Box Tools", ours: "FRITZ!Box Network (today)", result: "Result" },
+    cols: { core: "FRITZ!Box Tools", ours: "FRITZ!Box Cockpit (today)", result: "Result" },
     status: { migrate: "take over", conflict: "conflict", none: "no counterpart", skip: "skipped" },
     getsId: "gets the ID on the left",
     keeps: "stays as it is",
@@ -767,7 +767,7 @@ const en = {
       none: "FRITZ!Box Tools is not set up.",
       noneHint: "There is nothing to take over.",
       other: "FRITZ!Box Tools is set up for another box.",
-      otherHint: "“{title}” does not belong to this box. If that box has its own setup of FRITZ!Box Network, choose it at the top right and switch over there.",
+      otherHint: "“{title}” does not belong to this box. If that box has its own setup of FRITZ!Box Cockpit, choose it at the top right and switch over there.",
     },
     banner: {
       label: "Note",
@@ -1477,7 +1477,7 @@ const en = {
 };
 
 const de = {
-  title: "FRITZ!Box Netzwerk",
+  title: "FRITZ!Box Cockpit",
   live: "aktualisiert vor {n} s",
   liveShort: "vor {n} s",
   integration: "Integration",
@@ -2223,7 +2223,7 @@ const de = {
     filters: { all: "Alle", migrate: "Übernehmen", conflict: "Konflikte", none: "Kein Gegenstück", skip: "Übersprungen" },
     filterLabel: "Filter",
     groups: { box: "Box", client: "Netzwerkgeräte" },
-    cols: { core: "FRITZ!Box Tools", ours: "FRITZ!Box Netzwerk (heute)", result: "Ergebnis" },
+    cols: { core: "FRITZ!Box Tools", ours: "FRITZ!Box Cockpit (heute)", result: "Ergebnis" },
     status: { migrate: "übernehmen", conflict: "Konflikt", none: "kein Gegenstück", skip: "übersprungen" },
     getsId: "bekommt die ID links",
     keeps: "bleibt, wie sie ist",
@@ -2243,7 +2243,7 @@ const de = {
       none: "FRITZ!Box Tools ist nicht eingerichtet.",
       noneHint: "Es gibt nichts zu übernehmen.",
       other: "FRITZ!Box Tools ist für eine andere Box eingerichtet.",
-      otherHint: "„{title}“ gehört nicht zu dieser Box. Hat jene Box eine eigene Einrichtung von FRITZ!Box Netzwerk, wähle sie oben rechts und steige dort um.",
+      otherHint: "„{title}“ gehört nicht zu dieser Box. Hat jene Box eine eigene Einrichtung von FRITZ!Box Cockpit, wähle sie oben rechts und steige dort um.",
     },
     banner: {
       label: "Hinweis",

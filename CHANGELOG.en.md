@@ -6,6 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### Changed
 
+- The integration is now called "FRITZ!Box Cockpit" (before "FRITZ!Box Network"), because it shows far more than the network: internet, Wi-Fi, VPN, diagnosis and phone. The technical name `fritzbox_network`, the entities and the name of the repository stay.
 - Panel and card: "weak" now follows the signal (−75 dBm or weaker, Wi-Fi only) instead of the rate, matching the signal bars in the row. The `weak_threshold` option of the network card is now a dBm value (default −75); an old percentage is dropped and replaced by the default.
 - Panel, phone: the tab is always there (paler while "FRITZ!Box Telefon" is missing). Its page says whether the integration is not installed or only not set up, shows what it brings, and links to HACS (add the repository) and to the setup. "Hide tab" is remembered by the browser.
 - Panel, internet: the connection card is a slim status strip (state, live rate with load, addresses in one row, DNS servers folded away). The data volume takes the full width: four tiles (today, 7 days, 30 days, month) with download and upload as equals, next to them the bars per day and the devices that used the most. The load card shows only the history now.
