@@ -1,6 +1,6 @@
-/* The box page: the FRITZ!Box itself, how long it runs, how warm it is, its line, restart and reconnect. */
+/* The box page: the FRITZ!Box itself, how long it runs, how warm it is, its line in short and its restart. */
 
-import { escapeHtml, formatBytes, formatDuration, hintNote } from "./shared.js";
+import { errorCard, escapeHtml, formatBytes, formatDuration, hintNote, loadingCard } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { accessLabel } from "./panel-internet.js";
@@ -93,22 +93,24 @@ function chip(on, yes, no, unknown) {
   return `<span class="chip">${escapeHtml(unknown)}</span>`;
 }
 
+/**
+ * The line in short: whether the box is in sync, and its counters since the restart. Its quality,
+ * the addresses and the reconnect live on Internet › Connection, which this card links to.
+ */
 function lineCard(info, ctx) {
-  const { t, language, restart, internet } = ctx;
+  const { t, language, restart } = ctx;
   const b = t.boxPage;
   const down = restart && restart.phase !== "back";
   const line = info.line ?? {};
-  const rows = [
-    [b.lineTitle, accessLabel(line.access_type, t), chip(down ? false : line.linked ?? null, b.linked, b.notLinked, b.linkUnknown)],
-    ...(internet ? [[b.internet, internet.external_ipv4 ?? "", chip(down ? false : internet.connected !== false, b.connected, b.disconnected, b.linkUnknown)]] : []),
-  ];
+  const access = accessLabel(line.access_type, t);
   const bytes = (n) => escapeHtml(down ? "–" : formatBytes(n, language));
   return `<section class="card sec"><span class="label">${escapeHtml(b.line)}</span>
-    <dl class="kv">${rows.map(([k, sub, v]) => `<dt>${escapeHtml(k)}${sub ? `<br><small class="muted mono">${escapeHtml(sub)}</small>` : ""}</dt><dd>${v}</dd>`).join("")}</dl>
+    <dl class="kv"><dt>${escapeHtml(b.lineTitle)}${access ? `<br><small class="muted mono">${escapeHtml(access)}</small>` : ""}</dt><dd>${chip(down ? false : line.linked ?? null, b.linked, b.notLinked, b.linkUnknown)}</dd></dl>
     <div class="tiles counter">
       ${tile(b.received, `<b>${bytes(info.bytes_received)}</b>`, b.sinceRestart)}
       ${tile(b.sent, `<b>${bytes(info.bytes_sent)}</b>`, b.sinceRestart)}
     </div>
+    <p class="hint"><button class="tlink" data-tab="internet" data-k="box-line-more">${escapeHtml(b.lineMore)} ›</button></p>
     ${hintNote(b.lineNote, t)}</section>`;
 }
 
@@ -137,44 +139,30 @@ function restartBlock(restart, ctx) {
     ${buttons ? `<div class="btn-row tight">${buttons}</div>` : ""}</div>`;
 }
 
-function reconnectBlock(reconnect, ctx) {
-  const d = ctx.t.boxPage.reconnectDone;
-  const after = ctx.internet?.external_ipv4 ?? null;
-  const done = Boolean(after && reconnect.before && after !== reconnect.before);
-  return `<div class="progress ${done ? "ok" : ""}" role="status" aria-live="polite"><b>${escapeHtml(done ? d.done : d.title)}</b>
-    <dl class="kv"><dt>${escapeHtml(d.before)}</dt><dd class="mono">${escapeHtml(reconnect.before ?? "–")}</dd><dt>${escapeHtml(d.after)}</dt><dd class="mono">${escapeHtml(after ?? "–")}</dd></dl>
-    <div class="btn-row tight"><button class="btn sm" data-act="box-reconnect-clear" data-k="box-reconnect-clear">${escapeHtml(ctx.t.boxPage.restart.hide)}</button></div></div>`;
-}
-
 function actionsCard(info, ctx) {
-  const { t, restart, reconnect } = ctx;
+  const { t, restart } = ctx;
   const a = t.boxPage.actions;
   const canWrite = Boolean(info.can_write);
   const down = restart && restart.phase === "down";
   const off = !canWrite || down ? " disabled" : "";
-  const why = !canWrite ? a.noRights : down ? a.busy : a.hint;
+  const why = !canWrite ? a.noRights : down ? a.busy : "";
   return `<section class="card sec"><span class="label">${escapeHtml(a.title)}</span>
-    <div class="act"><span class="ico">${ic("globe")}</span><div><b>${escapeHtml(a.reconnectName)}</b><small>${escapeHtml(a.reconnectSub)}</small></div>
-      <button class="btn" data-act="reconnect" data-k="reconnect"${off}>${escapeHtml(a.reconnect)}</button></div>
     <div class="act"><span class="ico">${ic("restart")}</span><div><b>${escapeHtml(a.rebootName)}</b><small>${escapeHtml(a.rebootSub)}</small></div>
       <button class="btn dp" data-act="reboot" data-k="reboot" aria-haspopup="dialog"${off}>${escapeHtml(a.reboot)}</button></div>
-    ${restart ? restartBlock(restart, ctx) : ""}${reconnect ? reconnectBlock(reconnect, ctx) : ""}
-    <p class="hint">${escapeHtml(why)}</p></section>`;
+    ${restart ? restartBlock(restart, ctx) : ""}
+    ${why ? `<p class="hint">${escapeHtml(why)}</p>` : ""}</section>`;
 }
 
 /**
  * The page. info is what box/info answered: null while it is read, "failed" where the box did not
- * answer. ctx: t, language, now, internet (of the subscription), restart and reconnect under way.
+ * answer. ctx: t, language, now, the restart under way, history and historyRange.
  */
 export function renderBoxPage(info, ctx) {
   const { t } = ctx;
   const b = t.boxPage;
   const head = `<div class="phead"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(b.title)}</h1></div>`;
-  if (info === null || info === undefined) return `${head}<div class="card" aria-busy="true"><div class="empty"><span>${escapeHtml(t.loading)}</span></div></div>`;
-  if (info === "failed" || typeof info !== "object") {
-    return `${head}<div class="card"><div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${escapeHtml(b.failed)}</b>
-      <div class="btn-row"><button class="btn p" data-act="box-retry" data-k="box-retry">${escapeHtml(b.retry)}</button></div></div></div>`;
-  }
+  if (info === null || info === undefined) return `${head}${loadingCard(t)}`;
+  if (info === "failed" || typeof info !== "object") return `${head}${errorCard(t, b.failed, { retry: "box-retry" })}`;
   const late = ctx.restart?.phase === "late"
     ? `<section class="card sec hints" aria-label="${escapeHtml(b.hintsLabel)}"><p class="hintline bad"><span aria-hidden="true">${ic("alert")}</span><span>${escapeHtml(b.restart.late)}</span></p></section>`
     : "";

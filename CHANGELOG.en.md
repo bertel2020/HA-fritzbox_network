@@ -11,6 +11,12 @@ All notable changes to this integration are recorded here.
 - Panel: the "/" key jumps into the search of the device list from every page.
 - Panel: "Address space" is now called "Addresses". The guide calls the gear "Manage" and, for cleaning up, "remove" and "Removed devices", like the panel.
 - Panel: the pages with a visible title share one page head; the device list has a heading for screen readers. Tabs only report "selected", choice groups only "checked" to screen readers.
+- Panel, Internet: the tab now has the pages Connection, Data volume, Port forwarding and VPN (`#/internet`, `#/volume`, `#/ports`, `#/vpn`). The connection shows throughput, line quality, events and the address history; the data volume has a page of its own with the per-day chart over the whole width. "Reconnect" is only here now, with the address before and now.
+- Panel, Box: Diagnosis is no tab of its own any more. Its tools are pages of the box: Status, Connection test, Event log and Capture (`#/check`, `#/log`, `#/capture`); the old address `#/diagnose` opens the connection test, "Record" on the device page the capture. The "Line" card only tells sync and counters and links to Internet › Connection for the rest.
+- Panel, Wi-Fi: the Wi-Fi check is here now; the connection test and the notes on the network only show its verdict with "Details under Wi-Fi".
+- Panel, device: Rename, In the network map and Record stand next to the name, the rare ones (In Home Assistant, Logbook in HA, History in HA, Remove) behind "⋯". The two notes of the master data are one.
+- Panel, device list: search, sort, group and view are one row that wraps on narrow screens; the line "N devices · M online" is gone (the numbers are on the filters, during a search "3 of 15 shown"). The notes on the network are folded to one line.
+- Panel: every page shows the same placeholder card while loading and the same card with "Try again" on an error, the panel's own message too.
 
 ### Fixed
 

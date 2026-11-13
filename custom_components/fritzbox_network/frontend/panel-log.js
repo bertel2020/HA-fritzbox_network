@@ -1,6 +1,6 @@
 /* The event log of the box on the diagnosis page: DSL, network, Wi-Fi, phone and system messages, by group. */
 
-import { escapeHtml, noteHtml } from "./shared.js";
+import { errorCard, escapeHtml, noteHtml } from "./shared.js";
 import { fill } from "./texts.js";
 
 export const LOG_GROUPS = ["", "net", "wlan", "sys", "fon", "usb"];
@@ -48,9 +48,9 @@ export function renderLog(log, ctx) {
   const groups = LOG_GROUPS.map(
     (g) => `<button role="radio" aria-checked="${g === group}" data-log-group="${g}">${escapeHtml(c.groups[g || "all"])}</button>`
   ).join("");
+  if (log === "failed") return errorCard(t, c.failed, { retry: "log-retry" });
   let body;
-  if (log === "failed") body = `<p class="hint">${escapeHtml(c.failed)}</p>`;
-  else if (!log) body = `<p class="hint">${escapeHtml(t.loading)}</p>`;
+  if (!log) body = `<p class="hint">${escapeHtml(t.loading)}</p>`;
   else if (!log.events.length) body = `<p class="hint">${escapeHtml(c.none)}</p>`;
   else {
     const marks = logHighlights(log.events, now);

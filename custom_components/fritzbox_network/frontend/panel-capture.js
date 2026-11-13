@@ -1,6 +1,6 @@
 /* The packet capture of the internet page: choose an interface and a time, record, download the pcap. */
 
-import { escapeHtml, formatBytes, hintNote, noteHtml } from "./shared.js";
+import { errorCard, escapeHtml, loadingCard, formatBytes, hintNote, noteHtml } from "./shared.js";
 import { fill } from "./texts.js";
 
 /** The form values to start with. */
@@ -115,8 +115,8 @@ export function renderCapture(capture, ctx) {
   const { t, language, canWrite, form } = ctx;
   const clients = ctx.clients ?? [];
   const c = t.inet.capture;
-  if (capture === "failed") return `<section class="card sec"><span class="label">${escapeHtml(c.title)}</span><p class="hint">${escapeHtml(c.unavailable)}</p></section>`;
-  if (!capture) return `<section class="card sec"><span class="label">${escapeHtml(c.title)}</span><p class="hint">${escapeHtml(t.loading)}</p></section>`;
+  if (capture === "failed") return errorCard(t, c.unavailable, { retry: "cap-retry" });
+  if (!capture) return loadingCard(t);
   const job = capture.job;
   const busy = job?.state === "running";
   const detecting = Boolean(ctx.detecting || capture.detecting);

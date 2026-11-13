@@ -1,4 +1,4 @@
-/* The radio check of the diagnosis page: every access point with its radios, how busy they are and who hangs on them. */
+/* The radio check of the Wi-Fi page (in short on the connection test): every access point with its radios, how busy they are and who hangs on them. */
 
 import { BUSY_UTILIZATION, escapeHtml, isWeak, noteHtml } from "./shared.js";
 import { ic } from "./icons.js";
@@ -119,4 +119,17 @@ export function renderRadio(data, ctx) {
   return `<section class="card sec"><span class="label">${escapeHtml(r.title)}</span>
     ${verdict}${blocks}
     ${noteHtml(t.diag.note, r.hint)}</section>`;
+}
+
+/** The verdict of the radio check in one line, with the way to the Wi-Fi page where the details are; nothing without access points. */
+export function renderRadioVerdict(data, ctx) {
+  const { t } = ctx;
+  const r = t.diag.radio;
+  const check = radioCheck(data);
+  if (!check.nodes.length) return "";
+  const line = check.issues
+    ? `<p class="hintline warn"><span aria-hidden="true">${ic("alert")}</span><span>${escapeHtml(fill(r.issuesShort, { n: check.issues }))}</span></p>`
+    : `<p class="hintline info"><span aria-hidden="true">${ic("check")}</span><span>${escapeHtml(r.ok)}</span></p>`;
+  return `<section class="card sec"><span class="label">${escapeHtml(r.title)}</span>${line}
+    <p class="hint"><button class="tlink" data-tab="wlan" data-k="radio-wlan">${escapeHtml(t.toWlan)} ›</button></p></section>`;
 }

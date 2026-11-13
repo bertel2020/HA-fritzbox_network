@@ -175,17 +175,16 @@ test("the phone tab is always there, quiet without fritzbox_phone and gone only 
   // listed as a component, but no entity: not there either
   assert.equal(model.phoneLoaded({ ...makeHass({ phone: false }), config: { components: ["fritzbox_phone"] } }), false);
   assert.equal(model.phoneLoaded(makeHass()), true);
-  assert.deepEqual(panel.pagesOf("box", { phoneFound: true }), ["box"]);
+  assert.deepEqual(panel.pagesOf("box", { phoneFound: true }), ["box", "check", "log", "capture"]);
   assert.deepEqual(panel.pagesOf("phone", { phoneFound: false }), ["phone"]);
   assert.deepEqual(panel.pagesOf("phone", { phoneFound: false, phoneHidden: true }), []);
   assert.deepEqual(panel.pagesOf("phone", { phoneFound: true, phoneHidden: true }), ["phone"]);
   assert.deepEqual(panel.pagesOf("phone", { phoneFound: true }), ["phone"]);
   assert.equal(panel.renderSubTabs("phone", t, { phoneFound: true }), "");
-  assert.equal(panel.renderSubTabs("box", t, { phoneFound: true }), "");
   assert.match(panel.renderNav({ tab: "net", data: {}, phoneFound: false }, t), /<button role="tab" class="quiet" tabindex="-1" data-tab="phone" aria-selected="false">Telefon<\/button>/);
   assert.doesNotMatch(panel.renderNav({ tab: "net", data: {}, phoneFound: false, phoneHidden: true }, t), /data-tab="phone"/);
   const nav = panel.renderNav({ tab: "phone", data: {}, phoneFound: true, phoneUnread: 2 }, t);
-  assert.match(nav, /data-tab="box"[^>]*>Box<\/button><button role="tab" tabindex="0" data-tab="phone" aria-selected="true" aria-label="Telefon, 2 neue Nachrichten">Telefon<em>2<\/em><\/button><button[^>]*data-tab="diagnose"/);
+  assert.match(nav, /data-tab="box"[^>]*>Box<\/button><button role="tab" tabindex="0" data-tab="phone" aria-selected="true" aria-label="Telefon, 2 neue Nachrichten">Telefon<em>2<\/em><\/button>$/);
   assert.deepEqual(shared.routeFromHash("#/phone"), { tab: "phone", device: null });
   assert.deepEqual(shared.routeFromHash("#/box/phone"), { tab: "phone", device: null });
   assert.deepEqual(shared.routeFromHash("#/box/nonsense"), { tab: "net", device: null });

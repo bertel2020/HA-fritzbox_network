@@ -41,7 +41,7 @@ export function filterName(filter, data, t) {
  * The filter row: three fixed chips, the chosen other filter as a chip with ×, and the button
  * for the menu with the rest. It wraps when it must and never scrolls sideways.
  */
-export function renderChips(state, t, now) {
+export function renderChips(state, t, now, shown = null) {
   const menu = filterMenu(state.data, state.filter, now, state.threshold);
   const fixed = menu.primary.map(
     (f) =>
@@ -56,7 +56,10 @@ export function renderChips(state, t, now) {
     active = `<button class="fchip" data-filter="all" data-k="f-active" aria-pressed="true" aria-label="${escapeHtml(fill(t.removeFilter, { name }))}">${menu.active.startsWith("label:") ? ic("tag") : ""}${escapeHtml(name)}<b>${count}</b><span class="x">${ic("close")}</span></button>`;
   }
   const more = `<button class="fchip more" id="morebtn" data-act="menu" data-k="more" aria-haspopup="menu" aria-expanded="${Boolean(state.menu)}" aria-controls="fmenu" aria-label="${escapeHtml(fill(t.moreLabel, { n: menu.available }))}">${ic("filter")}${escapeHtml(t.more)}<b>${menu.available}</b>${ic("chev")}</button>`;
-  return [...fixed, active, more].join("");
+  // the chips count by status; a search narrows that, and only then the number shown is worth a word
+  const chosen = menu.active ? null : menu.primary.find((f) => f.id === state.filter);
+  const narrowed = state.query && shown !== null ? `<span class="shown" aria-hidden="true">${escapeHtml(fill(t.shownOf, { shown, total: chosen?.count ?? (state.data?.clients ?? []).length }))}</span>` : "";
+  return [...fixed, active, more, narrowed].join("");
 }
 
 /** The menu behind "More": the other filters and the groups, each with its count. */

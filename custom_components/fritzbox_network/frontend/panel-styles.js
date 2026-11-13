@@ -144,12 +144,14 @@ export const PANEL_CSS = `
 
   /* network tab */
   .toolbar { padding: 16px; display: grid; gap: 12px; }
-  .tools { display: grid; grid-template-columns: minmax(0, 1fr) 160px 170px auto; gap: 8px; align-items: center; }
-  .tools.map { grid-template-columns: minmax(0, 1fr) auto; }
+  /* search, sort, group and view on one row; narrower, the search keeps a row and the rest wraps below it */
+  .tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .tools .search { flex: 1 1 260px; min-width: 0; }
+  .tools > label:not(.search) { flex: 0 1 170px; min-width: 120px; }
+  .tools .viewsw { flex: 0 0 auto; }
   @container app (max-width: 700px) {
-    .tools { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-    .tools .search, .tools .viewsw { grid-column: 1 / -1; }
-    .tools.map { grid-template-columns: minmax(0, 1fr); }
+    .tools .search { flex-basis: 100%; }
+    .tools > label:not(.search) { flex: 1 1 110px; }
   }
   .search { position: relative; }
   .search svg { position: absolute; left: 12px; top: 12px; color: var(--muted); }
@@ -164,7 +166,7 @@ export const PANEL_CSS = `
     .seg.viewsw button { border-top: 0; border-left: 0; }
     .seg.viewsw button:first-child { border-left: 0; }
   }
-  .meta { color: var(--muted); font-size: 12px; padding: 0 4px; }
+  .chips .shown { color: var(--muted); font-size: 12px; padding: 0 4px; }
 
   /* the filters: three fixed chips, the chosen other one, and "More". Wraps, never scrolls sideways. */
   .chipwrap { position: relative; }
@@ -247,6 +249,12 @@ export const PANEL_CSS = `
   @container app (max-width: 480px) { .dev .rate, .dev .link { display: none; } }
   .empty { display: grid; justify-items: center; gap: 6px; padding: 48px 16px; text-align: center; color: var(--muted); }
   .empty b { color: var(--text); font-weight: 500; }
+  /* the one card of every page while its data is read */
+  .card.skel { display: grid; gap: 12px; padding: 20px; }
+  .skel i { display: block; height: 12px; border-radius: 6px; background: var(--neutral-soft); }
+  .skel i:nth-of-type(1) { width: 28%; }
+  .skel i:nth-of-type(2) { width: 82%; }
+  .skel i:nth-of-type(3) { width: 64%; }
 
   /* network map: islands per access point, devices as buttons on their lines */
   .mapcard { margin-top: 16px; padding: 16px; }
@@ -334,6 +342,21 @@ export const PANEL_CSS = `
   .icon-btn:hover { background: var(--neutral-soft); color: var(--text); }
   .icon-btn[disabled] { opacity: .4; cursor: default; }
   .chips-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  /* the name of the device with its actions; narrow, the actions go under the name */
+  .dtitlerow { flex-basis: 100%; order: 3; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; min-width: 0; }
+  .dtitlerow h1 { flex: 1 1 240px; order: 0; }
+  .dacts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .dacts .btn svg.i { width: 16px; height: 16px; }
+  .moremenu { position: relative; }
+  .moremenu > summary { list-style: none; cursor: pointer; }
+  .moremenu > summary::-webkit-details-marker { display: none; }
+  .moremenu[open] > summary { background: var(--accent-soft); color: var(--accent-hover); }
+  @container app (min-width: 601px) { .moremenu .fmenu { left: auto; right: 0; width: 240px; } }
+  .mitem { display: flex; width: 100%; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border-radius: 8px; text-align: left; }
+  .mitem:hover:not([disabled]), .mitem:focus-visible { background: var(--soft); }
+  .mitem[disabled] { opacity: .45; cursor: default; }
+  .mitem .t { flex: 1; min-width: 0; }
+  .chips-row + .entities-note { border-top: 0; padding-top: 0; margin-top: 10px; }
   .dsecs { display: grid; gap: 12px; margin-top: 14px; }
   .dsecs .card + .card { margin-top: 0; }
   @container app (min-width: 900px) { .dsecs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; } .dsecs .wide { grid-column: 1 / -1; } }
@@ -534,8 +557,8 @@ export const PANEL_CSS = `
   .vtile b i { font-style: normal; font-weight: 600; }
   .vtile .vdn { color: var(--accent); } .vtile .vup { color: var(--up); }
   .vtile small { color: var(--muted); font-size: 11px; }
+  /* the volume has a page of its own: the days over the whole width, who used the most below */
   .vbody { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px 24px; }
-  @container app (min-width: 900px) { .vbody { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); } }
   .vbody .topdev .amount small { display: block; }
   .tile .since { color: var(--warn); font-size: 11px; text-transform: none; letter-spacing: 0; }
   .tile .cmp { display: flex; flex-wrap: wrap; gap: 2px 6px; align-items: center; margin-top: 2px; font-size: 12px; color: var(--muted); }
@@ -548,8 +571,8 @@ export const PANEL_CSS = `
   .plot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
   .plot .cursor { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--muted); pointer-events: none; }
   .plot .tip { position: absolute; top: 4px; transform: translateX(-50%); padding: 3px 8px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 12px; font-weight: 500; white-space: nowrap; pointer-events: none; z-index: 1; }
-  #internet-view svg.spark { width: 100%; height: 72px; }
-  #internet-view svg.spark.days { height: 140px; }
+  #internet-view svg.spark, #volume-view svg.spark { width: 100%; height: 72px; }
+  #volume-view svg.spark.days { height: 180px; }
   .spark.days rect.bd { fill: var(--accent); }
   .spark.days rect.bu { fill: var(--up); }
   .topdev .rank { display: none; }
@@ -820,6 +843,17 @@ export const PANEL_CSS = `
   .hintline.warn { color: var(--warn); }
   .hintline.info { color: var(--muted); }
   #internet-view .card.hints + .card, #net-view > #hints > .card.hints { margin-bottom: 16px; }
+  /* the hints of the network folded to one line: the first one, how many more; open, all of them */
+  .hintsum summary { list-style: none; cursor: pointer; min-width: 0; }
+  .hintsum summary::-webkit-details-marker { display: none; }
+  .hintsum summary .one { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hintsum summary .all { display: none; flex: 1; color: var(--muted); }
+  .hintsum summary .chev { color: var(--muted); display: inline-grid; transition: transform .15s; transform: rotate(-90deg); }
+  .hintsum[open] summary .chev { transform: none; }
+  .hintsum[open] summary .one, .hintsum[open] summary .chip { display: none; }
+  .hintsum[open] summary .all { display: block; }
+  .hintsum .hintall .hintline { align-items: flex-start; }
+  .hintsum .hintall .hintline > span:first-child { margin-top: 2px; }
   .ihead { display: flex; align-items: center; gap: 12px; }
   .ihead .ico { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); flex: none; }
   .ihead .who { flex: 1; min-width: 0; }
@@ -993,7 +1027,7 @@ export const PANEL_CSS = `
 
   /* address page */
   #addresses-view > * + *, #addresses-view .alayout + * { margin-top: 16px; }
-  #diagnose-view > * + * { margin-top: 16px; }
+  #volume-view > * + *, #ports-view > * + *, #check-view > * + *, #log-view > * + *, #capture-view > * + * { margin-top: 16px; }
   .diagrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(440px, 100%), 1fr)); gap: 16px; align-items: start; }
   .diagrow > .card { margin-top: 0; }
   #addresses-view .atiles { margin-top: 0; }

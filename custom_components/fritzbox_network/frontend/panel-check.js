@@ -1,4 +1,4 @@
-/* The connection card of the diagnosis page: the check from Home Assistant, and below it the course over the day. */
+/* The connection test of the box tab: the check from Home Assistant, and below it the course over the day. */
 
 import { escapeHtml, noteHtml } from "./shared.js";
 import { ic } from "./icons.js";
@@ -32,4 +32,10 @@ export function renderConnection(check, latency, ctx) {
     ${check === "failed" ? `<p class="hint">${escapeHtml(c.error)}</p>` : result}
     ${latencySection(latency, ctx)}
     ${noteHtml(t.diag.note, c.hint, latencyHint(latency, t))}</section>`;
+}
+
+/** The head of a page that came from the diagnosis (connection test, event log, capture): its title, its lead. */
+export function diagHead(page, t) {
+  const p = t.diag.pages[page];
+  return `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(p.title)}</h1><p class="lead">${escapeHtml(p.lead)}</p></div>`;
 }

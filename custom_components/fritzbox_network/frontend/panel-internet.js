@@ -1,4 +1,4 @@
-/* The internet page of the panel: the connection of the box, its load and, on a DSL line, its quality. */
+/* The pages of the internet tab: the connection of the box with its load and, on DSL, its quality; the data volume; the port forwardings. */
 
 import { dailyTotals, escapeHtml, plotAttrs, formatBytes, formatDuration, formatRate, hintNote, noteOpen, sparkPaths, trafficByDevice, trafficMonth, trafficSummary, usedPercent } from "./shared.js";
 import { ic } from "./icons.js";
@@ -282,7 +282,7 @@ function volumeCard(ctx) {
   const scale = volTop(items);
   return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(i.volume)}</span><div class="seg" role="group" aria-label="${escapeHtml(i.volume)}">${buttons}</div></div>
     ${known ? `<div class="vtiles">${items.map((x) => volTile(x, scale)).join("")}</div>
-    <div class="vbody"><div><div class="subhead">${escapeHtml(i.perDay)}</div>${dayBars(dailyTotals(traffic, days), language, t)}</div>
+    <div class="vbody"><div class="vdays"><div class="subhead">${escapeHtml(i.perDay)}</div>${dayBars(dailyTotals(traffic, days), language, t)}</div>
       <div><div class="subhead">${escapeHtml(fill(i.topTitle, { range: t.trafficRanges[range] }))}</div>
       ${rows.length ? `<ol class="topdev">${list}</ol>${more}` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}</div></div>` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}
     ${hintNote(i.topHint, t)}</section>`;
@@ -433,19 +433,35 @@ function hintsHtml(internet, t, now) {
     .join("")}</section>`;
 }
 
-/** One port forwarding as a line: "TCP 443 → Living room TV:8443", the device a link to its page. */
-
 /** The button to dial in again, in the corner of the first card; the dialog of the panel asks first. */
 function reconnectButton(canWrite, t) {
   const a = t.inet.actions;
   return `<div class="hero-foot"><button class="btn" data-act="reconnect" data-k="reconnect"${canWrite ? "" : ` disabled title="${escapeHtml(a.noRights)}"`}>${escapeHtml(a.reconnect)}</button></div>`;
 }
 
-/** The whole page. Without data from the box it says so and offers the way back. */
+/** After a reconnect asked for here: the external address before and now, until it is hidden. */
+function reconnectBlock(reconnect, internet, t) {
+  const d = t.boxPage.reconnectDone;
+  const after = internet?.external_ipv4 ?? null;
+  const done = Boolean(after && reconnect.before && after !== reconnect.before);
+  return `<div class="progress ${done ? "ok" : ""}" role="status" aria-live="polite"><b>${escapeHtml(done ? d.done : d.title)}</b>
+    <dl class="kv"><dt>${escapeHtml(d.before)}</dt><dd class="mono">${escapeHtml(reconnect.before ?? "–")}</dd><dt>${escapeHtml(d.after)}</dt><dd class="mono">${escapeHtml(after ?? "–")}</dd></dl>
+    <div class="btn-row tight"><button class="btn sm" data-act="box-reconnect-clear" data-k="box-reconnect-clear">${escapeHtml(t.boxPage.restart.hide)}</button></div></div>`;
+}
+
+/** The head of a page of the internet tab: the title for screen readers, the switch above names the page. */
+function head(title) {
+  return `<div class="phead"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(title)}</h1></div>`;
+}
+
+/**
+ * Internet › Connection: the line now (rates, addresses, reconnect), its load and events, on DSL its
+ * quality, and the addresses it had. Without data from the box it says so.
+ */
 export function renderInternet(internet, ctx) {
-  const { t, language, now, canWrite, ports: portState } = ctx;
+  const { t, language, now, canWrite } = ctx;
   const i = t.inet;
-  const back = `<div class="phead"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(i.title)}</h1></div>`;
+  const back = head(i.title);
   if (!internet) return `${back}<div class="card"><div class="empty"><b>${escapeHtml(i.noData)}</b></div></div>`;
   const up = internet.connected !== false;
   const access = accessLabel(internet.access_type, t) || i.connection;
@@ -469,9 +485,9 @@ export function renderInternet(internet, ctx) {
         <div class="kv"><span class="k">${escapeHtml(i.lastError)}</span><span class="${failed ? "bad" : "ok"}">${escapeHtml(failed ? internet.last_error : i.noError)}</span></div>
         ${dnsDetails(internet.dns, t)}
       </div>
+      ${ctx.reconnect ? reconnectBlock(ctx.reconnect, internet, t) : ""}
       ${reconnectButton(canWrite, t)}
     </section>
-    ${volumeCard({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}
     <div class="icols${internet.dsl ? "" : " single"}">
       <div class="icol">
         <section class="card sec"><span class="label">${escapeHtml(i.load)}</span>
@@ -481,6 +497,16 @@ export function renderInternet(internet, ctx) {
       </div>
       ${internet.dsl ? `<div class="icol">${lineQuality(internet.dsl, language, t)}</div>` : ""}
     </div>
-    ${addressHistory(internet.addresses, language, t)}
-    ${renderPorts(portState, { t, filter: ctx.portsFilter })}`;
+    ${addressHistory(internet.addresses, language, t)}`;
+}
+
+/** Internet › Data volume: the volume of the line with the bars of the days over the whole width. */
+export function renderVolume(ctx) {
+  const { t, language } = ctx;
+  return `${head(t.inet.volume)}${volumeCard({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}`;
+}
+
+/** Internet › Port forwarding: what is open from the internet. */
+export function renderPortsPage(ports, ctx) {
+  return `${head(ctx.t.inet.ports.title)}${renderPorts(ports, { t: ctx.t, filter: ctx.portsFilter })}`;
 }

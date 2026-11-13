@@ -1,6 +1,6 @@
 /* The Wi-Fi page: the radio networks of the box with a switch each, and the guest access with QR code and password. */
 
-import { escapeHtml } from "./shared.js";
+import { errorCard, escapeHtml, loadingCard } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 
@@ -142,11 +142,8 @@ export function renderWlan(wlan, ctx) {
   const { t } = ctx;
   const w = t.wlan;
   const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(w.title)}</h1><p class="lead">${escapeHtml(w.lead)}</p></div>`;
-  if (wlan === null || wlan === undefined) return `${head}<div class="card" aria-busy="true"><div class="empty"><span>${escapeHtml(t.loading)}</span></div></div>`;
-  if (wlan === "failed" || typeof wlan !== "object") {
-    return `${head}<div class="card"><div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${escapeHtml(w.failed)}</b>${ctx.error ? `<span class="mono">${escapeHtml(ctx.error)}</span>` : ""}
-      <div class="btn-row"><button class="btn p" data-act="wlan-retry" data-k="wlan-retry">${escapeHtml(w.retry)}</button></div></div></div>`;
-  }
+  if (wlan === null || wlan === undefined) return `${head}${loadingCard(t)}`;
+  if (wlan === "failed" || typeof wlan !== "object") return `${head}${errorCard(t, w.failed, { retry: "wlan-retry", detail: ctx.error })}`;
   const c = { ...ctx, canWrite: Boolean(wlan.can_write) };
   const nets = Array.isArray(wlan.networks) && wlan.networks.length
     ? networksCard(wlan, c)

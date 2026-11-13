@@ -55,6 +55,9 @@ test("the filter row has three fixed chips with a number and the button for the 
   assert.match(html, /data-filter="all"[^>]*>Alle<b>2<\/b>/);
   assert.match(html, /data-filter="online"[^>]*>Online<b>1<\/b>/);
   assert.match(html, /data-filter="offline"[^>]*>Offline<b>1<\/b>/);
+  // the number shown is only a word of its own while a search narrows the list
+  assert.doesNotMatch(network.renderChips(state, t, NOW, 2), /class="shown"/);
+  assert.match(network.renderChips({ ...state, query: "tv" }, t, NOW, 1), /<span class="shown" aria-hidden="true">1 von 2 angezeigt<\/span>/);
   assert.doesNotMatch(html, /data-filter="blocked"/);
   // LAN, blocked, no access point; "new" needs a time on record, which "old" lacks
   assert.match(html, /id="morebtn"[^>]*aria-expanded="false"[^>]*aria-label="Weitere Filter, 3 verfügbar"/);
@@ -336,14 +339,28 @@ test("the device page offers the groups and the links to the history", () => {
   const html = device.renderDevice(groupData.clients[0], { t, now: NOW, data: groupData, hass, threshold: -75 });
   assert.match(html, /data-label="kids" aria-pressed="true"/);
   assert.match(html, /data-act="new-group"/);
-  assert.match(html, /data-act="logbook"/);
-  assert.match(html, /data-act="history"/);
+  assert.match(html, /data-act="logbook"[^>]*>.*Logbuch in HA</);
+  assert.match(html, /data-act="history"[^>]*>.*Verlauf in HA</);
+  // the explanations of the groups and of the history are one note
+  assert.equal((html.match(/<details class="explain"/g) ?? []).length, 1);
+  assert.match(html, /<summary>Hinweis<\/summary><p class="hint">Eine Gruppe[^<]*<\/p><p class="hint">[^<]*Logbuch/);
   const bare = { ...groupData.clients[0], actions: {} };
   const without = device.renderDevice(bare, { t, now: NOW, data: groupData, hass, threshold: -75 });
   assert.match(without, /Gruppen brauchen die Entität/);
   assert.doesNotMatch(without, /data-label=/);
   const noTracker = { ...groupData.clients[0], entity_id: null };
   assert.doesNotMatch(device.renderDevice(noTracker, { t, now: NOW, data: groupData, hass, threshold: -75 }), /data-act="logbook"/);
+});
+
+test("the actions of the device stand next to its name, the rare ones behind the menu", () => {
+  const html = device.renderDevice(groupData.clients[0], { t, now: NOW, data: groupData, hass, threshold: -75 });
+  const head = html.slice(html.indexOf('<div class="dtitlerow">'), html.indexOf('<div class="chips-row">'));
+  for (const act of ["rename", "show-map", "cap-device", "ha", "logbook", "history", "remove"]) assert.match(head, new RegExp(`data-act="${act}"`));
+  assert.match(head, /<h1 id="dtitle" tabindex="-1">[^<]*<\/h1><div class="dacts">/);
+  assert.match(head, /<details class="moremenu" data-note="dev-more"><summary class="icon-btn" title="Weitere Aktionen" aria-label="Weitere Aktionen">/);
+  // nothing of it is left in a card at the end of the page
+  assert.equal(html.match(/data-act="rename"/g).length, 1);
+  assert.doesNotMatch(html, /class="label">Gerät</);
 });
 
 test("the groups are a way to group the list", () => {
@@ -475,7 +492,10 @@ test("the load is the share of the line rate, at most 100", () => {
 
 test("the internet page is a route of its own", () => {
   assert.deepEqual(sharedHelpers.routeFromHash("#/internet"), { tab: "internet", device: null });
-  assert.deepEqual(sharedHelpers.routeFromHash("#/diagnose"), { tab: "diagnose", device: null });
+  assert.deepEqual(sharedHelpers.routeFromHash("#/volume"), { tab: "volume", device: null });
+  assert.deepEqual(sharedHelpers.routeFromHash("#/ports"), { tab: "ports", device: null });
+  // the diagnosis lives in the box now
+  assert.deepEqual(sharedHelpers.routeFromHash("#/diagnose"), { tab: "check", device: null });
 });
 
 const internet = {
@@ -710,6 +730,11 @@ test("the network points out a busy radio and a weak repeater link", () => {
   assert.deepEqual(hintsModule.networkHints(null, t), []);
   assert.equal(hintsModule.renderHints({ nodes: [] }, t), "");
   assert.match(hintsModule.renderHints(data, t), /5 GHz radio is 85 % busy/);
+  // folded to the first hint and how many more; a hint about the radios leads to the Wi-Fi page
+  const html = hintsModule.renderHints(data, t);
+  assert.match(html, /^<details class="card sec hints hintsum" data-note="net-hints" aria-label="Notes on the network">/);
+  assert.match(html, /<summary class="hintline warn">[\s\S]*<span class="one">Box: the 5 GHz radio[^<]*<\/span>[\s\S]*<span class="chip">\+1 more<\/span>/);
+  assert.equal((html.match(/data-tab="wlan"/g) ?? []).length, 2);
 });
 
 test("a new firmware is a hint only when it differs from the installed one", () => {
@@ -724,9 +749,11 @@ const portsPage = await import(`${base}panel-ports.js`);
 
 const forwarding = (over) => ({ uid: null, description: "Web", protocol: "TCP", external_port: 443, external_port_end: null, internal_port: 443, internal_port_end: null, client: "192.0.2.10", family: "ipv4", enabled: true, lease: 0, source: "manual", device_id: "000000000001", device_name: "NAS", device_online: true, ...over });
 
-test("the internet page lists the port forwardings by device, and says when there are none or they cannot be read", () => {
+test("the port forwarding page lists them by device, and says when there are none or they cannot be read", () => {
   const t = texts.panelTexts("en");
-  const page = (ports) => internetPage.renderInternet(internet, { t, language: "en", now: Date.now(), canWrite: true, ports });
+  const page = (ports) => internetPage.renderPortsPage(ports, { t });
+  // the connection page itself no longer carries them
+  assert.doesNotMatch(internetPage.renderInternet(internet, { t, language: "en", now: Date.now(), canWrite: true }), /pfcard/);
   const entries = [
     forwarding({ internal_port: 8443 }),
     forwarding({ description: null, protocol: "UDP", external_port: 5000, internal_port: 5000, client: "192.0.2.250", device_id: null, device_name: null, device_online: null, enabled: false, lease: 3600, source: "upnp" }),
@@ -740,8 +767,8 @@ test("the internet page lists the port forwardings by device, and says when ther
   assert.match(html, /<b>192\.0\.2\.250<\/b>/);
   assert.match(html, /class="chip open"><i class="dot warn" aria-hidden="true"><\/i>open/);
   assert.match(page({ entries: [], manual_known: true }), /No ports are open to the internet/);
-  assert.match(page("failed"), /did not tell its port forwardings/);
-  assert.match(page(null), /Loading/);
+  assert.match(page("failed"), /did not tell its port forwardings[\s\S]*data-act="ports-retry"[^>]*>Try again/);
+  assert.match(page(null), /class="card skel" aria-busy="true"><span class="sr">Loading/);
   // a hostile description is escaped
   assert.doesNotMatch(page({ entries: [{ ...entries[0], description: "<b>x</b>" }], manual_known: true }), /<b>x<\/b>/);
 });
@@ -1099,7 +1126,7 @@ test("the pool card is only offered to someone who may write, and warns before i
 test("the pages are tabs, the internet tab carries the state of the line, the gear of Manage the clean-up count", () => {
   const html = panel.renderNav({ tab: "internet", data: { internet: { connected: false } } }, t);
   const labels = [...html.matchAll(/<button[^>]*>([^<]+)/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ["Netzwerk", "Internet", "Box", "Telefon", "Diagnose"]);
+  assert.deepEqual(labels, ["Netzwerk", "Internet", "Box", "Telefon"]);
   assert.match(html, /data-tab="internet" aria-selected="true" aria-label="Internet, Getrennt"/);
   assert.match(html, /<i class="dot " aria-hidden="true"><\/i>/);
   assert.doesNotMatch(html, /data-tab="devices"/);
@@ -1480,7 +1507,7 @@ test("the VPN page is a page of the internet tab, offered only where the box tel
   assert.doesNotMatch(panel.renderNav({ tab: "net", data: vpnData }, t), /data-tab="vpn"/);
   assert.match(panel.renderNav({ tab: "vpn", data: vpnData }, t), /data-tab="internet" aria-selected="true"/);
   assert.match(panel.renderSubTabs("internet", t, { data: vpnData }), /data-tab="vpn"[^>]*>VPN/);
-  assert.equal(panel.renderSubTabs("internet", t, { data: { vpn: null } }), "");
+  assert.doesNotMatch(panel.renderSubTabs("internet", t, { data: { vpn: null } }), /data-tab="vpn"/);
   assert.deepEqual(shared.routeFromHash("#/vpn"), { tab: "vpn", device: null });
 });
 

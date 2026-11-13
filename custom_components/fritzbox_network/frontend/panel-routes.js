@@ -1,6 +1,6 @@
 /** The routes page: the static IPv4 routes of the box, a switch and a delete button for each, and a form for a new one. */
 
-import { escapeHtml, hintNote } from "./shared.js";
+import { errorCard, escapeHtml, loadingCard, hintNote } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 
@@ -184,10 +184,8 @@ export function renderRoutes(routes, ctx) {
   const canAdd = Boolean(ctx.canWrite && routes?.home);
   const add = canAdd && !ctx.draft ? `<div class="btn-row tight"><button class="btn" data-act="route-new" data-k="route-new" aria-haspopup="dialog"><span aria-hidden="true">+</span> ${escapeHtml(v.form.open)}</button></div>` : "";
   const head = `${ctx.subTabs ?? ""}<div class="phead"><div class="pheadrow"><h1 id="dtitle" tabindex="-1">${escapeHtml(v.title)}</h1>${add}</div><p class="lead">${escapeHtml(v.lead)}</p></div>`;
-  if (routes === null) return `${head}<div class="card"><div class="empty"><span>${escapeHtml(t.loading)}</span></div></div>`;
-  if (routes === "failed" || !Array.isArray(routes?.entries)) {
-    return `${head}<div class="card"><div class="empty"><b>${escapeHtml(v.failed)}</b></div></div>`;
-  }
+  if (routes === null) return `${head}${loadingCard(t)}`;
+  if (routes === "failed" || !Array.isArray(routes?.entries)) return `${head}${errorCard(t, v.failed, { retry: "routes-retry" })}`;
   const newForm = ctx.draft && canAdd ? form({ ...ctx, routes: routes.entries, home: routes.home }) : "";
   const noHome = ctx.canWrite && !routes.home ? `<p class="hint">${escapeHtml(v.form.noHome)}</p>` : "";
   const m = routesModel(routes.entries);

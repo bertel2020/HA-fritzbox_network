@@ -11,6 +11,12 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Panel: Die Taste „/“ springt von jeder Seite aus in die Suche der Geräteliste.
 - Panel: „Adressraum“ heißt jetzt „Adressen“. Die Anleitung nennt das Zahnrad „Verwalten“ und beim Aufräumen „entfernen“ und „Entfernte Geräte“, wie das Panel.
 - Panel: Die Seiten mit sichtbarem Titel nutzen denselben Seitenkopf; die Geräteliste hat eine Überschrift für Screenreader. Tabs melden nur „ausgewählt“, Auswahlgruppen nur „gewählt“ an Screenreader.
+- Panel, Internet: Der Tab hat jetzt die Seiten Verbindung, Datenvolumen, Portfreigaben und VPN (`#/internet`, `#/volume`, `#/ports`, `#/vpn`). Die Verbindung zeigt Durchsatz, Leitungsqualität, Ereignisse und Adressverlauf; das Datenvolumen hat seine eigene Seite mit dem Diagramm pro Tag über die ganze Breite. „Neu verbinden“ steht nur noch hier, mit der Adresse vorher und jetzt.
+- Panel, Box: Die Diagnose ist kein eigener Tab mehr. Ihre Werkzeuge sind Seiten der Box: Status, Verbindungstest, Protokoll und Mitschnitt (`#/check`, `#/log`, `#/capture`); die alte Adresse `#/diagnose` öffnet den Verbindungstest, „Mitschneiden“ auf der Geräteseite den Mitschnitt. Die Karte „Anschluss“ nennt nur Synchronisation und Zähler und verlinkt für alles Weitere auf Internet › Verbindung.
+- Panel, WLAN: Der Funk-Check steht jetzt hier; der Verbindungstest und die Hinweise zum Netz zeigen nur das Urteil mit „Details unter WLAN“.
+- Panel, Gerät: Umbenennen, In der Netzkarte und Mitschneiden stehen neben dem Namen, Seltenes (In Home Assistant, Logbuch in HA, Verlauf in HA, Entfernen) hinter „⋯“. Die zwei Hinweise der Stammdaten sind einer.
+- Panel, Geräteliste: Suche, Sortieren, Gruppieren und Ansicht stehen in einer Zeile, die auf schmalen Bildschirmen umbricht; die Zeile „N Geräte · M online“ entfällt (die Zahlen stehen an den Filtern, bei einer Suche „3 von 15 angezeigt“). Die Hinweise zum Netz sind auf eine Zeile eingeklappt.
+- Panel: Alle Seiten zeigen beim Laden dieselbe Platzhalter-Karte und bei einem Fehler dieselbe Karte mit „Erneut versuchen“, auch die Meldung des Panels selbst.
 
 ### Behoben
 

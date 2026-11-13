@@ -3,7 +3,9 @@
 import {
   STALE_STEPS,
   WEAK_SIGNAL_DBM,
+  errorCard,
   escapeHtml,
+  loadingCard,
   rememberNote,
   filterChanged,
   nearestStep,
@@ -29,13 +31,13 @@ import {
   visibleClients,
 } from "./panel-network.js";
 import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
-import { renderInternet } from "./panel-internet.js";
+import { renderInternet, renderPortsPage, renderVolume } from "./panel-internet.js";
 import { renderVpn } from "./panel-vpn.js";
 import { renderRoutes } from "./panel-routes.js";
 import { captureDefaults, defaultInterface, renderCapture } from "./panel-capture.js";
-import { renderConnection } from "./panel-check.js";
+import { diagHead, renderConnection } from "./panel-check.js";
 import { renderLog } from "./panel-log.js";
-import { renderRadio } from "./panel-radio.js";
+import { renderRadio, renderRadioVerdict } from "./panel-radio.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice } from "./panel-device.js";
@@ -179,15 +181,14 @@ const ICON_URL = new URL("./brand/icon.png", import.meta.url).href;
  */
 export const TAB_GROUPS = {
   net: ["net", "wlan", "addresses", "routes"],
-  internet: ["internet", "vpn"],
-  box: ["box"],
+  internet: ["internet", "volume", "ports", "vpn"],
+  box: ["box", "check", "log", "capture"],
   phone: ["phone"],
-  diagnose: ["diagnose"],
   devices: ["filter", "cleanup", "migrate"],
 };
 export const TABS = Object.keys(TAB_GROUPS);
 // a page named like its tab is called differently in the switch: "Network" › "Devices"
-const SUB_LABELS = { net: "netDevices", internet: "connection" };
+const SUB_LABELS = { net: "netDevices", internet: "connection", box: "boxStatus" };
 
 /** The tab a page belongs to. */
 export function groupOf(page) {
@@ -228,7 +229,7 @@ export function renderSubTabs(active, t, state = {}) {
 }
 
 /** The icons of the tabs, shown in the bar at the bottom of a narrow screen. */
-const NAV_ICONS = { net: "network", internet: "globe", box: "router", phone: "phone", diagnose: "search" };
+const NAV_ICONS = { net: "network", internet: "globe", box: "router", phone: "phone" };
 
 /**
  * The tabs. Internet carries a dot for the state of the line, Box one while it restarts, Phone
@@ -241,7 +242,7 @@ export function renderNav(state, t, { icons = false, bottom = false } = {}) {
   const line = state.data?.internet;
   const open = groupOf(state.tab);
   const phone = Boolean(state.phoneFound) || (!bottom && !state.phoneHidden);
-  const ids = ["net", "internet", "box", ...(phone ? ["phone"] : []), "diagnose"];
+  const ids = ["net", "internet", "box", ...(phone ? ["phone"] : [])];
   const focusable = ids.includes(open) ? open : ids[0];
   const tab = (id, extra = "", label = "", quiet = false) =>
     `<button role="tab"${quiet ? ' class="quiet"' : ""} tabindex="${id === focusable ? 0 : -1}" data-tab="${id}" aria-selected="${id === open}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${icons ? `<span class="ni">${ic(NAV_ICONS[id])}${extra}</span><span class="nl">${escapeHtml(t.tabs[id])}</span>` : `${escapeHtml(t.tabs[id])}${extra}`}</button>`;
@@ -258,7 +259,6 @@ export function renderNav(state, t, { icons = false, bottom = false } = {}) {
     tab("internet", dot, label),
     tab("box", restarting ? `<i class="dot warn" aria-hidden="true"></i>` : "", restarting ? `${t.tabs.box}, ${t.boxPage.restarting}` : ""),
     phone ? tab("phone", phoneExtra, phoneNote ? `${t.tabs.phone}, ${phoneNote}` : "", !state.phoneFound) : "",
-    tab("diagnose"),
   ].join("");
 }
 
@@ -605,12 +605,10 @@ class FritzboxNetworkPanel extends HTMLElement {
   _enterTab() {
     if (this._state.tab === "cleanup") this._loadCleanup();
     else if (this._state.tab === "filter") this._loadFilter();
-    else if (this._state.tab === "internet") this._loadPorts();
-    else if (this._state.tab === "diagnose") {
-      this._loadLatency();
-      this._loadCapture();
-      this._loadLog();
-    }
+    else if (this._state.tab === "ports") this._loadPorts();
+    else if (this._state.tab === "check") this._loadLatency();
+    else if (this._state.tab === "log") this._loadLog();
+    else if (this._state.tab === "capture") this._loadCapture();
     else if (this._state.tab === "addresses") this._loadAddresses();
     else if (this._state.tab === "routes") this._loadRoutes();
     else if (this._state.tab === "vpn") this._loadVpnHistory();
@@ -681,7 +679,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
   }
 
-  /** The port forwardings are read when the internet page opens, not with every update. */
+  /** The port forwardings are read when their page opens, not with every update. */
   async _loadPorts() {
     this._state.ports = null;
     try {
@@ -830,7 +828,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
   }
 
-  /** The recordings are read when the internet page opens and while one runs. */
+  /** The recordings are read when the capture page opens and while one runs. */
   async _loadCapture() {
     clearTimeout(this._captureTimer);
     try {
@@ -846,7 +844,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._state.capture = "failed";
     }
     this._update();
-    if (this._state.tab === "diagnose" && this._state.capture?.job?.state === "running") {
+    if (this._state.tab === "capture" && this._state.capture?.job?.state === "running") {
       this._captureTimer = setTimeout(() => this._loadCapture(), 1000);
     }
   }
@@ -860,7 +858,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._state.latency = "failed";
     }
     this._update();
-    if (this._state.tab === "diagnose" && this._state.latency?.enabled) {
+    if (this._state.tab === "check" && this._state.latency?.enabled) {
       this._latencyTimer = setTimeout(() => this._loadLatency(), 60000);
     }
   }
@@ -913,7 +911,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         this._captureTimer = setTimeout(() => this._loadCapture(), 1000);
       } else if (ds.act === "cap-device") {
         state.captureForm = { ...state.captureForm, interface: state.captureForm.interface.startsWith("2-") ? defaultInterface(state.capture.interfaces) : state.captureForm.interface, mac: this._selected()?.mac ?? "" };
-        globalThis.location.hash = "#/diagnose";
+        globalThis.location.hash = pageHash("capture");
         return;
       } else if (ds.act === "cap-detect") {
         state.captureDetecting = true;
@@ -995,6 +993,21 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._unsub = null;
     }
     this._started = false;
+  }
+
+  /** "Try again" on the note of a failed read: start over where it failed, or read the open page again. */
+  async _retry() {
+    this._error = null;
+    this._update();
+    if (!this._entryId) {
+      this._started = false;
+      return this._start();
+    }
+    if (!this._unsub) {
+      if (await this._subscribe()) this._enterTab();
+      return;
+    }
+    this._enterTab();
   }
 
   _fail(err) {
@@ -1140,15 +1153,19 @@ class FritzboxNetworkPanel extends HTMLElement {
                 <div class="chips" id="chips" role="group" aria-label="${t.filterGroup}"></div>
                 <div id="menuhost"></div>
               </div>
-              <div class="meta" id="meta" aria-live="polite"></div>
+              <div class="sr" id="meta" aria-live="polite"></div>
             </div>
             <div id="groupbar"></div>
             <div id="body"></div>
           </div>
           <div id="device-view" hidden></div>
           <div id="internet-view" hidden></div>
+          <div id="volume-view" hidden></div>
+          <div id="ports-view" hidden></div>
           <div id="vpn-view" hidden></div>
-          <div id="diagnose-view" hidden></div>
+          <div id="check-view" hidden></div>
+          <div id="log-view" hidden></div>
+          <div id="capture-view" hidden></div>
           <div id="addresses-view" hidden></div>
           <div id="routes-view" hidden></div>
           <div id="box-view" hidden></div>
@@ -1260,9 +1277,10 @@ class FritzboxNetworkPanel extends HTMLElement {
     const root = this.shadowRoot;
     const t = this._t;
     const state = this._state;
-    const note = this._error ? `<div class="card note-card"><div class="empty"><b>${t[this._error]}</b></div></div>` : "";
+    // without a box there is nothing to try again; a failed read or missing rights may change
+    const note = this._error ? errorCard(t, t[this._error], { retry: this._error === "noBox" ? "" : "retry" }) : "";
     const ready = Boolean(state.data) && !this._error;
-    this._set("note", note || (state.data ? "" : `<div class="card"><div class="empty"><span>${t.loading}</span></div></div>`));
+    this._set("note", note || (state.data ? "" : loadingCard(t)));
     this._set("lookhost", lookButton(t, state.look));
     this._set("lookmenuhost", renderLookMenu(this._look, t, state.look));
     const netView = root.querySelector("#net-view");
@@ -1274,7 +1292,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const onDevice = tab === "net" && Boolean(state.sel);
     netView.hidden = !ready || tab !== "net" || onDevice;
     root.querySelector("#device-view").hidden = !ready || !onDevice;
-    for (const page of ["internet", "vpn", "box", "phone", "diagnose", "wlan", "addresses", "routes", "cleanup", "filter", "migrate"]) {
+    for (const page of ["internet", "volume", "ports", "vpn", "box", "check", "log", "capture", "phone", "wlan", "addresses", "routes", "cleanup", "filter", "migrate"]) {
       root.querySelector(`#${page}-view`).hidden = !ready || tab !== page;
     }
     root.querySelector("#live-chip").hidden = !ready;
@@ -1289,9 +1307,9 @@ class FritzboxNetworkPanel extends HTMLElement {
     const master = (state.data.nodes ?? []).find((n) => n.role === "master");
     root.querySelector("#sub").textContent = boxSubline(master);
     this._tick();
-    if (tab === "internet") return this._renderInternet();
+    if (tab === "internet" || tab === "volume" || tab === "ports") return this._renderInternet();
     if (tab === "vpn") return this._renderVpn();
-    if (tab === "diagnose") return this._renderDiagnose();
+    if (tab === "check" || tab === "log" || tab === "capture") return this._renderDiagnose();
     if (tab === "addresses") return this._renderAddresses();
     if (tab === "routes") return this._renderRoutes();
     if (tab === "box") return this._renderBoxPage();
@@ -1316,7 +1334,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._listKey = listKey;
     const shown = visibleClients(state, now);
     this._set("hints", renderHints(state.data, t));
-    this._set("chips", renderChips(state, t, now));
+    this._set("chips", renderChips(state, t, now, shown.length));
     this._set("menuhost", renderFilterMenu(state, t, now));
     this._set("meta", renderMeta(state, t, shown.length));
     this._set("groupbar", renderGroupBar(state, t, this._hass));
@@ -1331,22 +1349,23 @@ class FritzboxNetworkPanel extends HTMLElement {
     drawLinks(this.shadowRoot);
   }
 
+  /** The page of the internet tab that is open: the connection, the data volume or the port forwardings. */
   _renderInternet() {
-    const language = this._hass?.language;
-    this._set(
-      "internet-view",
-      renderInternet(this._state.data?.internet ?? null, {
-        t: this._t,
-        language,
-        now: Date.now(),
-        canWrite: Boolean(this._state.data?.can_write),
-        ports: this._state.ports,
-        traffic: this._state.trafficRange === 365 ? (this._state.trafficYear ?? this._state.traffic) : this._state.traffic,
-        trafficRange: this._state.trafficRange,
-        portsFilter: this._state.portsFilter,
-        clients: this._state.data?.clients ?? [],
-      })
-    );
+    const state = this._state;
+    const ctx = {
+      t: this._t,
+      language: this._hass?.language,
+      now: Date.now(),
+      canWrite: Boolean(state.data?.can_write),
+      reconnect: state.boxReconnect,
+      traffic: state.trafficRange === 365 ? (state.trafficYear ?? state.traffic) : state.traffic,
+      trafficRange: state.trafficRange,
+      portsFilter: state.portsFilter,
+      clients: state.data?.clients ?? [],
+    };
+    if (state.tab === "volume") return this._set("volume-view", renderVolume(ctx));
+    if (state.tab === "ports") return this._set("ports-view", renderPortsPage(state.ports, ctx));
+    this._set("internet-view", renderInternet(state.data?.internet ?? null, ctx));
   }
 
   _renderVpn() {
@@ -1371,21 +1390,31 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
   }
 
+  /** The pages of the box tab that came from the diagnosis: the connection test, the event log, the capture. */
   _renderDiagnose() {
     const t = this._t;
+    const state = this._state;
+    const language = this._hass?.language;
+    if (state.tab === "check") {
+      return this._set(
+        "check-view",
+        diagHead("check", t) +
+          renderConnection(state.check, state.latency, { t, language, now: Date.now() / 1000, range: state.latencyRange }) +
+          renderRadioVerdict(state.data, { t })
+      );
+    }
+    if (state.tab === "log") return this._set("log-view", diagHead("log", t) + renderLog(state.log, { t, group: state.logGroup, kind: state.logKind }));
     this._set(
-      "diagnose-view",
-      `<div class="phead"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(t.diag.title)}</h1></div>` +
-        renderConnection(this._state.check, this._state.latency, { t, language: this._hass?.language, now: Date.now() / 1000, range: this._state.latencyRange }) +
-        `<div class="diagrow">${renderRadio(this._state.data, { t, language: this._hass?.language })}${renderLog(this._state.log, { t, group: this._state.logGroup, kind: this._state.logKind })}</div>` +
-        renderCapture(this._state.capture, {
+      "capture-view",
+      diagHead("capture", t) +
+        renderCapture(state.capture, {
           t,
-          language: this._hass?.language,
-          canWrite: Boolean(this._state.data?.can_write),
-          form: this._state.captureForm,
-          detecting: this._state.captureDetecting,
-          clients: this._state.data?.clients ?? [],
-          summary: this._state.captureSummary,
+          language,
+          canWrite: Boolean(state.data?.can_write),
+          form: state.captureForm,
+          detecting: state.captureDetecting,
+          clients: state.data?.clients ?? [],
+          summary: state.captureSummary,
         })
     );
   }
@@ -1558,6 +1587,13 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     if (event.key === "Escape") {
       if (state.tab === "phone") this._phoneTip(null);
+      const more = root.querySelector("details.moremenu[open]");
+      if (more) {
+        event.preventDefault();
+        more.open = false;
+        more.querySelector("summary")?.focus();
+        return;
+      }
       if (state.look) {
         event.preventDefault();
         state.look = false;
@@ -1700,6 +1736,10 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _onClick(event) {
     const t = this._t;
+    // the "⋯" menu of the device closes on a click outside it and once an entry is chosen
+    for (const more of this.shadowRoot.querySelectorAll("details.moremenu[open]")) {
+      if (!more.contains(event.target) || event.target.closest?.(".mitem")) more.open = false;
+    }
     if (event.target.id === "a-groups") return this._closeGroups();
     if (event.target.id === "a-entries") return this._closeEntry();
     const target = event.target.closest("button, a[data-act], [data-filter], [data-ap], [data-dev], [data-act], [data-aip]");
@@ -1811,6 +1851,22 @@ class FritzboxNetworkPanel extends HTMLElement {
     } else if (ds.act === "ports-filter") {
       state.portsFilter = ds.f;
       return this._renderInternet();
+    } else if (ds.act === "retry") {
+      return this._retry();
+    } else if (ds.act === "ports-retry") {
+      return this._loadPorts();
+    } else if (ds.act === "addr-retry") {
+      return this._loadAddresses();
+    } else if (ds.act === "routes-retry") {
+      return this._loadRoutes();
+    } else if (ds.act === "log-retry") {
+      state.log = null;
+      this._update();
+      return this._loadLog();
+    } else if (ds.act === "cap-retry") {
+      state.capture = null;
+      this._update();
+      return this._loadCapture();
     } else if (ds.act === "route-pick") {
       state.routesSel = ds.network;
       return this._renderRoutes();
@@ -2001,7 +2057,6 @@ class FritzboxNetworkPanel extends HTMLElement {
         now: Date.now(),
         internet: state.data?.internet ?? null,
         restart: state.boxRestart,
-        reconnect: state.boxReconnect,
         history: state.boxHistory,
         historyRange: state.boxHistoryRange,
       })
@@ -2084,7 +2139,13 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _renderWlan() {
     const state = this._state;
-    this._set("wlan-view", renderWlan(state.wlan, { t: this._t, busy: state.wlanBusy, secret: state.wlanSecret, reveal: state.wlanReveal, error: state.wlanError, clients: state.data?.clients ?? [] }));
+    const t = this._t;
+    // the radio check reads what the subscription brings: it is there even where wlan/list failed
+    this._set(
+      "wlan-view",
+      renderWlan(state.wlan, { t, busy: state.wlanBusy, secret: state.wlanSecret, reveal: state.wlanReveal, error: state.wlanError, clients: state.data?.clients ?? [] }) +
+        renderRadio(state.data, { t, language: this._hass?.language })
+    );
   }
 
   /** Forgets the guest password and draws the page without it, so that it is not kept in the page either. */

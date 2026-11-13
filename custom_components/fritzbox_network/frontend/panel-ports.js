@@ -1,6 +1,6 @@
-/** The port forwardings card of the internet page: by device, one row per forwarding, IPv4 and IPv6 as one. */
+/** The port forwardings page of the internet tab: by device, one row per forwarding, IPv4 and IPv6 as one. */
 
-import { escapeHtml, formatDuration } from "./shared.js";
+import { errorCard, escapeHtml, formatDuration, loadingCard } from "./shared.js";
 import { fill } from "./texts.js";
 
 export const PORT_FILTERS = ["all", "open", "closed", "ipv6", "upnp"];
@@ -117,8 +117,8 @@ export function renderPorts(state, ctx) {
   const filter = PORT_FILTERS.includes(ctx.filter) ? ctx.filter : "all";
   const head = `<span class="label">${escapeHtml(p.title)}</span>`;
   const card = (body) => `<section class="card sec pfcard">${head}${body}</section>`;
-  if (state === "failed") return card(`<p class="hint">${escapeHtml(p.failed)}</p>`);
-  if (!state) return card(`<p class="hint">${escapeHtml(t.loading)}</p>`);
+  if (state === "failed") return errorCard(t, p.failed, { retry: "ports-retry" });
+  if (!state) return loadingCard(t);
   const m = portsModel(state.entries, filter);
   const gap = state.manual_known === false;
   if (!m.rows.length) {

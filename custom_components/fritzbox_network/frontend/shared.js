@@ -1,5 +1,7 @@
 /* The parts of the FRITZ!Box Cockpit frontend that need no DOM: used by the cards and the panel. */
 
+import { ic } from "./icons.js";
+
 // A Wi-Fi device is on a weak link when its signal is this strong (in dBm) or weaker.
 export const WEAK_SIGNAL_DBM = -75;
 
@@ -37,6 +39,23 @@ export function rememberNote(details) {
 }
 
 /** A hint under a card: a short one stays as it is, a long one is folded behind "Note" (it is read once). */
+/**
+ * The card a page shows while its data is read: grey lines in the shape of a card, said as "Loading"
+ * to a screen reader. One look for every page that reads something.
+ */
+export function loadingCard(t) {
+  return `<div class="card skel" aria-busy="true"><span class="sr">${escapeHtml(t.loading)}</span><i></i><i></i><i></i></div>`;
+}
+
+/**
+ * The card a page shows where reading failed: what went wrong, a detail if there is one, and
+ * "Try again" where `retry` names the action (data-act) that reads again.
+ */
+export function errorCard(t, text, { retry = "", detail = "" } = {}) {
+  const button = retry ? `<div class="btn-row"><button class="btn p" data-act="${escapeHtml(retry)}" data-k="${escapeHtml(retry)}">${escapeHtml(t.retry)}</button></div>` : "";
+  return `<div class="card" role="alert"><div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${escapeHtml(text)}</b>${detail ? `<span class="mono">${escapeHtml(detail)}</span>` : ""}${button}</div></div>`;
+}
+
 export function hintNote(text, t, min = 110) {
   if (!text) return "";
   return String(text).length < min ? `<p class="hint">${escapeHtml(text)}</p>` : noteHtml(t.hintLabel, text);
@@ -352,19 +371,18 @@ export function deviceFromHash(hash) {
   return match ? match[1] : null;
 }
 
-/** Which page a #/… route shows: the network (also for a device), the internet, the diagnosis, the clean-up or the filter. */
 /** The pages of the panel reached by "#/<page>"; the network list is "#/". */
-const PAGES = ["wlan", "addresses", "routes", "internet", "vpn", "box", "phone", "diagnose", "filter", "cleanup", "migrate"];
-/** Older addresses of pages that have moved: the phone used to live under the box. */
-const SUB_PAGES = { "box/phone": "phone" };
+const PAGES = ["wlan", "addresses", "routes", "internet", "volume", "ports", "vpn", "box", "check", "log", "capture", "phone", "filter", "cleanup", "migrate"];
+/** Older addresses of pages that have moved: the phone used to live under the box, the diagnosis is the box's connection test now. */
+const MOVED = { "box/phone": "phone", diagnose: "check" };
 
+/** Which page a #/… route shows: the network (also for a device) or one of PAGES; an old address leads to where its page is now. */
 export function routeFromHash(hash) {
   const device = deviceFromHash(hash);
   if (device) return { tab: "net", device };
-  const sub = /^#\/([a-z]+\/[a-z]+)$/.exec(hash ?? "")?.[1];
-  if (sub && SUB_PAGES[sub]) return { tab: SUB_PAGES[sub], device: null };
-  const page = /^#\/([a-z]+)$/.exec(hash ?? "")?.[1];
-  return { tab: PAGES.includes(page) ? page : "net", device: null };
+  const path = /^#\/([a-z]+(?:\/[a-z]+)?)$/.exec(hash ?? "")?.[1];
+  if (path && MOVED[path]) return { tab: MOVED[path], device: null };
+  return { tab: PAGES.includes(path) ? path : "net", device: null };
 }
 
 /** The address of a page: "#/" for the network, "#/<page>" otherwise. */

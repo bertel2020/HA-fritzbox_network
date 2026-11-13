@@ -95,37 +95,44 @@ const typesOf = (calls) => calls.map((c) => c.type.replace("fritzbox_network/", 
 
 // ---------- tabs ----------
 
-test("there are four tabs, and the phone one; Wi-Fi, addresses and routes are pages of the network, VPN of the internet", () => {
+test("there are three tabs, and the phone one; Wi-Fi, addresses and routes are pages of the network, VPN of the internet, the diagnosis of the box", () => {
   const nav = panel.renderNav({ tab: "wlan", data: {} }, t);
   const labels = [...nav.matchAll(/<button[^>]*data-tab="(\w+)"/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ["net", "internet", "box", "phone", "diagnose"]);
+  assert.deepEqual(labels, ["net", "internet", "box", "phone"]);
   // hidden by the reader, and FRITZ!Box Telefon not there: no phone tab
   const hidden = panel.renderNav({ tab: "wlan", data: {}, phoneHidden: true }, t);
-  assert.deepEqual([...hidden.matchAll(/<button[^>]*data-tab="(\w+)"/g)].map((m) => m[1]), ["net", "internet", "box", "diagnose"]);
+  assert.deepEqual([...hidden.matchAll(/<button[^>]*data-tab="(\w+)"/g)].map((m) => m[1]), ["net", "internet", "box"]);
   // the bar at the bottom has the phone only where FRITZ!Box Telefon is found
   const bottom = (state) => [...panel.renderNav({ tab: "wlan", data: {}, ...state }, t, { icons: true, bottom: true }).matchAll(/data-tab="(\w+)"/g)].map((m) => m[1]);
-  assert.deepEqual(bottom({}), ["net", "internet", "box", "diagnose"]);
-  assert.deepEqual(bottom({ phoneFound: true }), ["net", "internet", "box", "phone", "diagnose"]);
-  assert.deepEqual(bottom({ phoneFound: true, phoneHidden: true }), ["net", "internet", "box", "phone", "diagnose"]);
+  assert.deepEqual(bottom({}), ["net", "internet", "box"]);
+  assert.deepEqual(bottom({ phoneFound: true }), ["net", "internet", "box", "phone"]);
+  assert.deepEqual(bottom({ phoneFound: true, phoneHidden: true }), ["net", "internet", "box", "phone"]);
   // on the phone page without FRITZ!Box Telefon, the bottom bar still has a tab in the tab order
   assert.match(panel.renderNav({ tab: "phone", data: {} }, t, { bottom: true }), /^<button role="tab" tabindex="0" data-tab="net" aria-selected="false"/);
   assert.match(nav, /data-tab="net" aria-selected="true"/);
   assert.deepEqual(panel.TAB_GROUPS.net, ["net", "wlan", "addresses", "routes"]);
-  assert.deepEqual(panel.TAB_GROUPS.internet, ["internet", "vpn"]);
+  assert.deepEqual(panel.TAB_GROUPS.internet, ["internet", "volume", "ports", "vpn"]);
+  assert.deepEqual(panel.TAB_GROUPS.box, ["box", "check", "log", "capture"]);
+  assert.equal(panel.TAB_GROUPS.diagnose, undefined);
   const sub = panel.renderSubTabs("wlan", t, { data: {} });
   assert.deepEqual([...sub.matchAll(/>([^<]+)<\/button>/g)].map((m) => m[1]), ["Geräte", "WLAN", "Adressen", "Routen"]);
   assert.match(sub, /role="tablist" aria-label="Netzwerk"/);
   assert.match(sub, /data-tab="wlan" aria-selected="true"/);
-  // the box has one page: no switch
-  assert.equal(panel.renderSubTabs("box", t, { data: {} }), "");
+  // the box has its status and the tools of the diagnosis as pages
+  const boxSub = panel.renderSubTabs("log", t, { data: {} });
+  assert.deepEqual([...boxSub.matchAll(/>([^<]+)<\/button>/g)].map((m) => m[1]), ["Status", "Verbindungstest", "Protokoll", "Mitschnitt"]);
+  assert.match(boxSub, /role="tablist" aria-label="Box"/);
+  assert.match(boxSub, /data-tab="log" aria-selected="true"/);
   assert.match(panel.renderNav({ tab: "box", data: {} }, t), /data-tab="box" aria-selected="true">Box</);
+  assert.match(panel.renderNav({ tab: "capture", data: {} }, t), /data-tab="box" aria-selected="true">Box</);
 });
 
 test("VPN is offered only with WireGuard, switching over only while FRITZ!Box Tools is set up", () => {
-  assert.deepEqual(panel.pagesOf("internet", { data: { vpn: [] } }), ["internet", "vpn"]);
-  assert.deepEqual(panel.pagesOf("internet", { data: { vpn: null } }), ["internet"]);
-  assert.equal(panel.renderSubTabs("internet", t, { data: {} }), "");
-  assert.match(panel.renderSubTabs("internet", t, { data: { vpn: [] } }), /Verbindung<\/button><button[^>]*data-tab="vpn"/);
+  assert.deepEqual(panel.pagesOf("internet", { data: { vpn: [] } }), ["internet", "volume", "ports", "vpn"]);
+  assert.deepEqual(panel.pagesOf("internet", { data: { vpn: null } }), ["internet", "volume", "ports"]);
+  const sub = panel.renderSubTabs("internet", t, { data: {} });
+  assert.deepEqual([...sub.matchAll(/>([^<]+)<\/button>/g)].map((m) => m[1]), ["Verbindung", "Datenvolumen", "Portfreigaben"]);
+  assert.match(panel.renderSubTabs("internet", t, { data: { vpn: [] } }), /Portfreigaben<\/button><button[^>]*data-tab="vpn"/);
   assert.deepEqual(panel.pagesOf("devices", { migrate: null }), ["filter", "cleanup"]);
   assert.deepEqual(panel.pagesOf("devices", { migrate: "failed" }), ["filter", "cleanup"]);
   assert.deepEqual(panel.pagesOf("devices", { migrate: { core: null, rows: [] } }), ["filter", "cleanup"]);
@@ -135,8 +142,11 @@ test("VPN is offered only with WireGuard, switching over only while FRITZ!Box To
 
 test("the new pages are routes of their own, an old or unknown one leads to the network", async () => {
   const shared = await import(`${base}shared.js`);
-  for (const page of ["wlan", "box", "migrate", "vpn", "addresses", "routes"]) assert.deepEqual(shared.routeFromHash(`#/${page}`), { tab: page, device: null });
+  for (const page of ["wlan", "box", "migrate", "vpn", "addresses", "routes", "volume", "ports", "check", "log", "capture"]) assert.deepEqual(shared.routeFromHash(`#/${page}`), { tab: page, device: null });
   assert.deepEqual(shared.routeFromHash("#/nonsense"), { tab: "net", device: null });
+  // the diagnosis moved into the box: its old address opens the connection test
+  assert.deepEqual(shared.routeFromHash("#/diagnose"), { tab: "check", device: null });
+  assert.deepEqual(shared.routeFromHash("#/diagnose/x"), { tab: "net", device: null });
 });
 
 test("the box tab carries a dot while the box restarts", () => {
@@ -172,12 +182,15 @@ test("the box page shows model, firmware, uptime, temperature, the line and the 
   assert.match(html, /23 d 4 Std\./);
   assert.match(html, /61,5 °C/);
   assert.match(html, /synchron/);
+  // the line in short: the quality and the reconnect are on Internet › Connection, only linked here
+  assert.match(html, /data-tab="internet"[^>]*>Leitungsqualität, Adressen und Neu verbinden ›/);
+  assert.doesNotMatch(html, /data-act="reconnect"/);
+  assert.doesNotMatch(html, /203\.0\.113\.7/);
   assert.match(html, /1,84 TB/);
   assert.match(html, /212 GB/);
   assert.match(html, /chip ok"><i class="dot on" aria-hidden="true"><\/i>läuft/);
   assert.match(html, /data-act="reboot" data-k="reboot" aria-haspopup="dialog">Neu starten …/);
   assert.doesNotMatch(html, /data-act="reboot"[^>]*disabled/);
-  assert.match(html, /Beide fragen vorher nach/);
 });
 
 test("a box without a temperature says so, an unknown line too, and a hostile model is escaped", () => {
@@ -188,9 +201,8 @@ test("a box without a temperature says so, an unknown line too, and a hostile mo
   assert.match(html, /<b>–<\/b><small>seit dem Neustart/);
 });
 
-test("without the right to write both actions are off and the page says why", () => {
+test("without the right to write the restart is off and the page says why", () => {
   const html = boxPage.renderBoxPage({ ...info, can_write: false }, boxCtx());
-  assert.match(html, /data-act="reconnect"[^>]*disabled/);
   assert.match(html, /data-act="reboot"[^>]*disabled/);
   assert.match(html, /Recht „FRITZ!Box Einstellungen“/);
 });
@@ -259,16 +271,16 @@ test("reboot asks with the list of what goes away, then calls box/reboot and sta
 });
 
 test("reconnect calls internet/reconnect and shows the address before and now", async () => {
-  const { p, calls, root } = makePanel({ "box/info": info, "internet/reconnect": {} }, "box");
-  await p._loadBox();
+  const { p, calls, root } = makePanel({ "internet/reconnect": {} }, "internet");
   const asked = p._interrupt("reconnect");
   root.els["#dialog"].querySelector("#dlg-yes").onclick();
   await asked;
-  assert.deepEqual(typesOf(calls), ["box/info", "box/history", "internet/reconnect"]);
-  assert.match(p._html["box-view"], /IPv4 vorher<\/dt><dd class="mono">203\.0\.113\.7/);
+  assert.deepEqual(typesOf(calls), ["internet/reconnect"]);
+  // the address before and now is shown where the reconnect is: on Internet › Connection
+  assert.match(p._html["internet-view"], /IPv4 vorher<\/dt><dd class="mono">203\.0\.113\.7/);
   p._state.data.internet.external_ipv4 = "203.0.113.99";
-  p._renderBoxPage();
-  assert.match(p._html["box-view"], /Wieder verbunden\.[\s\S]*203\.0\.113\.99/);
+  p._renderInternet();
+  assert.match(p._html["internet-view"], /Wieder verbunden\.[\s\S]*203\.0\.113\.99/);
 });
 
 // ---------- Wi-Fi ----------
@@ -868,4 +880,72 @@ test("a failing history says so and the rest of the page stays", async () => {
   assert.equal(p._state.boxHistory, "failed");
   assert.match(p._html["box-view"], /Der Verlauf konnte nicht gelesen werden/);
   assert.match(p._html["box-view"], /FRITZ!Box 7590 AX/);
+});
+
+// ---------- the pages that came from the diagnosis, the shared cards ----------
+
+test("the connection test, the log and the capture are pages of the box, each read when it opens", async () => {
+  const { p, calls } = makePanel({ "diagnose/latency": { enabled: false, interval: 300, steps: [], samples: [] }, "diagnose/log": { events: [] }, "capture/status": { interfaces: [], files: [], limits: {}, job: null, url: "/x/" } }, "check");
+  p._enterTab();
+  await new Promise((resolve) => setTimeout(resolve));
+  assert.deepEqual(typesOf(calls), ["diagnose/latency"]);
+  assert.match(p._html["check-view"], /<h1 id="dtitle" tabindex="-1">Verbindungstest<\/h1>/);
+  assert.match(p._html["check-view"], /data-act="check-run"/);
+  p._state.tab = "log";
+  p._enterTab();
+  await new Promise((resolve) => setTimeout(resolve));
+  assert.deepEqual(typesOf(calls), ["diagnose/latency", "diagnose/log"]);
+  assert.match(p._html["log-view"], /<h1 id="dtitle" tabindex="-1">Protokoll<\/h1>/);
+  p._state.tab = "capture";
+  p._enterTab();
+  await new Promise((resolve) => setTimeout(resolve));
+  assert.deepEqual(typesOf(calls).at(-1), "capture/status");
+  assert.match(p._html["capture-view"], /<h1 id="dtitle" tabindex="-1">Mitschnitt<\/h1>/);
+});
+
+test("the radio check is on the Wi-Fi page; the connection test keeps its verdict with the way there", async () => {
+  const data = { can_write: true, clients: [], nodes: [{ mac: "m", name: "Box", role: "master", radios: { "5ghz": { utilization: 90, channel: 36 } } }] };
+  const { p } = makePanel({ "wlan/list": wlan, "diagnose/latency": { enabled: false, interval: 300, steps: [], samples: [] } }, "wlan");
+  p._state.data = data;
+  await p._loadWlan();
+  assert.match(p._html["wlan-view"], /Funk-Check[\s\S]*Kanal 36/);
+  p._state.tab = "check";
+  p._update();
+  const check = p._html["check-view"];
+  assert.match(check, /Auf den Funkmodulen fallen 1 Dinge auf\./);
+  assert.match(check, /data-tab="wlan"[^>]*>Details unter WLAN ›/);
+  assert.doesNotMatch(check, /Kanal 36/);
+});
+
+test("a page that loads shows the grey card, a failed read the card with Try again", async () => {
+  const shared = await import(`${base}shared.js`);
+  assert.equal(shared.loadingCard(t), '<div class="card skel" aria-busy="true"><span class="sr">Lädt…</span><i></i><i></i><i></i></div>');
+  const card = shared.errorCard(t, "Kaputt <b>", { retry: "x-retry", detail: "E 401" });
+  assert.match(card, /role="alert"/);
+  assert.match(card, /<b>Kaputt &lt;b&gt;<\/b><span class="mono">E 401<\/span>/);
+  assert.match(card, /data-act="x-retry" data-k="x-retry">Erneut versuchen<\/button>/);
+  assert.doesNotMatch(shared.errorCard(t, "Keine Box"), /<button/);
+  // the note of the panel uses the same card, and Try again reads the open page again
+  const { p, calls } = makePanel({ "box/info": info }, "box");
+  p._fail({ code: "unauthorized" });
+  assert.match(p._html.note, /role="alert"[\s\S]*data-act="retry"/);
+  p._unsub = () => {};
+  await p._retry();
+  await new Promise((resolve) => setTimeout(resolve));
+  assert.equal(p._error, null);
+  assert.equal(typesOf(calls)[0], "box/info");
+  p._error = "noBox";
+  p._update();
+  assert.doesNotMatch(p._html.note, /data-act="retry"/);
+});
+
+test("Record traffic of a device opens the capture page of the box with the device chosen", async () => {
+  const { p } = makePanel({}, "net");
+  p._state.capture = { interfaces: [{ id: "1-lan" }], files: [], limits: {}, job: null };
+  p._state.captureForm = { interface: "1-lan", seconds: 60, mb: 10, mac: "" };
+  p._selected = () => ({ mac: "aa:bb" });
+  globalThis.location.hash = "";
+  await p._onCapture({ act: "cap-device" });
+  assert.equal(globalThis.location.hash, "#/capture");
+  assert.equal(p._state.captureForm.mac, "aa:bb");
 });

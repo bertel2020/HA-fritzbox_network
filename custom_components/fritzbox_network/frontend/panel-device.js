@@ -1,6 +1,6 @@
 /* The device page of the panel: a page of its own with the connection, the actions and the master data, as HTML. */
 
-import { BANDS, escapeHtml, plotAttrs, formatBytes, hintNote, isBlocked, isWeak, pointColumn, seriesStats, sparkLine, trafficSum, uplinkStyle } from "./shared.js";
+import { BANDS, escapeHtml, plotAttrs, formatBytes, isBlocked, noteHtml, noteOpen, isWeak, pointColumn, seriesStats, sparkLine, trafficSum, uplinkStyle } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { whenText } from "./panel-network.js";
@@ -170,7 +170,30 @@ function tilesHtml(client, data, t) {
   return body ? `<div class="tiles">${body}</div>` : "";
 }
 
-/** Back to where the device was opened, and paging through the devices that are shown there. */
+/**
+ * What can be done with the device, next to its name: rename, show it in the map, record its
+ * traffic; the rarer ones (Home Assistant, its logbook and history there, removing it) behind "⋯".
+ */
+function actionsHtml(client, t) {
+  const item = (act, label, icon = "", extra = "") =>
+    `<button class="mitem" data-act="${act}" data-k="m-${act}"${extra}>${icon ? ic(icon) : `<span class="ck"></span>`}<span class="t">${escapeHtml(label)}</span></button>`;
+  const more = [
+    item("ha", t.openInHa, "external", client.device_id ? "" : " disabled"),
+    client.entity_id ? item("logbook", t.logbook, "list") : "",
+    client.entity_id ? item("history", t.history, "list") : "",
+    item("remove", t.removeDevice, "trash", client.online ? ` disabled title="${escapeHtml(t.removeOnline)}"` : ""),
+  ].join("");
+  const key = "dev-more";
+  return `<div class="dacts">
+    <button class="btn sm" data-act="rename" data-k="rename" ${client.entity_id ? "" : "disabled"}>${ic("pencil")}${escapeHtml(t.rename)}</button>
+    <button class="btn sm" data-act="show-map" data-k="show-map">${ic("map")}${escapeHtml(t.showInMap)}</button>
+    <button class="btn sm" data-act="cap-device" data-k="cap-device">${ic("download")}${escapeHtml(t.inet.capture.ofDevice)}</button>
+    <details class="moremenu" data-note="${key}"${noteOpen(key) ? " open" : ""}><summary class="icon-btn" title="${escapeHtml(t.moreActions)}" aria-label="${escapeHtml(t.moreActions)}">${ic("more")}</summary>
+      <div class="fmenu mlist">${more}</div></details>
+  </div>`;
+}
+
+/** Back to where the device was opened, and paging through the devices that are shown there; the name with the actions. */
 function headHtml(client, ctx) {
   const { t, pager, view } = ctx;
   const p = pager ?? { index: -1, total: 0, prev: null, next: null };
@@ -179,7 +202,7 @@ function headHtml(client, ctx) {
   const count = p.index >= 0 ? `<span aria-hidden="true">${escapeHtml(fill(t.pager, { i: p.index + 1, n: p.total }))}</span>` : "";
   return `<div class="dhead"><button class="back" data-act="back" data-k="back">${ic("back")}${escapeHtml(t.views[view] ?? t.views.list)}</button>
     ${client ? `<span class="pager">${count}${go("prev", p.prev, t.prevDevice, "k")}${go("next", p.next, t.nextDevice, "j")}</span>` : ""}
-    ${client ? `<h1 id="dtitle" tabindex="-1">${escapeHtml(client.name)}</h1>` : ""}</div>`;
+    ${client ? `<div class="dtitlerow"><h1 id="dtitle" tabindex="-1">${escapeHtml(client.name)}</h1>${actionsHtml(client, t)}</div>` : ""}</div>`;
 }
 
 export function renderDevice(client, ctx) {
@@ -220,27 +243,21 @@ export function renderDevice(client, ctx) {
     .map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${v}</dd>`)
     .join("");
 
+  // one note for the card: what a group is, and what Home Assistant records (its logbook and history are behind "⋯")
+  const notes = [client.actions?.internet_access ? t.groupsHint : "", client.entity_id ? t.historyHint : ""].filter(Boolean);
   const off = enablePlan(client, hass, canWrite, enabling);
   const note = off.length
     ? `<div class="entities-note"><span>${escapeHtml(fill(t.entitiesNote, { n: off.length }))}</span><button class="btn sm" data-enable="all" data-k="en-all">${escapeHtml(t.entitiesEnable)}</button></div>`
     : "";
   return `${headHtml(client, ctx)}
-    <div class="chips-row">${chips}</div>
+    <div class="chips-row">${chips}</div>${note}
     <div class="dsecs">
       <section class="card sec wide"><span class="label">${escapeHtml(t.connection)}</span>${pathHtml(client, data, t, ctx.threshold)}${tilesHtml(client, data, t)}</section>
       ${trendSection(client, ctx)}
       ${controlsCard(client, data, canWrite, t)}
       <section class="card sec"><span class="label">${escapeHtml(t.master)}</span><dl>${master}</dl>
         ${groupsSection(client, data, t)}
-        ${historySection(client, t)}</section>
-      <section class="card sec wide"><span class="label">${escapeHtml(t.deviceTools)}</span>
-        <div class="btn-row">
-          <button class="btn" data-act="rename" data-k="rename" ${client.entity_id ? "" : "disabled"}>${escapeHtml(t.rename)}</button>
-          <button class="btn" data-act="remove" data-k="remove" ${client.online ? "disabled" : ""} title="${client.online ? escapeHtml(t.removeOnline) : ""}">${ic("trash")}${escapeHtml(t.removeDevice)}</button>
-          <button class="btn" data-act="ha" data-k="ha" ${client.device_id ? "" : "disabled"}>${ic("external")}${escapeHtml(t.openInHa)}</button>
-          <button class="btn" data-act="show-map" data-k="show-map">${ic("map")}${escapeHtml(t.showInMap)}</button>
-          <button class="btn" data-act="cap-device" data-k="cap-device">${escapeHtml(t.inet.capture.ofDevice)}</button>
-        </div>${note}</section>
+        ${notes.length ? noteHtml(t.hintLabel, ...notes) : ""}</section>
     </div>`;
 }
 
@@ -320,16 +337,7 @@ function groupsSection(client, data, t) {
           (l) =>
             `<button class="fchip" data-label="${escapeHtml(l.id)}" aria-pressed="${(client.labels ?? []).includes(l.id)}" data-k="lb-${escapeHtml(l.id)}">${escapeHtml(l.name)}</button>`
         )
-        .join("")}<button class="fchip" data-act="new-group" data-k="new-group">+ ${escapeHtml(t.newGroup)}</button></div>
-      ${hintNote(t.groupsHint, t)}`
+        .join("")}<button class="fchip" data-act="new-group" data-k="new-group">+ ${escapeHtml(t.newGroup)}</button></div>`
     : `<p class="hint">${escapeHtml(t.noGroupEntity)}</p>`;
   return `<div class="section"><span class="label">${escapeHtml(t.groupsTitle)}</span>${body}</div>`;
-}
-
-/** Links to what Home Assistant already records about the device. */
-function historySection(client, t) {
-  if (!client.entity_id) return "";
-  return `<div class="section"><span class="label">${escapeHtml(t.historyTitle)}</span>
-    <div class="btn-row"><button class="btn sm" data-act="logbook" data-k="logbook">${escapeHtml(t.logbook)}</button><button class="btn sm" data-act="history" data-k="history">${escapeHtml(t.history)}</button></div>
-    ${hintNote(t.historyHint, t)}</div>`;
 }

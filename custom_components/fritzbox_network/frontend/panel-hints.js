@@ -1,6 +1,6 @@
 /* Notes on the network that stand out: a busy Wi-Fi radio, a repeater that hangs on a weak link, a new firmware. */
 
-import { BUSY_UTILIZATION, escapeHtml } from "./shared.js";
+import { BUSY_UTILIZATION, escapeHtml, noteOpen } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 
@@ -38,14 +38,28 @@ export function networkHints(data, t) {
   return hints;
 }
 
-/** The card with the hints; nothing where there are none. */
+// hints about the radios and the mesh: their details are on the Wi-Fi page
+const ON_WLAN = new Set(["radioBusy", "uplinkWeak", "repeaterLost"]);
+
+/**
+ * The card with the hints, folded to one line: the first hint and how many more there are. Opened,
+ * it shows all of them, a hint about the radios with the way to the Wi-Fi page. Nothing where
+ * there are none.
+ */
 export function renderHints(data, t) {
   const hints = networkHints(data, t);
   if (!hints.length) return "";
-  return `<section class="card sec hints" aria-label="${escapeHtml(t.netHintsLabel)}">${hints
+  const icon = (level) => `<span aria-hidden="true">${ic(level === "info" ? "check" : "alert")}</span>`;
+  const first = hints[0];
+  const more = hints.length > 1 ? `<span class="chip">${escapeHtml(fill(t.netHintsMore, { n: hints.length - 1 }))}</span>` : "";
+  const key = "net-hints";
+  const lines = hints
     .map(
       (h) =>
-        `<p class="hintline ${h.level}"><span aria-hidden="true">${ic(h.level === "info" ? "check" : "alert")}</span><span>${escapeHtml(fill(t.netHints[h.key], h.values))}</span></p>`
+        `<p class="hintline ${h.level}">${icon(h.level)}<span>${escapeHtml(fill(t.netHints[h.key], h.values))}${ON_WLAN.has(h.key) ? ` <button class="tlink" data-tab="wlan" data-k="hint-wlan-${h.key}">${escapeHtml(t.toWlan)} ›</button>` : ""}</span></p>`
     )
-    .join("")}</section>`;
+    .join("");
+  return `<details class="card sec hints hintsum" data-note="${key}" aria-label="${escapeHtml(t.netHintsLabel)}"${noteOpen(key) ? " open" : ""}>
+    <summary class="hintline ${first.level}">${icon(first.level)}<span class="one">${escapeHtml(fill(t.netHints[first.key], first.values))}</span><span class="all">${escapeHtml(t.netHintsLabel)}</span>${more}<span class="chev">${ic("chev")}</span></summary>
+    <div class="hintall">${lines}</div></details>`;
 }
