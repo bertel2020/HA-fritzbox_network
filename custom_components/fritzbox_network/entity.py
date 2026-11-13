@@ -78,6 +78,11 @@ def async_setup_client_entities(
 
     @callback
     def _add_new_hosts() -> None:
+        # a host the filter dropped (for example one that moved to the guest network) is gone
+        # for the entities too; when the filter lets it in again it gets new ones
+        known.difference_update(
+            mac for mac in known if mac in coordinator.all_hosts and mac not in coordinator.data.hosts
+        )
         new = [
             h
             for mac, h in coordinator.data.hosts.items()

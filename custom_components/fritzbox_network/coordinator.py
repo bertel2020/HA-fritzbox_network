@@ -173,6 +173,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self._routes_failed = 0
         self._routes_missing: dict[str, int] = {}
         self._routes_force = False
+        self._routes_generation = 0  # counts the routes written from the event loop
         self.routes_gone: set[str] = set()
         # the internet connection: the slow part of the last read, the byte counters of the poll
         # before, the throughput since then, the last hour of it and what happened to the line
@@ -572,6 +573,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
 
     async def _async_update_data(self) -> NetworkData:
         started = time.monotonic()
+        routes_generation = self._routes_generation
         try:
             hosts, mesh, wan, guest, vpn, routes = await self.hass.async_add_executor_job(
                 self._fetch
@@ -586,6 +588,9 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.slowest_fetch_seconds = max(self.slowest_fetch_seconds, self.last_fetch_seconds)
         _LOGGER.debug("Poll took %.2f s for %d hosts", self.last_fetch_seconds, len(hosts))
         self._reset_failures()
+        if routes_generation != self._routes_generation and self.data is not None:
+            # routes were written while this poll ran: what it read may be older
+            routes = self.data.routes
         self.last_success = dt_util.utcnow()
         self.all_hosts = {h.mac: h for h in hosts}
         selected = self._apply_filters(hosts, mesh)
@@ -1189,6 +1194,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
     def _store_routes(self, routes: list[dict[str, Any]]) -> None:
         """Show routes read back after a change to the entities, and count the read."""
         self._routes_failed = 0
+        self._routes_force = True  # read the routes again with the next poll
+        self._routes_generation += 1
         self._note_routes(routes)
         if self.data is not None:
             self.async_set_updated_data(replace(self.data, routes=routes))

@@ -462,18 +462,16 @@ export function renderInternet(internet, ctx) {
       </div>
     </section>
     ${volumeCard({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}
-    <div class="icols">
+    <div class="icols${internet.dsl ? "" : " single"}">
       <div class="icol">
         <section class="card sec"><span class="label">${escapeHtml(i.load)}</span>
           ${chart(internet, language, t)}
           ${hintNote(i.measureNote, t)}</section>
         ${events(internet, t, now)}
-        ${internet.dsl ? addressHistory(internet.addresses, language, t) : ""}
       </div>
-      <div class="icol">
-        ${internet.dsl ? lineQuality(internet.dsl, language, t) : addressHistory(internet.addresses, language, t)}
-      </div>
+      ${internet.dsl ? `<div class="icol">${lineQuality(internet.dsl, language, t)}</div>` : ""}
     </div>
+    ${addressHistory(internet.addresses, language, t)}
     ${renderPorts(portState, { t, filter: ctx.portsFilter })}
     ${actions(canWrite, t)}`;
 }

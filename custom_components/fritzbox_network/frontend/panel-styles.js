@@ -471,6 +471,7 @@ export const PANEL_CSS = `
   #internet-view .two > .card { margin-top: 0; }
   .icols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
   @container app (min-width: 900px) { .icols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+  @container app (min-width: 900px) { .icols.single { grid-template-columns: minmax(0, 1fr); } }
   .icol { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
   #internet-view .icol > .card { margin-top: 0; }
   #internet-view .hero + .card, #internet-view .card + .icols, #internet-view .icols + .card, #internet-view .icols + section { margin-top: 16px; }

@@ -272,7 +272,8 @@ class FritzNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
         entry = self._get_reconfigure_entry()
         if user_input is not None:
-            data = {**entry.data, **user_input}
+            # the port is optional: an empty field drops the saved one
+            data = {k: v for k, v in entry.data.items() if k != CONF_PORT} | user_input
             try:
                 info = await _validate_input(self.hass, data)
             except Exception as err:  # noqa: BLE001

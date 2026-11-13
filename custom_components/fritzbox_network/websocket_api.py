@@ -1455,7 +1455,7 @@ async def ws_capture_status(
         vol.Required("interface"): vol.Match(INTERFACE_RE),
         vol.Required("seconds"): vol.All(int, vol.Range(min=MIN_SECONDS, max=MAX_SECONDS)),
         vol.Required("mb"): vol.All(int, vol.Range(min=1, max=MAX_BYTES // 1048576)),
-        vol.Optional("mac"): vol.All(str, vol.Length(max=40)),
+        vol.Optional("mac"): vol.Match(r"^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$"),
     }
 )
 @websocket_api.require_admin

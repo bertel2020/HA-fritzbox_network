@@ -309,9 +309,12 @@ class CaptureManager:
         max_bytes = max(1024 * 1024, min(MAX_BYTES, max_bytes))
         stamp = dt_util.now().strftime("%Y%m%d-%H%M%S")
         suffix = f"-{device.replace(':', '')}" if device else ""
+        name = f"{interface_slug(interface)}_{stamp}{suffix}.pcap"
+        if not FILE_RE.match(name):
+            raise ValueError("invalid device")
         job = Job(
             interface=interface,
-            name=f"{interface_slug(interface)}_{stamp}{suffix}.pcap",
+            name=name,
             started=time.monotonic(),
             seconds=seconds,
             max_bytes=max_bytes,
