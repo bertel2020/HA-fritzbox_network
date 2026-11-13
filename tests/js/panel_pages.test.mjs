@@ -146,6 +146,8 @@ const info = {
   last_restart: "2026-10-15T03:12:00Z",
   uptime_seconds: 23 * 86400 + 4 * 3600,
   cpu_temperature: 61.5,
+  cpu_load: 24,
+  ram_usage: 37,
   line: { linked: true, access_type: "DSL" },
   bytes_received: 1840000000000,
   bytes_sent: 212000000000,
@@ -751,4 +753,12 @@ test("a cancelled removal sends nothing, and a refusal of the box is told", asyn
   await second;
   assert.match(refused.root.els["#toast"].textContent, /1/);
   assert.notEqual(refused.root.els["#toast"].textContent, t.toastRemoved);
+});
+
+test("the box page shows the CPU load and the RAM use, and says where the box tells none", () => {
+  const html = boxPage.renderBoxPage(info, boxCtx());
+  assert.match(html, /CPU-Auslastung<\/span><b>24 %<\/b>/);
+  assert.match(html, /RAM-Auslastung<\/span><b>37 %<\/b>/);
+  const none = boxPage.renderBoxPage({ ...info, cpu_load: null, ram_usage: null }, boxCtx());
+  assert.match(none, /RAM-Auslastung<\/span><b class="na">nicht gemeldet<\/b><small>Diese Box nennt weder Auslastung noch RAM\.<\/small>/);
 });

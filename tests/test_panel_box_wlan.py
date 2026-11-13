@@ -29,6 +29,7 @@ async def test_box_info_tells_the_box_itself(hass, hass_ws_client, fake_client, 
     assert result["model"] == "FRITZ!Box 7590 AX"
     assert result["firmware"] == "8.25"
     assert result["cpu_temperature"] == 72
+    assert (result["cpu_load"], result["ram_usage"]) == (12, 37)
     assert result["line"] == {"linked": True, "access_type": "DSL"}
     assert result["uptime_seconds"] == pytest.approx(3 * 3600, abs=120)
     assert result["last_restart"] is not None
@@ -40,6 +41,7 @@ async def test_box_info_leaves_out_what_the_box_does_not_say(
     hass, hass_ws_client, fake_client, entry
 ):
     fake_client.cpu_temperature = None
+    fake_client.utilization = None
     fake_client.uptime = None
     fake_client.writable = False
     await _setup(hass, entry)
@@ -48,6 +50,7 @@ async def test_box_info_leaves_out_what_the_box_does_not_say(
     result = (await _call(client, entry, "box/info"))["result"]
 
     assert result["cpu_temperature"] is None
+    assert result["cpu_load"] is None and result["ram_usage"] is None
     assert result["last_restart"] is None and result["uptime_seconds"] is None
     assert result["can_write"] is False
 

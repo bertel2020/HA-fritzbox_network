@@ -1148,7 +1148,7 @@ def _no_rights(connection: websocket_api.ActiveConnection, msg: dict[str, Any]) 
 async def ws_box_info(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
-    """The box itself: model, firmware, last restart, CPU temperature, line and counters."""
+    """The box itself: model, firmware, last restart, CPU temperature, load, RAM, line, counters."""
     if (found := _loaded_coordinator(hass, connection, msg)) is None:
         return
     _, coordinator = found
@@ -1166,6 +1166,12 @@ async def ws_box_info(
             temperature = await hass.async_add_executor_job(client.get_cpu_temperature)
         except (FritzConnectionException, OSError, ValueError, PermissionError):
             temperature = None
+    utilization: dict[str, int] = {}
+    if coordinator.util_supported is not False:
+        try:
+            utilization = await hass.async_add_executor_job(client.get_utilization) or {}
+        except (FritzConnectionException, OSError, ValueError, PermissionError):
+            utilization = {}
     boot = coordinator.box_boot
     internet = coordinator.data.internet
     connection.send_result(
@@ -1176,6 +1182,8 @@ async def ws_box_info(
             "last_restart": boot.isoformat() if boot else None,
             "uptime_seconds": int((dt_util.utcnow() - boot).total_seconds()) if boot else None,
             "cpu_temperature": temperature,
+            "cpu_load": utilization.get("cpu"),
+            "ram_usage": utilization.get("ram"),
             "line": {
                 "linked": internet.linked if internet else None,
                 "access_type": internet.access_type if internet else None,

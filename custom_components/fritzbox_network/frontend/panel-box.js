@@ -64,6 +64,10 @@ function hero(info, ctx) {
     typeof info.cpu_temperature === "number"
       ? tile(b.cpuTemp, `<b>${escapeHtml(down ? "–" : `${info.cpu_temperature.toLocaleString(language || "en", { maximumFractionDigits: 1 })} °C`)}</b>`, down ? b.unreachable : "")
       : tile(b.cpuTemp, `<b class="na">${escapeHtml(b.notReported)}</b>`, b.notReportedHint);
+  const usage = (label, value) =>
+    typeof value === "number"
+      ? tile(label, `<b>${escapeHtml(down ? "–" : `${value.toLocaleString(language || "en")} %`)}</b>`, down ? b.unreachable : "")
+      : tile(label, `<b class="na">${escapeHtml(b.notReported)}</b>`, b.notReportedUsage);
   const stat = down
     ? `<span class="chip warn"><i class="dot warn" aria-hidden="true"></i>${escapeHtml(b.restarting)}</span>`
     : `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${escapeHtml(b.running)}</span>`;
@@ -75,8 +79,10 @@ function hero(info, ctx) {
     <div class="tiles">
       ${tile(b.uptime, `<b>${escapeHtml(down ? "–" : formatDuration(uptime, t.inet.units))}</b>`, b.noRestart)}
       ${tile(b.lastRestart, `<b>${escapeHtml(last)}</b>`, back && restart.backAt ? fill(b.lastRestartTook, { time: minSec(restart.backAt - restart.requestedAt) }) : b.noReason)}
-      ${temp}
       ${tile(b.firmware, `<b>${escapeHtml(info.firmware ?? "–")}</b>`)}
+      ${temp}
+      ${usage(b.cpuLoad, info.cpu_load)}
+      ${usage(b.ramUsage, info.ram_usage)}
     </div></section>`;
 }
 
