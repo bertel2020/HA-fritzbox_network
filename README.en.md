@@ -5,7 +5,7 @@
 <h1 align="center">FRITZ!Box Cockpit</h1>
 
 <p align="center">
-  The network devices of your FRITZ!Box in Home Assistant, tracked by MAC address: stable entity ids, names that follow the box, and the most useful info and actions per device.
+  Your FRITZ!Box in Home Assistant at a glance: devices tracked by MAC address (stable entity ids), plus internet, Wi-Fi, VPN, diagnosis and, with "FRITZ!Box Telefon", the phone, in a side panel and dashboard cards.
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 
 <p align="center"><em><a href="README.md">Deutsche Version</a></em></p>
 
-**FRITZ!Box Cockpit** shows the devices of your home network in Home Assistant the way they are listed in the FRITZ!Box, and tracks every device by its **MAC address**. That is why entity ids never change, even when you rename a device in the box; the device name, on the other hand, follows the box. On top of that you get presence, connection data and actions such as blocking a device's internet access.
+**FRITZ!Box Cockpit** is the overview and control of your FRITZ!Box in Home Assistant. At its core it shows the devices of your home network the way they are listed in the FRITZ!Box, and tracks every device by its **MAC address**. That is why entity ids never change, even when you rename a device in the box; the device name, on the other hand, follows the box. On top of that you get presence, connection data and actions such as blocking a device's internet access. The side panel goes beyond devices: it shows the state of the internet connection with its data volume, the Wi-Fi radios, VPN, port forwardings and a diagnosis; with the integration "FRITZ!Box Telefon" the phone joins in, with call list, answering machine and phone book.
 
 > The integration used to be called "FRITZ!Box Network". The technical name `fritzbox_network` and the name of the repository stay, so existing installations, entities and automations keep working unchanged.
 

@@ -5,7 +5,7 @@
 <h1 align="center">FRITZ!Box Cockpit</h1>
 
 <p align="center">
-  Die Netzwerkgeräte deiner FRITZ!Box in Home Assistant, geführt über die MAC-Adresse: stabile Entity-IDs, Namen, die der Box folgen, und die wichtigsten Infos und Aktionen pro Gerät.
+  Deine FRITZ!Box in Home Assistant auf einen Blick: Geräte geführt über die MAC-Adresse (stabile Entity-IDs), dazu Internet, WLAN, VPN, Diagnose und, mit „FRITZ!Box Telefon“, das Telefon, in einem Seitenpanel und in Dashboard-Karten.
 </p>
 
 <p align="center">
@@ -25,7 +25,7 @@
 
 <p align="center"><em><a href="README.en.md">English version</a></em></p>
 
-**FRITZ!Box Cockpit** zeigt die Geräte deines Heimnetzes so in Home Assistant, wie sie in der FRITZ!Box stehen, und führt jedes Gerät über seine **MAC-Adresse**. Dadurch ändern sich die Entity-IDs nie, auch wenn du ein Gerät in der Box umbenennst; der Gerätename folgt dagegen der Box. Dazu kommen Anwesenheit, Verbindungsdaten und Aktionen wie das Sperren des Internetzugangs.
+**FRITZ!Box Cockpit** ist die Übersicht und Steuerung deiner FRITZ!Box in Home Assistant. Im Kern zeigt es die Geräte deines Heimnetzes so, wie sie in der FRITZ!Box stehen, und führt jedes Gerät über seine **MAC-Adresse**. Dadurch ändern sich die Entity-IDs nie, auch wenn du ein Gerät in der Box umbenennst; der Gerätename folgt dagegen der Box. Dazu kommen Anwesenheit, Verbindungsdaten und Aktionen wie das Sperren des Internetzugangs. Das Seitenpanel zeigt darüber hinaus den Zustand der Internetverbindung mit Datenvolumen, die Funkmodule, VPN, Portfreigaben und eine Diagnose; mit der Integration „FRITZ!Box Telefon“ kommt das Telefon mit Anrufliste, Anrufbeantworter und Telefonbuch dazu.
 
 > Früher hieß die Integration „FRITZ!Box Netzwerk“. Der technische Name `fritzbox_network` und der Name des Repositorys bleiben, damit bestehende Installationen, Entitäten und Automationen unverändert weiterlaufen.
 
