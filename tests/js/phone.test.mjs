@@ -389,7 +389,7 @@ test("a part without its sensor says not available instead of failing", () => {
 // ---------- privacy ----------
 
 test("privacy mode hides names, numbers and places until a row is tapped, for 15 seconds", () => {
-  mock.timers.enable({ apis: ["setTimeout"] });
+  mock.timers.enable({ apis: ["setTimeout", "Date"], now: NOW });
   try {
     const { p, html } = makePanel({ privacy: true });
     let out = html();
