@@ -1,6 +1,6 @@
 /* The course of the connection on the diagnosis page: the check run every few minutes, as one strip per step over 24 hours. */
 
-import { escapeHtml } from "./shared.js";
+import { escapeHtml, noteOpen, noteStartsOpen } from "./shared.js";
 import { fill } from "./texts.js";
 
 export const BUCKET_SECONDS = 900; // 96 buckets of 15 minutes make a day
@@ -111,7 +111,9 @@ export function latencyBody(latency, ctx) {
 export function latencySection(latency, ctx) {
   const { t } = ctx;
   const on = Boolean(latency && latency !== "failed" && latency.enabled);
-  return `<div class="course"><div class="chead"><span class="sub">${escapeHtml(t.diag.latency.heading)}</span><div class="coursectl">${on ? latencyRangeSwitch(ctx.range === "days3" ? "days3" : "day", t) : ""}${latencySwitch(latency, t)}</div></div>${latencyBody(latency, ctx)}</div>`;
+  const key = "latency-course";
+  noteStartsOpen(key);
+  return `<details class="course" data-note="${key}"${noteOpen(key) ? " open" : ""}><summary class="chead"><span class="sub">${escapeHtml(t.diag.latency.heading)}</span></summary><div class="coursectl">${on ? latencyRangeSwitch(ctx.range === "days3" ? "days3" : "day", t) : ""}${latencySwitch(latency, t)}</div>${latencyBody(latency, ctx)}</details>`;
 }
 
 /** The text on how the recording works. */

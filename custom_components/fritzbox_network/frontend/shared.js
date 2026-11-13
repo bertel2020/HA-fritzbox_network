@@ -19,6 +19,15 @@ export function noteHtml(label, ...texts) {
   return `<details class="explain" data-note="${escapeHtml(key)}"${OPEN_NOTES.has(key) ? " open" : ""}><summary>${escapeHtml(label)}</summary>${texts.map((text) => `<p class="hint">${escapeHtml(text)}</p>`).join("")}</details>`;
 }
 
+/** A section that starts open: it is open until the reader closes it, and stays as left when the page is drawn again. */
+export function noteStartsOpen(key) {
+  if (!SEEN_NOTES.has(key)) {
+    SEEN_NOTES.add(key);
+    OPEN_NOTES.add(key);
+  }
+}
+const SEEN_NOTES = new Set();
+
 /** Notes the open or closed state of an explanation the reader toggled. */
 export function rememberNote(details) {
   const key = details?.dataset?.note;

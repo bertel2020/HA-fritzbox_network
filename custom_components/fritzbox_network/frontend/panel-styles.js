@@ -679,6 +679,12 @@ export const PANEL_CSS = `
   .course { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
   .course .chead { margin-bottom: 4px; }
   .course .sub { font-size: 14px; font-weight: 500; }
+  .course > summary { cursor: pointer; list-style: none; }
+  .course > summary::-webkit-details-marker { display: none; }
+  .course > summary::after { content: "▴"; color: var(--muted); font-size: 12px; margin-left: auto; }
+  .course:not([open]) > summary::after { content: "▾"; }
+  .course:not([open]) > summary { margin-bottom: 0; }
+  .course > .coursectl { margin: 4px 0 10px; }
   .coursectl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .coursectl .seg button { min-height: 32px; text-align: center; border-top: 0; }
   .swstate { color: var(--muted); font-size: 13px; }
