@@ -257,3 +257,15 @@ async def test_a_repeater_that_shows_up_at_the_login_is_refused(hass, fake_clien
     )
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "mesh_repeater"
+
+
+async def test_reconfigure_can_drop_the_port(hass, fake_client, entry):
+    hass.config_entries.async_update_entry(entry, data={**entry.data, "port": 49443})
+    await hass.config_entries.async_setup(entry.entry_id)
+    result = await entry.start_reconfigure_flow(hass)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"host": "192.168.178.2", "use_tls": False}
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert "port" not in entry.data

@@ -205,3 +205,14 @@ async def test_the_course_of_the_connection_is_recorded_only_while_switched_on(
     await _call(client, f"{state}/switch", entry_id=entry.entry_id, enabled=False)
     await entry.runtime_data.latency.async_sample()
     assert len((await _call(client, state, entry_id=entry.entry_id))["result"]["samples"]) == 1
+
+
+async def test_a_mac_that_is_no_mac_is_refused(hass, hass_ws_client, fake_client, entry):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    bad = await _call(
+        client, START, entry_id=entry.entry_id, interface="1-lan", seconds=30, mb=10,
+        mac="../../../x",
+    )
+    assert not bad["success"]
