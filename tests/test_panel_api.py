@@ -277,3 +277,25 @@ async def test_a_failure_of_the_box_on_a_device_action_is_an_answer_not_a_trace(
         client, ACTION, entry_id=entry.entry_id, mac=LAN, action="internet_access", value=False
     )
     assert result["error"]["code"] == "unknown_error"
+
+
+async def test_a_box_that_cannot_be_reached_is_an_answer_not_a_trace_on_the_address_pages(
+    hass, hass_ws_client, fake_client, entry
+):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    def off():
+        raise OSError("no route to host")
+
+    fake_client.get_network = off
+    fake_client.get_ip_reservation = lambda mac: off()
+
+    for command, data in (
+        ("fritzbox_network/address/overview", {}),
+        ("fritzbox_network/device/ip", {"mac": LAN}),
+        ("fritzbox_network/address/pool", {"first": "192.168.178.20", "last": "192.168.178.200"}),
+    ):
+        result = await _call(client, command, entry_id=entry.entry_id, **data)
+        assert result["success"] is False, command
+        assert result["error"]["code"] == "unknown_error", command

@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import base64
+from collections.abc import Awaitable, Callable
 from dataclasses import asdict
+import functools
 import ipaddress
 import time
 from typing import Any
@@ -135,6 +137,25 @@ ENTRY_KINDS = ["plan", "hold", "ext"]
 
 def _ipv4(value: Any) -> str:
     return str(ipaddress.IPv4Address(value))
+
+
+def _box_errors(
+    func: Callable[
+        [HomeAssistant, websocket_api.ActiveConnection, dict[str, Any]], Awaitable[None]
+    ],
+) -> Callable[[HomeAssistant, websocket_api.ActiveConnection, dict[str, Any]], Awaitable[None]]:
+    """Answer a command whose call to the box fails (box off, no route) with an error, no trace."""
+
+    @functools.wraps(func)
+    async def wrapper(
+        hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+    ) -> None:
+        try:
+            await func(hass, connection, msg)
+        except (FritzConnectionException, OSError) as err:
+            connection.send_error(msg["id"], websocket_api.ERR_UNKNOWN_ERROR, str(err))
+
+    return wrapper
 
 
 def _mac(value: Any) -> str:
@@ -792,6 +813,7 @@ async def ws_route_delete(
 )
 @websocket_api.require_admin
 @websocket_api.async_response
+@_box_errors
 async def ws_device_ip(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
@@ -809,6 +831,7 @@ async def ws_device_ip(
 )
 @websocket_api.require_admin
 @websocket_api.async_response
+@_box_errors
 async def ws_address_overview(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
@@ -873,6 +896,7 @@ def ws_address_save(
 )
 @websocket_api.require_admin
 @websocket_api.async_response
+@_box_errors
 async def ws_address_pool(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
@@ -1189,6 +1213,7 @@ async def _wlan_state(hass: HomeAssistant, coordinator: FritzNetworkCoordinator)
 )
 @websocket_api.require_admin
 @websocket_api.async_response
+@_box_errors
 async def ws_wlan_list(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
@@ -1213,6 +1238,7 @@ async def ws_wlan_list(
 )
 @websocket_api.require_admin
 @websocket_api.async_response
+@_box_errors
 async def ws_wlan_switch(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:

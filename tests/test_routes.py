@@ -611,3 +611,22 @@ async def test_the_routes_are_read_again_with_the_poll_after_a_change(
     await _poll(hass, coordinator, read=False)  # not a read of its own turn, but forced
 
     assert "10.7.0.0/24" in [r["network"] for r in coordinator.data.routes]
+
+
+async def test_the_routes_a_poll_reads_are_counted_in_the_event_loop(
+    hass, fake_client, entry, routes
+):
+    import threading
+
+    coordinator = await _setup(hass, entry)
+    seen = []
+    note = coordinator._note_routes
+
+    def counting(found):
+        seen.append(threading.current_thread() is threading.main_thread())
+        note(found)
+
+    coordinator._note_routes = counting
+    await _poll(hass, coordinator)
+
+    assert seen == [True]

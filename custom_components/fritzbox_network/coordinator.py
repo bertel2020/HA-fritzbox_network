@@ -395,7 +395,6 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             self._routes_failed += 1
             return previous if self._routes_failed < ROUTES_FAILED_READS else None
         self._routes_failed = 0
-        self._note_routes(found)
         return found
 
     def _note_routes(self, found: list[dict[str, Any]]) -> None:
@@ -588,6 +587,11 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.slowest_fetch_seconds = max(self.slowest_fetch_seconds, self.last_fetch_seconds)
         _LOGGER.debug("Poll took %.2f s for %d hosts", self.last_fetch_seconds, len(hosts))
         self._reset_failures()
+        if routes is not None and (self.data is None or routes is not self.data.routes):
+            # a read of this poll (the other answers are the routes known): counted here, in the
+            # event loop, where the changes from the panel are counted too
+            if routes_generation == self._routes_generation:
+                self._note_routes(routes)
         if routes_generation != self._routes_generation and self.data is not None:
             # routes were written while this poll ran: what it read may be older
             routes = self.data.routes
