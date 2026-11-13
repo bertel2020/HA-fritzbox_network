@@ -3,7 +3,7 @@
 import { BANDS, escapeHtml, plotAttrs, formatBytes, hintNote, isBlocked, isWeak, pointColumn, seriesStats, sparkLine, trafficSum, uplinkStyle } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
-import { weakPercent, whenText } from "./panel-network.js";
+import { whenText } from "./panel-network.js";
 
 /** The state of an entity of the integration, or null where it does not exist or is gone. */
 export function entityState(hass, entityId) {
@@ -199,7 +199,7 @@ export function renderDevice(client, ctx) {
     client.link_type ? `<span class="chip">${client.link_type === "wlan" ? "WLAN" : "LAN"}</span>` : "",
     client.guest ? `<span class="chip info">${escapeHtml(t.guestChip)}</span>` : "",
     isBlocked(client) ? `<span class="chip bad">${escapeHtml(t.blockedChip)}</span>` : "",
-    weak ? `<span class="chip warn">${escapeHtml(fill(t.weakChip, { percent: weakPercent(client) }))}</span>` : "",
+    weak ? `<span class="chip warn">${escapeHtml(fill(t.weakChip, { dbm: client.signal_dbm }))}</span>` : "",
     client.private_mac ? `<span class="chip">${escapeHtml(t.privateMac)}</span>` : "",
     client.vpn ? `<span class="chip">${escapeHtml(t.vpn)}</span>` : "",
   ].join("");

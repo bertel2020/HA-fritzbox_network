@@ -18,7 +18,7 @@ import {
 } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
-import { whenText, weakPercent } from "./panel-network.js";
+import { whenText } from "./panel-network.js";
 
 export { DEFAULT_PAGE_SIZE, PAGE_SIZES };
 
@@ -68,7 +68,7 @@ function row(client, state, t, now, volumes) {
       : "";
   const sub = client.online ? client.vendor ?? "" : fill(t.lastOnline, { when: whenText(client.last_online, now, t) });
   const link = client.link_type === "lan" ? "lan" : client.link_type === "wlan" ? "wifi" : "help";
-  const chips = `${isBlocked(client) ? `<span class="chip bad">${escapeHtml(t.blockedChip)}</span>` : ""}${client.guest ? `<span class="chip info">${escapeHtml(t.guestChip)}</span>` : ""}${weak ? `<span class="chip warn" title="${escapeHtml(fill(t.weakTitle, { percent: weakPercent(client) }))}">${escapeHtml(t.weakShort)}</span>` : ""}`;
+  const chips = `${isBlocked(client) ? `<span class="chip bad">${escapeHtml(t.blockedChip)}</span>` : ""}${client.guest ? `<span class="chip info">${escapeHtml(t.guestChip)}</span>` : ""}${weak ? `<span class="chip warn" title="${escapeHtml(fill(t.weakTitle, { dbm: client.signal_dbm }))}">${escapeHtml(t.weakShort)}</span>` : ""}`;
   return `<tr data-dev="${escapeHtml(client.id)}" class="${client.online ? "" : "off"}"${state.sel === client.id ? ' aria-current="true"' : ""}>
     <td><span class="who2"><span class="dot ${client.online ? "on" : ""}"></span><span class="link">${ic(link)}</span>
       <span class="who"><button class="tlink" data-dev="${escapeHtml(client.id)}">${escapeHtml(client.name)}</button><small>${escapeHtml(sub)}</small></span></span></td>

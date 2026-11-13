@@ -184,20 +184,9 @@ function deviceRow(client, state, t, now) {
     <span class="dot ${client.online ? "on" : ""}"></span>
     <span class="link">${ic(link)}</span>
     <span class="who"><b>${escapeHtml(client.name)}</b><small>${escapeHtml(line2)}</small></span>
-    <span class="end">${isBlocked(client) ? `<span class="chip bad">${escapeHtml(t.blockedChip)}</span>` : ""}${client.guest ? `<span class="chip info">${escapeHtml(t.guestChip)}</span>` : ""}<span class="rate">${escapeHtml(rateText(client))}</span>${weak ? `<span class="warnIcon" title="${escapeHtml(fill(t.weakTitle, { percent: weakPercent(client) }))}">${ic("alert")}</span>` : ""}${signal}</span></button>`;
+    <span class="end">${isBlocked(client) ? `<span class="chip bad">${escapeHtml(t.blockedChip)}</span>` : ""}${client.guest ? `<span class="chip info">${escapeHtml(t.guestChip)}</span>` : ""}<span class="rate">${escapeHtml(rateText(client))}</span>${weak ? `<span class="warnIcon" title="${escapeHtml(fill(t.weakTitle, { dbm: client.signal_dbm }))}">${ic("alert")}</span>` : ""}${signal}</span></button>`;
 }
 
-function weakPercent(client) {
-  const ratios = [
-    [client.rate_download, client.rate_max_download],
-    [client.rate_upload, client.rate_max_upload],
-  ]
-    .filter(([a, b]) => typeof a === "number" && typeof b === "number" && b > 0)
-    .map(([a, b]) => a / b);
-  return ratios.length ? Math.round(Math.min(...ratios) * 100) : 0;
-}
-
-export { weakPercent };
 
 /** The groups of the list as the page shows them, for the list and for paging on the device page. */
 export function listGroups(state, now) {

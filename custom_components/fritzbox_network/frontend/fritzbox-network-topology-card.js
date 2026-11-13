@@ -1,10 +1,9 @@
 /* FRITZ!Box Network cards: the topology of the network, its Wi-Fi radios, chosen devices, the VPN connections and the routes. */
 
 import {
-  WEAK_LINK_RATIO,
+  WEAK_SIGNAL_DBM,
   BUSY_UTILIZATION,
   escapeHtml,
-  linkRatio,
   isWeak,
   groupTopology,
   signalBars,
@@ -25,7 +24,7 @@ const PANEL_PATH = "/fritzbox-network";
 const TEXT = {
   en: {
     title: "Network",
-    weakTitle: "Weak link: only {percent} % of the possible rate",
+    weakTitle: "Weak signal: {dbm} dBm",
     rateTitle: "Download / upload",
     openPanel: "Open in the panel",
     unassigned: "Without access point",
@@ -83,8 +82,8 @@ const TEXT = {
       collapsed: "Start with access points collapsed",
       max_height: "Maximum height (px)",
       max_height_help: "Empty or 0: no limit, the list grows with the devices.",
-      weak_threshold: "Weak link below (% of the highest rate)",
-      weak_threshold_help: "Empty: 33.",
+      weak_threshold: "Weak signal at or below (dBm)",
+      weak_threshold_help: "Empty: -75.",
       hide_rate: "Hide the rate",
       hide_signal: "Hide the signal",
       entities: "Devices",
@@ -99,7 +98,7 @@ const TEXT = {
   },
   de: {
     title: "Netzwerk",
-    weakTitle: "Schwache Verbindung: nur {percent} % der möglichen Rate",
+    weakTitle: "Schwaches Signal: {dbm} dBm",
     rateTitle: "Download / Upload",
     openPanel: "Im Panel öffnen",
     unassigned: "Ohne Access Point",
@@ -157,8 +156,8 @@ const TEXT = {
       collapsed: "Access Points zugeklappt starten",
       max_height: "Maximale Höhe (px)",
       max_height_help: "Leer oder 0: keine Grenze, die Liste wächst mit den Geräten.",
-      weak_threshold: "Schwache Verbindung unter (% der höchsten Rate)",
-      weak_threshold_help: "Leer: 33.",
+      weak_threshold: "Schwaches Signal ab (dBm)",
+      weak_threshold_help: "Leer: -75.",
       hide_rate: "Rate ausblenden",
       hide_signal: "Signal ausblenden",
       entities: "Geräte",
@@ -208,7 +207,7 @@ function normalizeConfig(config = {}) {
     entry_id: config.entry_id || undefined,
     collapsed: Boolean(config.collapsed),
     max_height: number(config.max_height, 0, 10000, 0),
-    weak_threshold: number(config.weak_threshold, 1, 99, Math.round(WEAK_LINK_RATIO * 100)),
+    weak_threshold: number(config.weak_threshold, -100, -40, WEAK_SIGNAL_DBM),
   };
 }
 
@@ -441,7 +440,7 @@ class FritzboxNetworkTopologyCard extends FritzboxNetworkCardBase {
       { name: "entry_id", selector: configEntry },
       { name: "collapsed", selector: { boolean: {} } },
       { name: "max_height", selector: number(0, 2000, 10, "px") },
-      { name: "weak_threshold", selector: number(1, 99, 1, "%") },
+      { name: "weak_threshold", selector: number(-100, -40, 1, "dBm") },
     ]);
   }
 
@@ -455,7 +454,7 @@ class FritzboxNetworkTopologyCard extends FritzboxNetworkCardBase {
   }
 
   get _threshold() {
-    return this._config.weak_threshold / 100;
+    return this._config.weak_threshold;
   }
 
   /** With the option on, every access point starts collapsed, once per data and option. */
@@ -553,7 +552,7 @@ class FritzboxNetworkTopologyCard extends FritzboxNetworkCardBase {
     const signal = client.link_type === "wlan" ? signalHtml(client) : "";
     const weak = isWeak(client, this._threshold)
       ? `<ha-icon class="weak" icon="mdi:wifi-alert" title="${escapeHtml(
-          t.weakTitle.replace("{percent}", Math.round(linkRatio(client) * 100))
+          t.weakTitle.replace("{dbm}", client.signal_dbm)
         )}"></ha-icon>`
       : "";
     const target = client.id ? ` data-open="${escapeHtml(client.id)}" role="button" tabindex="0"` : "";

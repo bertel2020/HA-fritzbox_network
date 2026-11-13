@@ -2,6 +2,13 @@
 
 All notable changes to this integration are recorded here.
 
+## Unreleased
+
+### Changed
+
+- Panel and card: "weak" now follows the signal (−75 dBm or weaker, Wi-Fi only) instead of the rate, matching the signal bars in the row. The `weak_threshold` option of the network card is now a dBm value (default −75); an old percentage is dropped and replaced by the default.
+- Panel, data volume of a device: download and upload stand side by side as equals, with the total and a split bar.
+
 ## 1.7.0 – 2026-11-10
 
 ### New

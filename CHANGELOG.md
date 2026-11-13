@@ -2,6 +2,13 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
+## Unveröffentlicht
+
+### Geändert
+
+- Panel und Karte: „Schwach“ richtet sich jetzt nach dem Signal (−75 dBm oder schwächer, nur WLAN) statt nach der Rate. Das passt zu den Signalbalken in der Zeile. Die Option `weak_threshold` der Netzkarte ist jetzt ein dBm-Wert (Standard −75); ein alter Prozentwert wird verworfen und durch den Standard ersetzt.
+- Panel, Datenvolumen eines Geräts: Download und Upload stehen gleichwertig nebeneinander, mit Gesamtsumme und einem geteilten Balken.
+
 ## 1.7.0 – 2026-11-10
 
 ### Neu

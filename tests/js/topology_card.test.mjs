@@ -57,24 +57,18 @@ test("the search also looks at the vendor", () => {
   assert.deepEqual(names, ["tv"]);
 });
 
-test("the link ratio is the lower one of both directions", () => {
-  const client = { rate_download: 150, rate_max_download: 150, rate_upload: 45, rate_max_upload: 150 };
-  assert.equal(card.linkRatio(client), 0.3);
-  assert.equal(card.linkRatio({ rate_download: 100, rate_max_download: 200 }), 0.5);
-  assert.equal(card.linkRatio({ rate_download: 100 }), null);
-  assert.equal(card.linkRatio({ rate_download: 1, rate_max_download: 0 }), null);
-});
-
-test("a weak link needs an online device and a low ratio", () => {
-  const slow = { online: true, rate_download: 45, rate_max_download: 150 };
-  assert.equal(card.isWeak(slow), true);
-  assert.equal(card.isWeak({ ...slow, online: false }), false);
-  assert.equal(card.isWeak({ online: true, rate_download: 100, rate_max_download: 150 }), false);
+test("a weak link needs an online device with a weak signal", () => {
+  const weak = { online: true, signal_dbm: -80 };
+  assert.equal(card.isWeak(weak), true);
+  assert.equal(card.isWeak({ online: true, signal_dbm: -75 }), true);
+  assert.equal(card.isWeak({ online: true, signal_dbm: -74 }), false);
+  assert.equal(card.isWeak({ ...weak, online: false }), false);
+  assert.equal(card.isWeak({ online: true, rate_download: 1, rate_max_download: 150 }), false);
   assert.equal(card.isWeak({ online: true }), false);
 });
 
 test("the weak filter shows only the weak ones", () => {
-  const weak = { mac: "09", name: "slow", online: true, ap_mac: "aa", link_type: "wlan", rate_download: 40, rate_max_download: 150 };
+  const weak = { mac: "09", name: "slow", online: true, ap_mac: "aa", link_type: "wlan", signal_dbm: -80 };
   const names = card.groupTopology({ nodes: data.nodes, clients: [...data.clients, weak] }, "weak").flatMap((g) => g.clients.map((c) => c.name));
   assert.deepEqual(names, ["slow"]);
 });
@@ -100,18 +94,18 @@ test("rate text", () => {
 });
 
 test("the weak threshold can be changed", () => {
-  const client = { online: true, rate_download: 60, rate_max_download: 100 };
+  const client = { online: true, signal_dbm: -68 };
   assert.equal(card.isWeak(client), false);
-  assert.equal(card.isWeak(client, 0.7), true);
+  assert.equal(card.isWeak(client, -65), true);
   const weak = { mac: "09", name: "slow", online: true, ap_mac: "aa", link_type: "wlan", ...client };
   const names = (threshold) =>
     card.groupTopology({ nodes: data.nodes, clients: [weak] }, "weak", "", threshold).flatMap((g) => g.clients.map((c) => c.name));
-  assert.deepEqual(names(0.5), []);
-  assert.deepEqual(names(0.7), ["slow"]);
+  assert.deepEqual(names(-75), []);
+  assert.deepEqual(names(-65), ["slow"]);
 });
 
 test("the filters with a number count offline and weak devices", () => {
-  const weak = { mac: "09", name: "slow", online: true, rate_download: 40, rate_max_download: 150 };
+  const weak = { mac: "09", name: "slow", online: true, signal_dbm: -80 };
   assert.deepEqual(card.countFilters({ clients: [...data.clients, weak] }), { offline: 3, weak: 1 });
   assert.deepEqual(card.countFilters(null), { offline: 0, weak: 0 });
 });
@@ -122,15 +116,15 @@ test("the config gets its defaults and drops values that make no sense", () => {
     entry_id: undefined,
     collapsed: false,
     max_height: 0,
-    weak_threshold: 33,
+    weak_threshold: -75,
   });
   const config = card.normalizeConfig({ title: "", max_height: -5, weak_threshold: 500, collapsed: 1 });
   assert.equal(config.title, undefined);
   assert.equal(config.max_height, 0);
-  assert.equal(config.weak_threshold, 33);
+  assert.equal(config.weak_threshold, -75);
   assert.equal(config.collapsed, true);
-  const set = card.normalizeConfig({ max_height: 300, weak_threshold: 50 });
-  assert.deepEqual([set.max_height, set.weak_threshold], [300, 50]);
+  const set = card.normalizeConfig({ max_height: 300, weak_threshold: -60 });
+  assert.deepEqual([set.max_height, set.weak_threshold], [300, -60]);
 });
 
 test("a config from before the card was slimmed down still loads", () => {
@@ -140,7 +134,7 @@ test("a config from before the card was slimmed down still loads", () => {
     entry_id: undefined,
     collapsed: true,
     max_height: 0,
-    weak_threshold: 33,
+    weak_threshold: -75,
   });
 });
 
@@ -258,7 +252,7 @@ const panelData = {
   clients: [
     { mac: "01", id: "01", name: "tv", online: true, ap_mac: "aa", link_type: "lan", rate_download: 1000, created_at: day(100) },
     { mac: "02", id: "02", name: "phone", online: true, ap_mac: "bb", link_type: "wlan", band: "5ghz", signal_dbm: -50, rate_download: 30, rate_max_download: 150, created_at: day(2), wan_access: false },
-    { mac: "03", id: "03", name: "guest", online: true, ap_mac: "bb", link_type: "wlan", band: "2_4ghz", signal_dbm: -70, guest: true, created_at: day(1) },
+    { mac: "03", id: "03", name: "guest", online: true, ap_mac: "bb", link_type: "wlan", band: "2_4ghz", signal_dbm: -80, guest: true, created_at: day(1) },
     { mac: "04", id: "04", name: "old", online: false, ap_mac: null, link_type: null, last_online: day(60), created_at: day(300) },
     { mac: "05", id: "05", name: "recent", online: false, ap_mac: "aa", link_type: "lan", last_online: day(3), created_at: day(300) },
     { mac: "06", id: "06", name: "unknown", online: false, ap_mac: "aa", link_type: "lan", created_at: day(300) },

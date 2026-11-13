@@ -222,11 +222,11 @@ title: Network
 | `entry_id` | Only needed with more than one box: the id of the config entry |
 | `collapsed` | `true`: the access points start collapsed (default `false`) |
 | `max_height` | Maximum height of the list in pixels, it scrolls beyond that; 0 or empty: no limit |
-| `weak_threshold` | Weak link below this percentage of the highest rate (1–99, default 33) |
+| `weak_threshold` | Weak signal at this value in dBm or below (−100 to −40, default −75) |
 
 All options are also in the visual editor of the card. The options `default_filter`, `compact`, `hide_vendor`, `hide_rate`, `hide_signal`, `hide_radio` and `tap_action` of an earlier version are gone; existing cards still load, the values are ignored.
 
-A device is on a weak link when it is online and its current rate is below a third (adjustable with `weak_threshold`) of the highest rate its link can do, in one direction or the other; the card marks it with a warning icon that shows the percentage. A device that is idle can run at a lower rate for a while, so read the mark as a hint, not as a fault. The numbers next to an access point are shown / total. Devices the box does not assign to an access point are listed at the end. Without a mesh topology there are no access points and all devices sit in that group. Channel and load of the radios are in the [Wi-Fi card](#wi-fi-card), actions like block internet in the [devices card](#devices-card).
+A device is on a weak link when it is online, on Wi-Fi and its signal is −75 dBm or weaker (adjustable with `weak_threshold`); the card marks it with a warning icon that shows the dBm value. Cable devices are never weak. The rate does not count: many devices run slowly on purpose when idle. The numbers next to an access point are shown / total. Devices the box does not assign to an access point are listed at the end. Without a mesh topology there are no access points and all devices sit in that group. Channel and load of the radios are in the [Wi-Fi card](#wi-fi-card), actions like block internet in the [devices card](#devices-card).
 
 The card needs an administrator account because it shows MAC and IP addresses. It loads automatically, a hard refresh of the browser after the update brings the new version.
 

@@ -222,11 +222,11 @@ title: Netzwerk
 | `entry_id` | Nur bei mehr als einer Box nötig: die ID des Config-Eintrags |
 | `collapsed` | `true`: die Access Points starten zugeklappt (Standard `false`) |
 | `max_height` | Maximale Höhe der Liste in Pixel, danach scrollt sie; 0 oder leer: keine Grenze |
-| `weak_threshold` | Schwache Verbindung unter diesem Prozentwert der höchsten Rate (1–99, Standard 33) |
+| `weak_threshold` | Schwaches Signal bei diesem Wert in dBm oder darunter (−100 bis −40, Standard −75) |
 
 Alle Optionen stehen auch im visuellen Editor der Karte. Die Optionen `default_filter`, `compact`, `hide_vendor`, `hide_rate`, `hide_signal`, `hide_radio` und `tap_action` einer früheren Version gibt es nicht mehr; bestehende Karten laden weiter, die Werte werden ignoriert.
 
-Ein Gerät hängt an einer schwachen Verbindung, wenn es online ist und seine aktuelle Rate unter einem Drittel (einstellbar mit `weak_threshold`) der höchsten Rate liegt, die seine Verbindung kann, in einer der beiden Richtungen; die Karte markiert es mit einem Warnsymbol, das den Prozentwert zeigt. Ein Gerät im Leerlauf kann eine Weile mit niedrigerer Rate laufen, lies die Markierung also als Hinweis und nicht als Fehler. Die Zahlen neben einem Access Point sind angezeigt / gesamt. Geräte, die die Box keinem Access Point zuordnet, stehen am Ende. Ohne Mesh-Topologie gibt es keine Access Points, und alle Geräte stehen in dieser Gruppe. Kanal und Auslastung der Funkmodule zeigt die [Funk-Karte](#funk-karte), Aktionen wie Internet sperren die [Geräte-Karte](#geräte-karte).
+Ein Gerät hängt an einer schwachen Verbindung, wenn es online ist, per WLAN verbunden ist und sein Signal −75 dBm oder schwächer ist (einstellbar mit `weak_threshold`); die Karte markiert es mit einem Warnsymbol, das den dBm-Wert zeigt. Kabelgeräte gelten nie als schwach. Die Rate spielt dafür keine Rolle: Viele Geräte funken im Leerlauf bewusst langsam. Die Zahlen neben einem Access Point sind angezeigt / gesamt. Geräte, die die Box keinem Access Point zuordnet, stehen am Ende. Ohne Mesh-Topologie gibt es keine Access Points, und alle Geräte stehen in dieser Gruppe. Kanal und Auslastung der Funkmodule zeigt die [Funk-Karte](#funk-karte), Aktionen wie Internet sperren die [Geräte-Karte](#geräte-karte).
 
 Die Karte braucht ein Administratorkonto, weil sie MAC- und IP-Adressen zeigt. Sie lädt sich selbst; nach dem Update bringt ein harter Reload des Browsers die neue Version.
 

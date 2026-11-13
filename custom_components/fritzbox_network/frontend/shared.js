@@ -1,8 +1,7 @@
 /* The parts of the FRITZ!Box Network frontend that need no DOM: used by the cards and the panel. */
 
-// A device is on a weak link when its current rate is below this part of the
-// highest rate the link can do, in one direction or the other.
-export const WEAK_LINK_RATIO = 1 / 3;
+// A Wi-Fi device is on a weak link when its signal is this strong (in dBm) or weaker.
+export const WEAK_SIGNAL_DBM = -75;
 
 export const BANDS = { "2_4ghz": "2.4 GHz", "5ghz": "5 GHz", "6ghz": "6 GHz" };
 // from this channel load on, the radio is shown as busy
@@ -38,7 +37,7 @@ export function escapeHtml(value) {
   );
 }
 
-export function matches(client, filter, query, threshold = WEAK_LINK_RATIO) {
+export function matches(client, filter, query, threshold = WEAK_SIGNAL_DBM) {
   if (query) {
     const haystack = `${client.name} ${client.ip ?? ""} ${client.mac} ${client.vendor ?? ""}`.toLowerCase();
     if (!haystack.includes(query.toLowerCase())) return false;
@@ -50,25 +49,13 @@ export function matches(client, filter, query, threshold = WEAK_LINK_RATIO) {
   return true;
 }
 
-/** The lower of the current/highest rate ratios of both directions; null if unknown. */
-export function linkRatio(client) {
-  const ratios = [
-    [client.rate_download, client.rate_max_download],
-    [client.rate_upload, client.rate_max_upload],
-  ]
-    .filter(([current, max]) => typeof current === "number" && typeof max === "number" && max > 0)
-    .map(([current, max]) => current / max);
-  return ratios.length ? Math.min(...ratios) : null;
-}
-
-/** Only for online devices: the rate of a device that is gone says nothing. */
-export function isWeak(client, threshold = WEAK_LINK_RATIO) {
-  const ratio = linkRatio(client);
-  return Boolean(client.online) && ratio !== null && ratio < threshold;
+/** Only for online Wi-Fi devices with a known signal: a device that is gone, or on a cable, has none to judge. */
+export function isWeak(client, threshold = WEAK_SIGNAL_DBM) {
+  return Boolean(client.online) && typeof client.signal_dbm === "number" && client.signal_dbm <= threshold;
 }
 
 /** How many devices the filters with a number in front of them would show. */
-export function countFilters(data, threshold = WEAK_LINK_RATIO) {
+export function countFilters(data, threshold = WEAK_SIGNAL_DBM) {
   const clients = data?.clients ?? [];
   return {
     offline: clients.filter((c) => !c.online).length,
@@ -77,7 +64,7 @@ export function countFilters(data, threshold = WEAK_LINK_RATIO) {
 }
 
 /** Groups the clients by access point: the box first, the unassigned ones last. */
-export function groupTopology(data, filter = "all", query = "", threshold = WEAK_LINK_RATIO) {
+export function groupTopology(data, filter = "all", query = "", threshold = WEAK_SIGNAL_DBM) {
   const groups = (data.nodes ?? []).map((node) => ({ node, clients: [], total: 0 }));
   const byMac = new Map(groups.map((g) => [g.node.mac, g]));
   const unassigned = { node: null, clients: [], total: 0 };
@@ -218,7 +205,7 @@ export function isBlocked(client) {
   return client.wan_access === false;
 }
 
-export function panelMatches(client, filter, now = Date.now(), threshold = WEAK_LINK_RATIO) {
+export function panelMatches(client, filter, now = Date.now(), threshold = WEAK_SIGNAL_DBM) {
   if (filter.startsWith("label:")) return Boolean(client.labels?.includes(filter.slice(6)));
   switch (filter) {
     case "online":
@@ -246,7 +233,7 @@ export function panelMatches(client, filter, now = Date.now(), threshold = WEAK_
   }
 }
 
-export function panelCounts(data, now = Date.now(), threshold = WEAK_LINK_RATIO) {
+export function panelCounts(data, now = Date.now(), threshold = WEAK_SIGNAL_DBM) {
   const clients = data?.clients ?? [];
   return Object.fromEntries(
     PANEL_FILTERS.map((f) => [f, clients.filter((c) => panelMatches(c, f, now, threshold)).length])
@@ -413,7 +400,7 @@ export const PRIMARY_FILTERS = ["all", "online", "offline"];
  * What the filter row offers: the fixed chips, the other filters and the groups with something
  * to show (or chosen), and the chosen one when it is not a fixed chip.
  */
-export function filterMenu(data, filter, now = Date.now(), threshold = WEAK_LINK_RATIO) {
+export function filterMenu(data, filter, now = Date.now(), threshold = WEAK_SIGNAL_DBM) {
   const counts = panelCounts(data, now, threshold);
   const others = PANEL_FILTERS.filter((f) => !PRIMARY_FILTERS.includes(f))
     .filter((f) => counts[f] || f === filter)

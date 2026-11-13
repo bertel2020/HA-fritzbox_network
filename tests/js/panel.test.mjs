@@ -33,7 +33,7 @@ const data = {
     { mac: "02", id: "000000000002", name: "old", ip: null, online: false, ap_mac: null, link_type: null, last_online: day(3), actions: {} },
   ],
 };
-const state = { data, filter: "all", query: "", sort: "name", group: "ap", closed: new Set(), sel: null, threshold: 1 / 3 };
+const state = { data, filter: "all", query: "", sort: "name", group: "ap", closed: new Set(), sel: null, threshold: -75 };
 const hass = {
   states: {
     "switch.tv_i": { state: "off" },
@@ -131,7 +131,7 @@ test("an action needs the right, an IP address and its entity", () => {
 test("the device page shows the data and the actions", () => {
   const withProfiles = { ...data, profiles: [{ id: "filtprof1", name: "Standard" }, { id: "filtprof2", name: "Kinder" }] };
   const client = { ...data.clients[0], filter_profile_id: "filtprof2", priority: true };
-  const html = device.renderDevice(client, { t, now: NOW, data: withProfiles, hass, threshold: 1 / 3 });
+  const html = device.renderDevice(client, { t, now: NOW, data: withProfiles, hass, threshold: -75 });
   assert.match(html, /<h1 id="dtitle" tabindex="-1">tv &lt;b&gt;<\/h1>/);
   assert.match(html, /Internet gesperrt/);
   assert.match(html, /aria-checked="false"[^>]*data-sw="internet_access"/);
@@ -142,14 +142,14 @@ test("the device page shows the data and the actions", () => {
 
 test("without the right the actions are off and say why", () => {
   const html = device.renderDevice(data.clients[0], {
-    t, now: NOW, data: { ...data, can_write: false }, hass, threshold: 1 / 3,
+    t, now: NOW, data: { ...data, can_write: false }, hass, threshold: -75,
   });
   assert.match(html, /FRITZ!Box Einstellungen/);
   assert.match(html, /role="switch"[^>]*disabled/);
 });
 
 test("only an offline device can be woken", () => {
-  const ctx = { t, now: NOW, data, hass, threshold: 1 / 3 };
+  const ctx = { t, now: NOW, data, hass, threshold: -75 };
   assert.match(device.renderDevice(data.clients[0], ctx), /data-act="wol"[^>]*disabled/);
   const offline = { ...data.clients[0], online: false, ip: null };
   assert.doesNotMatch(device.renderDevice(offline, ctx), /data-act="wol"[^>]*disabled/);
@@ -163,7 +163,7 @@ test("an unknown device shows a hint and the way back", () => {
 
 test("the device page is a page of its own: back to where it came from, paging, the connection path", () => {
   const pager = shared.pagerFor(data.clients, "000000000001");
-  const html = device.renderDevice(data.clients[0], { t, now: NOW, data, hass, threshold: 1 / 3, pager, view: "list" });
+  const html = device.renderDevice(data.clients[0], { t, now: NOW, data, hass, threshold: -75, pager, view: "list" });
   assert.match(html, /data-act="back"[^>]*>.*Liste<\/button>/);
   assert.match(html, /<span aria-hidden="true">1 \/ 2<\/span>/);
   assert.match(html, /data-go="" data-k="prev"[^>]*disabled/);
@@ -175,28 +175,28 @@ test("the device page is a page of its own: back to where it came from, paging, 
 test("the connection path goes through the repeater with the line of its uplink", () => {
   const nodes = [data.nodes[0], { ...data.nodes[1], uplink: { type: "wlan", band: "5ghz", signal_dbm: -58 } }];
   const client = { ...data.clients[0], ap_mac: "bb", link_type: "wlan", band: "2_4ghz", signal_dbm: -70 };
-  const steps = device.connectionPath(client, { nodes }, t, 1 / 3);
+  const steps = device.connectionPath(client, { nodes }, t, -75);
   assert.deepEqual(steps.filter((s) => s.kind).map((s) => s.name), ["Internet", "Box", "Repeater", "tv <b>"]);
   assert.deepEqual(steps.filter((s) => !s.kind).map((s) => [s.style, s.text]), [
     ["plain", ""],
     ["wlan", "WLAN 5 GHz · -58 dBm"],
     ["wlan", "WLAN 2,4 GHz · -70 dBm"],
   ]);
-  const unknown = device.connectionPath(client, data, t, 1 / 3);
+  const unknown = device.connectionPath(client, data, t, -75);
   assert.deepEqual(unknown[3], { style: "unknown", text: "unbekannt" });
-  const offline = device.connectionPath({ ...client, online: false }, data, t, 1 / 3);
+  const offline = device.connectionPath({ ...client, online: false }, data, t, -75);
   assert.equal(offline.at(-2).text, "offline");
 });
 
 test("the controls work without entities; a note offers to switch the entities on", () => {
   const off = { states: { "switch.tv_i": { state: "off" } } };
-  const html = device.renderDevice(data.clients[0], { t, now: NOW, data, hass: off, threshold: 1 / 3 });
+  const html = device.renderDevice(data.clients[0], { t, now: NOW, data, hass: off, threshold: -75 });
   assert.match(html, /data-sw="priority"[^>]*>/);
   assert.doesNotMatch(html, /data-sw="priority"[^>]*disabled/);
   assert.match(html, /Für Automationen stehen 3 Entitäten bereit/);
   assert.match(html, /data-enable="all"[^>]*>Aktivieren/);
   // all entities are there: no note
-  assert.doesNotMatch(device.renderDevice(data.clients[0], { t, now: NOW, data, hass, threshold: 1 / 3 }), /data-enable="all"/);
+  assert.doesNotMatch(device.renderDevice(data.clients[0], { t, now: NOW, data, hass, threshold: -75 }), /data-enable="all"/);
 });
 
 test("the plan to switch on lists only what is off, can be written and is not under way", () => {
@@ -331,17 +331,17 @@ test("the group button blocks when every device may go online, else allows", () 
 });
 
 test("the device page offers the groups and the links to the history", () => {
-  const html = device.renderDevice(groupData.clients[0], { t, now: NOW, data: groupData, hass, threshold: 1 / 3 });
+  const html = device.renderDevice(groupData.clients[0], { t, now: NOW, data: groupData, hass, threshold: -75 });
   assert.match(html, /data-label="kids" aria-pressed="true"/);
   assert.match(html, /data-act="new-group"/);
   assert.match(html, /data-act="logbook"/);
   assert.match(html, /data-act="history"/);
   const bare = { ...groupData.clients[0], actions: {} };
-  const without = device.renderDevice(bare, { t, now: NOW, data: groupData, hass, threshold: 1 / 3 });
+  const without = device.renderDevice(bare, { t, now: NOW, data: groupData, hass, threshold: -75 });
   assert.match(without, /Gruppen brauchen die Entität/);
   assert.doesNotMatch(without, /data-label=/);
   const noTracker = { ...groupData.clients[0], entity_id: null };
-  assert.doesNotMatch(device.renderDevice(noTracker, { t, now: NOW, data: groupData, hass, threshold: 1 / 3 }), /data-act="logbook"/);
+  assert.doesNotMatch(device.renderDevice(noTracker, { t, now: NOW, data: groupData, hass, threshold: -75 }), /data-act="logbook"/);
 });
 
 test("the groups are a way to group the list", () => {
@@ -361,13 +361,13 @@ const mapData = {
   clients: [
     { id: "000000000011", mac: "11", name: "Zeta TV", online: true, ap_mac: "aa", link_type: "lan" },
     { id: "000000000012", mac: "12", name: "alpha phone", online: false, ap_mac: "aa", link_type: "wlan", band: "5ghz", last_online: day(2) },
-    { id: "000000000013", mac: "13", name: "Beta phone", online: true, ap_mac: "aa", link_type: "wlan", band: "5ghz", signal_dbm: -71, rate_download: 10, rate_max_download: 400 },
+    { id: "000000000013", mac: "13", name: "Beta phone", online: true, ap_mac: "aa", link_type: "wlan", band: "5ghz", signal_dbm: -78, rate_download: 10, rate_max_download: 400 },
     { id: "000000000014", mac: "14", name: "Plug", online: true, ap_mac: "bb", link_type: "wlan", band: "2_4ghz", signal_dbm: -60, wan_access: false },
     { id: "000000000015", mac: "15", name: "Mystery", online: false, ap_mac: null, link_type: null },
     { id: "000000000016", mac: "16", name: "Odd", online: true, ap_mac: "aa", link_type: "wlan", band: null },
   ],
 };
-const mapState = { data: mapData, filter: "all", query: "", sort: "name", group: "ap", closed: new Set(), threshold: 1 / 3, names: true, view: "map" };
+const mapState = { data: mapData, filter: "all", query: "", sort: "name", group: "ap", closed: new Set(), threshold: -75, names: true, view: "map" };
 
 test("an access point has a line for the cable and each band, online devices first", () => {
   const atBox = mapData.clients.filter((c) => c.ap_mac === "aa");
@@ -411,9 +411,9 @@ test("a node has initials and says everything for a screen reader", () => {
   assert.equal(shared.initials("Ökö-Gerät 2"), "ÖG");
   assert.equal(shared.initials("NAS"), "N");
   assert.equal(shared.initials(""), "");
-  assert.equal(map.nodeLabel(mapData.clients[2], t, NOW, 1 / 3), "Beta phone, online, WLAN 5 GHz, -71 dBm, schwache Verbindung");
-  assert.equal(map.nodeLabel(mapData.clients[1], t, NOW, 1 / 3), "alpha phone, offline, zuletzt online vor 2 Tagen, WLAN 5 GHz");
-  assert.equal(map.nodeLabel(mapData.clients[3], t, NOW, 1 / 3), "Plug, online, WLAN 2,4 GHz, -60 dBm, Internet gesperrt");
+  assert.equal(map.nodeLabel(mapData.clients[2], t, NOW, -75), "Beta phone, online, WLAN 5 GHz, -78 dBm, schwache Verbindung");
+  assert.equal(map.nodeLabel(mapData.clients[1], t, NOW, -75), "alpha phone, offline, zuletzt online vor 2 Tagen, WLAN 5 GHz");
+  assert.equal(map.nodeLabel(mapData.clients[3], t, NOW, -75), "Plug, online, WLAN 2,4 GHz, -60 dBm, Internet gesperrt");
 });
 
 test("the map draws islands with real buttons, the uplink, hidden devices and the legend", () => {
@@ -1683,7 +1683,7 @@ test("the radio line names the network and the encryption as people say it", () 
 });
 
 test("the device page shows the hostname where it tells more than the name", () => {
-  const ctx = { t, now: NOW, data, hass, threshold: 1 / 3 };
+  const ctx = { t, now: NOW, data, hass, threshold: -75 };
   const named = { ...data.clients[0], hostname: "esp-kitchen<1>" };
   assert.match(device.renderDevice(named, ctx), /<dt>Hostname<\/dt><dd><span class="mono">esp-kitchen&lt;1&gt;<\/span><\/dd>/);
   const same = { ...data.clients[0], hostname: data.clients[0].name.toUpperCase() };

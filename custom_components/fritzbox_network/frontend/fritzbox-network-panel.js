@@ -2,7 +2,7 @@
 
 import {
   STALE_STEPS,
-  WEAK_LINK_RATIO,
+  WEAK_SIGNAL_DBM,
   escapeHtml,
   rememberNote,
   filterChanged,
@@ -286,7 +286,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       trend: null,
       closed: new Set(),
       sel: route.device,
-      threshold: WEAK_LINK_RATIO,
+      threshold: WEAK_SIGNAL_DBM,
       view: rememberedView(),
       menu: false,
       look: false,
