@@ -39,11 +39,11 @@ import { renderRadio } from "./panel-radio.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice } from "./panel-device.js";
-import { openDialog, openPasswordDialog, showToast } from "./panel-dialogs.js";
+import { openDialog, openFormDialog, openPasswordDialog, showToast } from "./panel-dialogs.js";
 import { sinceText } from "./panel-phone.js";
 import { WS_PARTS } from "./phone-model.js";
 import { RESTART_POLL_MS, minSec, nextRestart, renderBoxPage, restarted } from "./panel-box.js";
-import { isLastNetwork, passwordRules, randomPassword, renderWlan } from "./panel-wlan.js";
+import { isLastNetwork, passwordRules, qrContent, randomPassword, renderWlan } from "./panel-wlan.js";
 import { bannerHidden, hasCore, hideBanner, renderBanner, renderMigrate } from "./panel-migrate.js";
 import { pickedMacs, renderHidden, renderStale, staleList, visibleStale } from "./panel-cleanup.js";
 import { pickable, renderFilterControls, renderPicker, renderPickerHead, renderPreview } from "./panel-filter.js";
@@ -2034,6 +2034,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (state.wlanSecret === null && !state.wlanReveal) return;
     state.wlanSecret = null;
     state.wlanReveal = false;
+    this._qrDialog?.close?.();
     this._renderWlan();
   }
 
@@ -2088,13 +2089,42 @@ class FritzboxNetworkPanel extends HTMLElement {
       state.wlanReveal = false;
       clearTimeout(this._secretTimer);
       this._secretTimer = setTimeout(() => this._dropSecret(), 300000);
+      this._renderWlan();
+      this._showQrDialog();
+      return;
     } catch (err) {
       if (state.wlanSecret === "loading") state.wlanSecret = null;
       const text = err?.code === "unauthorized" ? this._t.wlan.guest.qrLocked : fill(this._t.toastFailed, { error: err?.message ?? err });
       showToast(this.shadowRoot, text);
     }
     this._renderWlan();
-    this.shadowRoot.querySelector('[data-k="wlan-reveal"], [data-k="wlan-hideqr"], [data-k="wlan-qr"]')?.focus({ preventScroll: true });
+  }
+
+  /** The QR code and the password in a dialog; closing it, or leaving the page, forgets them. */
+  _showQrDialog() {
+    const t = this._t;
+    const state = this._state;
+    const g = t.wlan.guest;
+    const draw = (dialog) => {
+      const secret = state.wlanSecret;
+      if (!secret || secret === "loading") return;
+      dialog.querySelector(".dlg-body").innerHTML = qrContent(secret, state.wlanReveal, g, state.wlan?.guest?.ssid ?? "");
+      dialog.querySelectorAll("[data-act]").forEach((button) => {
+        button.onclick = async () => {
+          const key = button.dataset.k;
+          await this._onWlanClick({ act: button.dataset.act });
+          draw(dialog);
+          dialog.querySelector(`[data-k="${key}"]`)?.focus?.();
+        };
+      });
+    };
+    const controller = {};
+    this._qrDialog = controller;
+    const ssid = state.wlanSecret?.ssid ?? state.wlan?.guest?.ssid ?? "";
+    openFormDialog(this.shadowRoot, t, { title: fill(g.qrTitle, { ssid }), close: g.close, onOpen: draw, controller }).then(() => {
+      if (this._qrDialog === controller) this._qrDialog = null;
+      this._dropSecret();
+    });
   }
 
   async _onWlanClick(ds) {
@@ -2103,15 +2133,10 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (act === "wlan-retry") return this._loadWlan();
     if (act === "wlan-switch") return this._switchWlan(ds.key, ds.on === "1");
     if (act === "wlan-qr") return this._loadSecret();
-    if (act === "wlan-hideqr") {
-      this._dropSecret();
-      this.shadowRoot.querySelector('[data-k="wlan-qr"]')?.focus({ preventScroll: true });
-      return;
-    }
     if (act === "wlan-reveal") {
       if (!state.wlanSecret?.password) return;
       state.wlanReveal = !state.wlanReveal;
-      return this._renderWlan();
+      return;
     }
     if (act === "wlan-copy") {
       const password = state.wlanSecret?.password;

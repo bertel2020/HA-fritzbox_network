@@ -173,7 +173,7 @@ export function openPasswordDialog(root, t, { title, lead = "", warn = "", rules
  * dialog only has a close button. Resolves the answer, or null when cancelled. Escape cancels,
  * Tab stays inside, the focus goes back where it was.
  */
-export function openFormDialog(root, t, { title, html = "", ok = null, danger = false, focus = null, onOpen = null, validate = null, read = () => true, close = null }) {
+export function openFormDialog(root, t, { title, html = "", ok = null, danger = false, focus = null, onOpen = null, validate = null, read = () => true, close = null, controller = null }) {
   return new Promise((resolve) => {
     const backdrop = root.querySelector("#backdrop");
     const dialog = root.querySelector("#dialog");
@@ -222,6 +222,7 @@ export function openFormDialog(root, t, { title, html = "", ok = null, danger = 
       }
     };
     document.addEventListener("keydown", onKey);
+    if (controller) controller.close = () => done(null);
     no.onclick = () => done(null);
     if (yes) yes.onclick = accept;
   });

@@ -70,27 +70,19 @@ function networksCard(wlan, ctx) {
     ${ctx.canWrite ? "" : `<p class="hint"><b>${escapeHtml(w.noRights)}</b></p>`}</section>`;
 }
 
-function qrBox(guest, ctx) {
-  const g = ctx.t.wlan.guest;
-  const secret = ctx.secret;
-  if (!ctx.canWrite) return `<div class="qrveil">${ic("lock")}<span>${escapeHtml(g.qrLocked)}</span></div>`;
-  if (!guest.enabled) return `<div class="qrveil"><span>${escapeHtml(g.qrOff)}</span></div>`;
-  if (!secret || secret === "loading") {
-    const loading = secret === "loading";
-    return `<div class="qrveil"><span>${escapeHtml(g.qrHint)}</span></div>
-      <button class="btn p sm" data-act="wlan-qr" data-k="wlan-qr"${loading ? " disabled" : ""}>${escapeHtml(loading ? g.loadingQr : g.showQr)}</button>`;
-  }
-  const ssid = secret.ssid ?? guest.ssid ?? "";
+/** What the QR dialog shows: the code and the password, masked until it is revealed. */
+export function qrContent(secret, reveal, g, fallbackSsid = "") {
+  const ssid = secret.ssid ?? fallbackSsid;
   // the password is in the page only while it is shown; masked, the page has dots and no password
-  const shown = ctx.reveal && secret.password;
+  const shown = reveal && secret.password;
   const text = secret.password ? (shown ? secret.password : "•".repeat(12)) : g.noPassword;
   const pw = secret.password
     ? `<div class="secret"><span class="mono" id="w-pw"${shown ? "" : ` aria-label="${escapeHtml(g.password)}"`}>${escapeHtml(text)}</span>
         <button class="iconbtn" data-act="wlan-reveal" data-k="wlan-reveal" aria-pressed="${Boolean(shown)}" aria-controls="w-pw" title="${escapeHtml(shown ? g.conceal : g.reveal)}" aria-label="${escapeHtml(shown ? g.conceal : g.reveal)}">${ic(shown ? "eyeOff" : "eye")}</button>
         <button class="iconbtn" data-act="wlan-copy" data-k="wlan-copy" title="${escapeHtml(g.copy)}" aria-label="${escapeHtml(g.copy)}">${ic("copy")}</button></div>`
     : `<div class="secret"><span class="muted">${escapeHtml(text)}</span></div>`;
-  return `<div class="qr"><img src="data:image/png;base64,${escapeHtml(secret.qr_png_base64 ?? "")}" alt="${escapeHtml(fill(g.qrAlt, { ssid }))}" width="180" height="180"></div>
-    ${pw}`;
+  return `<div class="qrbox"><div class="qr"><img src="data:image/png;base64,${escapeHtml(secret.qr_png_base64 ?? "")}" alt="${escapeHtml(fill(g.qrAlt, { ssid }))}" width="180" height="180"></div>
+    ${pw}</div>`;
 }
 
 /** The label of the way the guest network is secured, from the type the box tells; null where it does not say. */
@@ -120,7 +112,6 @@ function guestCard(guest, ctx) {
   const busy = ctx.busy?.has("guest");
   const ssid = guest.ssid || g.name;
   const secret = ctx.secret;
-  const qrShown = ctx.canWrite && guest.enabled && secret && secret !== "loading";
   const security = securityLabel(guest.beacon, g);
   const online = guestOnline(ctx);
   const count = guest.enabled ? (online.length === 1 ? g.devicesOne : online.length ? fill(g.devices, { n: online.length }) : g.noneConnected) : "";
@@ -129,18 +120,17 @@ function guestCard(guest, ctx) {
   const actions = ctx.canWrite
     ? `<div class="btn-row">
         <button class="btn" data-act="wlan-pw" data-k="wlan-pw" aria-haspopup="dialog">${escapeHtml(g.edit)}</button>
-        ${qrShown ? `<button class="btn on" data-act="wlan-hideqr" data-k="wlan-hideqr" aria-pressed="true">${escapeHtml(g.hideQr)}</button>` : guest.enabled ? `<button class="btn" data-act="wlan-qr" data-k="wlan-qr"${loading ? " disabled" : ""}>${escapeHtml(loading ? g.loadingQr : g.showQr)}</button>` : ""}</div>`
+        ${guest.enabled ? `<button class="btn" data-act="wlan-qr" data-k="wlan-qr" aria-haspopup="dialog"${loading ? " disabled" : ""}>${escapeHtml(loading ? g.loadingQr : g.showQr)}</button>` : ""}</div>`
     : `<p class="hint">${escapeHtml(g.qrLocked)}</p>`;
   return `<section class="card sec"><span class="label">${escapeHtml(g.title)}</span>
-    <div class="guest${qrShown ? " withqr" : ""}"><div>
+    <div class="guest"><div>
       <div class="net first ${guest.enabled ? "" : "off"}">
         <span class="ico">${ic("guest")}</span>
         <div class="n"><b>${escapeHtml(ssid)}</b><small>${facts.map((f) => `<span>${escapeHtml(f)}</span>`).join("")}${busy ? `<span class="busyText">${escapeHtml(t.wlan.switching)}</span>` : ""}</small></div>
         <div class="end"><button class="switch${busy ? " busy" : ""}" role="switch" aria-checked="${guest.enabled}" aria-label="${escapeHtml(fill(g.switchLabel, { ssid }))}" data-act="wlan-switch" data-key="guest" data-on="${guest.enabled ? "0" : "1"}" data-k="wl-guest"${!ctx.canWrite || busy ? " disabled" : ""}></button></div></div>
       ${guest.enabled ? guestDevices(online, g) : ""}
       ${actions}
-    </div>
-    ${qrShown ? `<div class="qrbox">${qrBox(guest, ctx)}</div>` : ""}</div>
+    </div></div>
     <p class="hint gfoot">${ic("info")}<span>${escapeHtml(g.hint)}</span></p></section>`;
 }
 

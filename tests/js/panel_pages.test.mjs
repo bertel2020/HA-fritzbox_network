@@ -352,38 +352,43 @@ test("switching a network off asks; the last one says that the panel and the rep
   assert.deepEqual(calls[2], { type: "fritzbox_network/wlan/switch", entry_id: "e1", key: "5ghz", enabled: true });
 });
 
-test("the QR code and the password are only read on request, masked, and dropped when the page is left", async () => {
-  const { p, calls } = makePanel({ "wlan/list": wlan, "wlan/guest/secret": SECRET }, "wlan");
+test("the QR code and the password are only read on request, shown in a dialog, masked, and dropped when the page is left", async () => {
+  const { p, calls, root } = makePanel({ "wlan/list": wlan, "wlan/guest/secret": SECRET }, "wlan");
   await p._loadWlan();
   assert.ok(!typesOf(calls).includes("wlan/guest/secret"));
   await p._onWlanClick({ act: "wlan-qr" });
   assert.deepEqual(typesOf(calls), ["wlan/list", "wlan/guest/secret"]);
-  let html = p._html["wlan-view"];
-  assert.match(html, /<img src="data:image\/png;base64,QUJD" alt="QR-Code zum Verbinden mit Gäste &lt;i&gt;"/);
-  assert.doesNotMatch(html, /Sonnenblume/);
-  assert.match(html, /id="w-pw" aria-label="Passwort">••••••••••••/);
-  assert.match(html, /data-act="wlan-reveal"[^>]*aria-pressed="false" aria-controls="w-pw"/);
+  const dialog = root.els["#dialog"];
+  const body = () => dialog.querySelector(".dlg-body").innerHTML;
+  assert.match(dialog.innerHTML, /Mit Gäste &lt;i&gt; verbinden/);
+  assert.match(body(), /<img src="data:image\/png;base64,QUJD" alt="QR-Code zum Verbinden mit Gäste &lt;i&gt;"/);
+  assert.doesNotMatch(body(), /Sonnenblume/);
+  assert.match(body(), /id="w-pw" aria-label="Passwort">••••••••••••/);
+  assert.match(body(), /data-act="wlan-reveal"[^>]*aria-pressed="false" aria-controls="w-pw"/);
+  // the page itself carries neither the code nor the password
+  assert.doesNotMatch(p._html["wlan-view"], /<img|Sonnenblume|base64/);
   await p._onWlanClick({ act: "wlan-reveal" });
-  html = p._html["wlan-view"];
-  assert.match(html, />Sonnenblume-42</);
-  assert.match(html, /aria-pressed="true"/);
-  assert.doesNotMatch(html, /value="Sonnenblume/);
-  // leaving the page forgets it, in the state and in what was drawn
+  assert.match(qrPage(p), /Sonnenblume-42/);
+  // leaving the page forgets it, in the state and in the dialog
   globalThis.location = { hash: "#/box" };
   p._onHash();
   assert.equal(p._state.wlanSecret, null);
   assert.equal(p._state.wlanReveal, false);
-  assert.doesNotMatch(p._html["wlan-view"], /Sonnenblume|base64/);
   clearTimeout(p._secretTimer);
 });
 
-test("hiding the QR code forgets the password; without the right the box refuses it", async () => {
-  const { p } = makePanel({ "wlan/list": wlan, "wlan/guest/secret": SECRET }, "wlan");
+function qrPage(p) {
+  return wlanPage.qrContent(p._state.wlanSecret, p._state.wlanReveal, t.wlan.guest);
+}
+
+test("closing the QR dialog forgets the password; without the right the box refuses it", async () => {
+  const { p, root } = makePanel({ "wlan/list": wlan, "wlan/guest/secret": SECRET }, "wlan");
   await p._loadWlan();
   await p._onWlanClick({ act: "wlan-qr" });
-  await p._onWlanClick({ act: "wlan-hideqr" });
+  assert.ok(p._state.wlanSecret);
+  root.els["#dialog"].querySelector("#dlg-no").onclick();
+  await new Promise((resolve) => setTimeout(resolve, 0));
   assert.equal(p._state.wlanSecret, null);
-  assert.doesNotMatch(p._html["wlan-view"], /Sonnenblume|base64/);
   const refused = makePanel({ "wlan/list": wlan, "wlan/guest/secret": Object.assign(new Error("No right"), { code: "unauthorized" }) }, "wlan");
   await refused.p._loadWlan();
   await refused.p._onWlanClick({ act: "wlan-qr" });
