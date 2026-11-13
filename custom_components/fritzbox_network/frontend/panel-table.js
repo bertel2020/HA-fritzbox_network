@@ -53,7 +53,7 @@ function connectionText(client, nodes, t) {
 
 function volumeText(client, volumes, language) {
   const volume = volumes[client.mac];
-  return volume ? `↓ ${formatBytes(volume[0], language)} <small>↑ ${formatBytes(volume[1], language)}</small>` : "–";
+  return volume ? `<span class="vl"><i class="vdn">↓</i> ${formatBytes(volume[0], language)}</span><span class="vl"><i class="vup">↑</i> ${formatBytes(volume[1], language)}</span>` : "–";
 }
 
 function row(client, state, t, now, volumes) {

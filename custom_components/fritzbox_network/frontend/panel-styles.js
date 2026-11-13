@@ -822,6 +822,10 @@ export const PANEL_CSS = `
   .devtable { width: 100%; border-collapse: collapse; }
   .devtable th { text-align: left; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 0; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--surface); }
   .devtable th.num, .devtable td.num { text-align: right; }
+  .devtable td.vol .vl { display: block; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .devtable td.vol i { font-style: normal; font-weight: 600; }
+  .devtable td.vol .vdn { color: var(--accent); }
+  .devtable td.vol .vup { color: var(--up); }
   .devtable th > button { font: inherit; letter-spacing: inherit; text-transform: inherit; color: inherit; width: 100%; padding: 10px 12px; display: inline-flex; align-items: center; gap: 6px; text-align: inherit; }
   .devtable th.num > button { justify-content: flex-end; }
   .devtable th > button:hover, .devtable th[aria-sort="ascending"] > button, .devtable th[aria-sort="descending"] > button { color: var(--accent-hover); }
