@@ -48,3 +48,6 @@ spike_out/
 # Probe scripts for a real box: local only
 tools/
 *PLAN*.md
+
+# Design mockups: local only
+mockups/
