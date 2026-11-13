@@ -470,7 +470,8 @@ export const PANEL_CSS = `
   #internet-view .icol > .card { margin-top: 0; }
   #internet-view .hero + .card, #internet-view .card + .icols, #internet-view .icols + .card, #internet-view .icols + section { margin-top: 16px; }
   .hero { background: linear-gradient(135deg, var(--accent-soft), transparent 70%), var(--surface); }
-  .strip { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.5fr) minmax(0, 1.5fr); gap: 16px 24px; align-items: center; }
+  .strip { display: grid; grid-template-columns: minmax(250px, 1.2fr) minmax(0, 1.4fr) minmax(0, 1.4fr); gap: 16px 24px; align-items: center; }
+  .strip .ihead .who small { white-space: normal; overflow: visible; text-overflow: clip; }
   @container app (max-width: 899px) { .strip { grid-template-columns: 1fr 1fr; } .strip .ihead { grid-column: 1 / -1; } }
   .strip .ihead .stat { margin-left: auto; }
   .rate b { display: block; font-size: 26px; font-weight: 500; line-height: 1.2; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }

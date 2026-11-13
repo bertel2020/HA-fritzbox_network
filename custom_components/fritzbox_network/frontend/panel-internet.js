@@ -468,10 +468,10 @@ export function renderInternet(internet, ctx) {
           ${chart(internet, language, t)}
           ${hintNote(i.measureNote, t)}</section>
         ${events(internet, t, now)}
+        ${internet.dsl ? addressHistory(internet.addresses, language, t) : ""}
       </div>
       <div class="icol">
-        ${internet.dsl ? lineQuality(internet.dsl, language, t) : ""}
-        ${addressHistory(internet.addresses, language, t)}
+        ${internet.dsl ? lineQuality(internet.dsl, language, t) : addressHistory(internet.addresses, language, t)}
       </div>
     </div>
     ${renderPorts(portState, { t, filter: ctx.portsFilter })}
