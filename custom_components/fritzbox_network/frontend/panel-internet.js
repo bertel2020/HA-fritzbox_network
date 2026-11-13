@@ -357,12 +357,25 @@ function addressHistory(addresses, language, t) {
     ${hintNote(i.addressHint, t)}</section>`;
 }
 
-function events(internet, t, now) {
+/** The moment of an event with the clock time: "today, 14:32", "Mon, 9 Nov, 14:32"; the relative wording is the tooltip. */
+function eventTime(iso, now, t, language) {
+  const at = new Date(iso);
+  if (Number.isNaN(at.getTime())) return { text: t.unknown, title: "" };
+  const clock = at.toLocaleTimeString(language, { hour: "2-digit", minute: "2-digit" });
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const days = Math.round((startOfDay(new Date(now)) - startOfDay(at)) / 86400000);
+  const upper = (word) => word.charAt(0).toUpperCase() + word.slice(1);
+  const day =
+    days === 0 ? upper(t.today) : days === 1 ? upper(t.yesterday) : at.toLocaleDateString(language, { weekday: "short", day: "numeric", month: "short" });
+  return { text: `${day}, ${clock}`, title: whenText(iso, now, t) };
+}
+
+function events(internet, t, now, language) {
   const i = t.inet;
   const items = (internet.events ?? [])
     .map(
       (e) =>
-        `<li><time>${escapeHtml(whenText(e.time, now, t))}</time><span>${escapeHtml(fill(i.kinds[e.kind] ?? e.kind, { detail: e.detail ?? "" }))}</span></li>`
+        `<li><time datetime="${escapeHtml(e.time)}" title="${escapeHtml(eventTime(e.time, now, t, language).title)}">${escapeHtml(eventTime(e.time, now, t, language).text)}</time><span>${escapeHtml(fill(i.kinds[e.kind] ?? e.kind, { detail: e.detail ?? "" }))}</span></li>`
     )
     .join("");
   return `<section class="card sec"><span class="label">${escapeHtml(i.events)}</span>
@@ -464,7 +477,7 @@ export function renderInternet(internet, ctx) {
         <section class="card sec"><span class="label">${escapeHtml(i.load)}</span>
           ${chart(internet, language, t)}
           ${hintNote(i.measureNote, t)}</section>
-        ${events(internet, t, now)}
+        ${events(internet, t, now, language)}
       </div>
       ${internet.dsl ? `<div class="icol">${lineQuality(internet.dsl, language, t)}</div>` : ""}
     </div>

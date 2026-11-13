@@ -678,6 +678,17 @@ test("the internet page offers to reconnect in the corner of the first card, and
   assert.match(refused, /may not change settings/);
 });
 
+test("the events of the internet page show the clock time, the relative wording is the tooltip", () => {
+  const t = texts.panelTexts("en");
+  const now = new Date(2026, 10, 13, 18, 0).getTime();
+  const at = (d, h, m) => new Date(2026, 10, d, h, m).toISOString();
+  const events = [{ kind: "reconnected", time: at(13, 14, 32) }, { kind: "reconnected", time: at(12, 3, 5) }, { kind: "reconnected", time: at(9, 7, 8) }];
+  const html = internetPage.renderInternet({ ...internet, events }, { t, language: "en", now, canWrite: true });
+  assert.match(html, /title="today">Today, 02:32 PM|title="today">Today, 14:32/);
+  assert.match(html, /Yesterday, (03:05 AM|03:05)/);
+  assert.match(html, /Mon, Nov 9, (07:08 AM|07:08)|Mon, 9 Nov, 07:08/);
+});
+
 const hintsModule = await import(`${base}panel-hints.js`);
 
 test("the network points out a busy radio and a weak repeater link", () => {

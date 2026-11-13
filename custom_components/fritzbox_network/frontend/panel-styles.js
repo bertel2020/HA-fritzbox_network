@@ -839,7 +839,7 @@ export const PANEL_CSS = `
   .events { list-style: none; margin: 0; padding: 0; font-size: 13px; }
   .events li { display: flex; gap: 12px; padding: 6px 0; border-top: 1px solid var(--line); }
   .events li:first-child { border-top: 0; }
-  .events time { color: var(--muted); width: 12ch; flex: none; }
+  .events time { color: var(--muted); width: 18ch; flex: none; font-variant-numeric: tabular-nums; }
   .backdrop { position: fixed; inset: 0; background: rgb(0 0 0 / 40%); display: none; place-items: center; z-index: 20; padding: 16px; }
   .backdrop.open { display: grid; }
   .dialog { width: min(440px, 100%); background: var(--surface); border-radius: 16px; padding: 24px; box-shadow: 0 6px 24px rgb(0 0 0 / 28%); max-height: 90vh; overflow: auto; }
