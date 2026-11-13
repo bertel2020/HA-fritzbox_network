@@ -11,6 +11,10 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Panel, Tabelle: Die Spalte Volumen zeigt Download und Upload gleich groß untereinander statt klein nebeneinander.
 - Panel, Datenvolumen eines Geräts: Download und Upload stehen gleichwertig nebeneinander, mit Gesamtsumme und einem geteilten Balken.
 
+### Behoben
+
+- Panel, Ereignisprotokoll der Box: Die Filterreihe (Alle, Netzwerk, WLAN …) ist nur so breit wie ihre Knöpfe; rechts blieb ein leerer Streifen im Rahmen.
+
 ## 1.7.0 – 2026-11-10
 
 ### Neu

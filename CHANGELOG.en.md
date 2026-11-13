@@ -11,6 +11,10 @@ All notable changes to this integration are recorded here.
 - Panel, table: the volume column shows download and upload in the same size, one under the other, instead of small side by side.
 - Panel, data volume of a device: download and upload stand side by side as equals, with the total and a split bar.
 
+### Fixed
+
+- Panel, event log of the box: the filter row (All, Network, Wi-Fi …) is only as wide as its buttons; an empty strip was left at the right inside the frame.
+
 ## 1.7.0 – 2026-11-10
 
 ### New

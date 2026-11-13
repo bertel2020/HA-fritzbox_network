@@ -677,8 +677,9 @@ export const PANEL_CSS = `
   .lat.fail { fill: var(--bad); background: var(--bad); }
   .lat.none { fill: var(--line); background: var(--line); }
   i.lat { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
-  .seg.logseg { display: flex; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .seg.logseg { display: inline-flex; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
   .seg.logseg button { flex: none; }
+  @container app (max-width: 600px) { .seg.logseg { display: flex; } .seg.logseg button { flex: 1 0 auto; text-align: center; border-top: 0; border-left: 1px solid var(--input-line); } .seg.logseg button:first-child { border-left: 0; } }
   @container app (max-width: 600px) {
     ul.logrows li { grid-template-columns: 1fr; gap: 2px; }
     ul.logrows .pmap { text-align: left; font-size: 12px; }
