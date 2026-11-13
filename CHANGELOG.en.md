@@ -2,6 +2,26 @@
 
 All notable changes to this integration are recorded here.
 
+## 1.9.0 – 2026-11-13
+
+### New
+
+- Panel, device list: a device can be renamed right in the list with the pencil. An offline device can be removed with the trash button (also on its detail page) after a confirmation; hiding works the same as on the tidy-up page.
+- Panel, internet: the QR code of the guest Wi-Fi opens in a dialog with the password (reveal, copy). Closing the dialog or leaving the page forgets both.
+
+### Changed
+
+- Panel, internet: the address history runs over the full width below the columns. "Reconnect" sits in the bottom right corner of the first card (the separate card is gone) and still asks first. The latest events show the clock time ("today, 14:32"); the relative wording is the tooltip.
+- Panel, diagnosis: the course of the connection folds away; it starts open and stays as left.
+- The "/" hint of the search field hides while the field has focus or text, so it no longer covers the clear button.
+
+### Fixed
+
+- A device the filter had excluded (for example after a move to the guest Wi-Fi) got no entities again when it returned, until a reload.
+- Static routes: a running poll overwrote a route that had just been changed or deleted with the old state, for up to about 5 minutes.
+- Reconfigure: an emptied port field now removes the saved port.
+- Capture: the MAC address is checked before it goes into the file name.
+
 ## 1.8.0 – 2026-11-13
 
 ### Changed

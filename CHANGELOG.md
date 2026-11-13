@@ -2,6 +2,26 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
+## 1.9.0 – 2026-11-13
+
+### Neu
+
+- Panel, Geräteliste: Ein Gerät lässt sich mit dem Stift direkt in der Liste umbenennen. Ein Gerät, das offline ist, lässt sich mit dem Papierkorb (auch auf seiner Detailseite) nach einer Rückfrage entfernen; das Ausblenden ist dasselbe wie auf der Aufräumen-Seite.
+- Panel, Internet: Der QR-Code des Gast-WLANs öffnet sich in einem Dialog mit dem Passwort (anzeigen, kopieren). Beim Schließen oder Verlassen der Seite werden beide vergessen.
+
+### Geändert
+
+- Panel, Internet: Die Adresshistorie läuft in voller Breite unter den Spalten. „Neu verbinden“ sitzt unten rechts in der ersten Karte (die eigene Karte entfällt) und fragt weiterhin nach. Die letzten Ereignisse zeigen die Uhrzeit („heute, 14:32“); die relative Angabe steht im Tooltip.
+- Panel, Diagnose: Der Verlauf der Verbindung lässt sich einklappen; er startet offen und bleibt, wie er verlassen wurde.
+- Das „/“-Kürzel des Suchfelds verschwindet, solange das Feld den Fokus oder Text hat, und verdeckt so nicht mehr den Löschen-Knopf.
+
+### Behoben
+
+- Ein Gerät, das der Filter ausgeschlossen hatte (zum Beispiel beim Wechsel ins Gast-WLAN), bekam beim Zurückkommen keine Entitäten mehr bis zum Neuladen.
+- Statische Routen: Ein laufender Abruf überschrieb eine gerade geänderte oder gelöschte Route mit dem alten Stand, bis zu etwa 5 Minuten lang.
+- Neu konfigurieren: Ein geleertes Portfeld entfernt den gespeicherten Port jetzt.
+- Mitschnitt: Die MAC-Adresse wird geprüft, bevor sie in den Dateinamen übernommen wird.
+
 ## 1.8.0 – 2026-11-13
 
 ### Geändert
