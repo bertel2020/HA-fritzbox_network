@@ -321,7 +321,10 @@ test("answering machines and phone books are read defensively, names without the
 
 test("the page shows today, the call list by day, the answering machine and the phone book", () => {
   const html = page.renderPhone(read(), ctx());
-  assert.match(html, /<h1 id="dtitle" tabindex="-1">Telefon<\/h1>/);
+  assert.match(html, /<h1 id="dtitle" tabindex="-1" class="sr">Telefon<\/h1>/);
+  // entry, call monitor and link stand at the right end of the row of the switch
+  assert.match(html, /<div class="ph-bar"><div class="seg ph-seg ph-view"[\s\S]*?<\/div><p class="ph-src">Eintrag „[^<]+“ · Anrufmonitor <span class="chip ok">/);
+  assert.doesNotMatch(html, /Daten von FRITZ!Box Telefon ·/);
   assert.match(html, /Eintrag „FRITZ!Box 7590 AX“/);
   assert.match(html, /Anrufmonitor <span class="chip ok">/);
   assert.match(html, /<span class="label">Anrufe<\/span><b>4<\/b><small>2 eingehend · 1 ausgehend/);

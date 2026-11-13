@@ -58,7 +58,7 @@ function sourceLine(model, ctx) {
     : monitor.connected
       ? `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${esc(p.monitorOn)}</span>`
       : `<span class="chip warn"><i class="dot warn" aria-hidden="true"></i>${esc(p.monitorOff)}</span>`;
-  return `<p class="ph-src">${esc(p.source)} · ${entryText} · ${esc(p.monitor)} ${mon} · <a href="/config/integrations/integration/fritzbox_phone" data-act="integration" data-k="ph-int">${esc(p.openIntegration)}</a></p>`;
+  return `<p class="ph-src">${entryText} · ${esc(p.monitor)} ${mon} · <a href="/config/integrations/integration/fritzbox_phone" data-act="integration" data-k="ph-int">${esc(p.openIntegration)}</a></p>`;
 }
 
 /** Seconds since an ISO time, as m:ss (with hours from one hour on); "" when the time is unknown. */
@@ -833,21 +833,24 @@ export function renderPhone(model, ctx) {
   const { t, ui } = ctx;
   const p = t.phone;
   const legacy = model?.legacy ? `<p class="ph-src ph-legacy">${esc(p.legacy)}</p>` : "";
-  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">${esc(p.title)}</h1>${model?.entry ? sourceLine(model, ctx) : ""}${legacy}</div>`;
-  if (!model?.found) return `${head}${hintPage(ctx)}`;
+  const source = model?.entry ? sourceLine(model, ctx) : "";
+  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1" class="sr">${esc(p.title)}</h1>${legacy}</div>`;
+  // the entry, the call monitor and the link stand at the right end of the row of the switch
+  const bar = (view = "") => (view || source ? `<div class="ph-bar">${view}${source}</div>` : "");
+  if (!model?.found) return `${head}${bar()}${hintPage(ctx)}`;
   const view = `<div class="seg ph-seg ph-view" role="group" aria-label="${esc(p.view.label)}"><button data-act="ph-view" data-ph-val="list" data-k="ph-v-list" aria-pressed="${ui.view !== "stats"}">${esc(p.view.list)}</button><button data-act="ph-view" data-ph-val="stats" data-k="ph-v-stats" aria-pressed="${ui.view === "stats"}">${esc(p.view.stats)}</button></div>`;
   const integration = `<div class="btn-row"><a class="btn" href="/config/integrations/integration/fritzbox_phone" data-act="integration" data-k="ph-int2">${esc(p.openIntegration)}</a></div>`;
-  if (model.missing) return `${head}<div class="card"><div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${esc(p.missing)}</b><span>${esc(p.missingBody)}</span>${integration}</div></div>`;
-  if (model.notLoaded) return `${head}<div class="card"><div class="empty"><span class="bad-ico">${ic("unplug")}</span><b>${esc(p.notLoaded)}</b><span>${esc(p.notLoadedBody)}</span>${integration}</div></div>`;
-  if (model.loading) return `${head}${view}${skeleton(ctx)}`;
+  if (model.missing) return `${head}${bar()}<div class="card"><div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${esc(p.missing)}</b><span>${esc(p.missingBody)}</span>${integration}</div></div>`;
+  if (model.notLoaded) return `${head}${bar()}<div class="card"><div class="empty"><span class="bad-ico">${ic("unplug")}</span><b>${esc(p.notLoaded)}</b><span>${esc(p.notLoadedBody)}</span>${integration}</div></div>`;
+  if (model.loading) return `${head}${bar(view)}${skeleton(ctx)}`;
   const offline = model.offline && !model.list.ok
     ? `<section class="card"><div class="empty"><span class="bad-ico">${ic("unplug")}</span><b>${esc(p.offline)}</b><span>${esc(p.offlineBody)}</span>${integration}</div></section>`
     : "";
-  if (offline) return `${head}${liveCard(model, ctx)}${offline}`;
+  if (offline) return `${head}${bar()}${liveCard(model, ctx)}${offline}`;
   const body = ui.view === "stats"
     ? statsView(model, ctx)
     : `${todayCard(model, ctx)}<div class="two ph-two">${callCard(model, ctx)}<div class="ph-col">${tamCards(model, ctx)}${bookCard(model, ctx)}${blockCard(model, ctx)}</div></div>`;
-  return `${head}${view}${liveCard(model, ctx)}${notices(model, ctx)}${body}`;
+  return `${head}${bar(view)}${liveCard(model, ctx)}${notices(model, ctx)}${body}`;
 }
 
 // ---------- dialog bodies ----------

@@ -1276,6 +1276,8 @@ export const PANEL_CSS = `
   .ph-src select.ph-entry { width: auto; max-width: 100%; height: 32px; font-size: 13px; }
   .chead .ph-src { margin: 0; }
   .ph-view { justify-self: start; }
+  .ph-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+  .ph-bar .ph-src { margin: 0 0 0 auto; justify-content: flex-end; text-align: right; }
   .ph-seg { display: flex; flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
   .ph-seg button { flex: none; min-height: 36px; padding: 0 12px; border-top: 0; border-left: 1px solid var(--input-line); text-align: center; }
   .ph-seg button:first-child { border-left: 0; }
