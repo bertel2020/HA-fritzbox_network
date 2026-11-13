@@ -1251,7 +1251,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     root.querySelector("#live-chip").hidden = !ready;
     const stale = ready ? panelCounts(state.data, Date.now(), state.threshold).stale : 0;
-    this._set("nav", ready ? renderNav(state, t, stale) : "");
+    this._set("nav", ready ? renderNav(state, t, stale, true) : "");
     this._set("bnav", ready ? renderNav(state, t, stale, true) : "");
     this._set("subtabs", ready && !onDevice ? renderSubTabs(tab, t, state) : "");
     this._set("migbanner", ready ? renderBanner(state.migrate, { t, hidden: state.migrateHidden, tab }) : "");

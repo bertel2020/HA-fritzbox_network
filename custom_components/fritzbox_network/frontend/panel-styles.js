@@ -33,11 +33,11 @@ export const PANEL_CSS = `
     --code-bg: light-dark(#14181d, #0b0e11);
     --code-text: #d7dee6;
     --scale: 1;
-    --radius: 18px;
+    --radius: 16px;
     /* buttons, fields and switches of a group share one corner; round chips and tags stay pills */
     --control-radius: 10px;
     --shadow-c: light-dark(rgb(16 24 40 / 14%), rgb(0 0 0 / 40%));
-    --shadow: 0 1px 2px var(--shadow-c), 0 6px 18px -10px var(--shadow-c);
+    --shadow: 0 1px 2px color-mix(in srgb, var(--shadow-c) 45%, transparent), 0 8px 24px -16px var(--shadow-c);
     --link: light-dark(#8e98a6, #6b7684);
     --fixed: var(--up);
     --fixed-soft: light-dark(#f0e9fb, #2c2342);
@@ -70,10 +70,15 @@ export const PANEL_CSS = `
   .logo { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; flex: none; }
   .brand b { display: block; font-size: 18px; font-weight: 500; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .brand small { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 8px 0; }
-  nav button { display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 18px; font-weight: 500; color: var(--muted); white-space: nowrap; border-radius: 22px; transition: color .15s, background .15s; }
-  nav button:hover { color: var(--text); background: var(--neutral-soft); }
-  nav button[aria-selected="true"] { color: var(--accent-hover); background: var(--accent-soft); }
+  nav { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none; padding: 0; align-self: stretch; }
+  nav button { display: inline-flex; align-items: center; gap: 8px; min-height: 56px; padding: 0 14px; font-weight: 500; color: var(--muted); white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color .15s, border-color .15s; }
+  nav button:hover { color: var(--text); }
+  nav button[aria-selected="true"] { color: var(--accent-hover); border-bottom-color: var(--accent); }
+  #nav .ni { position: relative; display: inline-grid; place-items: center; }
+  #nav .ni svg.i { width: 16px; height: 16px; opacity: .85; }
+  #nav .ni .dot, #nav .ni em { position: absolute; top: -4px; right: -9px; }
+  #nav .ni .dot { width: 7px; height: 7px; box-shadow: 0 0 0 2px var(--surface); }
+  #nav .ni em { top: -8px; right: -12px; min-width: 16px; height: 16px; padding: 0 4px; font-size: 10px; }
   nav em { font-style: normal; font-size: 11px; font-weight: 600; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; display: inline-grid; place-items: center; background: var(--warn-soft); color: var(--warn); }
   .header-end { display: flex; align-items: center; gap: 6px; flex: none; }
   .intlink { text-decoration: none; }
@@ -83,7 +88,7 @@ export const PANEL_CSS = `
   .fresh .dot { width: 8px; height: 8px; box-shadow: 0 0 0 3px var(--ok-soft); }
   nav .dot { width: 7px; height: 7px; }
   /* six pages need about 1180 px next to the title and the link; below that they get a row of their own */
-  @container app (max-width: 1180px) { nav { order: 3; flex: 1 1 100%; padding-bottom: 8px; } }
+  @container app (max-width: 1180px) { nav { order: 3; flex: 1 1 100%; } nav button { min-height: 44px; } }
   @container app (max-width: 760px) { .menu { display: grid; } }
   @container app (max-width: 520px) { .header-end { gap: 0; } .header { gap: 0 8px; flex-wrap: nowrap; } .brand { min-height: 56px; flex: 1 1 0; } .brand small.subline { white-space: normal; overflow: visible; row-gap: 2px; } .header-end .iconbtn { width: 44px; height: 44px; } }
 
@@ -119,7 +124,7 @@ export const PANEL_CSS = `
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
   .card + .card { margin-top: 16px; }
   h2 { font-size: 16px; font-weight: 500; margin: 0; }
-  .label { font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); }
+  .label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
   .muted { color: var(--muted); }
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 18px; border-radius: var(--control-radius); font-weight: 500; white-space: nowrap; border: 1px solid var(--input-line); background: var(--surface); }
   .btn:hover { background: var(--soft); }
@@ -156,7 +161,7 @@ export const PANEL_CSS = `
   .seg.viewsw { display: flex; }
   .seg.viewsw button { flex: 1; justify-content: center; display: inline-flex; align-items: center; gap: 6px; }
   @container app (max-width: 600px) {
-    .seg.viewsw button { border-top: 0; border-left: 1px solid var(--input-line); }
+    .seg.viewsw button { border-top: 0; border-left: 0; }
     .seg.viewsw button:first-child { border-left: 0; }
   }
   .meta { color: var(--muted); font-size: 12px; padding: 0 4px; }
@@ -401,20 +406,20 @@ export const PANEL_CSS = `
   .range { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 8px; }
   .range > span { flex: 1 1 100%; font-weight: 500; }
   #days-seg .seg { grid-auto-flow: column; width: auto; flex-wrap: wrap; }
-  @container app (max-width: 600px) { #days-seg .seg { grid-template-columns: repeat(3, 1fr); grid-auto-flow: row; } #days-seg .seg button { text-align: center; border-top: 1px solid var(--input-line); } #days-seg .seg button:nth-child(3n+1) { border-left: 0; } #days-seg .seg button:nth-child(-n+3) { border-top: 0; } }
+  @container app (max-width: 600px) { #days-seg .seg { grid-template-columns: repeat(3, 1fr); grid-auto-flow: row; } #days-seg .seg button { text-align: center; border-top: 0; } #days-seg .seg button:nth-child(3n+1) { border-left: 0; } #days-seg .seg button:nth-child(-n+3) { border-top: 0; } }
   .row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-2); min-width: 0; }
   .row .who { flex: 1; min-width: 0; }
   .row .who b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .row .who small { display: block; color: var(--muted); font-size: 12px; }
   input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
   .selbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 12px 16px; border-radius: 12px; background: var(--accent-soft); }
-  .seg { display: inline-grid; grid-auto-flow: column; border: 1px solid var(--input-line); border-radius: var(--control-radius); overflow: hidden; max-width: 100%; }
-  .seg button { padding: 0 14px; min-height: 40px; font-weight: 500; color: var(--muted); border-left: 1px solid var(--input-line); white-space: nowrap; }
-  .seg button:first-child { border-left: 0; }
-  .seg button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
-  @container app (max-width: 600px) { .seg { grid-auto-flow: row; width: 100%; } .seg button { border-left: 0; border-top: 1px solid var(--input-line); text-align: left; } .seg button:first-child { border-top: 0; }
+  .seg { display: inline-grid; grid-auto-flow: column; gap: 2px; padding: 3px; background: var(--soft); border: 1px solid var(--line); border-radius: var(--control-radius); max-width: 100%; }
+  .seg button { padding: 0 14px; min-height: 34px; font-weight: 500; color: var(--muted); border-radius: 7px; white-space: nowrap; transition: color .15s, background .15s; }
+  .seg button:hover { color: var(--text); }
+  .seg button[aria-pressed="true"], .seg button[aria-selected="true"] { background: var(--surface); color: var(--accent-hover); box-shadow: 0 1px 2px var(--shadow-c), 0 0 0 1px var(--line); }
+  @container app (max-width: 600px) { .seg { grid-auto-flow: row; width: 100%; } .seg button { border-left: 0; border-top: 0; text-align: left; } .seg button:first-child { border-top: 0; }
     .seg.subtabs { display: flex; grid-auto-flow: column; overflow-x: auto; scrollbar-width: none; }
-    .seg.subtabs button { flex: 1 0 auto; border-top: 0; border-left: 1px solid var(--input-line); text-align: center; }
+    .seg.subtabs button { flex: 1 0 auto; border-top: 0; border-left: 0; text-align: center; }
     .seg.subtabs button:first-child { border-left: 0; } }
   @container app (max-width: 380px) { .seg.subtabs button { padding: 0 8px; } }
   .opts { margin: 16px 0; }
@@ -485,7 +490,7 @@ export const PANEL_CSS = `
   .strip .ihead .who small { white-space: normal; overflow: visible; text-overflow: clip; }
   @container app (max-width: 899px) { .strip { grid-template-columns: 1fr 1fr; } .strip .ihead { grid-column: 1 / -1; } }
   .strip .ihead .stat { margin-left: auto; }
-  .rate b { display: block; font-size: 26px; font-weight: 500; line-height: 1.2; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .rate b { display: block; font-size: 30px; font-weight: 300; line-height: 1.2; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
   .rate.dn b { color: var(--accent); } .rate.upl b { color: var(--up); }
   .rate .gl, .rate small { color: var(--muted); font-size: 12px; }
   .rbar { display: block; height: 6px; border-radius: 3px; background: var(--soft); overflow: hidden; margin: 4px 0 2px; }
@@ -738,7 +743,7 @@ export const PANEL_CSS = `
   i.lat { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
   .seg.logseg { display: inline-flex; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
   .seg.logseg button { flex: none; }
-  @container app (max-width: 600px) { .seg.logseg { display: flex; } .seg.logseg button { flex: 1 0 auto; text-align: center; border-top: 0; border-left: 1px solid var(--input-line); } .seg.logseg button:first-child { border-left: 0; } }
+  @container app (max-width: 600px) { .seg.logseg { display: flex; } .seg.logseg button { flex: 1 0 auto; text-align: center; border-top: 0; border-left: 0; } .seg.logseg button:first-child { border-left: 0; } }
   @container app (max-width: 600px) {
     ul.logrows li { grid-template-columns: 1fr; gap: 2px; }
     ul.logrows .pmap { text-align: left; font-size: 12px; }
@@ -1282,7 +1287,7 @@ export const PANEL_CSS = `
   .ph-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
   .ph-bar .ph-src { margin: 0 0 0 auto; justify-content: flex-end; text-align: right; }
   .ph-seg { display: flex; flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-  .ph-seg button { flex: none; min-height: 36px; padding: 0 12px; border-top: 0; border-left: 1px solid var(--input-line); text-align: center; }
+  .ph-seg button { flex: none; min-height: 36px; padding: 0 12px; border-top: 0; border-left: 0; text-align: center; }
   .ph-seg button:first-child { border-left: 0; }
   .ph-seg button .n { font-size: 12px; opacity: .8; margin-left: 5px; font-variant-numeric: tabular-nums; }
   .ph-col { display: grid; gap: 16px; min-width: 0; }
