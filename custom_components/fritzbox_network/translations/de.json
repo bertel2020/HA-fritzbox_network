@@ -514,7 +514,7 @@
     },
     "set_route": {
       "name": "Route schalten",
-      "description": "Schaltet eine statische IPv4-Route der Box ein oder aus, zum Beispiel die Route zu einem zweiten Router nur, solange jemand zu Hause ist. Das Panel listet die Routen unter Adressraum > Routen.",
+      "description": "Schaltet eine statische IPv4-Route der Box ein oder aus, zum Beispiel die Route zu einem zweiten Router nur, solange jemand zu Hause ist. Das Panel listet die Routen unter Netzwerk > Routen.",
       "fields": {
         "network": {
           "name": "Netz",

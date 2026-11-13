@@ -46,7 +46,7 @@ export function renderLog(log, ctx) {
   const { t, group, kind = null, now = Date.now() } = ctx;
   const c = t.diag.log;
   const groups = LOG_GROUPS.map(
-    (g) => `<button role="radio" aria-checked="${g === group}" aria-pressed="${g === group}" data-log-group="${g}">${escapeHtml(c.groups[g || "all"])}</button>`
+    (g) => `<button role="radio" aria-checked="${g === group}" data-log-group="${g}">${escapeHtml(c.groups[g || "all"])}</button>`
   ).join("");
   let body;
   if (log === "failed") body = `<p class="hint">${escapeHtml(c.failed)}</p>`;

@@ -134,7 +134,7 @@ export function toJson(m, own, rows, { mac = true, now = new Date() } = {}) {
 
 const PRINT_CSS = `
   @page { size: A4 portrait; margin: 15mm 13mm 17mm;
-    @bottom-left { content: "FRITZ!Box · Adressraum"; font: 7.5pt "Helvetica Neue", Arial, sans-serif; color: #6b7280; }
+    @bottom-left { content: "FRITZ!Box · Adressen"; font: 7.5pt "Helvetica Neue", Arial, sans-serif; color: #6b7280; }
     @bottom-right { content: counter(page) " / " counter(pages); font: 7.5pt "Helvetica Neue", Arial, sans-serif; color: #6b7280; } }
   * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   html { background: #e8ebf0; }

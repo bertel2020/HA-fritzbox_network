@@ -182,9 +182,9 @@ test("the phone tab is always there, quiet without fritzbox_phone and gone only 
   assert.deepEqual(panel.pagesOf("phone", { phoneFound: true }), ["phone"]);
   assert.equal(panel.renderSubTabs("phone", t, { phoneFound: true }), "");
   assert.equal(panel.renderSubTabs("box", t, { phoneFound: true }), "");
-  assert.match(panel.renderNav({ tab: "net", data: {}, phoneFound: false }, t, 0), /<button role="tab" class="quiet" tabindex="-1" data-tab="phone" aria-selected="false">Telefon<\/button>/);
-  assert.doesNotMatch(panel.renderNav({ tab: "net", data: {}, phoneFound: false, phoneHidden: true }, t, 0), /data-tab="phone"/);
-  const nav = panel.renderNav({ tab: "phone", data: {}, phoneFound: true, phoneUnread: 2 }, t, 0);
+  assert.match(panel.renderNav({ tab: "net", data: {}, phoneFound: false }, t), /<button role="tab" class="quiet" tabindex="-1" data-tab="phone" aria-selected="false">Telefon<\/button>/);
+  assert.doesNotMatch(panel.renderNav({ tab: "net", data: {}, phoneFound: false, phoneHidden: true }, t), /data-tab="phone"/);
+  const nav = panel.renderNav({ tab: "phone", data: {}, phoneFound: true, phoneUnread: 2 }, t);
   assert.match(nav, /data-tab="box"[^>]*>Box<\/button><button role="tab" tabindex="0" data-tab="phone" aria-selected="true" aria-label="Telefon, 2 neue Nachrichten">Telefon<em>2<\/em><\/button><button[^>]*data-tab="diagnose"/);
   assert.deepEqual(shared.routeFromHash("#/phone"), { tab: "phone", device: null });
   assert.deepEqual(shared.routeFromHash("#/box/phone"), { tab: "phone", device: null });
@@ -196,10 +196,10 @@ test("the phone tab is always there, quiet without fritzbox_phone and gone only 
 });
 
 test("the phone tab carries a dot while the phone rings, the box tab none", () => {
-  const nav = panel.renderNav({ tab: "net", data: {}, phoneFound: true, phoneRinging: true, phoneUnread: 2 }, t, 0);
+  const nav = panel.renderNav({ tab: "net", data: {}, phoneFound: true, phoneRinging: true, phoneUnread: 2 }, t);
   assert.match(nav, /data-tab="phone" aria-selected="false" aria-label="Telefon, es klingelt">Telefon<i class="dot warn"/);
   assert.doesNotMatch(nav, /data-tab="box"[^>]*>Box<i/);
-  assert.doesNotMatch(panel.renderNav({ tab: "net", data: {} }, t, 0), /dot warn/);
+  assert.doesNotMatch(panel.renderNav({ tab: "net", data: {} }, t), /dot warn/);
 });
 
 test("the panel finds the phone from the registries; without it #/phone shows the hint page", () => {

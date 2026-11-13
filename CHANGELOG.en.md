@@ -2,6 +2,21 @@
 
 All notable changes to this integration are recorded here.
 
+## Unreleased
+
+### Changed
+
+- Panel: "Manage" (Include, Clean up, Switch over) is no tab any more but a gear at the top right of the header next to the link to the integration; the count of the devices offline for long is on the gear. The addresses `#/filter`, `#/cleanup` and `#/migrate` stay.
+- Panel: the phone tab is in the bar at the bottom of narrow screens only when FRITZ!Box Telefon is found; at the top it stays, paler, as before.
+- Panel: the "/" key jumps into the search of the device list from every page.
+- Panel: "Address space" is now called "Addresses". The guide calls the gear "Manage" and, for cleaning up, "remove" and "Removed devices", like the panel.
+- Panel: the pages with a visible title share one page head; the device list has a heading for screen readers. Tabs only report "selected", choice groups only "checked" to screen readers.
+
+### Fixed
+
+- Panel, include: when nothing changes, the preview only says "Nothing changes with this setting.", without "are removed", the warning and the red button.
+- Panel: the line under the title names the model only once when the box is called like its model ("FRITZ!Box 7590" instead of "FRITZ!Box 7590 · FRITZ!Box 7590").
+
 ## 1.10.0 – 2026-11-13
 
 ### New

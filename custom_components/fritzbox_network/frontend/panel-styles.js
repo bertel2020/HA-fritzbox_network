@@ -187,7 +187,9 @@ export const PANEL_CSS = `
   svg.i.fill { fill: currentColor; stroke: none; }
   .iconbtn { display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; color: var(--muted); }
   .iconbtn svg.i { width: 24px; height: 24px; }
-  .iconbtn:hover, .iconbtn[aria-expanded="true"] { background: var(--accent-soft); color: var(--accent-hover); }
+  .iconbtn:hover, .iconbtn[aria-expanded="true"], .iconbtn[aria-current="page"] { background: var(--accent-soft); color: var(--accent-hover); }
+  .managebtn { position: relative; }
+  .managebtn em { position: absolute; top: 2px; right: 0; font-style: normal; font-size: 10px; font-weight: 600; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-grid; place-items: center; background: var(--warn-soft); color: var(--warn); box-shadow: 0 0 0 2px var(--surface); }
   /* outside the header, which holds fixed boxes inside itself because of its blur */
   .fmenu.lookmenu { position: fixed; top: 76px; left: auto; right: max(16px, calc((100vw - 1200px) / 2 + 24px)); width: 320px; max-width: calc(100vw - 32px); padding: 8px; }
   .lookmenu [role="group"] + .label { margin-top: 4px; border-top: 1px solid var(--line-2); padding-top: 12px; }
@@ -416,7 +418,7 @@ export const PANEL_CSS = `
   .seg { display: inline-grid; grid-auto-flow: column; gap: 2px; padding: 3px; background: var(--soft); border: 1px solid var(--line); border-radius: var(--control-radius); max-width: 100%; }
   .seg button { padding: 0 14px; min-height: 34px; font-weight: 500; color: var(--muted); border-radius: 7px; white-space: nowrap; transition: color .15s, background .15s; }
   .seg button:hover { color: var(--text); }
-  .seg button[aria-pressed="true"], .seg button[aria-selected="true"] { background: var(--surface); color: var(--accent-hover); box-shadow: 0 1px 2px var(--shadow-c), 0 0 0 1px var(--line); }
+  .seg button[aria-pressed="true"], .seg button[aria-selected="true"], .seg button[aria-checked="true"] { background: var(--surface); color: var(--accent-hover); box-shadow: 0 1px 2px var(--shadow-c), 0 0 0 1px var(--line); }
   @container app (max-width: 600px) { .seg { grid-auto-flow: row; width: 100%; } .seg button { border-left: 0; border-top: 0; text-align: left; } .seg button:first-child { border-top: 0; }
     .seg.subtabs { display: flex; grid-auto-flow: column; overflow-x: auto; scrollbar-width: none; }
     .seg.subtabs button { flex: 1 0 auto; border-top: 0; border-left: 0; text-align: center; }
@@ -434,9 +436,12 @@ export const PANEL_CSS = `
 
   /* dialog + toast */
   .col > * + *, #f-controls > * + * { margin-top: 16px; }
-  .phead { display: contents; } /* only the heading for the screen reader: no empty row (and no gap) above the content */
+  /* the head of every page: the title (for the screen reader only on Internet, Box, Phone and Diagnosis), with its main action
+     at the right in a .pheadrow, and the lead below; no box of its own, so a hidden title leaves no empty row (and no gap) */
+  .phead { display: contents; }
   .phead h1 { font-size: 24px; font-weight: 500; margin: 4px 0 0; letter-spacing: -.01em; }
   .phead .lead { margin: 6px 0 0; }
+  .pheadrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
   .col h2 { font-size: 16px; font-weight: 500; margin: 0 0 8px; }
   .col label.search { margin: 12px 0 4px; }
   .count { color: var(--muted); font-size: 13px; margin: 12px 0 4px; }
@@ -988,9 +993,7 @@ export const PANEL_CSS = `
 
   /* address page */
   #addresses-view > * + *, #addresses-view .alayout + * { margin-top: 16px; }
-  #internet-view .phead, #addresses-view .phead, #diagnose-view .phead { margin-bottom: 16px; }
   #diagnose-view > * + * { margin-top: 16px; }
-  #diagnose-view .phead { margin-bottom: 0; }
   .diagrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(440px, 100%), 1fr)); gap: 16px; align-items: start; }
   .diagrow > .card { margin-top: 0; }
   #addresses-view .atiles { margin-top: 0; }
@@ -1140,8 +1143,6 @@ export const PANEL_CSS = `
   .poolform .afield { margin-top: 0; width: 90px; }
   .poolform .btn.p { margin-left: auto; }
   .poolform .poolbase { padding-bottom: 10px; color: var(--muted); }
-  .pheadrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
-  .pheadrow h1 { margin: 4px 0 0; }
   .aopts { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 4px 0 12px; }
   .acheck { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
   .abar { display: flex; height: 34px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); margin: 4px 0 18px; }
@@ -1155,7 +1156,6 @@ export const PANEL_CSS = `
   .dot.bad { background: var(--bad); }
   #migbanner .banner { margin-bottom: 16px; }
   #box-view > * + *, #wlan-view > * + *, #migrate-view > * + * { margin-top: 16px; }
-  #box-view .phead, #wlan-view .phead, #migrate-view .phead { margin-bottom: 0; }
   #box-view .two > .card { margin-top: 0; }
   .bad-ico { color: var(--bad); display: inline-flex; }
   .tile .na { color: var(--muted); font-weight: 400; font-size: 14px; }

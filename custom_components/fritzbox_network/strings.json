@@ -514,7 +514,7 @@
     },
     "set_route": {
       "name": "Switch route",
-      "description": "Switches a static IPv4 route of the box on or off, for example the route to a second router only while someone is home. The panel lists the routes under Address space > Routes.",
+      "description": "Switches a static IPv4 route of the box on or off, for example the route to a second router only while someone is home. The panel lists the routes under Network > Routes.",
       "fields": {
         "network": {
           "name": "Network",

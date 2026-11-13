@@ -222,24 +222,29 @@ export function renderSubTabs(active, t, state = {}) {
   if (pages.length < 2) return "";
   return `<div class="seg subtabs" role="tablist" aria-label="${escapeHtml(t.tabs[group])}">${pages
     .map((id) => {
-      return `<button role="tab" tabindex="${id === active ? 0 : -1}" data-tab="${id}" aria-selected="${id === active}" aria-pressed="${id === active}">${escapeHtml(t.tabs[SUB_LABELS[id] ?? id])}</button>`;
+      return `<button role="tab" tabindex="${id === active ? 0 : -1}" data-tab="${id}" aria-selected="${id === active}">${escapeHtml(t.tabs[SUB_LABELS[id] ?? id])}</button>`;
     })
     .join("")}</div>`;
 }
 
-/** The icons of the five tabs, shown in the bar at the bottom of a narrow screen. */
-const NAV_ICONS = { net: "network", internet: "globe", box: "router", phone: "phone", diagnose: "search", devices: "list" };
+/** The icons of the tabs, shown in the bar at the bottom of a narrow screen. */
+const NAV_ICONS = { net: "network", internet: "globe", box: "router", phone: "phone", diagnose: "search" };
 
 /**
  * The tabs. Internet carries a dot for the state of the line, Box one while it restarts, Phone
- * (only where FRITZ!Box Telefon is there) one while it rings or else the number of new messages,
- * Manage the number of devices gone for long.
+ * one while it rings or else the number of new messages. Manage is no tab: it is the gear of the
+ * header (renderManage). The phone tab is there while FRITZ!Box Telefon is found; without it, the
+ * top bar keeps a paler tab (until it is hidden in this browser) and the bar at the bottom has none.
+ * When the open page has no tab here, the first tab is the one in the tab order.
  */
-export function renderNav(state, t, stale, icons = false) {
+export function renderNav(state, t, { icons = false, bottom = false } = {}) {
   const line = state.data?.internet;
   const open = groupOf(state.tab);
+  const phone = Boolean(state.phoneFound) || (!bottom && !state.phoneHidden);
+  const ids = ["net", "internet", "box", ...(phone ? ["phone"] : []), "diagnose"];
+  const focusable = ids.includes(open) ? open : ids[0];
   const tab = (id, extra = "", label = "", quiet = false) =>
-    `<button role="tab"${quiet ? ' class="quiet"' : ""} tabindex="${id === open ? 0 : -1}" data-tab="${id}" aria-selected="${id === open}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${icons ? `<span class="ni">${ic(NAV_ICONS[id])}${extra}</span><span class="nl">${escapeHtml(t.tabs[id])}</span>` : `${escapeHtml(t.tabs[id])}${extra}`}</button>`;
+    `<button role="tab"${quiet ? ' class="quiet"' : ""} tabindex="${id === focusable ? 0 : -1}" data-tab="${id}" aria-selected="${id === open}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${icons ? `<span class="ni">${ic(NAV_ICONS[id])}${extra}</span><span class="nl">${escapeHtml(t.tabs[id])}</span>` : `${escapeHtml(t.tabs[id])}${extra}`}</button>`;
   const dot = line ? `<i class="dot ${line.connected === false ? "" : "on"}" aria-hidden="true"></i>` : "";
   const label = line ? `${t.tabs.internet}, ${line.connected === false ? t.inet.state.down : t.inet.state.up}` : "";
   const restarting = state.boxRestart && state.boxRestart.phase !== "back";
@@ -252,10 +257,27 @@ export function renderNav(state, t, stale, icons = false) {
     tab("net"),
     tab("internet", dot, label),
     tab("box", restarting ? `<i class="dot warn" aria-hidden="true"></i>` : "", restarting ? `${t.tabs.box}, ${t.boxPage.restarting}` : ""),
-    state.phoneFound || !state.phoneHidden ? tab("phone", phoneExtra, phoneNote ? `${t.tabs.phone}, ${phoneNote}` : "", !state.phoneFound) : "",
+    phone ? tab("phone", phoneExtra, phoneNote ? `${t.tabs.phone}, ${phoneNote}` : "", !state.phoneFound) : "",
     tab("diagnose"),
-    tab("devices", stale ? `<em>${stale}</em>` : ""),
   ].join("");
+}
+
+/**
+ * The gear of the header that leads to Manage (Include, Clean up, Switch over), with the number of
+ * devices gone for long. It is marked as the current page while one of these pages is open.
+ */
+export function renderManage(state, t, stale) {
+  const open = groupOf(state.tab) === "devices";
+  const label = stale ? `${t.tabs.devices}, ${fill(t.manageStale, { n: stale })}` : t.tabs.devices;
+  return `<button class="iconbtn managebtn" data-tab="devices" data-k="manage"${open ? ' aria-current="page"' : ""} title="${escapeHtml(t.tabs.devices)}" aria-label="${escapeHtml(label)}">${ic("settings")}${stale ? `<em aria-hidden="true">${stale}</em>` : ""}</button>`;
+}
+
+/** The line under the title of the header: the name of the box and its model, the model only once when both are the same. */
+export function boxSubline(master) {
+  if (!master) return "";
+  const name = String(master.name ?? "").trim();
+  const model = String(master.model ?? "").trim();
+  return name && model && name.toLowerCase() !== model.toLowerCase() ? `${name} · ${model}` : name || model;
 }
 
 /** What the address page knows of one box: it is all gone when another box is chosen. */
@@ -368,6 +390,10 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._update();
       if (state.sel && state.sel !== was) this._showDevicePage();
       else if (!state.sel && was) this._backToList(was);
+      if (this._afterNav === "search") {
+        this._afterNav = null;
+        if (state.tab === "net" && !state.sel) this.shadowRoot.querySelector("#q")?.focus();
+      }
     };
     this._resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => {
       this._syncCompact();
@@ -1090,6 +1116,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div class="header-end">
             <select id="box" aria-label="${t.box}" hidden></select>
             <span id="lookhost"></span>
+            <span id="managehost"></span>
             <a class="iconbtn intlink" href="/config/integrations/integration/${DOMAIN}" data-act="integration" title="${escapeHtml(t.integrationTitle)}" aria-label="${escapeHtml(t.integrationTitle)}">${ic("external")}</a>
           </div>
         </header>
@@ -1100,6 +1127,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div id="note"></div>
           <div id="subtabs"></div>
           <div id="net-view" hidden>
+            <h1 class="sr" id="ltitle" tabindex="-1">${t.tabs.netDevices}</h1>
             <div id="hints"></div>
             <div class="card toolbar">
               <div class="tools" id="tools">
@@ -1251,14 +1279,15 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     root.querySelector("#live-chip").hidden = !ready;
     const stale = ready ? panelCounts(state.data, Date.now(), state.threshold).stale : 0;
-    this._set("nav", ready ? renderNav(state, t, stale, true) : "");
-    this._set("bnav", ready ? renderNav(state, t, stale, true) : "");
+    this._set("nav", ready ? renderNav(state, t, { icons: true }) : "");
+    this._set("bnav", ready ? renderNav(state, t, { icons: true, bottom: true }) : "");
+    this._set("managehost", ready ? renderManage(state, t, stale) : "");
     this._set("subtabs", ready && !onDevice ? renderSubTabs(tab, t, state) : "");
     this._set("migbanner", ready ? renderBanner(state.migrate, { t, hidden: state.migrateHidden, tab }) : "");
     if (!ready) return;
     const now = Date.now();
     const master = (state.data.nodes ?? []).find((n) => n.role === "master");
-    root.querySelector("#sub").textContent = master ? [master.name, master.model].filter(Boolean).join(" · ") : "";
+    root.querySelector("#sub").textContent = boxSubline(master);
     this._tick();
     if (tab === "internet") return this._renderInternet();
     if (tab === "vpn") return this._renderVpn();
@@ -1368,7 +1397,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._set(
       "days-seg",
       `<div class="seg" role="radiogroup" aria-labelledby="days-head">${STALE_STEPS.map(
-        (n) => `<button role="radio" aria-checked="${n === days}" aria-pressed="${n === days}" data-days="${n}">${escapeHtml(fill(t.cleanup[n === 365 ? "year" : "days"], { n }))}</button>`
+        (n) => `<button role="radio" aria-checked="${n === days}" data-days="${n}">${escapeHtml(fill(t.cleanup[n === 365 ? "year" : "days"], { n }))}</button>`
       ).join("")}</div>`
     );
     this._set("stale", renderStale(state, t));
@@ -1563,9 +1592,13 @@ class FritzboxNetworkPanel extends HTMLElement {
       return;
     }
     if (/INPUT|SELECT|TEXTAREA/.test(target.tagName) || event.ctrlKey || event.metaKey || event.altKey) return;
-    if (event.key === "/" && state.tab === "net") {
+    // "/" searches the devices from every page: elsewhere it opens the list first
+    if (event.key === "/" && state.data && !this._error) {
       event.preventDefault();
-      if (state.sel) {
+      if (state.tab !== "net") {
+        this._afterNav = "search";
+        globalThis.location.hash = pageHash("net");
+      } else if (state.sel) {
         this._afterBack = "search";
         this._leaveDevice();
       } else root.querySelector("#q")?.focus();
@@ -1853,7 +1886,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     } else if (ds.tab) {
       // a tab opens the page of it that was open last, a switch of pages the page itself
       let page = ds.tab;
-      if (target.closest("#nav, #bnav")) {
+      if (target.closest("#nav, #bnav, #managehost")) {
         const offered = pagesOf(ds.tab, state);
         page = offered.includes(state.lastPage[ds.tab]) ? state.lastPage[ds.tab] : (offered[0] ?? ds.tab);
       }

@@ -67,18 +67,26 @@ function names(devices) {
   return devices.map((d) => d.name).join(", ");
 }
 
-/** What applying does, in a bar that stays at the bottom: the three numbers, the warning, the button. */
+/**
+ * What applying does, in a bar that stays at the bottom: the three numbers, the warning, the button.
+ * While the draft is the setting already saved, applying does nothing: the bar says so alone, with no
+ * numbers, no warning and no red button.
+ */
 export function renderPreview(page, t) {
   const f = t.filter;
   if (!page?.preview) return `<div class="empty"><span>${escapeHtml(t.loading)}</span></div>`;
-  const { keep, add, remove } = page.preview;
   const changed = filterChanged(page.current, page.draft);
+  if (!changed) {
+    return `<div class="applybar sticky">
+    <p class="muted">${escapeHtml(f.unchanged)}</p>
+    <div class="btn-row"><button class="btn p" data-act="apply" disabled>${escapeHtml(f.apply)}</button></div></div>`;
+  }
+  const { keep, add, remove } = page.preview;
   const pill = (key, list, cls = "") =>
     `<span class="pill2 ${cls}"><b>${list.length}</b> ${escapeHtml(f[key])}</span>`;
   return `<div class="applybar sticky">
     <div class="sum">${pill("keep", keep)}${pill("add", add, add.length ? "ok" : "")}${pill("remove", remove, remove.length ? "bad" : "")}</div>
     ${remove.length ? `<div class="note bad">${escapeHtml(fill(f.removeNote, { names: names(remove) }))}</div>` : ""}
     ${add.length ? `<p class="muted">${escapeHtml(fill(f.addNote, { names: names(add) }))}</p>` : ""}
-    ${!changed ? `<p class="muted">${escapeHtml(f.unchanged)}</p>` : ""}
-    <div class="btn-row"><button class="btn p ${remove.length ? "danger" : ""}" data-act="apply" ${changed ? "" : "disabled"}>${escapeHtml(f.apply)}</button></div></div>`;
+    <div class="btn-row"><button class="btn p ${remove.length ? "danger" : ""}" data-act="apply">${escapeHtml(f.apply)}</button></div></div>`;
 }

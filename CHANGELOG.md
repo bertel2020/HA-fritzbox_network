@@ -2,6 +2,21 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
+## Unveröffentlicht
+
+### Geändert
+
+- Panel: „Verwalten“ (Einbinden, Aufräumen, Umsteigen) ist kein Tab mehr, sondern ein Zahnrad oben rechts im Kopf neben dem Link zur Integration; der Zähler der lange offline Geräte steht am Zahnrad. Die Adressen `#/filter`, `#/cleanup` und `#/migrate` bleiben.
+- Panel: Der Tab Telefon steht in der Leiste unten auf schmalen Bildschirmen nur, wenn FRITZ!Box Telefon gefunden wird; oben bleibt er wie bisher blasser stehen.
+- Panel: Die Taste „/“ springt von jeder Seite aus in die Suche der Geräteliste.
+- Panel: „Adressraum“ heißt jetzt „Adressen“. Die Anleitung nennt das Zahnrad „Verwalten“ und beim Aufräumen „entfernen“ und „Entfernte Geräte“, wie das Panel.
+- Panel: Die Seiten mit sichtbarem Titel nutzen denselben Seitenkopf; die Geräteliste hat eine Überschrift für Screenreader. Tabs melden nur „ausgewählt“, Auswahlgruppen nur „gewählt“ an Screenreader.
+
+### Behoben
+
+- Panel, Einbinden: Ändert sich nichts, zeigt die Vorschau nur „Mit diesem Filter ändert sich nichts.“, ohne „werden entfernt“, Warnung und roten Knopf.
+- Panel: Die Zeile unter dem Titel nennt das Modell nur einmal, wenn die Box so heißt wie ihr Modell („FRITZ!Box 7590“ statt „FRITZ!Box 7590 · FRITZ!Box 7590“).
+
 ## 1.10.0 – 2026-11-13
 
 ### Neu

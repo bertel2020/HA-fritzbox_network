@@ -289,10 +289,12 @@ test("the filter page shows the mode and the picker only when needed", () => {
 test("the preview says what is removed, and applying needs a change", () => {
   const html = filter.renderPreview(page, t);
   assert.match(html, /Wird samt Entitäten entfernt: lost &lt;b&gt;/);
-  assert.match(html, /data-act="apply" >/);
+  assert.match(html, /data-act="apply">/);
+  // nothing changes: the bar says so alone, with no numbers, no warning and no red button, even if the preview lists removals
   const same = filter.renderPreview({ ...page, draft: page.current }, t);
   assert.match(same, /Mit diesem Filter ändert sich nichts/);
-  assert.match(same, /data-act="apply"[^>]*disabled/);
+  assert.match(same, /class="btn p" data-act="apply" disabled/);
+  assert.doesNotMatch(same, /werden entfernt|Wird samt Entitäten|note bad|danger/);
   assert.match(filter.renderPreview({ ...page, preview: null }, t), /Lädt/);
 });
 
@@ -1094,15 +1096,28 @@ test("the pool card is only offered to someone who may write, and warns before i
   assert.match(addresses.renderAddresses({ ...ctx, canWrite: true, addr: { ...addr, poolDraft: { first: "9", last: "5" } } }), /die erste nicht größer als die zweite/);
 });
 
-test("all pages are tabs, the internet tab carries the state of the line and clean-up its count", () => {
-  const html = panel.renderNav({ tab: "internet", data: { internet: { connected: false } } }, t, 3);
+test("the pages are tabs, the internet tab carries the state of the line, the gear of Manage the clean-up count", () => {
+  const html = panel.renderNav({ tab: "internet", data: { internet: { connected: false } } }, t);
   const labels = [...html.matchAll(/<button[^>]*>([^<]+)/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ["Netzwerk", "Internet", "Box", "Telefon", "Diagnose", "Verwalten"]);
+  assert.deepEqual(labels, ["Netzwerk", "Internet", "Box", "Telefon", "Diagnose"]);
   assert.match(html, /data-tab="internet" aria-selected="true" aria-label="Internet, Getrennt"/);
   assert.match(html, /<i class="dot " aria-hidden="true"><\/i>/);
-  assert.match(html, /Verwalten<em>3<\/em>/);
-  assert.match(panel.renderNav({ tab: "net", data: { internet: { connected: true } } }, t, 0), /<i class="dot on"/);
-  assert.doesNotMatch(panel.renderNav({ tab: "net", data: null }, t, 0), /<i class="dot|<em>/);
+  assert.doesNotMatch(html, /data-tab="devices"/);
+  const gear = panel.renderManage({ tab: "internet" }, t, 3);
+  assert.match(gear, /<button class="iconbtn managebtn" data-tab="devices" data-k="manage" title="Verwalten" aria-label="Verwalten, 3 lange offline">/);
+  assert.match(gear, /<em aria-hidden="true">3<\/em><\/button>$/);
+  assert.doesNotMatch(panel.renderManage({ tab: "net" }, t, 0), /<em|aria-current/);
+  assert.match(panel.renderManage({ tab: "net" }, t, 0), /aria-label="Verwalten"/);
+  assert.match(panel.renderNav({ tab: "net", data: { internet: { connected: true } } }, t), /<i class="dot on"/);
+  assert.doesNotMatch(panel.renderNav({ tab: "net", data: null }, t), /<i class="dot|<em>/);
+});
+
+test("the line under the title names the box and its model, the model only once when both are the same", () => {
+  assert.equal(panel.boxSubline({ name: "FRITZ!Box 7590", model: "FRITZ!Box 7590" }), "FRITZ!Box 7590");
+  assert.equal(panel.boxSubline({ name: "Keller", model: "FRITZ!Box 7590" }), "Keller · FRITZ!Box 7590");
+  assert.equal(panel.boxSubline({ name: "", model: "FRITZ!Box 7590" }), "FRITZ!Box 7590");
+  assert.equal(panel.boxSubline({ name: "Keller" }), "Keller");
+  assert.equal(panel.boxSubline(null), "");
 });
 
 const exporter = await import(`${base}panel-export.js`);
@@ -1157,7 +1172,8 @@ test("the print sheet is an A4 document with the numbers, the map, the list and 
   const m = addresses.addressModel({ ...lan, own });
   const html = exporter.printSheet({ m, own, t, language: "de", opts: { map: true, mac: true, poolNames: true }, now: new Date(2026, 10, 2, 14, 35) });
   assert.match(html, /@page \{ size: A4 portrait/);
-  assert.match(html, /<h1>Adressraum<\/h1>/);
+  assert.match(html, /<h1>Adressen<\/h1>/);
+  assert.match(html, /content: "FRITZ!Box · Adressen"/);
   assert.match(html, /Stand 2\. November 2026/);
   assert.equal((html.match(/class="cell /g) ?? []).length >= 256, true);
   assert.match(html, /Kameras/);
@@ -1266,24 +1282,31 @@ test("the event log shows the messages newest first and marks the chosen group",
   const html = logPage.renderLog(log, { t, group: "wlan" });
   assert.match(html, /Gerät angemeldet/);
   assert.match(html, /04\.11\.26 09:00:00 · WLAN/);
-  assert.match(html, /data-log-group="wlan"[^>]*>WLAN|aria-checked="true" aria-pressed="true" data-log-group="wlan"/);
+  // a radio group: the chosen one carries aria-checked, not aria-pressed
+  assert.match(html, /<button role="radio" aria-checked="true" data-log-group="wlan">WLAN/);
+  assert.doesNotMatch(html, /role="radio"[^>]*aria-pressed/);
   assert.match(logPage.renderLog({ events: [] }, { t, group: "" }), /Keine Meldungen/);
   assert.match(logPage.renderLog("failed", { t, group: "" }), /nicht geliefert/);
   assert.match(logPage.renderLog(null, { t, group: "" }), new RegExp(t.loading));
 });
 
 
-test("the devices tab is selected on both of its pages, and each page has the switch between them", () => {
-  for (const tab of ["cleanup", "filter"]) {
-    const nav = panel.renderNav({ tab, data: null }, t, 0);
-    assert.match(nav, /data-tab="devices" aria-selected="true"/);
-    assert.doesNotMatch(nav, /data-tab="(cleanup|filter)"/);
+test("the gear of Manage is the current page on all of its pages, and each page has the switch between them", () => {
+  for (const tab of ["cleanup", "filter", "migrate"]) {
+    assert.match(panel.renderManage({ tab }, t, 0), /data-tab="devices" data-k="manage" aria-current="page"/);
+    const nav = panel.renderNav({ tab, data: null }, t);
+    assert.doesNotMatch(nav, /data-tab="(devices|cleanup|filter)"|aria-selected="true"/);
+    // no tab of the bar is open: the first one is in the tab order, so the bar can still be reached
+    assert.match(nav, /^<button role="tab" tabindex="0" data-tab="net"/);
+    assert.equal([...nav.matchAll(/tabindex="0"/g)].length, 1);
   }
-  assert.match(panel.renderNav({ tab: "net", data: null }, t, 0), /data-tab="devices" aria-selected="false"/);
+  assert.doesNotMatch(panel.renderManage({ tab: "net" }, t, 0), /aria-current/);
 
+  // tabs carry aria-selected only, never aria-pressed
   const switchBar = panel.renderSubTabs("cleanup", t);
-  assert.match(switchBar, /data-tab="filter" aria-selected="false" aria-pressed="false">Einbinden/);
-  assert.match(switchBar, /data-tab="cleanup" aria-selected="true" aria-pressed="true">Aufräumen/);
+  assert.match(switchBar, /data-tab="filter" aria-selected="false">Einbinden/);
+  assert.match(switchBar, /data-tab="cleanup" aria-selected="true">Aufräumen/);
+  assert.doesNotMatch(switchBar, /aria-pressed/);
   assert.deepEqual(panel.TAB_GROUPS.devices, ["filter", "cleanup", "migrate"]);
 });
 
@@ -1454,8 +1477,8 @@ const vpnData = {
 };
 
 test("the VPN page is a page of the internet tab, offered only where the box tells its connections", () => {
-  assert.doesNotMatch(panel.renderNav({ tab: "net", data: vpnData }, t, 0), /data-tab="vpn"/);
-  assert.match(panel.renderNav({ tab: "vpn", data: vpnData }, t, 0), /data-tab="internet" aria-selected="true"/);
+  assert.doesNotMatch(panel.renderNav({ tab: "net", data: vpnData }, t), /data-tab="vpn"/);
+  assert.match(panel.renderNav({ tab: "vpn", data: vpnData }, t), /data-tab="internet" aria-selected="true"/);
   assert.match(panel.renderSubTabs("internet", t, { data: vpnData }), /data-tab="vpn"[^>]*>VPN/);
   assert.equal(panel.renderSubTabs("internet", t, { data: { vpn: null } }), "");
   assert.deepEqual(shared.routeFromHash("#/vpn"), { tab: "vpn", device: null });
@@ -1530,7 +1553,7 @@ const routeRows = {
 
 test("the routes page is a page of the network tab, reached by #/routes", () => {
   assert.deepEqual(shared.routeFromHash("#/routes"), { tab: "routes", device: null });
-  assert.match(panel.renderNav({ tab: "routes", data: {} }, t, 0), /data-tab="net" aria-selected="true"/);
+  assert.match(panel.renderNav({ tab: "routes", data: {} }, t), /data-tab="net" aria-selected="true"/);
   const tabs = panel.renderSubTabs("routes", t, { data: {} });
   assert.match(tabs, /data-tab="routes" aria-selected="true"[^>]*>Routen/);
   assert.match(tabs, /data-tab="addresses" aria-selected="false"/);

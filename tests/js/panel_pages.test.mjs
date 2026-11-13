@@ -95,23 +95,30 @@ const typesOf = (calls) => calls.map((c) => c.type.replace("fritzbox_network/", 
 
 // ---------- tabs ----------
 
-test("there are five tabs, and the phone one; Wi-Fi, address space and routes are pages of the network, VPN of the internet", () => {
-  const nav = panel.renderNav({ tab: "wlan", data: {} }, t, 0);
+test("there are four tabs, and the phone one; Wi-Fi, addresses and routes are pages of the network, VPN of the internet", () => {
+  const nav = panel.renderNav({ tab: "wlan", data: {} }, t);
   const labels = [...nav.matchAll(/<button[^>]*data-tab="(\w+)"/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ["net", "internet", "box", "phone", "diagnose", "devices"]);
+  assert.deepEqual(labels, ["net", "internet", "box", "phone", "diagnose"]);
   // hidden by the reader, and FRITZ!Box Telefon not there: no phone tab
-  const hidden = panel.renderNav({ tab: "wlan", data: {}, phoneHidden: true }, t, 0);
-  assert.deepEqual([...hidden.matchAll(/<button[^>]*data-tab="(\w+)"/g)].map((m) => m[1]), ["net", "internet", "box", "diagnose", "devices"]);
+  const hidden = panel.renderNav({ tab: "wlan", data: {}, phoneHidden: true }, t);
+  assert.deepEqual([...hidden.matchAll(/<button[^>]*data-tab="(\w+)"/g)].map((m) => m[1]), ["net", "internet", "box", "diagnose"]);
+  // the bar at the bottom has the phone only where FRITZ!Box Telefon is found
+  const bottom = (state) => [...panel.renderNav({ tab: "wlan", data: {}, ...state }, t, { icons: true, bottom: true }).matchAll(/data-tab="(\w+)"/g)].map((m) => m[1]);
+  assert.deepEqual(bottom({}), ["net", "internet", "box", "diagnose"]);
+  assert.deepEqual(bottom({ phoneFound: true }), ["net", "internet", "box", "phone", "diagnose"]);
+  assert.deepEqual(bottom({ phoneFound: true, phoneHidden: true }), ["net", "internet", "box", "phone", "diagnose"]);
+  // on the phone page without FRITZ!Box Telefon, the bottom bar still has a tab in the tab order
+  assert.match(panel.renderNav({ tab: "phone", data: {} }, t, { bottom: true }), /^<button role="tab" tabindex="0" data-tab="net" aria-selected="false"/);
   assert.match(nav, /data-tab="net" aria-selected="true"/);
   assert.deepEqual(panel.TAB_GROUPS.net, ["net", "wlan", "addresses", "routes"]);
   assert.deepEqual(panel.TAB_GROUPS.internet, ["internet", "vpn"]);
   const sub = panel.renderSubTabs("wlan", t, { data: {} });
-  assert.deepEqual([...sub.matchAll(/>([^<]+)<\/button>/g)].map((m) => m[1]), ["Geräte", "WLAN", "Adressraum", "Routen"]);
+  assert.deepEqual([...sub.matchAll(/>([^<]+)<\/button>/g)].map((m) => m[1]), ["Geräte", "WLAN", "Adressen", "Routen"]);
   assert.match(sub, /role="tablist" aria-label="Netzwerk"/);
   assert.match(sub, /data-tab="wlan" aria-selected="true"/);
   // the box has one page: no switch
   assert.equal(panel.renderSubTabs("box", t, { data: {} }), "");
-  assert.match(panel.renderNav({ tab: "box", data: {} }, t, 0), /data-tab="box" aria-selected="true">Box</);
+  assert.match(panel.renderNav({ tab: "box", data: {} }, t), /data-tab="box" aria-selected="true">Box</);
 });
 
 test("VPN is offered only with WireGuard, switching over only while FRITZ!Box Tools is set up", () => {
@@ -133,9 +140,9 @@ test("the new pages are routes of their own, an old or unknown one leads to the 
 });
 
 test("the box tab carries a dot while the box restarts", () => {
-  const nav = panel.renderNav({ tab: "net", data: {}, boxRestart: { phase: "down" } }, t, 0);
+  const nav = panel.renderNav({ tab: "net", data: {}, boxRestart: { phase: "down" } }, t);
   assert.match(nav, /data-tab="box" aria-selected="false" aria-label="Box, startet neu">Box<i class="dot warn"/);
-  assert.doesNotMatch(panel.renderNav({ tab: "net", data: {}, boxRestart: { phase: "back" } }, t, 0), /dot warn/);
+  assert.doesNotMatch(panel.renderNav({ tab: "net", data: {}, boxRestart: { phase: "back" } }, t), /dot warn/);
 });
 
 // ---------- box ----------
@@ -622,7 +629,7 @@ test("the arrows step around a tab list, Home and End go to its ends, other keys
 });
 
 test("only the open tab is in the tab order, the others are reached with the arrows", () => {
-  const nav = panel.renderNav({ tab: "wlan", data: {} }, t, 0);
+  const nav = panel.renderNav({ tab: "wlan", data: {} }, t);
   assert.equal([...nav.matchAll(/<button role="tab" tabindex="0"/g)].length, 1);
   assert.match(nav, /tabindex="0" data-tab="net" aria-selected="true"/);
   assert.match(nav, /tabindex="-1" data-tab="internet" aria-selected="false"/);
@@ -642,6 +649,30 @@ test("an arrow on a tab moves the focus to the next one", () => {
   p._onKey({ key: "ArrowRight", target: buttons[0], preventDefault: () => (prevented = true) });
   assert.equal(focused, "b");
   assert.equal(prevented, true);
+});
+
+test("/ searches the devices from every page: it opens the list and puts the focus in its search", () => {
+  const before = globalThis.location;
+  globalThis.location = { hash: "#/box", replace() {} };
+  try {
+    const { p, root } = makePanel({}, "box");
+    let focused = false;
+    root.querySelector("#q").focus = () => (focused = true);
+    let prevented = false;
+    const body = { tagName: "BODY", getAttribute: () => null, classList: { contains: () => false } };
+    p._onKey({ key: "/", target: body, preventDefault: () => (prevented = true) });
+    assert.equal(prevented, true);
+    assert.equal(globalThis.location.hash, "#/");
+    p._onHash();
+    assert.equal(p._state.tab, "net");
+    assert.equal(focused, true);
+    // typing a "/" into a field stays a "/"
+    prevented = false;
+    p._onKey({ key: "/", target: { ...body, tagName: "INPUT" }, preventDefault: () => (prevented = true) });
+    assert.equal(prevented, false);
+  } finally {
+    globalThis.location = before;
+  }
 });
 
 // ---------- the width the bar at the bottom follows ----------
