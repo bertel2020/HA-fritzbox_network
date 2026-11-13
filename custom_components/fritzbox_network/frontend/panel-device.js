@@ -236,6 +236,7 @@ export function renderDevice(client, ctx) {
       <section class="card sec wide"><span class="label">${escapeHtml(t.deviceTools)}</span>
         <div class="btn-row">
           <button class="btn" data-act="rename" data-k="rename" ${client.entity_id ? "" : "disabled"}>${escapeHtml(t.rename)}</button>
+          <button class="btn" data-act="remove" data-k="remove" ${client.online ? "disabled" : ""} title="${client.online ? escapeHtml(t.removeOnline) : ""}">${ic("trash")}${escapeHtml(t.removeDevice)}</button>
           <button class="btn" data-act="ha" data-k="ha" ${client.device_id ? "" : "disabled"}>${ic("external")}${escapeHtml(t.openInHa)}</button>
           <button class="btn" data-act="show-map" data-k="show-map">${ic("map")}${escapeHtml(t.showInMap)}</button>
           <button class="btn" data-act="cap-device" data-k="cap-device">${escapeHtml(t.inet.capture.ofDevice)}</button>

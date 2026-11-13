@@ -378,6 +378,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       if (rn && (event.key === "Enter" || event.key === " ")) {
         event.preventDefault();
         event.stopPropagation();
+        const row = (this._state.data?.clients ?? []).find((c) => c.id === rn.dataset.rid);
+        if (rn.dataset.act === "remove-row") return this._removeDevice(row);
         this._rename((this._state.data?.clients ?? []).find((c) => c.id === rn.dataset.rid));
       }
     });
@@ -1840,6 +1842,10 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._deviceAction("wake_on_lan", undefined, t.toastWol);
     } else if (ds.act === "rename") {
       return this._rename();
+    } else if (ds.act === "remove") {
+      return this._removeDevice();
+    } else if (ds.act === "remove-row") {
+      return this._removeDevice((state.data?.clients ?? []).find((c) => c.id === ds.rid));
     } else if (ds.act === "rename-row") {
       return this._rename((state.data?.clients ?? []).find((c) => c.id === ds.rid));
     } else if (ds.act === "ha") {
@@ -2217,6 +2223,36 @@ class FritzboxNetworkPanel extends HTMLElement {
         showToast(this.shadowRoot, fill(t.cleanup.toastRefused, { n: result.refused.length }));
       }
       await this._loadCleanup();
+    } catch (err) {
+      showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
+    }
+  }
+
+  /** Removes one offline device from Home Assistant (the same as on the tidy-up page): the one of the list row, else the open one. */
+  async _removeDevice(row) {
+    const t = this._t;
+    const client = row ?? this._selected();
+    if (!client) return;
+    if (client.online) {
+      showToast(this.shadowRoot, t.removeOnline);
+      return;
+    }
+    const ok = await openDialog(this.shadowRoot, t, {
+      title: t.removeDeviceTitle,
+      body: t.removeDeviceBody,
+      list: [client.name],
+      ok: t.removeDevice,
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      const result = await this._ws("devices/hide", { macs: [client.mac] });
+      if (result.refused.length) {
+        showToast(this.shadowRoot, fill(t.cleanup.toastRefused, { n: result.refused.length }));
+        return;
+      }
+      showToast(this.shadowRoot, t.toastRemoved);
+      if (this._state.sel === client.id) this._leaveDevice();
     } catch (err) {
       showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
     }
