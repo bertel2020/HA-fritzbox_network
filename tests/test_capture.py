@@ -212,7 +212,12 @@ async def test_a_mac_that_is_no_mac_is_refused(hass, hass_ws_client, fake_client
     client = await hass_ws_client(hass)
 
     bad = await _call(
-        client, START, entry_id=entry.entry_id, interface="1-lan", seconds=30, mb=10,
+        client,
+        START,
+        entry_id=entry.entry_id,
+        interface="1-lan",
+        seconds=30,
+        mb=10,
         mac="../../../x",
     )
     assert not bad["success"]
