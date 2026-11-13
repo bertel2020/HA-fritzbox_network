@@ -184,7 +184,7 @@ function deviceRow(client, state, t, now) {
     <span class="dot ${client.online ? "on" : ""}"></span>
     <span class="link">${ic(link)}</span>
     <span class="who"><b>${escapeHtml(client.name)}</b><small>${escapeHtml(line2)}</small></span>
-    <span class="end">${isBlocked(client) ? `<span class="chip bad">${escapeHtml(t.blockedChip)}</span>` : ""}${client.guest ? `<span class="chip info">${escapeHtml(t.guestChip)}</span>` : ""}<span class="rate">${escapeHtml(rateText(client))}</span>${weak ? `<span class="warnIcon" title="${escapeHtml(fill(t.weakTitle, { dbm: client.signal_dbm }))}">${ic("alert")}</span>` : ""}${signal}</span></button>`;
+    <span class="end">${client.entity_id ? `<span class="rn" role="button" tabindex="0" data-act="rename-row" data-rid="${escapeHtml(client.id)}" title="${escapeHtml(t.rename)}" aria-label="${escapeHtml(t.rename)}: ${escapeHtml(client.name)}">${ic("pencil")}</span>` : ""}${isBlocked(client) ? `<span class="chip bad">${escapeHtml(t.blockedChip)}</span>` : ""}${client.guest ? `<span class="chip info">${escapeHtml(t.guestChip)}</span>` : ""}<span class="rate">${escapeHtml(rateText(client))}</span>${weak ? `<span class="warnIcon" title="${escapeHtml(fill(t.weakTitle, { dbm: client.signal_dbm }))}">${ic("alert")}</span>` : ""}${signal}</span></button>`;
 }
 
 

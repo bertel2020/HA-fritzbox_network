@@ -147,6 +147,7 @@ export const PANEL_CSS = `
   .search { position: relative; }
   .search svg { position: absolute; left: 12px; top: 12px; color: var(--muted); }
   .search kbd { position: absolute; right: 10px; top: 9px; font: 12px monospace; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+  .search:focus-within kbd, .search input:not(:placeholder-shown) ~ kbd { display: none; }
   @container app (max-width: 700px) { .search kbd { display: none; } }
   input[type="search"], select { width: 100%; height: 42px; border-radius: var(--control-radius); border: 1px solid var(--input-line); background: var(--surface); padding: 0 12px; min-width: 0; }
   input[type="search"] { padding-left: 38px; }
@@ -227,6 +228,10 @@ export const PANEL_CSS = `
   .dev:hover { background: color-mix(in srgb, var(--soft) 60%, transparent); }
   .dev .end { display: flex; align-items: center; gap: 10px; flex: none; color: var(--muted); font-size: 12px; }
   .dev .link { color: var(--muted); display: inline-grid; }
+  .dev .rn { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: var(--muted); opacity: 0; cursor: pointer; }
+  .dev:hover .rn, .dev:focus-within .rn, .dev .rn:focus-visible { opacity: 1; }
+  .dev .rn:hover { background: var(--soft); color: inherit; }
+  @media (hover: none) { .dev .rn { opacity: 1; } }
   .dev.off .who b { color: var(--muted); }
   @container app (max-width: 480px) { .dev .rate, .dev .link { display: none; } }
   .empty { display: grid; justify-items: center; gap: 6px; padding: 48px 16px; text-align: center; color: var(--muted); }

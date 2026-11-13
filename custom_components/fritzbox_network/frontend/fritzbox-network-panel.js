@@ -373,6 +373,14 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._phoneResized();
     });
     this.shadowRoot.addEventListener("click", (event) => this._onClick(event));
+    this.shadowRoot.addEventListener("keydown", (event) => {
+      const rn = event.target.closest?.(".rn");
+      if (rn && (event.key === "Enter" || event.key === " ")) {
+        event.preventDefault();
+        event.stopPropagation();
+        this._rename((this._state.data?.clients ?? []).find((c) => c.id === rn.dataset.rid));
+      }
+    });
     this.shadowRoot.addEventListener("input", (event) => this._onInput(event));
     this.shadowRoot.addEventListener("change", (event) => this._onChange(event));
     this.shadowRoot.addEventListener("keydown", (event) => this._onKey(event));
@@ -1832,6 +1840,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._deviceAction("wake_on_lan", undefined, t.toastWol);
     } else if (ds.act === "rename") {
       return this._rename();
+    } else if (ds.act === "rename-row") {
+      return this._rename((state.data?.clients ?? []).find((c) => c.id === ds.rid));
     } else if (ds.act === "ha") {
       return this._openInHa();
     } else if (ds.label) {
@@ -2347,9 +2357,10 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
   }
 
-  async _rename() {
+  /** Renames a device: the one of the list row, else the open one. */
+  async _rename(row) {
     const t = this._t;
-    const client = this._selected();
+    const client = row ?? this._selected();
     if (!client?.entity_id) return;
     const name = await openDialog(this.shadowRoot, t, {
       title: t.renameTitle,
