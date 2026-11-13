@@ -291,9 +291,14 @@ function trendSection(client, ctx) {
   const volume = Object.keys(days ?? {}).length
     ? (() => {
         const sums = [1, 7, 30].map((n) => ({ n, sum: trafficSum(days, n) }));
-        const top = Math.max(...sums.map(({ sum }) => sum[0]), 1);
+        const top = Math.max(...sums.map(({ sum }) => sum[0] + sum[1]), 1);
         const tiles = sums
-          .map(({ n, sum: [down, up] }) => `<div class="vol"><span class="hint">${escapeHtml(t.trafficRanges[n])}</span><b><i class="vd">↓</i> ${escapeHtml(formatBytes(down, ctx.language))}</b><span class="vbar" aria-hidden="true"><i style="width:${((down / top) * 100).toFixed(1)}%"></i></span><small><i class="vu">↑</i> ${escapeHtml(formatBytes(up, ctx.language))}</small></div>`)
+          .map(({ n, sum: [down, up] }) => {
+            const total = down + up;
+            const share = total ? (down / total) * 100 : 50;
+            const fmt = (bytes) => escapeHtml(formatBytes(bytes, ctx.language));
+            return `<div class="vol"><div class="vpair"><span class="hint">${escapeHtml(t.trafficRanges[n])}</span><span class="vtot">${escapeHtml(t.trafficTotal)} <b>${fmt(total)}</b></span></div><div class="vwrap" style="width:${Math.max((total / top) * 100, 12).toFixed(1)}%"><div class="vsplit" aria-hidden="true"><i class="vd" style="width:${share.toFixed(1)}%"></i><i class="vu" style="width:${(100 - share).toFixed(1)}%"></i></div></div><div class="vpair"><div><b class="vdn"><i>↓</i> ${fmt(down)}</b><small>${Math.round(share)} %</small></div><div class="vr"><b class="vup"><i>↑</i> ${fmt(up)}</b><small>${total ? 100 - Math.round(share) : 50} %</small></div></div></div>`;
+          })
           .join("");
         return `<div class="volume"><span class="label">${escapeHtml(t.trafficTitle)}</span><div class="vols">${tiles}</div></div>`;
       })()

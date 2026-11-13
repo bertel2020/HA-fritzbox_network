@@ -880,14 +880,22 @@ export const PANEL_CSS = `
   .topdev small, .vol small { color: var(--muted); font-size: 12px; }
   @media (max-width: 560px) { .topdev li { grid-template-columns: 1fr auto; } .topdev .bar { grid-column: 1 / -1; order: 3; } }
   .volume { margin-top: 18px; }
-  .vols { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; margin-top: 8px; }
+  .vols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 8px; }
   .vols .vol { display: flex; flex-direction: column; gap: 4px; background: var(--soft); border-radius: 12px; padding: 10px 14px; min-width: 0; }
   .vols b { font-size: 18px; font-weight: 500; line-height: 1.3; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .vols .vbar { height: 6px; border-radius: 3px; background: var(--surface); overflow: hidden; }
-  .vols .vbar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
-  .vols i.vd { font-style: normal; color: var(--accent); }
-  .vols i.vu { font-style: normal; color: var(--up); }
-  .vols small { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .vols .vpair { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+  .vols .vpair > div { display: flex; flex-direction: column; }
+  .vols .vr { text-align: right; }
+  .vols .vtot { font-size: 12px; color: var(--muted); }
+  .vols .vtot b { font-size: 12px; color: var(--text); }
+  .vols .vsplit { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--surface); }
+  .vols .vsplit i { display: block; height: 100%; }
+  .vols .vsplit i.vd { background: var(--accent); }
+  .vols .vsplit i.vu { background: var(--up); margin-left: 2px; }
+  .vols .vdn { color: var(--accent); }
+  .vols .vup { color: var(--up); }
+  .vols b i { font-style: normal; font-weight: 600; }
+  .vols small { color: var(--muted); font-size: 11px; font-variant-numeric: tabular-nums; }
   .trend .plot { position: relative; touch-action: pan-y; }
   .trend .plot svg { margin: 6px 0 2px; }
   .trend .cursor { position: absolute; top: 6px; height: 90px; width: 0; border-left: 1px dashed var(--muted); pointer-events: none; }
