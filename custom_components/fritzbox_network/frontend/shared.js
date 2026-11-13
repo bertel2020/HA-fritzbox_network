@@ -10,6 +10,9 @@ export const BUSY_UTILIZATION = 70;
 
 const OPEN_NOTES = new Set();
 
+/** Whether the explanation with this key was left open by the reader. */
+export const noteOpen = (key) => OPEN_NOTES.has(key);
+
 /** An explanation that stays closed until it is wanted: a summary line and the paragraphs. It stays open when the page is drawn again. */
 export function noteHtml(label, ...texts) {
   const key = `${label}|${String(texts[0] ?? "").slice(0, 40)}`;

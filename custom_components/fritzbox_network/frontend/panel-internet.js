@@ -1,6 +1,6 @@
 /* The internet page of the panel: the connection of the box, its load and, on a DSL line, its quality. */
 
-import { dailyTotals, escapeHtml, plotAttrs, formatBytes, formatDuration, formatRate, hintNote, sparkPaths, trafficByDevice, trafficMonth, trafficSummary, usedPercent } from "./shared.js";
+import { dailyTotals, escapeHtml, plotAttrs, formatBytes, formatDuration, formatRate, hintNote, noteOpen, sparkPaths, trafficByDevice, trafficMonth, trafficSummary, usedPercent } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { whenText } from "./panel-network.js";
@@ -44,18 +44,6 @@ function pairRate(down, up, language) {
   }
   const number = (kbit) => (kbit / 1000).toLocaleString(language || "en", { maximumFractionDigits: kbit >= 100000 ? 0 : 1 });
   return `${number(down)} / ${number(up)} Mbit/s`;
-}
-
-function tile(label, value, small = "", { copy = null, tone = "" } = {}) {
-  return `<div class="tile${tone ? ` ${tone}` : ""}"><span class="label">${escapeHtml(label)}</span><b>${escapeHtml(value)}</b>${small ? `<small>${escapeHtml(small)}</small>` : ""}${copy ? copyButton(copy.value, copy.t) : ""}</div>`;
-}
-
-function gauge(kind, label, rate, max, language, t) {
-  const percent = usedPercent(rate, max);
-  const sub = rate === null || rate === undefined ? t.inet.measuring : max ? fill(t.inet.ofSync, { rate: formatRate(max, language) }) : "";
-  return `<div class="gauge ${kind}"><span class="gl">${escapeHtml(label)}</span>
-    <span class="meter" role="progressbar" aria-label="${escapeHtml(label)}" aria-valuemin="0" aria-valuemax="100" ${percent === null ? "" : `aria-valuenow="${percent}"`}><i style="width:${percent ?? 0}%"></i></span>
-    <b class="gv">${escapeHtml(formatRate(rate ?? null, language))}</b>${sub ? `<small class="gs">${escapeHtml(sub)}</small>` : ""}</div>`;
 }
 
 function chart(internet, language, t) {
@@ -235,28 +223,13 @@ function dayBars(rows, language, t) {
       <span class="grow">${escapeHtml(`${first} – ${last}`)} · max ${escapeHtml(formatBytes(top, language))}</span></div>`;
 }
 
-/** The small bars of a tile: one per day, the days before the history as one dashed box. */
-function miniBars(rows, since, language) {
-  const top = Math.max(1, ...rows.map((r) => r.down + r.up));
-  const gap = rows.filter((r) => r.ts < since).length;
-  const empty = gap ? `<rect class="gap" x="0.5" y="2" width="${gap * 10 - 1}" height="31" rx="2"/>` : "";
-  const bars = rows
-    .map((r, k) => {
-      if (r.ts < since) return "";
-      const down = (r.down / top) * 30;
-      const up = (r.up / top) * 30;
-      return `<rect class="bd" x="${k * 10 + 1}" y="${(33 - down).toFixed(1)}" width="8" height="${down.toFixed(1)}"/><rect class="bu" x="${k * 10 + 1}" y="${(33 - down - up).toFixed(1)}" width="8" height="${up.toFixed(1)}"/>`;
-    })
-    .join("");
-  return `<svg class="spark mini" viewBox="0 0 ${rows.length * 10} 34" preserveAspectRatio="none" aria-hidden="true">${empty}${bars}</svg>`;
-}
-
 /** The data volume of the line: today, 7 and 30 days, the bars per day and who used the most. */
 function volumeCard(ctx) {
   const { t, language, traffic, clients, range } = ctx;
   const i = t.inet;
   const known = Object.keys(traffic ?? {}).length > 0;
   const short = (ts) => new Date(ts * 1000).toLocaleDateString(language, { day: "numeric", month: "numeric" });
+  const sizeOf = (bytes) => escapeHtml(formatBytes(bytes, language));
   const tile = (n) => {
     const s = trafficSummary(traffic, n);
     const note = n === 1 ? "" : s.available < n ? fill(i.trafficSinceDays, { date: short(s.since), n: s.available }) : "";
@@ -269,17 +242,21 @@ function volumeCard(ctx) {
     } else if (n > 1 && s.available) {
       compare = `<span class="chip">${escapeHtml(fill(i.trafficAverage, { size: formatBytes(s.average, language) }))}</span>`;
     }
-    const spark = n > 1 && s.available ? miniBars(s.rows, s.since, language) : "";
-    const peak = n > 1 && s.peak ? `<div class="peak">${escapeHtml(fill(i.trafficPeak, { size: formatBytes(s.peak.down + s.peak.up, language), date: short(s.peak.ts) }))}</div>` : "";
-    return `<div class="tile"><span class="label">${escapeHtml(t.trafficRanges[n])}${note ? ` <span class="since">${escapeHtml(note)}</span>` : ""}</span><b>${escapeHtml(formatBytes(s.down + s.up, language))}</b><small>↓ ${escapeHtml(formatBytes(s.down, language))} · ↑ ${escapeHtml(formatBytes(s.up, language))}</small>${compare ? `<div class="cmp">${compare}</div>` : ""}${spark}${peak}</div>`;
+    return { label: t.trafficRanges[n], note, down: s.down, up: s.up, compare };
   };
-  const monthBlock = () => {
+  const monthTile = () => {
     const m = trafficMonth(traffic);
-    const total = m.down + m.up;
     const name = new Date().toLocaleDateString(language, { month: "long" });
-    return `<div class="month"><div class="row"><span>${escapeHtml(fill(i.trafficMonth, { month: name }))}</span><b>${escapeHtml(formatBytes(total, language))}</b></div>
-      <div class="meter" role="img" aria-label="↓ ${escapeHtml(formatBytes(m.down, language))} · ↑ ${escapeHtml(formatBytes(m.up, language))}"><i class="d" style="width:${total ? ((m.down / total) * 100).toFixed(1) : 0}%"></i><i class="u" style="width:${total ? ((m.up / total) * 100).toFixed(1) : 0}%"></i></div>
-      <div class="legend2"><span><i></i>↓ ${escapeHtml(formatBytes(m.down, language))}</span><span><i class="upl"></i>↑ ${escapeHtml(formatBytes(m.up, language))}</span></div></div>`;
+    return { label: fill(i.trafficMonth, { month: name }), note: "", down: m.down, up: m.up, compare: "" };
+  };
+  const volTop = (items) => Math.max(1, ...items.map((x) => x.down + x.up));
+  const volTile = (x, top) => {
+    const total = x.down + x.up;
+    const share = total ? (x.down / total) * 100 : 50;
+    return `<div class="vtile"><div class="vpair"><span class="hint">${escapeHtml(x.label)}${x.note ? ` <span class="since">${escapeHtml(x.note)}</span>` : ""}</span><span class="vtot">${escapeHtml(t.trafficTotal)} <b>${sizeOf(total)}</b></span></div>
+      <div class="vwrap" style="width:${Math.max((total / top) * 100, 12).toFixed(1)}%"><div class="vsplit" role="img" aria-label="↓ ${sizeOf(x.down)} · ↑ ${sizeOf(x.up)}"><i class="vd" style="width:${share.toFixed(1)}%"></i><i class="vu" style="width:${(100 - share).toFixed(1)}%"></i></div></div>
+      <div class="vpair"><div><b class="vdn"><i>↓</i> ${sizeOf(x.down)}</b><small>${Math.round(share)} %</small></div><div class="vr"><b class="vup"><i>↑</i> ${sizeOf(x.up)}</b><small>${total ? 100 - Math.round(share) : 50} %</small></div></div>
+      ${x.compare ? `<div class="cmp">${x.compare}</div>` : ""}</div>`;
   };
   const days = range === 365 ? 365 : range === 30 ? 30 : 14;
   const names = new Map((clients ?? []).map((c) => [c.mac, c]));
@@ -301,11 +278,13 @@ function volumeCard(ctx) {
     .join("");
   const rest = rows.slice(TOP_DEVICES);
   const more = rest.length ? `<p class="hint">${escapeHtml(fill(i.topMore, { n: rest.length, size: formatBytes(rest.reduce((a, r) => a + r.total, 0), language) }))}</p>` : "";
+  const items = known ? [tile(1), tile(7), tile(30), monthTile()] : [];
+  const scale = volTop(items);
   return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(i.volume)}</span><div class="seg" role="group" aria-label="${escapeHtml(i.volume)}">${buttons}</div></div>
-    ${known ? `<div class="tiles">${[1, 7, 30].map(tile).join("")}</div>${monthBlock()}
-    <div class="subhead">${escapeHtml(i.perDay)}</div>${dayBars(dailyTotals(traffic, days), language, t)}
-    <div class="subhead">${escapeHtml(fill(i.topTitle, { range: t.trafficRanges[range] }))}</div>
-    ${rows.length ? `<ol class="topdev">${list}</ol>${more}` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}
+    ${known ? `<div class="vtiles">${items.map((x) => volTile(x, scale)).join("")}</div>
+    <div class="vbody"><div><div class="subhead">${escapeHtml(i.perDay)}</div>${dayBars(dailyTotals(traffic, days), language, t)}</div>
+      <div><div class="subhead">${escapeHtml(fill(i.topTitle, { range: t.trafficRanges[range] }))}</div>
+      ${rows.length ? `<ol class="topdev">${list}</ol>${more}` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}</div></div>` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}
     ${hintNote(i.topHint, t)}</section>`;
 }
 
@@ -314,8 +293,8 @@ function copyButton(value, t) {
   return `<button class="copybtn" data-act="copy-value" data-value="${escapeHtml(value)}" title="${escapeHtml(t.inet.copy)}" aria-label="${escapeHtml(t.inet.copy)}">${ic("copy")}</button>`;
 }
 
-/** The DNS servers of the box as a tile under the connection, in one column per protocol. */
-function dnsTile(servers, t) {
+/** The DNS servers of the box, closed until wanted, in one column per protocol. */
+function dnsDetails(servers, t) {
   if (!servers?.length) return "";
   const column = (title, list) =>
     list.length
@@ -323,7 +302,21 @@ function dnsTile(servers, t) {
       : "";
   const v6 = servers.filter((server) => server.includes(":"));
   const v4 = servers.filter((server) => !server.includes(":"));
-  return `<div class="tile dnstile"><span class="tlabel">${escapeHtml(t.inet.dns)} <small>· ${escapeHtml(t.inet.dnsNote)}</small></span><div class="dnscols">${column(t.inet.dnsV4, v4)}${column(t.inet.dnsV6, v6)}</div></div>`;
+  const key = "inet-dns";
+  return `<details class="dnsbox" data-note="${key}"${noteOpen(key) ? " open" : ""}><summary>${escapeHtml(t.inet.dns)} <small>· ${escapeHtml(t.inet.dnsNote)}</small></summary><div class="dnscols">${column(t.inet.dnsV4, v4)}${column(t.inet.dnsV6, v6)}</div></details>`;
+}
+
+/** One address of the line as a label, the value and a copy button. */
+function addrItem(label, value, copy, t) {
+  return `<div class="kv"><span class="k">${escapeHtml(label)}</span><code>${escapeHtml(value)}</code>${copy ? copyButton(copy, t) : ""}</div>`;
+}
+
+/** A live rate with its share of the line rate as a bar. */
+function liveRate(kind, label, rate, max, language, t) {
+  const percent = usedPercent(rate, max);
+  const sub = rate === null || rate === undefined ? t.inet.measuring : max ? `${percent === null ? "" : `${percent} % `}${fill(t.inet.ofSync, { rate: formatRate(max, language) })}` : "";
+  return `<div class="rate ${kind}"><span class="gl">${kind === "dn" ? "↓" : "↑"} ${escapeHtml(label)}</span><b>${escapeHtml(formatRate(rate ?? null, language))}</b>
+    <span class="rbar" role="progressbar" aria-label="${escapeHtml(label)}" aria-valuemin="0" aria-valuemax="100" ${percent === null ? "" : `aria-valuenow="${percent}"`}><i style="width:${Math.max(percent ?? 0, percent ? 1 : 0)}%"></i></span>${sub ? `<small>${escapeHtml(sub)}</small>` : ""}</div>`;
 }
 
 const SAME_DIAL_MS = 10 * 60 * 1000;
@@ -450,33 +443,34 @@ export function renderInternet(internet, ctx) {
   const sub = internet.uptime !== null && up ? fill(i.since, { time: formatDuration(internet.uptime, i.units) }) : "";
   const prefix = internet.ipv6_prefix ? `${internet.ipv6_prefix}/${internet.ipv6_prefix_length ?? ""}`.replace(/\/$/, "") : "–";
   const rate = internet.throughput;
+  const failed = Boolean(internet.last_error) && internet.last_error !== "ERROR_NONE";
   return `${back}
     ${hintsHtml(internet, t, now)}
     <section class="card sec hero">
-      <div class="chead"><span class="label">${escapeHtml(i.connection)}</span>
-        <span class="stat ${up ? "ok" : "warn"}"><i class="sdot" aria-hidden="true"></i>${escapeHtml(up ? i.state.up : i.state.down)}</span></div>
-      <div class="ihead"><span class="ico">${ic("globe")}</span>
-        <span class="who"><b>${escapeHtml(access)}</b>${sub ? `<small>${escapeHtml(sub)}</small>` : ""}</span></div>
-      <div class="live"><div class="dn"><span class="gl">↓ ${escapeHtml(i.down)}</span><b>${escapeHtml(formatRate(rate?.down ?? null, language))}</b></div>
-        <div class="upl"><span class="gl">↑ ${escapeHtml(i.up)}</span><b>${escapeHtml(formatRate(rate?.up ?? null, language))}</b></div></div>
-      <div class="tiles">
-        ${tile(i.ipv4, internet.external_ipv4 ?? "–", "", { copy: internet.external_ipv4 ? { value: internet.external_ipv4, t } : null })}
-        ${tile(i.ipv6, prefix, "", { copy: internet.ipv6_prefix ? { value: prefix, t } : null })}
-        ${tile(i.lastError, internet.last_error && internet.last_error !== "ERROR_NONE" ? internet.last_error : i.noError, "", { tone: internet.last_error && internet.last_error !== "ERROR_NONE" ? "bad" : "ok" })}
+      <div class="strip">
+        <div class="ihead"><span class="ico">${ic("globe")}</span>
+          <span class="who"><b>${escapeHtml(access)}</b>${sub ? `<small>${escapeHtml(sub)}</small>` : ""}</span>
+          <span class="stat ${up ? "ok" : "warn"}"><i class="sdot" aria-hidden="true"></i>${escapeHtml(up ? i.state.up : i.state.down)}</span></div>
+        ${liveRate("dn", i.down, rate?.down, internet.rate_down, language, t)}
+        ${liveRate("upl", i.up, rate?.up, internet.rate_up, language, t)}
       </div>
-      ${dnsTile(internet.dns, t)}</section>
+      <div class="addr">
+        ${addrItem(i.ipv4, internet.external_ipv4 ?? "–", internet.external_ipv4, t)}
+        ${addrItem(i.ipv6, prefix, internet.ipv6_prefix ? prefix : "", t)}
+        <div class="kv"><span class="k">${escapeHtml(i.lastError)}</span><span class="${failed ? "bad" : "ok"}">${escapeHtml(failed ? internet.last_error : i.noError)}</span></div>
+        ${dnsDetails(internet.dns, t)}
+      </div>
+    </section>
+    ${volumeCard({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}
     <div class="icols">
       <div class="icol">
         <section class="card sec"><span class="label">${escapeHtml(i.load)}</span>
-          ${gauge("dn", i.down, rate?.down, internet.rate_down, language, t)}
-          ${gauge("upl", i.up, rate?.up, internet.rate_up, language, t)}
           ${chart(internet, language, t)}
           ${hintNote(i.measureNote, t)}</section>
-        ${internet.dsl ? lineQuality(internet.dsl, language, t) : ""}
         ${events(internet, t, now)}
       </div>
       <div class="icol">
-        ${volumeCard({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}
+        ${internet.dsl ? lineQuality(internet.dsl, language, t) : ""}
         ${addressHistory(internet.addresses, language, t)}
       </div>
     </div>
