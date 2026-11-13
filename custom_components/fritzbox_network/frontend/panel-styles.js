@@ -224,14 +224,16 @@ export const PANEL_CSS = `
   .meter { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; margin-top: 6px; }
   .meter i { display: block; height: 100%; background: var(--ok); }
   .meter i.busy { background: var(--warn); }
-  .dev { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 16px; border-top: 1px solid var(--line); text-align: left; min-width: 0; min-height: 56px; }
-  .dev:hover { background: color-mix(in srgb, var(--soft) 60%, transparent); }
+  .devrow { display: flex; align-items: stretch; border-top: 1px solid var(--line); }
+  .devrow:hover { background: color-mix(in srgb, var(--soft) 60%, transparent); }
+  .dev { display: flex; align-items: center; gap: 12px; flex: 1; padding: 10px 16px; text-align: left; min-width: 0; min-height: 56px; }
   .dev .end { display: flex; align-items: center; gap: 10px; flex: none; color: var(--muted); font-size: 12px; }
   .dev .link { color: var(--muted); display: inline-grid; }
-  .dev .rn { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: var(--muted); opacity: 0; cursor: pointer; }
-  .dev:hover .rn, .dev:focus-within .rn, .dev .rn:focus-visible { opacity: 1; }
-  .dev .rn:hover { background: var(--soft); color: inherit; }
-  @media (hover: none) { .dev .rn { opacity: 1; } }
+  .devrow .acts { display: flex; align-items: center; gap: 2px; padding-right: 12px; }
+  .devrow .rn { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; color: var(--muted); opacity: 0; cursor: pointer; }
+  .devrow:hover .rn, .devrow:focus-within .rn, .devrow .rn:focus-visible { opacity: 1; }
+  .devrow .rn:hover { background: var(--soft); color: inherit; }
+  @media (hover: none) { .devrow .rn { opacity: 1; } }
   .dev.off .who b { color: var(--muted); }
   @container app (max-width: 480px) { .dev .rate, .dev .link { display: none; } }
   .empty { display: grid; justify-items: center; gap: 6px; padding: 48px 16px; text-align: center; color: var(--muted); }

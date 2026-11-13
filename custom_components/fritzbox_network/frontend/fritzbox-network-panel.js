@@ -373,16 +373,6 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._phoneResized();
     });
     this.shadowRoot.addEventListener("click", (event) => this._onClick(event));
-    this.shadowRoot.addEventListener("keydown", (event) => {
-      const rn = event.target.closest?.(".rn");
-      if (rn && (event.key === "Enter" || event.key === " ")) {
-        event.preventDefault();
-        event.stopPropagation();
-        const row = (this._state.data?.clients ?? []).find((c) => c.id === rn.dataset.rid);
-        if (rn.dataset.act === "remove-row") return this._removeDevice(row);
-        this._rename((this._state.data?.clients ?? []).find((c) => c.id === rn.dataset.rid));
-      }
-    });
     this.shadowRoot.addEventListener("input", (event) => this._onInput(event));
     this.shadowRoot.addEventListener("change", (event) => this._onChange(event));
     this.shadowRoot.addEventListener("keydown", (event) => this._onKey(event));

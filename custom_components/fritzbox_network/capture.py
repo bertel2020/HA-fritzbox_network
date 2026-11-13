@@ -241,20 +241,30 @@ class CaptureManager:
         if self._store is not None:
             await self._store.async_save({"bands": self.bands})
 
-    def detect_bands(self, wifi: dict[str, str]) -> dict[str, Any]:
+    def begin_detection(self) -> None:
+        """Claim the box for the detection; call it in the event loop, before the executor job.
+
+        Refused while a capture runs or another detection does. The flag is set here, in the same
+        step as the check, so no capture can be started in between.
+        """
+        if self.running or self.detecting:
+            raise ValueError("busy")
+        self.detecting = True
+
+    def detect_bands(self, wifi: dict[str, str], *, claimed: bool = False) -> dict[str, Any]:
         """Find out which band the Wi-Fi access points of the box carry; blocking, for an executor.
 
         ``wifi`` are the devices of the mesh on Wi-Fi at the box itself, {mac: band}. Refused while
         a capture runs. What is found is kept; an access point it is not clear for is left unnamed.
+        ``claimed`` says that ``begin_detection`` was called before.
         """
-        if self.running or self.detecting:
-            raise ValueError("busy")
-        interfaces = [i["id"] for i in self.interfaces() if WIFI_AP_RE.match(i["id"])]
-        if not interfaces:
-            raise ValueError("no access points")
-        self.detecting = True
+        if not claimed:
+            self.begin_detection()
         directory = self.directory
         try:
+            interfaces = [i["id"] for i in self.interfaces() if WIFI_AP_RE.match(i["id"])]
+            if not interfaces:
+                raise ValueError("no access points")
             directory.mkdir(parents=True, exist_ok=True)
             result, votes = detect_wifi_bands(self._client, interfaces, wifi, directory)
         finally:
@@ -398,11 +408,15 @@ class CaptureManager:
         except (pcap.PcapError, OSError):
             return None
 
+    def is_recording(self, name: str) -> bool:
+        """Whether the file is the one a running capture writes."""
+        return bool(self.running and self.job and self.job.name == name)
+
     def delete(self, name: str) -> bool:
         if not FILE_RE.match(name):
             return False
         path = self.directory / name
-        if not path.is_file() or (self.running and self.job and self.job.name == name):
+        if not path.is_file() or self.is_recording(name):
             return False
         path.unlink()
         return True
@@ -423,8 +437,10 @@ class CaptureDownloadView(HomeAssistantView):
         if manager is None or not FILE_RE.match(name):
             return web.Response(status=404)
         path = manager.directory / name
-        if not path.is_file():
+        if not await hass.async_add_executor_job(path.is_file):
             return web.Response(status=404)
+        if manager.is_recording(name):
+            return web.Response(status=409)  # still being written: not a file to take yet
         return web.FileResponse(
             path,
             headers={

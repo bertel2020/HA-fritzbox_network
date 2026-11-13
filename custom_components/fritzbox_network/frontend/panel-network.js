@@ -180,11 +180,15 @@ function deviceRow(client, state, t, now) {
           .join("")}</span>`
       : "";
   const link = client.link_type === "lan" ? "lan" : client.link_type === "wlan" ? "wifi" : "help";
-  return `<button class="dev ${client.online ? "" : "off"}" data-dev="${escapeHtml(client.id)}"${state.sel === client.id ? ' aria-current="true"' : ""}>
+  const act = (name, label, icon) =>
+    `<button type="button" class="rn" data-act="${name}" data-rid="${escapeHtml(client.id)}" title="${escapeHtml(label)}" aria-label="${escapeHtml(label)}: ${escapeHtml(client.name)}">${ic(icon)}</button>`;
+  const acts = `${client.entity_id ? act("rename-row", t.rename, "pencil") : ""}${client.online ? "" : act("remove-row", t.removeDevice, "trash")}`;
+  // the row opens the device; the actions are buttons of their own beside it, not inside it
+  return `<div class="devrow"><button class="dev ${client.online ? "" : "off"}" data-dev="${escapeHtml(client.id)}"${state.sel === client.id ? ' aria-current="true"' : ""}>
     <span class="dot ${client.online ? "on" : ""}"></span>
     <span class="link">${ic(link)}</span>
     <span class="who"><b>${escapeHtml(client.name)}</b><small>${escapeHtml(line2)}</small></span>
-    <span class="end">${client.entity_id ? `<span class="rn" role="button" tabindex="0" data-act="rename-row" data-rid="${escapeHtml(client.id)}" title="${escapeHtml(t.rename)}" aria-label="${escapeHtml(t.rename)}: ${escapeHtml(client.name)}">${ic("pencil")}</span>` : ""}${client.online ? "" : `<span class="rn" role="button" tabindex="0" data-act="remove-row" data-rid="${escapeHtml(client.id)}" title="${escapeHtml(t.removeDevice)}" aria-label="${escapeHtml(t.removeDevice)}: ${escapeHtml(client.name)}">${ic("trash")}</span>`}${isBlocked(client) ? `<span class="chip bad">${escapeHtml(t.blockedChip)}</span>` : ""}${client.guest ? `<span class="chip info">${escapeHtml(t.guestChip)}</span>` : ""}<span class="rate">${escapeHtml(rateText(client))}</span>${weak ? `<span class="warnIcon" title="${escapeHtml(fill(t.weakTitle, { dbm: client.signal_dbm }))}">${ic("alert")}</span>` : ""}${signal}</span></button>`;
+    <span class="end">${isBlocked(client) ? `<span class="chip bad">${escapeHtml(t.blockedChip)}</span>` : ""}${client.guest ? `<span class="chip info">${escapeHtml(t.guestChip)}</span>` : ""}<span class="rate">${escapeHtml(rateText(client))}</span>${weak ? `<span class="warnIcon" title="${escapeHtml(fill(t.weakTitle, { dbm: client.signal_dbm }))}">${ic("alert")}</span>` : ""}${signal}</span></button>${acts ? `<span class="acts">${acts}</span>` : ""}</div>`;
 }
 
 

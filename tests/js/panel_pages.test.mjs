@@ -714,3 +714,41 @@ test("a key on a chart shows the point and tells it to a screen reader", () => {
   key("x");
   assert.equal(prevented, 3);
 });
+
+// ---------- removing a device from the list ----------
+
+const offline = { mac: "02", id: "000000000002", name: "old", online: false, last_online: "2026-11-01T00:00:00Z", actions: {} };
+
+test("an online device is not removed: the row says so and nothing is sent", async () => {
+  const { p, calls, root } = makePanel({});
+  await p._removeDevice({ ...offline, online: true });
+  assert.deepEqual(calls, []);
+  assert.equal(root.els["#toast"].textContent, t.removeOnline);
+});
+
+test("removing an offline device asks first and hides it only after the yes", async () => {
+  const { p, calls, root } = makePanel({ "devices/hide": { refused: [] } });
+  const done = p._removeDevice(offline);
+  const dialog = root.els["#dialog"];
+  assert.match(dialog.innerHTML, /<li>old<\/li>/);
+  assert.deepEqual(calls, []);
+  dialog.querySelector("#dlg-yes").onclick();
+  await done;
+  assert.deepEqual(calls.map((c) => [c.type, c.macs]), [["fritzbox_network/devices/hide", ["02"]]]);
+  assert.equal(root.els["#toast"].textContent, t.toastRemoved);
+});
+
+test("a cancelled removal sends nothing, and a refusal of the box is told", async () => {
+  const cancelled = makePanel({});
+  const first = cancelled.p._removeDevice(offline);
+  cancelled.root.els["#dialog"].querySelector("#dlg-no").onclick();
+  await first;
+  assert.deepEqual(cancelled.calls, []);
+
+  const refused = makePanel({ "devices/hide": { refused: ["02"] } });
+  const second = refused.p._removeDevice(offline);
+  refused.root.els["#dialog"].querySelector("#dlg-yes").onclick();
+  await second;
+  assert.match(refused.root.els["#toast"].textContent, /1/);
+  assert.notEqual(refused.root.els["#toast"].textContent, t.toastRemoved);
+});

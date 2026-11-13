@@ -221,3 +221,54 @@ async def test_a_mac_that_is_no_mac_is_refused(hass, hass_ws_client, fake_client
         mac="../../../x",
     )
     assert not bad["success"]
+
+
+async def test_a_detection_claims_the_box_before_it_starts_and_lets_go_when_it_fails(
+    hass, fake_client, entry
+):
+    import time
+
+    import pytest
+
+    from custom_components.fritzbox_network import capture as capture_module
+
+    await _setup(hass, entry)
+    manager = hass.data[capture_module.KEY_CAPTURES][entry.entry_id]
+
+    manager.begin_detection()
+    assert manager.detecting
+    with pytest.raises(ValueError, match="busy"):
+        manager.begin_detection()
+    with pytest.raises(ValueError, match="busy"):  # no capture slips in between
+        manager.start("1-lan", 30, 10 * 1048576)
+
+    # no access point to listen to: the detection fails, and the box is free again
+    manager._interfaces = [{"id": "1-lan", "group": "lan", "slug": "1lan"}]
+    manager._interfaces_at = time.monotonic()
+    with pytest.raises(ValueError):
+        manager.detect_bands({}, claimed=True)
+    assert not manager.detecting
+
+
+async def test_the_file_of_a_running_capture_is_not_downloaded(hass, fake_client, entry):
+    from unittest.mock import MagicMock
+
+    from custom_components.fritzbox_network import capture as capture_module
+
+    await _setup(hass, entry)
+    manager = hass.data[capture_module.KEY_CAPTURES][entry.entry_id]
+    name = "1lan_20261113-120000.pcap"
+    manager.directory.mkdir(parents=True)
+    (manager.directory / name).write_bytes(b"x")
+    request = MagicMock()
+    request.app = {"hass": hass}
+    request.__getitem__.return_value = MagicMock(is_admin=True)
+    view = capture_module.CaptureDownloadView()
+
+    assert (await view.get(request, entry.entry_id, name)).status == 200  # a finished one
+
+    manager.job = capture_module.Job(
+        interface="1-lan", name=name, started=0.0, seconds=30, max_bytes=1, state="running"
+    )
+    assert manager.is_recording(name)
+    assert (await view.get(request, entry.entry_id, name)).status == 409

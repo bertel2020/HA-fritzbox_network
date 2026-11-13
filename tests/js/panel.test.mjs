@@ -1737,3 +1737,21 @@ test("a long hint is folded behind a note, a short one stays; an opened note sta
   assert.doesNotMatch(sharedHelpers.hintNote(long, tt), / open>/);
   assert.equal(sharedHelpers.hintNote("", tt), "");
 });
+
+test("a row is a button that opens the device; its pencil and trash are buttons beside it, not inside", () => {
+  const html = network.renderGroups(state, t, NOW);
+  const rows = html.split('<div class="devrow">').slice(1);
+  assert.equal(rows.length, 2);
+  for (const row of rows) {
+    const open = row.slice(0, row.indexOf("</button>"));
+    assert.match(open, /^<button class="dev /);
+    assert.doesNotMatch(open, /data-act=|role="button"/);
+  }
+  // the online device with an entity can be renamed but not removed
+  assert.match(rows[0], /<\/button><span class="acts"><button type="button" class="rn" data-act="rename-row" data-rid="000000000001"/);
+  assert.doesNotMatch(rows[0], /remove-row/);
+  // the offline one without an entity can be removed but not renamed
+  assert.match(rows[1], /<button type="button" class="rn" data-act="remove-row" data-rid="000000000002"/);
+  assert.doesNotMatch(rows[1], /rename-row/);
+  assert.doesNotMatch(html, /role="button" tabindex="0" data-act/);
+});

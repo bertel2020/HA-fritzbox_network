@@ -1526,7 +1526,10 @@ async def ws_capture_bands(
     manager = hass.data[KEY_CAPTURES][msg["entry_id"]]
     wifi = wifi_bands(mesh.links, mesh.master.mac)
     try:
-        result = await hass.async_add_executor_job(manager.detect_bands, wifi)
+        manager.begin_detection()  # here in the loop, so a capture cannot slip in meanwhile
+        result = await hass.async_add_executor_job(
+            functools.partial(manager.detect_bands, wifi, claimed=True)
+        )
     except ValueError as err:
         code = ERR_BUSY if str(err) == "busy" else ERR_INVALID
         connection.send_error(msg["id"], code, str(err))
