@@ -382,3 +382,13 @@ def test_the_radios_tell_network_name_width_security_and_the_guest_network():
         ]
     }
     assert _radios(node)["5ghz"].guest is False
+
+
+def test_the_md5_answer_is_refused_for_a_box_that_knows_the_new_login():
+    from custom_components.fritzbox_network.api import web_login_response
+
+    with pytest.raises(PermissionError):
+        web_login_response("1234567z", "geheim", allow_md5=False)
+    assert web_login_response("1234567z", "geheim") == web_login_response(
+        "1234567z", "geheim", allow_md5=True
+    )

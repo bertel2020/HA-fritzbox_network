@@ -254,6 +254,36 @@ async def test_diagnostics_show_the_poll_time_and_hide_secrets(hass, fake_client
     assert WLAN not in str(result)
 
 
+async def test_diagnostics_leave_out_the_repeater_macs(hass, fake_client, entry):
+    hass.config_entries.async_update_entry(entry, options={"repeaters": [REPEATER]})
+    await _setup(hass, entry)
+
+    result = await async_get_config_entry_diagnostics(hass, entry)
+
+    assert "repeaters" not in result["options"]
+    assert REPEATER not in str(result)
+
+
+async def test_removing_the_integration_deletes_what_it_kept(hass, fake_client, entry):
+    from pathlib import Path
+
+    from homeassistant.helpers.storage import Store
+
+    await _setup(hass, entry)
+    kept = Path(hass.config.path("fritzbox_captures")) / entry.entry_id
+    kept.mkdir(parents=True)
+    (kept / "1lan_20261113-120000.pcap").write_bytes(b"x")
+    store = Store(hass, 1, f"fritzbox_network.history.{entry.entry_id}")
+    await store.async_save({"a": 1})
+    assert await store.async_load() == {"a": 1}
+
+    await hass.config_entries.async_remove(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert not kept.exists()
+    assert await Store(hass, 1, f"fritzbox_network.history.{entry.entry_id}").async_load() is None
+
+
 async def test_link_sensors_exist_only_for_devices_with_a_connection(hass, fake_client, entry):
     coordinator = await _setup(hass, entry)
     registry = er.async_get(hass)

@@ -198,14 +198,15 @@ def _cpu_client(answers):
     client = _client()
     client._web_sid = "sid1"
     client._web_login = MagicMock(return_value="sid2")
-    client._web_get = MagicMock(side_effect=answers)
+    client._web_post = MagicMock(side_effect=answers)
     return client
 
 
 def test_the_cpu_temperature_is_the_newest_value():
     client = _cpu_client(['{"CPUTEMP": "72,72,71"}'])
     assert client.get_cpu_temperature() == 72
-    assert "CPUTEMP=cpu:status/StatTemperature" in client._web_get.call_args.args[0]
+    assert client._web_post.call_args.args[0] == "/query.lua"
+    assert client._web_post.call_args.args[1]["CPUTEMP"] == "cpu:status/StatTemperature"
 
 
 def test_a_box_without_the_sensor_says_none_after_one_new_session():
@@ -221,7 +222,7 @@ def test_a_dropped_session_is_renewed_once_for_the_temperature():
     client = _cpu_client(['{"other": 1}', '{"CPUTEMP": "65,65"}'])
     assert client.get_cpu_temperature() == 65
     client._web_login.assert_called_once()
-    assert "sid=sid2" in client._web_get.call_args.args[0]
+    assert client._web_post.call_args.args[1]["sid"] == "sid2"  # in the body, not in the URL
 
 
 def test_an_answer_that_is_no_json_is_an_error_after_the_second_try():

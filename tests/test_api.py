@@ -752,7 +752,7 @@ def test_the_web_login_asks_for_the_challenge_with_a_get():
             return Response("<SessionInfo><SID>0123456789abcdef</SID></SessionInfo>")
 
     client = FritzNetworkClient("192.0.2.1", None, "user", "secret")
-    client._fc = SimpleNamespace(session=Session())  # noqa: SLF001
+    client._fc = SimpleNamespace(session=Session(), system_version="8.25")  # noqa: SLF001
 
     assert client._web_login() == "0123456789abcdef"  # noqa: SLF001
     assert calls[0][0] == "get"
@@ -941,3 +941,18 @@ def test_connecting_sets_the_session_to_the_choice_about_the_certificate():
             client = FritzNetworkClient("192.0.2.1", None, "u", "p", True, verify_tls)
             client.connect()
             assert connection.return_value.session.verify is verify_tls
+
+
+@pytest.mark.parametrize(
+    ("version", "md5_allowed"),
+    [("6.93", True), ("7.12", True), ("7.24", False), ("8.25", False), (None, False), ("x", False)],
+)
+def test_only_a_box_with_an_old_firmware_gets_the_md5_login(version, md5_allowed):
+    from types import SimpleNamespace
+
+    from custom_components.fritzbox_network.api import FritzNetworkClient
+
+    client = FritzNetworkClient("192.0.2.1", None, "user", "secret")
+    client._fc = SimpleNamespace(system_version=version)  # noqa: SLF001
+
+    assert client._old_login_firmware() is md5_allowed  # noqa: SLF001

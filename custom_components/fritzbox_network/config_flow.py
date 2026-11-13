@@ -192,7 +192,7 @@ class FritzNetworkConfigFlow(ConfigFlow, domain=DOMAIN):
                 if info["repeater"]:
                     return self.async_abort(reason="mesh_repeater")
                 await self.async_set_unique_id(str(info["serial"] or self._host))
-                self._abort_if_unique_id_configured(updates={CONF_HOST: self._host})
+                self._abort_if_unique_id_configured()
                 return self.async_create_entry(title=f"{info['model']} ({self._host})", data=data)
         return self.async_show_form(
             step_id="confirm",

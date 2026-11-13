@@ -269,3 +269,25 @@ async def test_reconfigure_can_drop_the_port(hass, fake_client, entry):
 
     assert result["type"] is FlowResultType.ABORT
     assert "port" not in entry.data
+
+
+async def test_a_confirmed_box_that_is_known_does_not_change_the_address_of_the_entry(
+    hass, fake_client
+):
+    # a UDN without a serial: the box is only recognised after the login, by its serial number
+    known = MockConfigEntry(
+        domain=DOMAIN,
+        unique_id="SERIAL1",
+        data={"host": "192.168.178.1", "username": "user", "password": "secret"},
+    )
+    known.add_to_hass(hass)
+    result = await _discover(hass, _ssdp(host="192.168.178.77", udn="uuid:no-serial-here"))
+    assert result["step_id"] == "confirm"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"username": "user", "password": "secret"}
+    )
+
+    assert result["type"] is FlowResultType.ABORT
+    assert result["reason"] == "already_configured"
+    assert known.data["host"] == "192.168.178.1"

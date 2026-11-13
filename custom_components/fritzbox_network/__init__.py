@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from datetime import timedelta
 import logging
+from pathlib import Path
+import shutil
 
 from fritzconnection.core.exceptions import (
     FritzAuthorizationError,
@@ -22,11 +24,12 @@ from homeassistant.helpers import (
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceEntry
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_call_later, async_track_time_interval
+from homeassistant.helpers.storage import Store
 from homeassistant.helpers.typing import ConfigType
 
 from .addresses import AddressNotes
 from .api import FritzNetworkClient
-from .capture import KEY_CAPTURES, CaptureDownloadView, CaptureManager
+from .capture import DIR_NAME, KEY_CAPTURES, CaptureDownloadView, CaptureManager
 from .connection_check import box_port
 from .const import (
     CONF_HIDDEN_MACS,
@@ -268,6 +271,14 @@ async def async_unload_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry
     ):
         async_drop_panel(hass)
     return unloaded
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
+    """Delete what the integration kept for the box: histories, address notes and captures."""
+    for name in ("history", "latency", "addresses", "capture"):
+        await Store(hass, 1, f"{DOMAIN}.{name}.{entry.entry_id}").async_remove()
+    captures = Path(hass.config.path(DIR_NAME)) / entry.entry_id
+    await hass.async_add_executor_job(shutil.rmtree, captures, True)
 
 
 async def async_remove_config_entry_device(

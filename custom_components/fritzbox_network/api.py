@@ -110,8 +110,12 @@ WEB_LOGIN_MIN_ROUNDS_2 = 2000
 WEB_LOGIN_MAX_ROUNDS = 1_000_000
 
 
-def web_login_response(challenge: str, password: str) -> str:
-    """The answer to the challenge of the login of the web interface (PBKDF2 or the old MD5)."""
+def web_login_response(challenge: str, password: str, *, allow_md5: bool = True) -> str:
+    """The answer to the challenge of the login of the web interface (PBKDF2 or the old MD5).
+
+    ``allow_md5`` is False for a box that is known to do PBKDF2: a challenge without the ``2$``
+    would then come from somebody else, who asks for the cheap answer.
+    """
     if challenge.startswith("2$"):
         _, iterations_1, salt_1, iterations_2, salt_2 = challenge.split("$")
         # a box asks for 10000 and 2000 rounds; a host that asks for far fewer would get an answer
@@ -126,6 +130,8 @@ def web_login_response(challenge: str, password: str) -> str:
         )
         hash_2 = hashlib.pbkdf2_hmac("sha256", hash_1, bytes.fromhex(salt_2), int(iterations_2))
         return f"{salt_2}${hash_2.hex()}"
+    if not allow_md5:
+        raise PermissionError("the box asks for the old login although its firmware knows the new")
     digest = hashlib.md5(f"{challenge}-{password}".encode("utf-16-le")).hexdigest()  # noqa: S324
     return f"{challenge}-{digest}"
 
@@ -277,6 +283,17 @@ class FritzNetworkClient:
         response.raise_for_status()
         return response.text
 
+    def _old_login_firmware(self) -> bool:
+        """Whether the firmware is older than FRITZ!OS 7.24, the first with the PBKDF2 login.
+
+        Only such a box may be answered with MD5; with an unknown version it is not.
+        """
+        try:
+            major, minor = (int(part) for part in str(self.system_version).split(".")[:2])
+        except (TypeError, ValueError):
+            return False
+        return (major, minor) < (7, 24)
+
     def _web_login(self) -> str:
         """Log in to the web interface with the account of the integration."""
         url = "/login_sid.lua?version=2"
@@ -289,7 +306,9 @@ class FritzNetworkClient:
                 url,
                 {
                     "username": self._username,
-                    "response": web_login_response(challenge, self._password),
+                    "response": web_login_response(
+                        challenge, self._password, allow_md5=self._old_login_firmware()
+                    ),
                 },
             )
         )
@@ -599,7 +618,10 @@ class FritzNetworkClient:
                 sid = self._web_sid or self._web_login()
                 try:
                     data = json.loads(
-                        self._web_get(f"/query.lua?sid={sid}&CPUTEMP=cpu:status/StatTemperature")
+                        # a POST: the session id stays out of the URL and so out of the logs
+                        self._web_post(
+                            "/query.lua", {"sid": sid, "CPUTEMP": "cpu:status/StatTemperature"}
+                        )
                     )
                 except (requests.RequestException, ValueError):
                     self._web_sid = None

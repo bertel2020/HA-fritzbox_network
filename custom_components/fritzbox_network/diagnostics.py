@@ -25,7 +25,9 @@ async def async_get_config_entry_diagnostics(
     return {
         "entry": async_redact_data(dict(entry.data), TO_REDACT_ENTRY),
         "options": {
-            k: v for k, v in entry.options.items() if k not in ("hidden_macs", "filter_devices")
+            k: v
+            for k, v in entry.options.items()
+            if k not in ("hidden_macs", "filter_devices", "repeaters")
         },
         "can_write": coordinator.can_write,
         "poll": {
