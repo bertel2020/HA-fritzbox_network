@@ -60,7 +60,7 @@ export const PANEL_CSS = `
   /* header: logo and title on the left, the pages as pills and the link to the settings on the right */
   .header { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px;
-    padding: 0 max(16px, calc((100% - 1200px) / 2 + 24px)); }
+    padding: 0 max(24px, calc((100% - 1200px) / 2 + 24px)); }
   .brand { display: flex; align-items: center; gap: 12px; padding: 10px 0; min-height: 60px; min-width: 0; flex: 1 1 auto; }
   .brand > div { min-width: 0; }
   .menu { display: none; width: 40px; height: 40px; margin-left: -10px; place-items: center; border-radius: 50%; color: var(--text); }
@@ -104,7 +104,7 @@ export const PANEL_CSS = `
   :host([compact]) main { padding-bottom: 96px !important; }
 
   main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; }
-  @container app (max-width: 600px) { main { padding: 16px 16px 56px; } }
+  @container app (max-width: 600px) { main { padding: 16px 16px 56px; } .header { padding-left: 16px; padding-right: 16px; } }
 
   /* shared bits */
   .chip { display: inline-flex; align-items: center; gap: 6px; min-height: 26px; padding: 0 11px; border-radius: 13px; background: var(--neutral-soft); color: var(--neutral-text); font-size: 12px; font-weight: 500; white-space: nowrap; }
