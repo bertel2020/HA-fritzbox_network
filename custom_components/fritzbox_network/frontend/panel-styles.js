@@ -63,6 +63,8 @@ export const PANEL_CSS = `
     padding: 0 max(24px, calc((100% - 1200px) / 2 + 24px)); }
   .brand { display: flex; align-items: center; gap: 12px; padding: 10px 0; min-height: 60px; min-width: 0; flex: 1 1 auto; }
   .brand > div { min-width: 0; }
+  /* HA's menu button is empty while the sidebar is docked; it must not leave its gap before the logo (the logo lines up with the content) */
+  .brand ha-menu-button { flex: none; margin-right: -12px; }
   .menu { display: none; width: 40px; height: 40px; margin-left: -10px; place-items: center; border-radius: 50%; color: var(--text); }
   .menu:hover { background: var(--neutral-soft); }
   .logo { width: 36px; height: 36px; border-radius: 10px; object-fit: cover; flex: none; }
@@ -427,6 +429,7 @@ export const PANEL_CSS = `
 
   /* dialog + toast */
   .col > * + *, #f-controls > * + * { margin-top: 16px; }
+  .phead { display: contents; } /* only the heading for the screen reader: no empty row (and no gap) above the content */
   .phead h1 { font-size: 24px; font-weight: 500; margin: 4px 0 0; letter-spacing: -.01em; }
   .phead .lead { margin: 6px 0 0; }
   .col h2 { font-size: 16px; font-weight: 500; margin: 0 0 8px; }
