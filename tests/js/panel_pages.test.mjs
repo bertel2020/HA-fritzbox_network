@@ -774,7 +774,7 @@ const day = { range: "day", step: 360, enabled: false, interval: 300, since: nul
 
 test("the box page shows three charts in the order of the tiles, with the span switch and the recording switch", () => {
   const html = boxPage.renderBoxPage(info, boxCtx({ history: day, historyRange: "day" }));
-  const labels = [...html.matchAll(/<section class="card bhm hm-(\w+)">/g)].map((m) => m[1]);
+  const labels = [...html.matchAll(/<section class="card pad bhm hm-(\w+)">/g)].map((m) => m[1]);
   assert.deepEqual(labels, ["cpu", "temp", "ram"]);
   assert.match(html, /data-act="box-history-range" data-range="day" aria-pressed="true">Tag/);
   assert.match(html, /data-act="box-history-range" data-range="month" aria-pressed="false">Monat/);

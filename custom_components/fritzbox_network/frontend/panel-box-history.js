@@ -75,7 +75,7 @@ function card(metric, history, ctx) {
   const stat = (name, v) => `<span>${escapeHtml(name)} <b>${escapeHtml(typeof v === "number" ? `${number(v)} ${metric.unit}` : "–")}</b></span>`;
   const axisLabels = [axis.hi, (axis.lo + axis.hi) / 2, axis.lo].map((v) => `<span>${number(v)}</span>`).join("");
   const xAxis = h.axis[history.range].map((text) => `<span>${escapeHtml(text)}</span>`).join("");
-  return `<section class="card bhm hm-${metric.tone}">
+  return `<section class="card pad bhm hm-${metric.tone}">
     <div class="bhhead"><span class="label">${escapeHtml(h.metrics[metric.key])}</span><span class="bhnow">${escapeHtml(typeof sum.last === "number" ? `${number(sum.last)} ${metric.unit}` : "–")}</span></div>
     <div class="bhplot"><div class="bhy" aria-hidden="true">${axisLabels}</div>
       <div class="plot" ${plotAttrs(label)} data-mode="time" data-unit="${escapeHtml(metric.unit)}" data-range="${history.range === "day" ? "day" : "week"}" data-pts="${escapeHtml(JSON.stringify(pts))}">
