@@ -59,7 +59,7 @@ from .const import (
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .filters import FILTER_OPTIONS, select_hosts
-from .latency import INTERVAL, STEPS
+from .latency import INTERVAL, KEPT_SECONDS, STEPS
 from .models import (
     MeshNode,
     MeshTopology,
@@ -1372,7 +1372,7 @@ def _latency_state(coordinator: FritzNetworkCoordinator) -> dict[str, Any]:
         "enabled": monitor.enabled if monitor else False,
         "interval": int(INTERVAL.total_seconds()),
         "steps": STEPS,
-        "samples": monitor.samples() if monitor else [],
+        "samples": monitor.samples(KEPT_SECONDS) if monitor else [],
     }
 
 

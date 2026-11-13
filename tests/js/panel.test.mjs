@@ -1366,19 +1366,41 @@ test("the course of the connection is put into 15 minute buckets by the worst re
   assert.deepEqual(summary, { last: 12, median: 12, failed: 1, runs: 3 });
 });
 
-test("the course has a switch, says why it is empty and draws a strip per step", () => {
+test("the course has a switch, previews itself when off and draws a strip per step", () => {
   const base = { enabled: false, interval: 300, steps: ["box", "internet", "dns", "web", "ipv6"], samples: [] };
   const ctx = { t, language: "de", now: 1_793_000_000 };
-  assert.match(latencyPage.latencyButton(base, t), /data-act="latency-switch" data-on="1">Verlauf aufzeichnen/);
-  assert.match(latencyPage.latencyBody(base, ctx), /Keine Aufzeichnung/);
+  assert.match(latencyPage.latencySwitch(base, t), /aria-checked="false"[^>]*data-act="latency-switch" data-on="1"/);
+  assert.match(latencyPage.latencySwitch(base, t), /Aufzeichnung aus/);
+  const off = latencyPage.latencyBody(base, ctx);
+  assert.match(off, /So sähe der Verlauf aus/);
+  assert.match(off, /alle 5 Minuten 1\.1\.1\.1/);
+  assert.equal((off.match(/<svg class="latstrip"/g) ?? []).length, 3);
   assert.match(latencyPage.latencyBody({ ...base, enabled: true }, ctx), /Aufzeichnung läuft/);
   const on = { ...base, enabled: true, samples: [[1_792_999_700, 3, 12, 20, 80, null]] };
-  assert.match(latencyPage.latencyButton(on, t), /data-on="0">Aufzeichnung beenden/);
+  assert.match(latencyPage.latencySwitch(on, t), /aria-checked="true"[^>]*data-on="0"/);
+  assert.match(latencyPage.latencySwitch(on, t), /Aufzeichnung an · alle 5 Min\./);
   const body = latencyPage.latencyBody(on, ctx);
   assert.equal((body.match(/<svg class="latstrip"/g) ?? []).length, 5);
   assert.match(body, /zuletzt 12 ms/);
+  assert.match(body, /15 Minuten je Balken/);
+  assert.match(latencyPage.latencyBody(on, { ...ctx, range: "days3" }), /3 Tage, 45 Minuten je Balken/);
   assert.match(latencyPage.latencyBody("failed", ctx), /nicht gelesen/);
   assert.match(latencyPage.latencyHint(on, t), /alle 5 Minuten/);
+  const section = latencyPage.latencySection(on, { ...ctx, range: "days3" });
+  assert.match(section, /data-act="latency-range" data-range="days3" aria-pressed="true"/);
+  assert.doesNotMatch(latencyPage.latencySection(base, ctx), /latency-range/);
+});
+
+test("three days are 96 bars of 45 minutes", () => {
+  const steps = ["box", "internet", "dns", "web", "ipv6"];
+  const now = 1_793_000_000;
+  const samples = [[now - 2 * 86400, 3, null, 20, 80, 30], [now - 60, 3, 12, 20, 80, 30]];
+  const day = latencyPage.latencyBuckets(samples, steps, "internet", now);
+  assert.equal(day.filter((b) => b.state !== "none").length, 1);
+  const days = latencyPage.latencyBuckets(samples, steps, "internet", now, latencyPage.RANGES.days3.bucket);
+  assert.equal(days.length, 96);
+  assert.equal(days.filter((b) => b.state === "fail").length, 1);
+  assert.equal(days.filter((b) => b.state === "ok").length, 1);
 });
 
 test("the capture list names the Wi-Fi access points after their band and offers to find it", () => {

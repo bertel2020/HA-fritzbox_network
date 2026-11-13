@@ -10,6 +10,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Panel, Internet: Die Verbindungskachel ist ein schlanker Statusstreifen (Zustand, Live-Rate mit Auslastung, Adressen in einer Zeile, DNS-Server eingeklappt). Das Datenvolumen hat die volle Breite: vier Kacheln (Heute, 7 Tage, 30 Tage, Monat) mit Download und Upload gleichwertig, daneben Tagesbalken und die Geräte mit dem meisten Verbrauch. Die Auslastung zeigt nur noch den Verlauf.
 - Panel, Tabelle: Die Spalte Volumen zeigt Download und Upload gleich groß untereinander statt klein nebeneinander.
 - Panel, Datenvolumen eines Geräts: Download und Upload stehen gleichwertig nebeneinander, mit Gesamtsumme und einem geteilten Balken.
+- Panel, Diagnose: „Verbindung prüfen“ steht neben der Überschrift der Karte. Der Verlauf ist ein eigener Abschnitt mit einem Schalter, der den Zustand zeigt („Aufzeichnung an · alle 5 Min.“). Ausgeschaltet zeigt er eine blasse Vorschau und den Datenschutz-Hinweis statt eines leeren Satzes; eingeschaltet lässt sich zwischen 24 Std. und den drei gespeicherten Tagen wählen.
 
 ### Behoben
 

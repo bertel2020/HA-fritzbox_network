@@ -666,7 +666,17 @@ export const PANEL_CSS = `
   button.chip { cursor: pointer; border: 1px solid transparent; }
   button.chip[aria-pressed="true"] { border-color: currentColor; }
   ul.logrows li.mark .pdesc { font-weight: 500; }
-  .course { margin-top: 18px; }
+  .course { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .course .chead { margin-bottom: 4px; }
+  .course .sub { font-size: 14px; font-weight: 500; }
+  .coursectl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .coursectl .seg button { min-height: 32px; text-align: center; border-top: 0; }
+  .swstate { color: var(--muted); font-size: 13px; }
+  .swstate.on { color: var(--text); }
+  .latrow.ghost { opacity: .55; }
+  .latcta { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); font-size: 13px; }
+  .latcta .hint { margin: 6px 0 0; }
+  .chead .btn-row { margin-top: 0; }
   .latrow { margin-top: 14px; }
   .latrow:first-child { margin-top: 0; }
   .lathead { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }

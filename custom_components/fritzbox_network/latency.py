@@ -1,7 +1,7 @@
 """The course of the connection: the diagnosis check, run now and then while switched on.
 
 Off until the user switches it on in the panel, because it connects to a public address now and
-then. Kept over restarts for a few days; the panel shows the last 24 hours.
+then. Kept over restarts for a few days; the panel shows the last 24 hours or all three days.
 """
 
 from __future__ import annotations

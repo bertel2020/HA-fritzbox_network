@@ -3,7 +3,7 @@
 import { escapeHtml, noteHtml } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
-import { latencyBody, latencyButton, latencyHint } from "./panel-latency.js";
+import { latencyHint, latencySection } from "./panel-latency.js";
 
 function stepTiles(check, c) {
   return `<div class="checktiles">${check.steps
@@ -19,7 +19,7 @@ function stepTiles(check, c) {
 }
 
 /**
- * The card: the buttons for the check and the recording, the result of the last check as one tile
+ * The card: the button for the check, the result of the last check as one tile
  * per step with a verdict, and the course of the day as one strip per step.
  */
 export function renderConnection(check, latency, ctx) {
@@ -27,9 +27,9 @@ export function renderConnection(check, latency, ctx) {
   const c = t.diag.check;
   const running = check === "running";
   const result = check && check !== "running" && check !== "failed" ? stepTiles(check, c) : "";
-  return `<section class="card sec"><span class="label">${escapeHtml(t.diag.connection)}</span>
-    <div class="btn-row tight"><button class="btn p" data-act="check-run"${running ? " disabled" : ""}>${escapeHtml(running ? c.running : c.run)}</button>${latencyButton(latency, t)}</div>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(t.diag.connection)}</span>
+    <div class="btn-row tight"><button class="btn p" data-act="check-run"${running ? " disabled" : ""}>${escapeHtml(running ? c.running : c.run)}</button></div></div>
     ${check === "failed" ? `<p class="hint">${escapeHtml(c.error)}</p>` : result}
-    <div class="course">${latencyBody(latency, ctx)}</div>
+    ${latencySection(latency, ctx)}
     ${noteHtml(t.diag.note, c.hint, latencyHint(latency, t))}</section>`;
 }

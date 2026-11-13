@@ -267,6 +267,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       captureDetecting: false,
       check: null,
       latency: null,
+      latencyRange: "day",
       log: null,
       logGroup: "",
       logKind: null,
@@ -1330,7 +1331,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._set(
       "diagnose-view",
       `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(t.diag.title)}</h1><p class="lead">${escapeHtml(t.diag.lead)}</p></div>` +
-        renderConnection(this._state.check, this._state.latency, { t, language: this._hass?.language, now: Date.now() / 1000 }) +
+        renderConnection(this._state.check, this._state.latency, { t, language: this._hass?.language, now: Date.now() / 1000, range: this._state.latencyRange }) +
         `<div class="diagrow">${renderRadio(this._state.data, { t, language: this._hass?.language })}${renderLog(this._state.log, { t, group: this._state.logGroup, kind: this._state.logKind })}</div>` +
         renderCapture(this._state.capture, {
           t,
@@ -1780,6 +1781,9 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._switchRoute(ds.network, ds.on === "1");
     } else if (ds.act === "latency-switch") {
       return this._switchLatency(ds.on === "1");
+    } else if (ds.act === "latency-range") {
+      this._state.latencyRange = ds.range === "days3" ? "days3" : "day";
+      return this._update();
     } else if (ds.act === "check-run") {
       return this._runCheck();
     } else if (ds.act?.startsWith("cap-")) {

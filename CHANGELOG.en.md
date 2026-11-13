@@ -10,6 +10,7 @@ All notable changes to this integration are recorded here.
 - Panel, internet: the connection card is a slim status strip (state, live rate with load, addresses in one row, DNS servers folded away). The data volume takes the full width: four tiles (today, 7 days, 30 days, month) with download and upload as equals, next to them the bars per day and the devices that used the most. The load card shows only the history now.
 - Panel, table: the volume column shows download and upload in the same size, one under the other, instead of small side by side.
 - Panel, data volume of a device: download and upload stand side by side as equals, with the total and a split bar.
+- Panel, diagnosis: "Check connection" sits next to the heading of the card. The course is a section of its own with a switch that shows its state ("Recording on · every 5 min"). Off, it shows a faint preview and the privacy note instead of an empty sentence; on, you can choose between 24 h and the three days that are kept.
 
 ### Fixed
 
