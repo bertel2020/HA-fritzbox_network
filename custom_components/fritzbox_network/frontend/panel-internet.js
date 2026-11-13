@@ -422,14 +422,10 @@ function hintsHtml(internet, t, now) {
 
 /** One port forwarding as a line: "TCP 443 → Living room TV:8443", the device a link to its page. */
 
-/** A new dial-in; without the right to change settings it says why it is off. Restarting is on the box page. */
-function actions(canWrite, t) {
+/** The button to dial in again, in the corner of the first card; the dialog of the panel asks first. */
+function reconnectButton(canWrite, t) {
   const a = t.inet.actions;
-  const off = canWrite ? "" : " disabled";
-  return `<section class="card sec"><span class="label">${escapeHtml(a.title)}</span>
-    <div class="btn-row tight">
-      <button class="btn" data-act="reconnect" data-k="reconnect"${off}>${escapeHtml(a.reconnect)}</button></div>
-    <p class="hint">${escapeHtml(canWrite ? a.hint : a.noRights)} <a href="#/box">${escapeHtml(a.rebootLink)}</a></p></section>`;
+  return `<div class="hero-foot"><button class="btn" data-act="reconnect" data-k="reconnect"${canWrite ? "" : ` disabled title="${escapeHtml(a.noRights)}"`}>${escapeHtml(a.reconnect)}</button></div>`;
 }
 
 /** The whole page. Without data from the box it says so and offers the way back. */
@@ -460,6 +456,7 @@ export function renderInternet(internet, ctx) {
         <div class="kv"><span class="k">${escapeHtml(i.lastError)}</span><span class="${failed ? "bad" : "ok"}">${escapeHtml(failed ? internet.last_error : i.noError)}</span></div>
         ${dnsDetails(internet.dns, t)}
       </div>
+      ${reconnectButton(canWrite, t)}
     </section>
     ${volumeCard({ t, language, traffic: ctx.traffic, clients: ctx.clients, range: ctx.trafficRange ?? 7 })}
     <div class="icols${internet.dsl ? "" : " single"}">
@@ -472,6 +469,5 @@ export function renderInternet(internet, ctx) {
       ${internet.dsl ? `<div class="icol">${lineQuality(internet.dsl, language, t)}</div>` : ""}
     </div>
     ${addressHistory(internet.addresses, language, t)}
-    ${renderPorts(portState, { t, filter: ctx.portsFilter })}
-    ${actions(canWrite, t)}`;
+    ${renderPorts(portState, { t, filter: ctx.portsFilter })}`;
 }

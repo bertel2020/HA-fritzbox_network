@@ -486,6 +486,7 @@ export const PANEL_CSS = `
   .rbar { display: block; height: 6px; border-radius: 3px; background: var(--soft); overflow: hidden; margin: 4px 0 2px; }
   .rbar i { display: block; height: 100%; border-radius: 3px; background: var(--accent); }
   .rate.upl .rbar i { background: var(--up); }
+  .hero-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
   .addr { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; border-top: 1px solid var(--line); margin-top: 14px; padding-top: 12px; }
   .kv { display: flex; align-items: center; gap: 8px; min-width: 0; }
   .kv .k { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }

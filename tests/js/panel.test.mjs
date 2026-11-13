@@ -666,13 +666,13 @@ test("the access type is named in the language of the page, an unknown one as th
   assert.doesNotMatch(html, /Leitungsqualität/);
 });
 
-test("the internet page offers to reconnect, points to the box page for a restart, and says why it cannot", () => {
+test("the internet page offers to reconnect in the corner of the first card, and says why it cannot", () => {
   const t = texts.panelTexts("en");
   const page = (canWrite) => internetPage.renderInternet(internet, { t, language: "en", now: Date.now(), canWrite });
   const allowed = page(true);
   assert.match(allowed, /data-act="reconnect" data-k="reconnect">Reconnect/);
   assert.doesNotMatch(allowed, /data-act="reboot"/);
-  assert.match(allowed, /<a href="#\/box">Restarting the box is on the Box page/);
+  assert.match(allowed, /hero-foot"><button class="btn" data-act="reconnect"/);
   const refused = page(false);
   assert.match(refused, /data-act="reconnect"[^>]*disabled/);
   assert.match(refused, /may not change settings/);
