@@ -148,10 +148,23 @@ export class PhoneMethods {
 
   _renderPhone() {
     this._readPhone();
+    if (!this._phone?.found && this._phoneInstalled === undefined) this._phoneCheckInstalled();
     const view = this.shadowRoot.querySelector("#phone-view");
     const width = view?.clientWidth || this._phoneWidth || 640;
     this._phoneWidth = width;
-    this._set("phone-view", renderPhone(this._phone, { t: this._t, language: this._hass?.language, now: new Date(), ui: this._state.phone, width }));
+    this._set("phone-view", renderPhone(this._phone, { t: this._t, language: this._hass?.language, now: new Date(), ui: this._state.phone, width, installed: this._phoneInstalled ?? null, hidden: this._state.phoneHidden }));
+  }
+
+  /** Whether Home Assistant knows the integration FRITZ!Box Telefon at all: true (installed, not set up), false, or null where it does not say. */
+  async _phoneCheckInstalled() {
+    this._phoneInstalled = null;
+    try {
+      await this._hass.callWS({ type: "manifest/get", integration: PHONE_DOMAIN });
+      this._phoneInstalled = true;
+    } catch (err) {
+      this._phoneInstalled = wsCode(err) === "not_found" ? false : null;
+    }
+    if (this._state.tab === "phone") this._renderPhone();
   }
 
   /** The charts are drawn as wide as the page: again when it changed noticeably. */

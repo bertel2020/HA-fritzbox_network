@@ -95,10 +95,13 @@ const typesOf = (calls) => calls.map((c) => c.type.replace("fritzbox_network/", 
 
 // ---------- tabs ----------
 
-test("there are five tabs; Wi-Fi, address space and routes are pages of the network, VPN of the internet", () => {
+test("there are five tabs, and the phone one; Wi-Fi, address space and routes are pages of the network, VPN of the internet", () => {
   const nav = panel.renderNav({ tab: "wlan", data: {} }, t, 0);
   const labels = [...nav.matchAll(/<button[^>]*data-tab="(\w+)"/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ["net", "internet", "box", "diagnose", "devices"]);
+  assert.deepEqual(labels, ["net", "internet", "box", "phone", "diagnose", "devices"]);
+  // hidden by the reader, and FRITZ!Box Telefon not there: no phone tab
+  const hidden = panel.renderNav({ tab: "wlan", data: {}, phoneHidden: true }, t, 0);
+  assert.deepEqual([...hidden.matchAll(/<button[^>]*data-tab="(\w+)"/g)].map((m) => m[1]), ["net", "internet", "box", "diagnose", "devices"]);
   assert.match(nav, /data-tab="net" aria-selected="true"/);
   assert.deepEqual(panel.TAB_GROUPS.net, ["net", "wlan", "addresses", "routes"]);
   assert.deepEqual(panel.TAB_GROUPS.internet, ["internet", "vpn"]);

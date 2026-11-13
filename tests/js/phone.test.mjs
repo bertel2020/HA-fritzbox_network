@@ -170,17 +170,20 @@ const read = (opts) => model.readPhone(makeHass(opts), "e1", { cache: new Map() 
 
 // ---------- detection and navigation ----------
 
-test("without fritzbox_phone there is no phone tab, with it the tab sits between Box and Diagnosis, and #/phone is a route", () => {
+test("the phone tab is always there, quiet without fritzbox_phone and gone only where it was hidden; #/phone is a route", () => {
   assert.equal(model.phoneLoaded(makeHass({ phone: false })), false);
   // listed as a component, but no entity: not there either
   assert.equal(model.phoneLoaded({ ...makeHass({ phone: false }), config: { components: ["fritzbox_phone"] } }), false);
   assert.equal(model.phoneLoaded(makeHass()), true);
   assert.deepEqual(panel.pagesOf("box", { phoneFound: true }), ["box"]);
-  assert.deepEqual(panel.pagesOf("phone", { phoneFound: false }), []);
+  assert.deepEqual(panel.pagesOf("phone", { phoneFound: false }), ["phone"]);
+  assert.deepEqual(panel.pagesOf("phone", { phoneFound: false, phoneHidden: true }), []);
+  assert.deepEqual(panel.pagesOf("phone", { phoneFound: true, phoneHidden: true }), ["phone"]);
   assert.deepEqual(panel.pagesOf("phone", { phoneFound: true }), ["phone"]);
   assert.equal(panel.renderSubTabs("phone", t, { phoneFound: true }), "");
   assert.equal(panel.renderSubTabs("box", t, { phoneFound: true }), "");
-  assert.doesNotMatch(panel.renderNav({ tab: "net", data: {}, phoneFound: false }, t, 0), /data-tab="phone"/);
+  assert.match(panel.renderNav({ tab: "net", data: {}, phoneFound: false }, t, 0), /<button role="tab" class="quiet" tabindex="-1" data-tab="phone" aria-selected="false">Telefon<\/button>/);
+  assert.doesNotMatch(panel.renderNav({ tab: "net", data: {}, phoneFound: false, phoneHidden: true }, t, 0), /data-tab="phone"/);
   const nav = panel.renderNav({ tab: "phone", data: {}, phoneFound: true, phoneUnread: 2 }, t, 0);
   assert.match(nav, /data-tab="box"[^>]*>Box<\/button><button role="tab" tabindex="0" data-tab="phone" aria-selected="true" aria-label="Telefon, 2 neue Nachrichten">Telefon<em>2<\/em><\/button><button[^>]*data-tab="diagnose"/);
   assert.deepEqual(shared.routeFromHash("#/phone"), { tab: "phone", device: null });
@@ -199,7 +202,7 @@ test("the phone tab carries a dot while the phone rings, the box tab none", () =
   assert.doesNotMatch(panel.renderNav({ tab: "net", data: {} }, t, 0), /dot warn/);
 });
 
-test("the panel finds the phone from the registries; without it #/phone leads to the box", () => {
+test("the panel finds the phone from the registries; without it #/phone shows the hint page", () => {
   const { p } = makePanel();
   assert.equal(p._state.phoneFound, true);
   assert.equal(p._state.phoneUnread, 1);
@@ -207,9 +210,28 @@ test("the panel finds the phone from the registries; without it #/phone leads to
   globalThis.location = { hash: "#/phone", replace(h) { this.hash = h; } };
   none.p._state.box = "failed";
   none.p._update();
-  assert.equal(none.p._state.tab, "box");
-  assert.equal(globalThis.location.hash, "#/box");
+  assert.equal(none.p._state.tab, "phone");
   assert.equal(none.p._state.phoneFound, false);
+});
+
+test("without fritzbox_phone the page says where things stand and offers the next step", () => {
+  const ctx = (extra = {}) => ({ t, language: "de", now: new Date(), ui: { view: "list" }, ...extra });
+  const missing = page.renderPhone({ found: false }, ctx({ installed: false }));
+  assert.match(missing, /Telefon braucht „FRITZ!Box Telefon“/);
+  assert.match(missing, /Nicht installiert/);
+  assert.match(missing, /href="https:\/\/my\.home-assistant\.io\/redirect\/hacs_repository\/\?owner=bertel2020&amp;repository=HA-fritzbox_phone&amp;category=integration"/);
+  assert.match(missing, /data-act="integration"[^>]*>Integration einrichten/);
+  assert.match(missing, /data-act="ph-hide"/);
+  const setup = page.renderPhone({ found: false }, ctx({ installed: true }));
+  assert.match(setup, /Fast fertig/);
+  assert.match(setup, /Nicht eingerichtet/);
+  assert.doesNotMatch(setup, /hacs_repository/);
+  const unknown = page.renderPhone({ found: false }, ctx({ installed: null }));
+  assert.match(unknown, /hacs_repository/);
+  assert.match(unknown, /Integration einrichten/);
+  const hidden = page.renderPhone({ found: false }, ctx({ installed: false, hidden: true }));
+  assert.match(hidden, /data-act="ph-show"/);
+  assert.match(hidden, /ausgeblendet/);
 });
 
 test("with several boxes the entry with the serial number of this box is used, else the only one, else a choice", () => {

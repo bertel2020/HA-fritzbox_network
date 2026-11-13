@@ -122,6 +122,8 @@ export const PANEL_CSS = `
   .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; padding: 0 18px; border-radius: var(--control-radius); font-weight: 500; white-space: nowrap; border: 1px solid var(--input-line); background: var(--surface); }
   .btn:hover { background: var(--soft); }
   .btn.p { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  a.btn { text-decoration: none; }
+  a.btn:not(.p) { color: var(--text); }
   .btn.p:hover { background: var(--accent-hover); }
   .btn.d { color: var(--bad); border-color: transparent; background: none; }
   .btn.d:hover { background: var(--bad-soft); }
@@ -1212,6 +1214,19 @@ export const PANEL_CSS = `
   #phone-view .card + .card, #phone-view .two > .card, #phone-view .ph-col > .card { margin-top: 0; }
   .toast.act { pointer-events: auto; display: flex; gap: 14px; align-items: center; }
   .toast-act { color: var(--accent-soft); font-weight: 600; text-decoration: underline; }
+  .ph-hint .ihead .ico { background: var(--accent-soft); color: var(--accent-hover); }
+  .ph-hintro { margin: 8px 0 0; color: var(--muted); max-width: 66ch; }
+  .ph-hstate { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .ph-hbtns { justify-content: flex-start; align-items: center; margin-top: 14px; }
+  .ph-hbtns .btn.text { background: none; border-color: transparent; color: var(--muted); font-weight: 400; }
+  .ph-hint .tiles { margin-top: 16px; }
+  .ph-hint .tile small { white-space: normal; overflow: visible; text-overflow: clip; }
+  .ph-hprev { margin-top: 16px; opacity: .6; pointer-events: none; }
+  .ph-hrow { display: grid; grid-template-columns: 22px minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
+  .ph-hrow small { color: var(--muted); font-size: 13px; }
+  .ph-hrow .k.in { color: var(--ok); } .ph-hrow .k.out { color: var(--accent); }
+  @container app (max-width: 600px) { .ph-hrow { grid-template-columns: 22px minmax(0, 1fr) auto; } .ph-hrow small:nth-of-type(1) { display: none; } }
+  button[role="tab"].quiet:not([aria-selected="true"]) { opacity: .7; }
   .ph-src { font-size: 12px; color: var(--muted); margin: 8px 0 0; display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; }
   .ph-src a { color: var(--accent); }
   .ph-src select.ph-entry { width: auto; max-width: 100%; height: 32px; font-size: 13px; }

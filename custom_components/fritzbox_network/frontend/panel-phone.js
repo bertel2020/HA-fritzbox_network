@@ -716,6 +716,42 @@ function listStatsParts(model, period, ctx) {
   return { st: { ok: true, ...st }, notes, tamTile: { label: s.tam, value: st.sum.tam, small: fill(s.tamSub, { n: unheard }) }, sourceText: s.source };
 }
 
+const HACS_LINK = "https://my.home-assistant.io/redirect/hacs_repository/?owner=bertel2020&repository=HA-fritzbox_phone&category=integration";
+const REPO_LINK = "https://github.com/bertel2020/HA-fritzbox_phone";
+
+/**
+ * The page without FRITZ!Box Telefon: what it would bring, where things stand (not installed, or
+ * installed and not set up) and the next step; the tab can be hidden until the integration is there.
+ */
+function hintPage(ctx) {
+  const { t, installed = null, hidden = false } = ctx;
+  const h = t.phone.hint;
+  const state = installed === true ? "setup" : installed === false ? "missing" : "unknown";
+  const pills = installed === true
+    ? `<span class="chip ok">${esc(h.pillInstalled)}</span><span class="chip warn">${esc(h.pillSetup)}</span>`
+    : installed === false
+      ? `<span class="chip warn">${esc(h.pillMissing)}</span>`
+      : `<span class="chip warn">${esc(h.pillUnknown)}</span>`;
+  const hacs = state === "setup" ? "" : `<a class="btn p" href="${esc(HACS_LINK)}" target="_blank" rel="noopener">${esc(h.hacs)}</a>`;
+  const setup = `<a class="btn${state === "setup" ? " p" : ""}" href="/config/integrations/dashboard/add?domain=fritzbox_phone" data-act="integration" data-k="ph-setup">${esc(h.setup)}</a>`;
+  const toggle = hidden
+    ? `<button class="btn text" data-act="ph-show" data-k="ph-show">${esc(h.show)}</button>`
+    : `<button class="btn text" data-act="ph-hide" data-k="ph-hide">${esc(h.hide)}</button>`;
+  const features = h.features.map(([title, text]) => `<div class="tile"><b>${esc(title)}</b><small>${esc(text)}</small></div>`).join("");
+  const rows = h.sample
+    .map(([kind, name, when, what]) => `<div class="ph-hrow"><span class="k ${kind}" aria-hidden="true">${kind === "out" ? "↗" : "↙"}</span><b>${esc(name)}</b><small>${esc(when)}</small><small>${esc(what)}</small></div>`)
+    .join("");
+  return `<section class="card ph-hint"><div class="ihead"><span class="ico">${ic("phone")}</span>
+    <span class="who"><b>${esc(state === "setup" ? h.titleSetup : h.titleMissing)}</b></span></div>
+    <p class="ph-hintro">${esc(state === "setup" ? h.introSetup : state === "missing" ? h.introMissing : h.introUnknown)}</p>
+    <div class="ph-hstate">${pills}</div>
+    <div class="btn-row ph-hbtns">${hacs}${setup}${toggle}</div>
+    ${hidden ? `<p class="hint">${esc(h.hiddenNote)}</p>` : ""}
+    <div class="tiles">${features}</div>
+    <div class="ph-hprev" aria-hidden="true"><span class="label">${esc(h.preview)}</span>${rows}</div>
+    <p class="hint">${esc(h.previewNote)} <a href="${REPO_LINK}" target="_blank" rel="noopener">${esc(h.more)}</a></p></section>`;
+}
+
 /**
  * The statistics view. With the commands fritzbox_phone counts (over its call history where that
  * is switched on) and the page says from what and how far back; with an older version the page
@@ -798,7 +834,7 @@ export function renderPhone(model, ctx) {
   const p = t.phone;
   const legacy = model?.legacy ? `<p class="ph-src ph-legacy">${esc(p.legacy)}</p>` : "";
   const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">${esc(p.title)}</h1>${model?.entry ? sourceLine(model, ctx) : ""}${legacy}</div>`;
-  if (!model?.found) return `${head}<div class="card"><div class="empty"><b>${esc(p.missing)}</b></div></div>`;
+  if (!model?.found) return `${head}${hintPage(ctx)}`;
   const view = `<div class="seg ph-seg ph-view" role="group" aria-label="${esc(p.view.label)}"><button data-act="ph-view" data-ph-val="list" data-k="ph-v-list" aria-pressed="${ui.view !== "stats"}">${esc(p.view.list)}</button><button data-act="ph-view" data-ph-val="stats" data-k="ph-v-stats" aria-pressed="${ui.view === "stats"}">${esc(p.view.stats)}</button></div>`;
   const integration = `<div class="btn-row"><a class="btn" href="/config/integrations/integration/fritzbox_phone" data-act="integration" data-k="ph-int2">${esc(p.openIntegration)}</a></div>`;
   if (model.missing) return `${head}<div class="card"><div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${esc(p.missing)}</b><span>${esc(p.missingBody)}</span>${integration}</div></div>`;

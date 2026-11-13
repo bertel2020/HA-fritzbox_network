@@ -58,6 +58,7 @@ const VIEW_KEY = `${DOMAIN}_panel_view`;
 const HISTORY_REFRESH_MS = 300000;
 const VPN_HISTORY_REFRESH_MS = 60000;
 const PAGE_KEY = "fritzbox_network_page_size";
+const PHONE_HIDDEN_KEY = "fritzbox_network_phone_hidden";
 const VIEWS = ["list", "map"];
 
 function remembered() {
@@ -101,6 +102,24 @@ function rememberedView() {
     return VIEWS.includes(view) ? view : "list";
   } catch {
     return "list";
+  }
+}
+
+/** Whether the phone tab was hidden in this browser for the time FRITZ!Box Telefon is not there. */
+function rememberedPhoneHidden() {
+  try {
+    return localStorage.getItem(PHONE_HIDDEN_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function rememberPhoneHidden(hidden) {
+  try {
+    if (hidden) localStorage.setItem(PHONE_HIDDEN_KEY, "1");
+    else localStorage.removeItem(PHONE_HIDDEN_KEY);
+  } catch {
+    // without storage the tab is there again next time
   }
 }
 
@@ -180,7 +199,7 @@ export function pagesOf(group, state) {
   return (TAB_GROUPS[group] ?? []).filter((page) => {
     if (page === "vpn") return Array.isArray(state?.data?.vpn);
     if (page === "migrate") return hasCore(state?.migrate);
-    if (page === "phone") return Boolean(state?.phoneFound);
+    if (page === "phone") return Boolean(state?.phoneFound) || !state?.phoneHidden;
     return true;
   });
 }
@@ -219,8 +238,8 @@ const NAV_ICONS = { net: "network", internet: "globe", box: "router", phone: "ph
 export function renderNav(state, t, stale, icons = false) {
   const line = state.data?.internet;
   const open = groupOf(state.tab);
-  const tab = (id, extra = "", label = "") =>
-    `<button role="tab" tabindex="${id === open ? 0 : -1}" data-tab="${id}" aria-selected="${id === open}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${icons ? `<span class="ni">${ic(NAV_ICONS[id])}${extra}</span><span class="nl">${escapeHtml(t.tabs[id])}</span>` : `${escapeHtml(t.tabs[id])}${extra}`}</button>`;
+  const tab = (id, extra = "", label = "", quiet = false) =>
+    `<button role="tab"${quiet ? ' class="quiet"' : ""} tabindex="${id === open ? 0 : -1}" data-tab="${id}" aria-selected="${id === open}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${icons ? `<span class="ni">${ic(NAV_ICONS[id])}${extra}</span><span class="nl">${escapeHtml(t.tabs[id])}</span>` : `${escapeHtml(t.tabs[id])}${extra}`}</button>`;
   const dot = line ? `<i class="dot ${line.connected === false ? "" : "on"}" aria-hidden="true"></i>` : "";
   const label = line ? `${t.tabs.internet}, ${line.connected === false ? t.inet.state.down : t.inet.state.up}` : "";
   const restarting = state.boxRestart && state.boxRestart.phase !== "back";
@@ -233,7 +252,7 @@ export function renderNav(state, t, stale, icons = false) {
     tab("net"),
     tab("internet", dot, label),
     tab("box", restarting ? `<i class="dot warn" aria-hidden="true"></i>` : "", restarting ? `${t.tabs.box}, ${t.boxPage.restarting}` : ""),
-    state.phoneFound ? tab("phone", phoneExtra, phoneNote ? `${t.tabs.phone}, ${phoneNote}` : "") : "",
+    state.phoneFound || !state.phoneHidden ? tab("phone", phoneExtra, phoneNote ? `${t.tabs.phone}, ${phoneNote}` : "", !state.phoneFound) : "",
     tab("diagnose"),
     tab("devices", stale ? `<em>${stale}</em>` : ""),
   ].join("");
@@ -312,6 +331,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       migrateHidden: false,
       // the phone page: what FRITZ!Box Telefon is there for, and what the page shows of it
       phoneFound: false,
+      phoneHidden: rememberedPhoneHidden(),
       phoneUnread: 0,
       phoneRinging: false,
       phoneLive: "",
@@ -1219,12 +1239,6 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (!netView) return;
     this._readPhone();
     this._renderCallBar(ready);
-    // without FRITZ!Box Telefon there is no phone page: its address leads to the box
-    if (state.tab === "phone" && !state.phoneFound && this._hass && Object.keys(this._hass.entities ?? {}).length) {
-      state.tab = "box";
-      globalThis.location?.replace?.(pageHash("box"));
-      this._enterTab();
-    }
     const tab = state.tab;
     state.lastPage[groupOf(tab)] = tab;
     const onDevice = tab === "net" && Boolean(state.sel);
@@ -1798,6 +1812,15 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._onWlanClick(ds);
     } else if (ds.act?.startsWith("mig-")) {
       return this._onMigrateClick(ds);
+    } else if (ds.act === "ph-hide" || ds.act === "ph-show") {
+      state.phoneHidden = ds.act === "ph-hide";
+      rememberPhoneHidden(state.phoneHidden);
+      if (state.phoneHidden) {
+        globalThis.location.hash = "#/box";
+        showToast(this.shadowRoot, this._t.phone.hint.hiddenToast);
+      }
+      this._update();
+      return;
     } else if (ds.act?.startsWith("ph-")) {
       return this._onPhoneClick(ds);
     } else if (ds.act === "back") {
