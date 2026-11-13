@@ -1179,3 +1179,42 @@ async def test_the_wifi_area_turned_off_removes_the_wifi_and_guest_switches(
     assert registry.async_get("switch.fritz_network_guest_wifi") is None
     assert registry.async_get("switch.fritz_network_wifi_2_4ghz") is None
     assert registry.async_get("switch.fritz_network_port_udp_51820") is not None
+
+
+async def test_cpu_load_and_ram_are_asked_once_and_read_only_while_a_sensor_is_on(
+    hass, fake_client, entry
+):
+    coordinator = await _setup(hass, entry)
+    registry = er.async_get(hass)
+    cpu = registry.async_get("sensor.fritz_network_cpu_load")
+    ram = registry.async_get("sensor.fritz_network_ram_usage")
+    for reg in (cpu, ram):
+        assert reg is not None and reg.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+    assert coordinator.util_supported is True
+    assert fake_client.calls.count(("utilization",)) == 1  # to see that the box has them
+    for _ in range(12):
+        await _poll(hass, coordinator)
+    assert fake_client.calls.count(("utilization",)) == 1  # nothing wants them
+
+    registry.async_update_entity(cpu.entity_id, disabled_by=None)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+    coordinator = entry.runtime_data
+    fake_client.utilization = {"cpu": 31, "ram": 55}
+    await _poll(hass, coordinator)
+
+    assert hass.states.get("sensor.fritz_network_cpu_load").state == "31"
+    assert hass.states.get("sensor.fritz_network_cpu_load").attributes["unit_of_measurement"] == "%"
+
+
+async def test_a_box_that_tells_neither_cpu_load_nor_ram_is_not_asked_again(
+    hass, fake_client, entry
+):
+    fake_client.utilization = None
+    coordinator = await _setup(hass, entry)
+    for _ in range(12):
+        await _poll(hass, coordinator)
+
+    assert coordinator.util_supported is False
+    assert fake_client.calls.count(("utilization",)) == 1
+    assert er.async_get(hass).async_get("sensor.fritz_network_cpu_load") is None

@@ -45,6 +45,7 @@ async def async_get_config_entry_diagnostics(
             "services": _services(coordinator),
             "upnp_enabled": coordinator.upnp_enabled,
             "cpu_temperature_supported": coordinator.cpu_supported,
+            "utilization_supported": coordinator.util_supported,
             "uptime_known": coordinator.box_boot is not None,
             "wifi_networks": sorted(coordinator.data.wifi or ()),
             # the repeaters controlled from here, without their addresses

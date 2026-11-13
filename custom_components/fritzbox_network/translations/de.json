@@ -275,6 +275,12 @@
       },
       "cpu_temperature": {
         "name": "CPU-Temperatur"
+      },
+      "cpu_load": {
+        "name": "CPU-Auslastung"
+      },
+      "ram_usage": {
+        "name": "RAM-Auslastung"
       }
     },
     "select": {

@@ -39,6 +39,7 @@ from .const import (
     KEY_BOX_UPTIME,
     KEY_CLIENTS,
     KEY_CONNECTION_TYPE,
+    KEY_CPU_LOAD,
     KEY_CPU_TEMPERATURE,
     KEY_DEVICES_OFFLINE,
     KEY_DEVICES_ONLINE,
@@ -75,6 +76,7 @@ from .const import (
     KEY_RADIO_CHANNEL,
     KEY_RADIO_NOISE,
     KEY_RADIO_UTILIZATION,
+    KEY_RAM_USAGE,
     KEY_SIGNAL_STRENGTH,
     KEY_SSID,
     KEY_UPLINK,
@@ -200,6 +202,7 @@ async def async_setup_entry(
     _async_setup_vpn(coordinator, entry, async_add_entities)
     _async_setup_dhcp_pool(coordinator, entry, async_add_entities)
     _async_setup_cpu_temperature(coordinator, entry, async_add_entities)
+    _async_setup_utilization(coordinator, entry, async_add_entities)
     for repeater in coordinator.repeaters.values():
         _async_setup_repeater(repeater, entry, async_add_entities)
 
@@ -251,6 +254,32 @@ def _async_setup_cpu_temperature(
             return
         added = True
         async_add_entities([FritzNetworkCpuTemperature(coordinator)])
+
+    _add()
+    entry.async_on_unload(coordinator.async_add_listener(_add))
+
+
+@callback
+def _async_setup_utilization(
+    coordinator: FritzNetworkCoordinator,
+    entry: FritzNetworkConfigEntry,
+    async_add_entities: AddConfigEntryEntitiesCallback,
+) -> None:
+    """CPU load and RAM use, once the box has shown that it tells them."""
+    added = False
+
+    @callback
+    def _add() -> None:
+        nonlocal added
+        if added or not coordinator.util_supported:
+            return
+        added = True
+        async_add_entities(
+            [
+                FritzNetworkUtilization(coordinator, KEY_CPU_LOAD, "cpu"),
+                FritzNetworkUtilization(coordinator, KEY_RAM_USAGE, "ram"),
+            ]
+        )
 
     _add()
     entry.async_on_unload(coordinator.async_add_listener(_add))
@@ -1035,6 +1064,32 @@ class FritzNetworkCpuTemperature(_BoxSensor):
     @property
     def native_value(self) -> int | None:
         return self.coordinator.cpu_temperature
+
+
+class FritzNetworkUtilization(_BoxSensor):
+    """The CPU load or the RAM use of the box in percent; off by default, read only while on."""
+
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(self, coordinator: FritzNetworkCoordinator, key: str, field: str) -> None:
+        super().__init__(coordinator, key)
+        self._field = field
+
+    async def async_added_to_hass(self) -> None:
+        await super().async_added_to_hass()
+        # an entity that is off costs no request: only an entity that is on asks for the values
+        self.async_on_remove(self.coordinator.async_want_utilization())
+
+    @property
+    def available(self) -> bool:
+        return super().available and self._field in self.coordinator.utilization
+
+    @property
+    def native_value(self) -> int | None:
+        return self.coordinator.utilization.get(self._field)
 
 
 class FritzNetworkRepeaterUptime(FritzNetworkRepeaterEntity, SensorEntity):

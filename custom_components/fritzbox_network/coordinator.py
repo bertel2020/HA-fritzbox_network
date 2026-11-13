@@ -162,6 +162,12 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         self.cpu_temperature: int | None = None
         self._cpu_demand = 0
         self._cpu_stale = False
+        # CPU load and RAM from one page: whether the box has them (None = not asked yet), the
+        # last values and how many entities want them
+        self.util_supported: bool | None = None
+        self.utilization: dict[str, int] = {}
+        self._util_demand = 0
+        self._util_stale = False
         self.note_uptime(getattr(client, "uptime", None))
         # The first poll reads only what the devices and the internet card need, so the setup is
         # not held up by the web interface of the box; a second poll right after it reads the rest.
@@ -290,6 +296,40 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             self._cpu_demand -= 1
 
         return _release
+
+    @callback
+    def async_want_utilization(self) -> Callable[[], None]:
+        """An entity wants CPU load or RAM: read from the next poll on, until it is gone."""
+        self._util_demand += 1
+        self._util_stale = True
+
+        @callback
+        def _release() -> None:
+            self._util_demand -= 1
+
+        return _release
+
+    def _fetch_utilization(self) -> None:
+        """CPU load and RAM, if the box tells them and an entity wants them (as the temperature)."""
+        if self.util_supported is False:
+            return
+        probing = self.util_supported is None
+        if not probing and not (
+            self._util_demand and (self._util_stale or self._polls % INTERNET_DETAIL_POLLS == 0)
+        ):
+            return
+        try:
+            found = self.client.get_utilization()
+        except (*_FETCH_ERRORS, requests.RequestException, PermissionError, TypeError) as err:
+            _LOGGER.debug("CPU load and RAM unavailable: %s", err)
+            return
+        self._util_stale = False
+        if not found:
+            if probing:
+                self.util_supported = False
+            return
+        self.util_supported = True
+        self.utilization = found
 
     def _fetch_cpu_temperature(self) -> None:
         """The CPU temperature, if the box has the sensor and an entity wants it.
@@ -566,6 +606,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             self._fetch_wifi()
             self._fetch_port_rules()
             self._fetch_cpu_temperature()
+            self._fetch_utilization()
             self._fetch_reservations([h for h in hosts if h.ip and not h.guest])
             self._polls += 1
         return hosts, mesh, internet, guest, vpn, routes

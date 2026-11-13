@@ -163,6 +163,8 @@ KEY_DSL_CRC_ERRORS = "dsl_crc_errors"
 
 KEY_BOX_UPTIME = "box_uptime"
 KEY_CPU_TEMPERATURE = "cpu_temperature"
+KEY_CPU_LOAD = "cpu_load"
+KEY_RAM_USAGE = "ram_usage"
 KEY_LAST_UPDATE = "last_update"
 KEY_FAILED_POLLS = "failed_polls"
 KEY_MESH_STATUS = "mesh_status"

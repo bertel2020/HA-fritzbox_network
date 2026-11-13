@@ -88,7 +88,7 @@ async def test_actions_need_the_right_to_change_settings(hass, fake_client, entr
                 blocking=True,
             )
     # reads of the poll are no action: nothing was written
-    reads = {("cpu_temperature",), ("read_uptime",)}
+    reads = {("cpu_temperature",), ("utilization",), ("read_uptime",)}
     assert [call for call in fake_client.calls if call not in reads] == []
 
 

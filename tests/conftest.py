@@ -80,6 +80,8 @@ class FakeClient:
     # the CPU temperature the web interface tells (None: the box has no sensor)
     cpu_temperature: int | None = 72
     cpu_error = False
+    # the CPU load and the RAM use the energy monitor page tells (None: the box has none)
+    utilization: dict[str, int] | None = {"cpu": 12, "ram": 37}
     # the picture of the guest QR code (not a real PNG: the entity passes the bytes on)
     qr = b"\x89PNG-1"
 
@@ -336,6 +338,12 @@ class FakeClient:
         if self.cpu_error:
             raise OSError("no answer")
         return self.cpu_temperature
+
+    def get_utilization(self) -> dict[str, int] | None:
+        self.calls.append(("utilization",))
+        if self.cpu_error:
+            raise OSError("no answer")
+        return self.utilization
 
     def read_uptime(self) -> int | None:
         self.calls.append(("read_uptime",))

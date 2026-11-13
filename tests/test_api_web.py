@@ -198,15 +198,14 @@ def _cpu_client(answers):
     client = _client()
     client._web_sid = "sid1"
     client._web_login = MagicMock(return_value="sid2")
-    client._web_post = MagicMock(side_effect=answers)
+    client._web_get = MagicMock(side_effect=answers)
     return client
 
 
 def test_the_cpu_temperature_is_the_newest_value():
     client = _cpu_client(['{"CPUTEMP": "72,72,71"}'])
     assert client.get_cpu_temperature() == 72
-    assert client._web_post.call_args.args[0] == "/query.lua"
-    assert client._web_post.call_args.args[1]["CPUTEMP"] == "cpu:status/StatTemperature"
+    assert "CPUTEMP=cpu:status/StatTemperature" in client._web_get.call_args.args[0]
 
 
 def test_a_box_without_the_sensor_says_none_after_one_new_session():
@@ -222,10 +221,27 @@ def test_a_dropped_session_is_renewed_once_for_the_temperature():
     client = _cpu_client(['{"other": 1}', '{"CPUTEMP": "65,65"}'])
     assert client.get_cpu_temperature() == 65
     client._web_login.assert_called_once()
-    assert client._web_post.call_args.args[1]["sid"] == "sid2"  # in the body, not in the URL
+    assert "sid=sid2" in client._web_get.call_args.args[0]
 
 
 def test_an_answer_that_is_no_json_is_an_error_after_the_second_try():
     client = _cpu_client(["<html>", "<html>"])
     with pytest.raises(ValueError):
         client.get_cpu_temperature()
+
+
+def test_cpu_load_and_ram_are_read_from_the_newest_value_of_the_energy_monitor_page():
+    from custom_components.fritzbox_network.api import parse_utilization
+
+    page = {
+        "data": {
+            "cpuutil": {"series": [["17", "20", "24"], ["0", "0", "0"]]},
+            "ramusage": {"series": [[28, 28], [35, 35], [37, 38]]},
+        }
+    }
+    assert parse_utilization(page) == {"cpu": 24, "ram": 38}
+    # one of the two missing or out of range: the other one stays
+    assert parse_utilization({"data": {"cpuutil": page["data"]["cpuutil"]}}) == {"cpu": 24}
+    assert parse_utilization({"data": {"ramusage": {"series": [[250]]}}}) is None
+    assert parse_utilization({"data": {}}) is None
+    assert parse_utilization([]) is None

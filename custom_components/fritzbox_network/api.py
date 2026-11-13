@@ -136,6 +136,27 @@ def web_login_response(challenge: str, password: str, *, allow_md5: bool = True)
     return f"{challenge}-{digest}"
 
 
+def parse_utilization(page: Any) -> dict[str, int] | None:
+    """CPU load and RAM use in percent from the page ``ecoStat``; None where it has neither.
+
+    The page holds a series for each, the newest value last: the load in the first series of
+    ``cpuutil``, the RAM in the last of the three of ``ramusage`` (they are stacked, so the last
+    is what is used altogether).
+    """
+    data = page.get("data") if isinstance(page, dict) else None
+    if not isinstance(data, dict):
+        return None
+    found: dict[str, int] = {}
+    for key, section, index in (("cpu", "cpuutil", 0), ("ram", "ramusage", -1)):
+        try:
+            value = int(float(data[section]["series"][index][-1]))
+        except (KeyError, IndexError, TypeError, ValueError):
+            continue
+        if 0 <= value <= 100:
+            found[key] = value
+    return found or None
+
+
 def _port_rule(row: dict[str, Any]) -> PortRule | None:
     """A forwarding from the answer of the box; None if it is not one that can be entered again."""
     try:
@@ -618,10 +639,8 @@ class FritzNetworkClient:
                 sid = self._web_sid or self._web_login()
                 try:
                     data = json.loads(
-                        # a POST: the session id stays out of the URL and so out of the logs
-                        self._web_post(
-                            "/query.lua", {"sid": sid, "CPUTEMP": "cpu:status/StatTemperature"}
-                        )
+                        # a GET: the box answers a POST with an empty list (checked on a 7590 AX)
+                        self._web_get(f"/query.lua?sid={sid}&CPUTEMP=cpu:status/StatTemperature")
                     )
                 except (requests.RequestException, ValueError):
                     self._web_sid = None
@@ -634,6 +653,11 @@ class FritzNetworkClient:
                     return int(first) if first.isdigit() and int(first) > 0 else None
                 self._web_sid = None
         return None
+
+    def get_utilization(self) -> dict[str, int] | None:
+        """CPU load and RAM use in percent from the web interface; None where it has none."""
+        with self._lock:
+            return parse_utilization(self._web_data(page="ecoStat"))
 
     def install_firmware(self) -> None:
         """Start the installation of the firmware the box offers; the box restarts by itself."""
