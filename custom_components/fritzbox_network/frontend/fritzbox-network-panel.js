@@ -1346,7 +1346,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const t = this._t;
     this._set(
       "diagnose-view",
-      `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(t.diag.title)}</h1><p class="lead">${escapeHtml(t.diag.lead)}</p></div>` +
+      `<div class="phead"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(t.diag.title)}</h1></div>` +
         renderConnection(this._state.check, this._state.latency, { t, language: this._hass?.language, now: Date.now() / 1000, range: this._state.latencyRange }) +
         `<div class="diagrow">${renderRadio(this._state.data, { t, language: this._hass?.language })}${renderLog(this._state.log, { t, group: this._state.logGroup, kind: this._state.logKind })}</div>` +
         renderCapture(this._state.capture, {
