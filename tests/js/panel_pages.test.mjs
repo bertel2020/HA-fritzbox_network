@@ -237,8 +237,8 @@ test("reboot asks with the list of what goes away, then calls box/reboot and sta
   assert.match(dialog.innerHTML, /<li>dieses Panel, falls Home Assistant über die Box angebunden ist<\/li>/);
   dialog.querySelector("#dlg-yes").onclick();
   await asked;
-  assert.deepEqual(typesOf(calls), ["box/info", "box/reboot"]);
-  assert.deepEqual(calls[1], { type: "fritzbox_network/box/reboot", entry_id: "e1" });
+  assert.deepEqual(typesOf(calls), ["box/info", "box/history", "box/reboot"]);
+  assert.deepEqual(calls[2], { type: "fritzbox_network/box/reboot", entry_id: "e1" });
   assert.equal(p._state.boxRestart.phase, "down");
   assert.match(p._html["box-view"], /Die Box startet neu/);
   clearTimeout(p._restartTimer);
@@ -246,7 +246,7 @@ test("reboot asks with the list of what goes away, then calls box/reboot and sta
   const again = p._interrupt("reconnect");
   root.els["#dialog"].querySelector("#dlg-no").onclick();
   await again;
-  assert.equal(calls.length, 2);
+  assert.equal(calls.length, 3);
 });
 
 test("reconnect calls internet/reconnect and shows the address before and now", async () => {
@@ -255,7 +255,7 @@ test("reconnect calls internet/reconnect and shows the address before and now", 
   const asked = p._interrupt("reconnect");
   root.els["#dialog"].querySelector("#dlg-yes").onclick();
   await asked;
-  assert.deepEqual(typesOf(calls), ["box/info", "internet/reconnect"]);
+  assert.deepEqual(typesOf(calls), ["box/info", "box/history", "internet/reconnect"]);
   assert.match(p._html["box-view"], /IPv4 vorher<\/dt><dd class="mono">203\.0\.113\.7/);
   p._state.data.internet.external_ipv4 = "203.0.113.99";
   p._renderBoxPage();
@@ -761,4 +761,78 @@ test("the box page shows the CPU load and the RAM use, and says where the box te
   assert.match(html, /RAM-Auslastung<\/span><b>37 %<\/b>/);
   const none = boxPage.renderBoxPage({ ...info, cpu_load: null, ram_usage: null }, boxCtx());
   assert.match(none, /RAM-Auslastung<\/span><b class="na">nicht gemeldet<\/b><small>Diese Box nennt weder Auslastung noch RAM\.<\/small>/);
+});
+
+// ---------- box: course of load, temperature and RAM ----------
+
+const historyImport = await import(`${base}panel-box-history.js`);
+const HOUR = 3600;
+const points = (n, step, fn) => Array.from({ length: n }, (_, i) => [1_800_000_000 - (n - 1 - i) * step, ...fn(i)]);
+const day = { range: "day", step: 360, enabled: false, interval: 300, since: null, points: points(240, 360, (i) => [10 + (i % 7), 70 + (i % 3), 37]) };
+
+test("the box page shows three charts in the order of the tiles, with the span switch and the recording switch", () => {
+  const html = boxPage.renderBoxPage(info, boxCtx({ history: day, historyRange: "day" }));
+  const labels = [...html.matchAll(/<section class="card bhm hm-(\w+)">/g)].map((m) => m[1]);
+  assert.deepEqual(labels, ["cpu", "temp", "ram"]);
+  assert.match(html, /data-act="box-history-range" data-range="day" aria-pressed="true">Tag/);
+  assert.match(html, /data-act="box-history-range" data-range="month" aria-pressed="false">Monat/);
+  assert.match(html, /role="switch" aria-checked="false"[^>]*data-act="box-history-switch"[^>]*data-on="1"/);
+  assert.match(html, /Aufzeichnung aus/);
+  assert.match(html, /class="plot" role="slider"[^>]*data-mode="time" data-unit="°C" data-range="day"/);
+  assert.match(html, /<div class="bhstats"><span>Min <b>10 %<\/b>/);
+  // the tiles: load, temperature, RAM in the second row
+  const tiles = [...html.matchAll(/<span class="label">([^<]+)<\/span>/g)].map((m) => m[1]);
+  assert.deepEqual(tiles.slice(tiles.indexOf("FRITZ!OS"), tiles.indexOf("FRITZ!OS") + 4), ["FRITZ!OS", "CPU-Auslastung", "CPU-Temperatur", "RAM-Auslastung"]);
+});
+
+test("a week without a recording says how to start it; with one it says since when", () => {
+  const empty = { range: "week", step: 1800, enabled: false, interval: 300, since: null, points: points(336, 1800, () => [null, null, null]) };
+  assert.match(boxPage.renderBoxPage(info, boxCtx({ history: empty, historyRange: "week" })), /Schalte die Aufzeichnung ein/);
+  const running = { ...empty, enabled: true, since: 1_799_000_000, points: points(336, 1800, (i) => (i > 300 ? [12, 72, 37] : [null, null, null])) };
+  const html = boxPage.renderBoxPage(info, boxCtx({ history: running, historyRange: "week" }));
+  assert.match(html, /Aufzeichnung seit /);
+  assert.match(html, /Aufzeichnung an · alle 5 Min\./);
+  assert.match(html, /data-range="week"/);
+});
+
+test("the chart pieces: an axis that widens, a summary without gaps, one path per run of values", () => {
+  const temp = historyImport.HISTORY_METRICS[1];
+  assert.deepEqual(historyImport.historyAxis(temp, [70, 72]), { lo: 60, hi: 90 });
+  assert.deepEqual(historyImport.historyAxis(temp, [55, 96]), { lo: 50, hi: 100 });
+  assert.deepEqual(historyImport.historySummary([null, 10, 20, null, 30]), { min: 10, avg: 20, max: 30, last: 30 });
+  assert.deepEqual(historyImport.historySummary([null]), { min: null, avg: null, max: null, last: null });
+  const paths = historyImport.historyPaths([null, 50, 60, null, 70], { lo: 0, hi: 100 });
+  assert.equal(paths.line.split("M").length - 1, 2);
+  assert.equal(paths.area.split("M").length - 1, 2);
+  assert.equal(historyImport.historyPaths([null, null], { lo: 0, hi: 100 }).line, "");
+});
+
+test("the history is loaded after the box, a span change loads it again, the switch sends and reloads", async () => {
+  const { p, calls } = makePanel({ "box/info": info, "box/history": (msg) => ({ ...day, range: msg.range }), "box/history/switch": {} }, "box");
+  await p._loadBox();
+  await Promise.resolve();
+  assert.equal(p._state.boxHistory.range, "day");
+
+  await p._onBoxClick("box-history-range", { range: "week" });
+  await new Promise((resolve) => setTimeout(resolve));
+  assert.equal(p._state.boxHistoryRange, "week");
+  assert.equal(p._state.boxHistory.range, "week");
+  assert.deepEqual(calls.filter((c) => c.type.endsWith("box/history")).map((c) => c.range), ["day", "week"]);
+
+  await p._onBoxClick("box-history-switch", { on: "1" });
+  assert.deepEqual(typesOf(calls).slice(-2), ["box/history/switch", "box/history"]);
+  assert.equal(calls.find((c) => c.type.endsWith("history/switch")).enabled, true);
+
+  // an answer for a span that is no longer chosen is dropped
+  await p._onBoxClick("box-history-range", { range: "bogus" });
+  assert.equal(p._state.boxHistoryRange, "week");
+});
+
+test("a failing history says so and the rest of the page stays", async () => {
+  const { p } = makePanel({ "box/info": info, "box/history": new Error("no") }, "box");
+  await p._loadBox();
+  await new Promise((resolve) => setTimeout(resolve));
+  assert.equal(p._state.boxHistory, "failed");
+  assert.match(p._html["box-view"], /Der Verlauf konnte nicht gelesen werden/);
+  assert.match(p._html["box-view"], /FRITZ!Box 7590 AX/);
 });

@@ -58,6 +58,7 @@ from .repairs import (
 )
 from .repeater import RepeaterCoordinator, repeater_macs
 from .services import async_register as async_register_services
+from .utilization import UtilizationMonitor
 from .vendor import async_load as async_load_vendors
 from .websocket_api import async_register as async_register_websocket
 
@@ -140,6 +141,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
     coordinator.latency = await LatencyMonitor.async_load(
         hass, entry.entry_id, entry.data[CONF_HOST], box_port(entry.data)
     )
+    coordinator.utilization_history = await UtilizationMonitor.async_load(
+        hass, entry.entry_id, client
+    )
     entry.runtime_data = coordinator
     captures = await CaptureManager.async_load(hass, entry.entry_id, client)
     hass.data.setdefault(KEY_CAPTURES, {})[entry.entry_id] = captures
@@ -149,6 +153,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
     entry.async_on_unload(history.async_flush)
     entry.async_on_unload(coordinator.addresses.async_flush)
     entry.async_on_unload(coordinator.latency.async_flush)
+    entry.async_on_unload(coordinator.utilization_history.async_flush)
     entry.async_on_unload(entry.add_update_listener(_async_update_listener))
     entry.async_on_unload(
         coordinator.async_add_listener(lambda: async_update_internet_issues(hass, entry))
@@ -275,7 +280,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry
 
 async def async_remove_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
     """Delete what the integration kept for the box: histories, address notes and captures."""
-    for name in ("history", "latency", "addresses", "capture"):
+    for name in ("history", "latency", "utilization", "addresses", "capture"):
         await Store(hass, 1, f"{DOMAIN}.{name}.{entry.entry_id}").async_remove()
     captures = Path(hass.config.path(DIR_NAME)) / entry.entry_id
     await hass.async_add_executor_job(shutil.rmtree, captures, True)

@@ -287,6 +287,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       check: null,
       latency: null,
       latencyRange: "day",
+      boxHistory: null,
+      boxHistoryRange: "day",
       log: null,
       logGroup: "",
       logKind: null,
@@ -988,7 +990,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     Object.assign(this._state, {
       history: null, traffic: null, trafficYear: null, trend: null, ip: null,
       vpnHistory: null, addr: addrState(), capture: null, captureSummary: null,
-      check: null, latency: null, log: null, routesSel: null, routesFixed: {}, wlanError: "",
+      check: null, latency: null, boxHistory: null, log: null, routesSel: null, routesFixed: {}, wlanError: "",
     });
     for (const busy of ["_historyBusy", "_trafficYearBusy", "_vpnHistoryBusy", "_trendBusy", "_ipBusy", "_fixedBusy"]) this[busy] = false;
     this._historyAt = null;
@@ -1807,7 +1809,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     } else if (ds.act === "reconnect" || ds.act === "reboot") {
       return this._interrupt(ds.act);
     } else if (ds.act?.startsWith("box-")) {
-      return this._onBoxClick(ds.act);
+      return this._onBoxClick(ds.act, ds);
     } else if (ds.act?.startsWith("wlan-")) {
       return this._onWlanClick(ds);
     } else if (ds.act?.startsWith("mig-")) {
@@ -1931,6 +1933,29 @@ class FritzboxNetworkPanel extends HTMLElement {
       state.box = "failed";
     }
     this._update();
+    if (state.box !== "failed") this._loadBoxHistory();
+  }
+
+  /** The course of load, temperature and RAM of the span chosen: the day from the box, week and month recorded. */
+  async _loadBoxHistory() {
+    const state = this._state;
+    const range = state.boxHistoryRange;
+    try {
+      const history = await this._ws("box/history", { range });
+      if (state.boxHistoryRange === range) state.boxHistory = history;
+    } catch {
+      if (state.boxHistoryRange === range) state.boxHistory = "failed";
+    }
+    this._update();
+  }
+
+  async _switchBoxHistory(enabled) {
+    try {
+      await this._ws("box/history/switch", { enabled });
+      await this._loadBoxHistory();
+    } catch (err) {
+      showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
+    }
   }
 
   _renderBoxPage() {
@@ -1944,6 +1969,8 @@ class FritzboxNetworkPanel extends HTMLElement {
         internet: state.data?.internet ?? null,
         restart: state.boxRestart,
         reconnect: state.boxReconnect,
+        history: state.boxHistory,
+        historyRange: state.boxHistoryRange,
       })
     );
   }
@@ -1971,8 +1998,18 @@ class FritzboxNetworkPanel extends HTMLElement {
     }, RESTART_POLL_MS);
   }
 
-  async _onBoxClick(act) {
+  async _onBoxClick(act, ds = {}) {
     const state = this._state;
+    if (act === "box-history-range") {
+      if (["day", "week", "month"].includes(ds.range) && ds.range !== state.boxHistoryRange) {
+        state.boxHistoryRange = ds.range;
+        state.boxHistory = null;
+        this._update();
+        this._loadBoxHistory();
+      }
+      return;
+    }
+    if (act === "box-history-switch") return this._switchBoxHistory(ds.on === "1");
     if (act === "box-retry") {
       state.box = null;
       return this._loadBox();

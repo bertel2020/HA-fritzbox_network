@@ -4,6 +4,7 @@ import { escapeHtml, formatBytes, formatDuration, hintNote } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { accessLabel } from "./panel-internet.js";
+import { renderHistory } from "./panel-box-history.js";
 
 /** After this long without an answer the restart counts as failed and the panel stops asking. */
 export const RESTART_GIVE_UP_MS = 600000;
@@ -76,12 +77,12 @@ function hero(info, ctx) {
     <div class="chead"><span class="label">${escapeHtml(t.box)}</span>${stat}</div>
     <div class="ihead"><span class="ico">${ic("router")}</span>
       <span class="who"><b>${escapeHtml(info.model ?? t.box)}</b>${sub ? `<small>${escapeHtml(sub)}</small>` : ""}</span></div>
-    <div class="tiles">
+    <div class="tiles tiles3">
       ${tile(b.uptime, `<b>${escapeHtml(down ? "–" : formatDuration(uptime, t.inet.units))}</b>`, b.noRestart)}
       ${tile(b.lastRestart, `<b>${escapeHtml(last)}</b>`, back && restart.backAt ? fill(b.lastRestartTook, { time: minSec(restart.backAt - restart.requestedAt) }) : b.noReason)}
       ${tile(b.firmware, `<b>${escapeHtml(info.firmware ?? "–")}</b>`)}
-      ${temp}
       ${usage(b.cpuLoad, info.cpu_load)}
+      ${temp}
       ${usage(b.ramUsage, info.ram_usage)}
     </div></section>`;
 }
@@ -177,5 +178,5 @@ export function renderBoxPage(info, ctx) {
   const late = ctx.restart?.phase === "late"
     ? `<section class="card sec hints" aria-label="${escapeHtml(b.hintsLabel)}"><p class="hintline bad"><span aria-hidden="true">${ic("alert")}</span><span>${escapeHtml(b.restart.late)}</span></p></section>`
     : "";
-  return `${head}${late}${hero(info, ctx)}<div class="two">${actionsCard(info, ctx)}${lineCard(info, ctx)}</div>`;
+  return `${head}${late}${hero(info, ctx)}${renderHistory(ctx.history, ctx)}<div class="two">${actionsCard(info, ctx)}${lineCard(info, ctx)}</div>`;
 }

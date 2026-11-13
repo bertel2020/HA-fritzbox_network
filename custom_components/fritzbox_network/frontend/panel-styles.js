@@ -690,6 +690,34 @@ export const PANEL_CSS = `
   .coursectl { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .coursectl .seg button { min-height: 32px; text-align: center; border-top: 0; }
   .swstate { color: var(--muted); font-size: 13px; }
+  .tiles.tiles3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  @container app (max-width: 560px) { .tiles.tiles3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .bhist { display: grid; gap: 12px; }
+  .bhist .vhead { display: flex; justify-content: space-between; align-items: end; gap: 10px 16px; flex-wrap: wrap; }
+  .bhist .vhead small { display: block; margin-top: 2px; }
+  .bhgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  @container app (max-width: 720px) { .bhgrid { grid-template-columns: minmax(0, 1fr); } }
+  .bhm .bhhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .bhm .bhnow { font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bhm.hm-cpu .bhnow { color: var(--accent); }
+  .bhm.hm-temp .bhnow { color: var(--warn); } .bhm.hm-ram .bhnow { color: var(--up); }
+  .bhplot { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 6px; margin-top: 10px; }
+  .bhplot .bhy { display: flex; flex-direction: column; justify-content: space-between; font-size: 10px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+  .bhplot .plot { background: var(--soft); border-radius: 10px; cursor: crosshair; }
+  .hspark { display: block; width: 100%; height: 100px; border-radius: 10px; }
+  .hspark .hgrid line { stroke: var(--line); stroke-width: 1; vector-effect: non-scaling-stroke; stroke-dasharray: 3 3; }
+  .hspark .harea { opacity: .14; stroke: none; }
+  .hspark .hline { fill: none; stroke-width: 1.6; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+  .hm-cpu .harea { fill: var(--accent); } .hm-cpu .hline { stroke: var(--accent); }
+  .hm-temp .harea { fill: var(--warn); } .hm-temp .hline { stroke: var(--warn); }
+  .hm-ram .harea { fill: var(--up); } .hm-ram .hline { stroke: var(--up); }
+  .bhm .bhx { display: flex; justify-content: space-between; font-size: 10px; color: var(--muted); margin: 3px 0 0 32px; }
+  .bhm .bhstats { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+  .bhm .bhstats b { color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .bhist .coursectl .seg { grid-auto-flow: column; grid-template-columns: none; }
+  .bhist .coursectl .seg button { border-top: 0; text-align: center; }
+  .bhgrid > .card { margin: 0; align-self: stretch; }
+  .bhist .bhnote { background: var(--accent-soft); border-radius: 12px; padding: 10px 14px; font-size: 13px; margin: 0; }
   .swstate.on { color: var(--text); }
   .latrow.ghost { opacity: .55; }
   .latcta { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: var(--accent-soft); font-size: 13px; }

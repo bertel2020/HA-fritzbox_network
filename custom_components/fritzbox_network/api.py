@@ -157,6 +157,38 @@ def parse_utilization(page: Any) -> dict[str, int] | None:
     return found or None
 
 
+def parse_utilization_series(page: Any) -> dict[str, list[int | None]] | None:
+    """The whole course of the CPU load, the temperature and the RAM use from ``ecoStat``.
+
+    {"cpu": [...], "temp": [...], "ram": [...]}, each oldest first, a value that is not a number
+    in its range is None; a part the page does not have is left out, None where it has none.
+    The RAM has fewer values than the others (24 against 240 on a 7590 AX).
+    """
+    data = page.get("data") if isinstance(page, dict) else None
+    if not isinstance(data, dict):
+        return None
+    found: dict[str, list[int | None]] = {}
+    for key, section, index, low, high in (
+        ("cpu", "cpuutil", 0, 0, 100),
+        ("temp", "cputemp", 0, 1, 130),
+        ("ram", "ramusage", -1, 0, 100),
+    ):
+        try:
+            raw = list(data[section]["series"][index])
+        except (KeyError, IndexError, TypeError):
+            continue
+        values: list[int | None] = []
+        for item in raw:
+            try:
+                number = int(float(item))
+            except (TypeError, ValueError):
+                number = None
+            values.append(number if number is not None and low <= number <= high else None)
+        if values:
+            found[key] = values
+    return found or None
+
+
 def _port_rule(row: dict[str, Any]) -> PortRule | None:
     """A forwarding from the answer of the box; None if it is not one that can be entered again."""
     try:
@@ -658,6 +690,11 @@ class FritzNetworkClient:
         """CPU load and RAM use in percent from the web interface; None where it has none."""
         with self._lock:
             return parse_utilization(self._web_data(page="ecoStat"))
+
+    def get_utilization_history(self) -> dict[str, list[int | None]] | None:
+        """The course of CPU load, temperature and RAM the box keeps; None where it has none."""
+        with self._lock:
+            return parse_utilization_series(self._web_data(page="ecoStat"))
 
     def install_firmware(self) -> None:
         """Start the installation of the firmware the box offers; the box restarts by itself."""

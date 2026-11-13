@@ -72,6 +72,7 @@ from .models import (
 )
 from .repairs import async_update_stale_issue, last_online
 from .routes import home_network
+from .utilization import INTERVAL as UTILIZATION_INTERVAL, RANGES as HISTORY_RANGES, day_points
 from .wifi_qr import wifi_qr_png
 
 COMMAND = f"{DOMAIN}/subscribe_topology"
@@ -83,6 +84,8 @@ RECONNECT_COMMAND = f"{DOMAIN}/internet/reconnect"
 REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
 MIGRATE_SCAN_COMMAND = f"{DOMAIN}/migrate/scan"
 BOX_INFO_COMMAND = f"{DOMAIN}/box/info"
+BOX_HISTORY_COMMAND = f"{DOMAIN}/box/history"
+BOX_HISTORY_SWITCH_COMMAND = f"{DOMAIN}/box/history/switch"
 WLAN_LIST_COMMAND = f"{DOMAIN}/wlan/list"
 WLAN_SWITCH_COMMAND = f"{DOMAIN}/wlan/switch"
 WLAN_SECRET_COMMAND = f"{DOMAIN}/wlan/guest/secret"
@@ -1195,6 +1198,70 @@ async def ws_box_info(
     )
 
 
+def _history_state(coordinator: FritzNetworkCoordinator) -> dict[str, Any]:
+    monitor = coordinator.utilization_history
+    return {
+        "enabled": monitor.enabled if monitor else False,
+        "interval": int(UTILIZATION_INTERVAL.total_seconds()),
+        "since": monitor.since if monitor else None,
+    }
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): BOX_HISTORY_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("range"): vol.In(list(HISTORY_RANGES)),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+@_box_errors
+async def ws_box_history(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """CPU load, temperature and RAM over a day (from the box), a week or a month (recorded).
+
+    ``points`` are [epoch seconds, cpu %, temperature °C, ram %], None where there is no value.
+    """
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    coordinator = found[1]
+    span = msg["range"]
+    monitor = coordinator.utilization_history
+    if span == "day":
+        series = await hass.async_add_executor_job(coordinator.client.get_utilization_history)
+        points = day_points(series, time.time()) if series else []
+    else:
+        points = monitor.points(span) if monitor else []
+    _, step = HISTORY_RANGES[span]
+    connection.send_result(
+        msg["id"], {"range": span, "step": step, "points": points, **_history_state(coordinator)}
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): BOX_HISTORY_SWITCH_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("enabled"): bool,
+    }
+)
+@websocket_api.require_admin
+@callback
+def ws_box_history_switch(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Start or stop recording CPU load, temperature and RAM."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    if found[1].utilization_history is None:
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "Nothing to record with")
+        return
+    found[1].utilization_history.set_enabled(msg["enabled"])
+    connection.send_result(msg["id"], _history_state(found[1]))
+
+
 async def _wlan_state(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) -> dict[str, Any]:
     """The Wi-Fi networks of the box and the guest network, read now."""
     networks = await hass.async_add_executor_job(coordinator.client.get_wifi_networks)
@@ -1749,6 +1816,8 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_wlan_secret)
     websocket_api.async_register_command(hass, ws_wlan_password)
     websocket_api.async_register_command(hass, ws_latency)
+    websocket_api.async_register_command(hass, ws_box_history)
+    websocket_api.async_register_command(hass, ws_box_history_switch)
     websocket_api.async_register_command(hass, ws_latency_switch)
     websocket_api.async_register_command(hass, ws_device_log)
     websocket_api.async_register_command(hass, ws_check_connection)

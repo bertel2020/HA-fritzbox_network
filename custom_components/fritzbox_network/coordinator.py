@@ -90,6 +90,7 @@ from .models import (
     parse_vpn,
 )
 from .routes import RouteRefused, home_network, validate_route
+from .utilization import UtilizationMonitor
 from .vendor import vendor_of
 
 _LOGGER = logging.getLogger(__name__)
@@ -133,6 +134,7 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         # what the user noted about the address space; set up with the entry
         self.addresses: AddressNotes | None = None
         self.latency: LatencyMonitor | None = None
+        self.utilization_history: UtilizationMonitor | None = None
         # Unfiltered host list: the options flow offers it for selection.
         self.all_hosts: dict[str, Host] = {}
         # None until the first poll: what the box lists then is not new.

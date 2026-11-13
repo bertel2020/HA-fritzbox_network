@@ -339,6 +339,18 @@ class FakeClient:
             raise OSError("no answer")
         return self.cpu_temperature
 
+    def get_utilization_history(self) -> dict[str, list[int | None]] | None:
+        self.calls.append(("utilization_history",))
+        if self.cpu_error:
+            raise OSError("no answer")
+        if self.utilization is None:
+            return None
+        return {
+            "cpu": [10, 20, self.utilization["cpu"]],
+            "temp": [70, 71, self.cpu_temperature or 72],
+            "ram": [30, self.utilization["ram"]],
+        }
+
     def get_utilization(self) -> dict[str, int] | None:
         self.calls.append(("utilization",))
         if self.cpu_error:
