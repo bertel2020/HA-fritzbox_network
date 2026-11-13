@@ -1,7 +1,8 @@
 """Switching a static route: in the panel and by an action."""
 
+import asyncio
 import ipaddress
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
 import pytest
@@ -575,3 +576,38 @@ async def test_the_switch_of_a_route_that_vanished_while_home_assistant_was_off_
 
     assert registry.async_get(stale.entity_id) is None
     assert _entity(hass, coordinator, "10.8.0.0/24")  # the ones that are there stay
+
+
+async def test_a_poll_running_during_a_change_does_not_bring_the_old_routes_back(
+    hass, fake_client, entry, routes
+):
+    coordinator = await _setup(hass, entry)
+    fetch = coordinator._fetch
+    changed = [r for r in routes if r["network"] != "10.8.0.0/24"]
+
+    def fetch_while_a_route_is_deleted():
+        result = fetch()  # the poll read the routes before the change
+        asyncio.run_coroutine_threadsafe(_store(changed), hass.loop).result()
+        return result
+
+    async def _store(new):
+        coordinator._store_routes(new)
+
+    coordinator._routes_force = True
+    with patch.object(coordinator, "_fetch", fetch_while_a_route_is_deleted):
+        await coordinator.async_refresh()
+    await hass.async_block_till_done()
+
+    assert [r["network"] for r in coordinator.data.routes] == ["172.16.0.0/16"]
+
+
+async def test_the_routes_are_read_again_with_the_poll_after_a_change(
+    hass, fake_client, entry, routes
+):
+    coordinator = await _setup(hass, entry)
+    coordinator._store_routes(list(routes))  # a change from the panel
+    routes.append(_route("10.7.0.0/24", "10.7.0.0", "255.255.255.0", "192.0.2.7", True))
+
+    await _poll(hass, coordinator, read=False)  # not a read of its own turn, but forced
+
+    assert "10.7.0.0/24" in [r["network"] for r in coordinator.data.routes]

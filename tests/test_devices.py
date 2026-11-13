@@ -137,6 +137,29 @@ async def test_filters_remove_devices_but_not_the_repeater(hass, fake_client, en
     assert hass.states.get("device_tracker.fritz_02000000000e").state == "home"
 
 
+async def test_a_device_the_filter_let_go_gets_its_entities_again_when_it_returns(
+    hass, fake_client, entry
+):
+    hass.config_entries.async_update_entry(entry, options={"ignore_guests": True})
+    coordinator = await _setup(hass, entry)
+    assert hass.states.get("device_tracker.fritz_020000000003") is not None
+    original = list(fake_client.hosts)
+
+    # the device moves to the guest network: the filter drops it and its device goes
+    fake_client.hosts = [replace(h, guest=True) if h.mac == WLAN else h for h in original]
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert _device(hass, entry, WLAN) is None
+    assert hass.states.get("device_tracker.fritz_020000000003") is None
+
+    # and back: it is a device again, with new entities
+    fake_client.hosts = original
+    await coordinator.async_refresh()
+    await hass.async_block_till_done()
+    assert _device(hass, entry, WLAN)
+    assert hass.states.get("device_tracker.fritz_020000000003") is not None
+
+
 async def test_filters_keep_a_device_another_integration_shares(hass, fake_client, entry):
     await _setup(hass, entry)
     other = MockConfigEntry(domain="other", entry_id="other-entry")
