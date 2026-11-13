@@ -2,6 +2,28 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
+## 1.10.0 – 2026-11-13
+
+### Neu
+
+- Sensoren für die CPU-Auslastung und die RAM-Auslastung der Box (standardmäßig aus, nur Diagnose). Sie lesen die Seite „Energiemonitor“ der Box und fragen nur, solange einer der beiden an ist.
+- Panel, Box: Die Kacheln sind jetzt 3 × 2 (Läuft seit, Letzter Neustart, FRITZ!OS; darunter CPU-Auslastung, CPU-Temperatur, RAM-Auslastung). Darunter stehen drei Verlaufskarten mit Min, Ø und Max und Mouseover; der Schalter wählt Tag, Woche oder Monat. Der Tag kommt von der Box selbst. Woche und Monat schreibt Home Assistant mit, wenn du die Aufzeichnung einschaltest (alle 5 Minuten, einen Monat lang); sie ist standardmäßig aus.
+
+### Geändert
+
+- Panel: Die Seiten Internet, Box, Telefon und Diagnose haben keinen sichtbaren Titel und keinen Einleitungstext mehr; für Screenreader bleibt die Überschrift. Beim Telefon stehen Eintrag, Anrufmonitor und der Link zur Integration rechts in der Zeile des Umschalters.
+- Panel: Logo und Titel der Kopfzeile stehen bündig mit dem Inhalt darunter, bei jeder Breite.
+
+### Behoben
+
+- Discovery: Eine bereits eingerichtete Box bekommt durch die Bestätigung keine neue Adresse mehr.
+- Entfernen der Integration löscht ihre Dateien (Verläufe, Adressnotizen, Mitschnitte). Die Diagnose enthält die Repeater-MACs nicht mehr.
+- Web-Login: Die MD5-Antwort gibt es nur noch für Firmware vor FRITZ!OS 7.24.
+- Routen: Die Zähler für verschwundene Routen laufen nur noch im Event-Loop (kein `KeyError` mehr bei gleichzeitigen Änderungen).
+- Panel: Adress- und WLAN-Befehle antworten mit einem Fehler, wenn die Box nicht erreichbar ist.
+- Mitschnitt: Die Band-Erkennung belegt die Box, bevor sie startet (kein zweiter Mitschnitt dazwischen); die Datei eines laufenden Mitschnitts lässt sich nicht herunterladen.
+- Panel, Geräteliste: Stift und Papierkorb sind eigene Buttons neben der Zeile statt in ihr (Tastatur und Screenreader).
+
 ## 1.9.0 – 2026-11-13
 
 ### Neu

@@ -2,6 +2,28 @@
 
 All notable changes to this integration are recorded here.
 
+## 1.10.0 – 2026-11-13
+
+### New
+
+- Sensors for the CPU load and the RAM use of the box (off by default, diagnostic). They read the "energy monitor" page of the box and ask only while one of the two is on.
+- Panel, box: the tiles are now 3 × 2 (running for, last restart, FRITZ!OS; below them CPU load, CPU temperature, RAM use). Below are three charts with min, average and max and a mouse-over; the switch picks day, week or month. The day comes from the box itself. Week and month are written down by Home Assistant when you switch the recording on (every 5 minutes, kept for a month); it is off by default.
+
+### Changed
+
+- Panel: the pages Internet, Box, Phone and Diagnosis have no visible title and no lead text any more; the heading stays for screen readers. On the phone page the entry, the call monitor and the link to the integration stand at the right end of the row of the switch.
+- Panel: the logo and title of the header line up with the content below, at every width.
+
+### Fixed
+
+- Discovery: confirming a box that is already set up no longer gives its entry a new address.
+- Removing the integration deletes its files (histories, address notes, captures). The diagnostics no longer hold the MAC addresses of the repeaters.
+- Web login: the MD5 answer is only given for firmware before FRITZ!OS 7.24.
+- Routes: the counters for vanished routes run in the event loop only (no more `KeyError` with simultaneous changes).
+- Panel: the address and Wi-Fi commands answer with an error when the box cannot be reached.
+- Capture: the band detection claims the box before it starts (no second capture in between); the file of a running capture cannot be downloaded.
+- Panel, device list: the pencil and trash are buttons of their own beside the row instead of inside it (keyboard and screen reader).
+
 ## 1.9.0 – 2026-11-13
 
 ### New
