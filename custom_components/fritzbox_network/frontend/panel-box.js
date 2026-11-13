@@ -169,7 +169,7 @@ function actionsCard(info, ctx) {
 export function renderBoxPage(info, ctx) {
   const { t } = ctx;
   const b = t.boxPage;
-  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(b.title)}</h1><p class="lead">${escapeHtml(b.lead)}</p></div>`;
+  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(b.title)}</h1></div>`;
   if (info === null || info === undefined) return `${head}<div class="card" aria-busy="true"><div class="empty"><span>${escapeHtml(t.loading)}</span></div></div>`;
   if (info === "failed" || typeof info !== "object") {
     return `${head}<div class="card"><div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${escapeHtml(b.failed)}</b>

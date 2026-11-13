@@ -157,7 +157,9 @@ const boxCtx = (extra = {}) => ({ t, language: "de", now: NOW, internet: { conne
 
 test("the box page shows model, firmware, uptime, temperature, the line and the counters", () => {
   const html = boxPage.renderBoxPage(info, boxCtx());
-  assert.match(html, /<h1 id="dtitle" tabindex="-1">Box<\/h1>/);
+  // the title stays for the screen reader and the focus, but is not shown, and the page has no lead text
+  assert.match(html, /<h1 id="dtitle" tabindex="-1" class="sr">Box<\/h1>/);
+  assert.doesNotMatch(html, /class="lead"/);
   assert.match(html, /FRITZ!Box 7590 AX/);
   assert.match(html, /FRITZ!OS 8\.25/);
   assert.match(html, /23 d 4 Std\./);
