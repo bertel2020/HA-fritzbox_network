@@ -34,6 +34,10 @@ The integration works locally with the FRITZ!Box (TR-064) and makes no connectio
 ## Screenshots
 
 <p align="center">
+  <img src="screenshots-en/overview-light.png" alt="Side panel with the overview" width="100%">
+</p>
+
+<p align="center">
   <img src="screenshots-en/net-light.png" alt="Side panel with the device list" width="100%">
 </p>
 

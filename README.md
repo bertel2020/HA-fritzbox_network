@@ -34,6 +34,10 @@ Die Integration arbeitet lokal mit der FRITZ!Box (TR-064) und baut keine Interne
 ## Screenshots
 
 <p align="center">
+  <img src="screenshots/overview-light.png" alt="Seitenpanel mit der Übersicht" width="100%">
+</p>
+
+<p align="center">
   <img src="screenshots/net-light.png" alt="Seitenpanel mit der Geräteliste" width="100%">
 </p>
 
