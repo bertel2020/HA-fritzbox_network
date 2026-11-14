@@ -496,43 +496,121 @@ function mapView(m, ctx) {
   return `<div class="agrid" aria-label="${escapeHtml(fill(t.addr.gridLabel, { from: `${m.baseText}0`, to: `${m.baseText}255` }))}">${html}</div><div class="alegend">${legend}</div>`;
 }
 
+const SORT_KEYS = ["ip", "name", "vendor", "kind", "status"];
+
+/** The sort value of a row: a list that is compared item by item; rows without a value come last. */
+function sortValue(c, key, own) {
+  const d = c.device;
+  if (key === "name") return [d ? 0 : 1, (d ? displayName(d, own) : (c.entry?.name ?? "")).toLowerCase()];
+  if (key === "vendor") return [d?.vendor ? 0 : 1, (d?.vendor ?? "").toLowerCase()];
+  if (key === "kind") return [d ? (d.kind === "dyn" ? 1 : 0) : 2, ""];
+  if (key === "status") {
+    if (!d) return [3, 0];
+    if (d.online) return [0, 0];
+    const ts = Date.parse(d.lastOnline ?? "");
+    return Number.isNaN(ts) ? [2, 0] : [1, -ts];
+  }
+  return [0, c.n];
+}
+
+/** The rows in the order of the choice: by address when none is made; the address breaks every tie. */
+export function sortCells(cells, sort, own) {
+  const key = SORT_KEYS.includes(sort?.key) ? sort.key : "ip";
+  const dir = sort?.dir === -1 ? -1 : 1;
+  const cmp = (x, y) => {
+    const [x0, x1] = sortValue(x, key, own);
+    const [y0, y1] = sortValue(y, key, own);
+    if (x0 !== y0) return x0 - y0;
+    if (x1 !== y1) return x1 < y1 ? -1 : 1;
+    return 0;
+  };
+  return [...cells].sort((x, y) => dir * cmp(x, y) || x.n - y.n);
+}
+
+function statusCell(d, a, t, now) {
+  if (!d) return "–";
+  if (d.online) return `<span class="st on"><i class="dot on"></i>${escapeHtml(a.online)}</span>`;
+  return `<span class="st"><i class="dot"></i>${escapeHtml(a.offline)}<small>${escapeHtml(fill(a.lastSeen, { when: whenText(d.lastOnline, now, t) }))}</small></span>`;
+}
+
 function listView(m, ctx) {
   const { t, own, now } = ctx;
   const a = t.addr;
-  const rows = m.cells
-    .filter((c) => (c.device || c.state === "res" || c.entry) && matches(m, c, ctx))
+  const sort = SORT_KEYS.includes(ctx.sort?.key) ? ctx.sort : { key: "ip", dir: 1 };
+  const withGroups = own.blocks.length > 0;
+  const columns = [["ip", a.columns.ip], ["name", a.columns.name], ["vendor", a.columns.vendor], ...(withGroups ? [[null, a.columns.group]] : []), ["kind", a.columns.kind], ["status", a.columns.status]];
+  const bySort = sort.key === "ip" && sort.dir === 1;
+  let zone = null;
+  const rows = sortCells(m.cells.filter((c) => (c.device || c.state === "res" || c.entry) && matches(m, c, ctx)), sort, own)
     .map((c) => {
       const ip = `${m.baseText}${c.n}`;
       const blk = blockOf(own, c.n);
       const note = own.notes[ip] ? `📝 ${escapeHtml(own.notes[ip])}` : "";
       const d = c.device;
       const group = blk ? `<span class="gchip"><i style="background:var(${blk.color})"></i>${escapeHtml(blk.name)}</span>` : "";
-      const pool = c.pool ? `<span class="badge pool" title="${escapeHtml(a.poolTitle)}">DHCP</span>` : "";
-      const hints = ctx.hints
-        .filter((h) => h.n === c.n && !own.muted.includes(h.id))
+      const groupCell = withGroups ? `<td>${group}</td>` : "";
+      const rowHints = ctx.hints.filter((h) => h.n === c.n && !own.muted.includes(h.id));
+      const flags = rowHints
         .map((h) => {
           const values = Object.fromEntries(Object.entries(h.values).map(([k, v]) => [k, escapeHtml(String(v))]));
-          return `<span class="lhint ${h.level}"><span aria-hidden="true">${{ bad: "⛔", warn: "⚠", info: "ℹ" }[h.level]}</span> ${fill(a.hints[h.key], values)}</span>`;
+          // the whole text stands in the notes above the list: here a mark with it as its title
+          const text = fill(a.hints[h.key], values).replace(/<[^>]*>/g, "");
+          return `<span class="lflag ${h.level}" role="img" title="${escapeHtml(text)}" aria-label="${escapeHtml(text)}">${{ bad: "⛔", warn: "⚠", info: "ℹ" }[h.level]}</span>`;
         })
         .join("");
-      const open = (inner) => `<tr class="arow" data-aip="${c.n}" data-k="a${c.n}"${blk ? ` style="--bc:var(${blk.color})"` : ""}><td class="mono">${ip}${pool}</td>${inner}</tr>`;
+      const tone = rowHints.some((h) => h.level === "bad") ? " rowbad" : rowHints.some((h) => h.level === "warn") ? " rowwarn" : "";
+      const chips = (badge) => `<span class="chips">${badge}${c.pool ? `<span class="pchip" title="${escapeHtml(a.poolTitle)}">${escapeHtml(a.poolChip)}</span>` : ""}</span>`;
+      let divider = "";
+      if (bySort && m.zones.length > 1) {
+        const z = m.zones.find((x) => c.n >= x.from && c.n <= x.to);
+        if (z && z.id !== zone) {
+          zone = z.id;
+          divider = `<tr class="zonerow"><td colspan="${columns.length}"><b>${escapeHtml(a.zones[z.id])}</b> .${z.from} – .${z.to}</td></tr>`;
+        }
+      }
+      const open = (inner, off) =>
+        `${divider}<tr class="arow${c.pool ? " pool" : ""}${tone}" data-aip="${c.n}" data-k="a${c.n}"${ctx.sel === c.n ? ' aria-current="true"' : ""}${blk ? ` style="--bc:var(${blk.color})"` : ""}><td class="mono${off ? " offl" : ""}">${ip}</td>${inner}</tr>`;
       if (!d && c.entry) {
         const e = c.entry;
         const cls = { plan: "ok", hold: "warn", ext: "" }[e.kind];
-        return open(`<td>${escapeHtml(e.name || a.nobody)}<small>${escapeHtml(e.note || note.replace("📝 ", ""))}</small>${hints}</td><td>${group}</td><td><span class="badge ${cls}">${escapeHtml(a.states[e.kind])}</span></td><td>–</td><td>–</td><td>–</td>`);
+        return open(`<td class="name"><span class="nm">${escapeHtml(e.name || a.nobody)}${flags}</span><small>${escapeHtml(e.note || note.replace("📝 ", ""))}</small></td><td class="vend">–</td>${groupCell}<td>${chips(`<span class="badge ${cls}">${escapeHtml(a.states[e.kind])}</span>`)}</td><td>–</td>`);
       }
       if (!d) {
-        return open(`<td class="muted">${escapeHtml(a.nobody)}<small>${note}</small>${hints}</td><td>${group}</td><td><span class="badge warn">${escapeHtml(a.states.res)}</span></td><td>–</td><td>–</td><td>–</td>`);
+        return open(`<td class="name muted"><span class="nm">${escapeHtml(a.nobody)}${flags}</span><small>${note}</small></td><td class="vend">–</td>${groupCell}<td>${chips(`<span class="badge warn">${escapeHtml(a.states.res)}</span>`)}</td><td>–</td>`);
       }
       const fixed = d.kind !== "dyn";
-      const seen = d.online ? t.nowText : whenText(d.lastOnline, now, t);
-      return open(`<td><span class="dot ${d.online ? "on" : ""}"></span>${escapeHtml(displayName(d, own))}<small>${note || escapeHtml(linkText(d, t))}</small>${hints}</td>
-        <td>${group}</td><td><span class="badge ${fixed ? "fix" : "dyn"}">${escapeHtml(fixed ? a.kindFixedShort : a.kindDynamicShort)}</span></td>
-        <td>${escapeHtml(d.online ? a.online : a.offline)}</td><td>${escapeHtml(d.vendor ?? "–")}</td><td>${escapeHtml(seen)}</td>`);
+      const sub = note || escapeHtml(linkText(d, t));
+      const vendor = d.vendor ? escapeHtml(d.vendor) : "–";
+      return open(
+        `<td class="name${d.online ? "" : " offl"}"><span class="nm">${escapeHtml(displayName(d, own))}${flags}</span><small>${sub}</small></td>
+        <td class="vend" title="${vendor}">${vendor}</td>${groupCell}<td>${chips(`<span class="badge ${fixed ? "fix" : "dyn"}">${escapeHtml(fixed ? a.kindFixedShort : a.kindDynamicShort)}</span>`)}</td>
+        <td class="nw">${statusCell(d, a, t, now)}</td>`,
+        !d.online
+      );
     })
     .join("");
-  return `<div class="tablewrap"><table class="atable"><thead><tr>${a.columns.map((c) => `<th scope="col">${escapeHtml(c)}</th>`).join("")}</tr></thead>
-    <tbody>${rows || `<tr><td colspan="${a.columns.length}" class="muted">${escapeHtml(a.nothingFound)}</td></tr>`}</tbody></table></div>`;
+  const head = columns
+    .map(([key, label]) => {
+      if (!key) return `<th scope="col">${escapeHtml(label)}</th>`;
+      const on = sort.key === key;
+      const arrow = on ? `<i aria-hidden="true">${sort.dir === 1 ? "↑" : "↓"}</i>` : "";
+      return `<th scope="col" aria-sort="${on ? (sort.dir === 1 ? "ascending" : "descending") : "none"}"><button class="sortb" data-asort="${key}" data-k="as-${key}" title="${escapeHtml(fill(a.sortBy, { column: label }))}">${escapeHtml(label)}${arrow}</button></th>`;
+    })
+    .join("");
+  return `<div class="tablewrap"><table class="atable"><thead><tr>${head}</tr></thead>
+    <tbody>${rows || `<tr><td colspan="${columns.length}" class="muted">${escapeHtml(a.nothingFound)}</td></tr>`}</tbody></table></div>`;
+}
+
+/** The popup of one address: the steps to the one before and after, and the way out, over the detail. */
+function detailDialog(m, ctx) {
+  const { t, sel } = ctx;
+  if (sel === null || sel === undefined || !m.cells[sel]) return "";
+  const a = t.addr;
+  const ip = `${m.baseText}${sel}`;
+  return `<div class="backdrop open" id="a-detail"><div class="dialog adlg" role="dialog" aria-modal="true" aria-label="${escapeHtml(ip)}">
+    <div class="adnav"><button class="iconbtn" data-adnav="-1" data-k="ad-prev" aria-label="${escapeHtml(a.prevAddress)}" title="${escapeHtml(a.prevAddress)}">↑</button><button class="iconbtn" data-adnav="1" data-k="ad-next" aria-label="${escapeHtml(a.nextAddress)}" title="${escapeHtml(a.nextAddress)}">↓</button>
+      <span class="sp"></span><button class="iconbtn" data-adclose="1" data-k="ad-close" aria-label="${escapeHtml(a.closeDetail)}" title="${escapeHtml(a.closeDetail)}">✕</button></div>
+    <div class="adetail">${detail(m, ctx)}</div></div></div>`;
 }
 
 export function linkText(d, t) {
@@ -711,7 +789,7 @@ export function renderAddresses(ctx) {
   const model = addressModel({ network: addr.network, clients, nodes, fixed: addr.fixed, own });
   if (!model) return `${back}<div class="card"><div class="empty"><b>${escapeHtml(a.noNetwork)}</b></div></div>`;
   const hints = addressHints(model, { fixedKnown: fixedKnownOf(addr.fixed) });
-  const c = { ...ctx, own, filter: addr.filter, query: addr.query, sel: addr.sel, hints, blockMessage: addr.blockMessage, groupDraft: addr.groupDraft, entryDraft: addr.entryDraft, entryMessage: addr.entryMessage };
+  const c = { ...ctx, own, sort: addr.sort, filter: addr.filter, query: addr.query, sel: addr.sel, hints, blockMessage: addr.blockMessage, groupDraft: addr.groupDraft, entryDraft: addr.entryDraft, entryMessage: addr.entryMessage };
   const chips = FILTERS.map(
     (f) => `<button class="achip" data-afilter="${f}" data-k="f-${f}" aria-pressed="${addr.filter === f}">${escapeHtml(a.filters[f])}<em>${countFor(model, f, c)}</em></button>`
   ).join("");
@@ -723,7 +801,6 @@ export function renderAddresses(ctx) {
           <div class="seg" role="group" aria-label="${escapeHtml(a.viewLabel)}"><button data-aview="map" data-k="v-map" aria-pressed="${addr.view === "map"}">${escapeHtml(a.viewMap)}</button><button data-aview="list" data-k="v-list" aria-pressed="${addr.view === "list"}">${escapeHtml(a.viewList)}</button></div></div>
         <label class="search"><span class="sr">${escapeHtml(a.search)}</span><input type="search" id="a-q" data-k="a-q" placeholder="${escapeHtml(a.search)}" aria-label="${escapeHtml(a.search)}" value="${escapeHtml(addr.query)}"></label>
         ${addr.view === "map" ? mapView(model, c) : listView(model, c)}</section>
-      <aside class="card sec adetail" aria-live="polite">${detail(model, c)}</aside>
     </div>
-    ${zonesCard(model, t, ctx.language)}${ctx.canWrite && model.dhcp ? poolCard(model, c) : ""}${exportCard(model, c)}${addr.groupsOpen ? groupsDialog(model, c) : ""}${addr.entryOpen ? entryDialog(model, c) : ""}`;
+    ${zonesCard(model, t, ctx.language)}${ctx.canWrite && model.dhcp ? poolCard(model, c) : ""}${exportCard(model, c)}${detailDialog(model, c)}${addr.groupsOpen ? groupsDialog(model, c) : ""}${addr.entryOpen ? entryDialog(model, c) : ""}`;
 }

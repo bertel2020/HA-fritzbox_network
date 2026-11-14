@@ -288,7 +288,7 @@ export function boxSubline(master) {
 }
 
 /** What the address page knows of one box: it is all gone when another box is chosen. */
-const addrState = () => ({ status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sel: null, blockMessage: "", groupsOpen: false, groupDraft: null, entryOpen: false, entryDraft: null, entryMessage: "", progress: null, exportOpts: { free: false, mac: true, map: true, poolNames: true } });
+const addrState = () => ({ status: "loading", network: null, own: null, fixed: {}, filter: "all", query: "", view: "map", sort: { key: "ip", dir: 1 }, sel: null, blockMessage: "", groupsOpen: false, groupDraft: null, entryOpen: false, entryDraft: null, entryMessage: "", progress: null, exportOpts: { free: false, mac: true, map: true, poolNames: true } });
 
 /** The width of the panel up to which the pages are a bar at the bottom: where the content gets its narrow layout too. */
 export const COMPACT_WIDTH = 600;
@@ -1596,6 +1596,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (root.querySelector("#backdrop")?.classList.contains("open")) return;
     if (event.key === "Escape" && state.addr?.entryOpen) return this._closeEntry();
     if (event.key === "Escape" && state.addr?.groupsOpen) return this._closeGroups();
+    if (event.key === "Escape" && state.tab === "addresses" && state.addr?.sel !== null && state.addr?.sel !== undefined) return this._closeDetail();
     const target = event.target;
     if (target?.classList?.contains("plot") && !event.ctrlKey && !event.metaKey && !event.altKey) {
       if (this._onPlotKey(target, event)) return;
@@ -1802,6 +1803,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     if (event.target.id === "a-groups") return this._closeGroups();
     if (event.target.id === "a-entries") return this._closeEntry();
+    if (event.target.id === "a-detail") return this._closeDetail();
     const target = event.target.closest("button, a[data-act], [data-filter], [data-ap], [data-dev], [data-act], [data-aip]");
     if (!target || target.disabled) return;
     const ds = target.dataset;

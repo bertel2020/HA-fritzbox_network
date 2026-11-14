@@ -177,6 +177,16 @@ export class AddressMethods {
       const n = Number(ds.aip);
       if (addr.sel === n) return true;
       addr.sel = n;
+      this._focusDetail = true;
+    } else if (ds.asort) {
+      const same = addr.sort?.key === ds.asort;
+      addr.sort = { key: ds.asort, dir: same ? -(addr.sort.dir ?? 1) : 1 };
+    } else if (ds.adclose !== undefined) {
+      this._closeDetail();
+      return true;
+    } else if (ds.adnav !== undefined) {
+      this._stepAddress(Number(ds.adnav));
+      return true;
     } else if (ds.afilter) addr.filter = ds.afilter;
     else if (ds.aview) addr.view = ds.aview;
     else if (ds.aexport) {
@@ -188,6 +198,7 @@ export class AddressMethods {
     else if (ds.ahint) {
       if (ds.an === undefined) return true;
       addr.sel = Number(ds.an);
+      this._focusDetail = true;
     } else if (ds.amute) {
       if (!own.muted.includes(ds.amute)) own.muted.push(ds.amute);
       this._saveOwn();
@@ -243,7 +254,32 @@ export class AddressMethods {
     } else return false;
     addr.own = own;
     this._update();
+    if (this._focusDetail) {
+      this._focusDetail = false;
+      this.shadowRoot.querySelector('#a-detail [data-k="ad-close"]')?.focus({ preventScroll: true });
+    }
     return true;
+  }
+
+  /** Closes the popup of an address and gives the focus back to its row or cell. */
+  _closeDetail() {
+    const addr = this._state.addr;
+    const was = addr.sel;
+    addr.sel = null;
+    this._renderAddresses();
+    this.shadowRoot.querySelector(`[data-aip="${was}"]`)?.focus({ preventScroll: true });
+  }
+
+  /** The popup goes on to the address before or after in the list as drawn (rows, or the cells that match). */
+  _stepAddress(dir) {
+    const addr = this._state.addr;
+    const nodes = [...this.shadowRoot.querySelectorAll(".arow[data-aip], .cell[data-aip]:not(.dim)")];
+    const at = nodes.findIndex((el) => Number(el.dataset.aip) === addr.sel);
+    const next = nodes[at + dir];
+    if (!next) return;
+    addr.sel = Number(next.dataset.aip);
+    this._renderAddresses();
+    this.shadowRoot.querySelector(`[data-aip="${addr.sel}"]`)?.scrollIntoView({ block: "nearest" });
   }
 
   /** The address space as a file or as the sheet; what is asked for is in the options of the card. */

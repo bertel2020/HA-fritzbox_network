@@ -1089,9 +1089,19 @@ test("the address page draws the map, escapes names and says what it is still re
   assert.match(html, /Wallbox/);
   assert.match(html, /feste Adresse mitten im DHCP-Bereich/);
   assert.doesNotMatch(html, /<b>x<\/b>/);
-  const list = addresses.renderAddresses({ t, language: "de", now: NOW, addr: { ...addr, view: "list", query: "wall" }, clients: lan.clients, nodes: lan.nodes, backIcon: "" });
-  assert.match(list, /<tr class="arow" data-aip="150"/);
-  assert.doesNotMatch(list, /<tr class="arow" data-aip="10"/);
+  const list = addresses.renderAddresses({ t, language: "de", now: NOW, addr: { ...addr, view: "list", query: "wall", sel: null }, clients: lan.clients, nodes: lan.nodes, backIcon: "" });
+  assert.match(list, /<tr class="arow pool rowwarn" data-aip="150"/);
+  assert.doesNotMatch(list, /<tr class="arow[^"]*" data-aip="10"/);
+  // one status column, sortable columns, the DHCP range as a second chip, no detail beside the list
+  assert.match(list, /aria-sort="ascending"><button class="sortb" data-asort="ip"/);
+  assert.match(list, /<span class="chips"><span class="badge fix">fest<\/span><span class="pchip"[^>]*>DHCP<\/span><\/span>/);
+  assert.doesNotMatch(list, /adetail|id="a-detail"|Zuletzt gesehen/);
+  assert.doesNotMatch(list, /<th scope="col">Gruppe/);
+  // a device chosen opens the popup over the page, with the steps and the way out
+  const open = addresses.renderAddresses({ t, language: "de", now: NOW, addr: { ...addr, view: "list", query: "wall", sel: 150 }, clients: lan.clients, nodes: lan.nodes, backIcon: "" });
+  assert.match(open, /<div class="backdrop open" id="a-detail"><div class="dialog adlg" role="dialog" aria-modal="true" aria-label="192\.168\.79\.150">/);
+  assert.match(open, /data-adnav="-1"[\s\S]*data-adnav="1"[\s\S]*data-adclose="1"/);
+  assert.match(open, /<tr class="arow pool rowwarn" data-aip="150" data-k="a150" aria-current="true"/);
   assert.match(addresses.renderAddresses({ t, language: "de", now: NOW, addr: { ...addr, network: null }, clients: [], nodes: [], backIcon: "" }), /meldet ihr Netz nicht/);
 });
 
@@ -1804,4 +1814,17 @@ test("a row is a button that opens the device; its pencil and trash are buttons 
   assert.match(rows[1], /<button type="button" class="rn" data-act="remove-row" data-rid="000000000002"/);
   assert.doesNotMatch(rows[1], /rename-row/);
   assert.doesNotMatch(html, /role="button" tabindex="0" data-act/);
+});
+
+test("the list sorts by address, device, vendor, kind and status; online first, then the most recent", () => {
+  const dev = (n, o) => ({ n, device: { mac: `m${n}`, name: `D${n}`, online: o.online, lastOnline: o.last ?? null, kind: o.kind ?? "dyn", vendor: o.vendor ?? null } });
+  const cells = [dev(30, { online: false }), dev(20, { online: false, last: "2026-01-02T00:00:00Z" }), dev(10, { online: true }), dev(40, { online: false, last: "2026-01-05T00:00:00Z" }), { n: 50, device: null }];
+  const own = { names: {} };
+  const order = (sort) => addresses.sortCells(cells, sort, own).map((c) => c.n);
+  assert.deepEqual(order({ key: "ip", dir: 1 }), [10, 20, 30, 40, 50]);
+  assert.deepEqual(order({ key: "ip", dir: -1 }), [50, 40, 30, 20, 10]);
+  // online, then the newest offline one, then those never seen, then what has no device
+  assert.deepEqual(order({ key: "status", dir: 1 }), [10, 40, 20, 30, 50]);
+  assert.deepEqual(order({ key: "name", dir: 1 }), [10, 20, 30, 40, 50]);
+  assert.deepEqual(order({ key: "bogus" }), [10, 20, 30, 40, 50]);
 });
