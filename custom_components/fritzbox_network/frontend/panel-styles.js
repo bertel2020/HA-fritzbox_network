@@ -1055,7 +1055,7 @@ export const PANEL_CSS = `
   .achip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; color: var(--text); }
   .achip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
   .achip em { font-style: normal; color: var(--muted); }
-  .agrid { display: grid; grid-template-columns: 28px repeat(16, minmax(0, 1fr)); gap: 3px; margin-top: 12px; }
+  .agrid { display: grid; grid-template-columns: 28px repeat(16, minmax(0, 1fr)); gap: 3px; margin-top: 12px; max-width: 620px; /* 28 label + 16 cells of 34 px + gaps */ }
   /* 256 cells do not fit a phone at a size one can hit: the grid keeps cells of 30 px and is wiped sideways */
   @container app (max-width: 600px) {
     .achip { min-height: 40px; }
