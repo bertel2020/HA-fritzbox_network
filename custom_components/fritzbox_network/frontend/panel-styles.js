@@ -172,7 +172,7 @@ export const PANEL_CSS = `
   /* the filters: three fixed chips, the chosen other one, and "More". Wraps, never scrolls sideways. */
   .chipwrap { position: relative; }
   .chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
-  .fchip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px; border-radius: 20px; border: 1px solid var(--line); color: var(--muted); font-weight: 500; white-space: nowrap; background: var(--surface); }
+  .fchip { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid var(--line); color: var(--muted); font-weight: 500; white-space: nowrap; background: var(--surface); }
   .fchip b { font-weight: 600; font-size: 12px; }
   .fchip:hover { color: var(--text); background: var(--soft); }
   .fchip[aria-pressed="true"] { color: var(--accent-hover); border-color: var(--accent); background: var(--accent-soft); }
@@ -258,7 +258,7 @@ export const PANEL_CSS = `
   .skel i:nth-of-type(3) { width: 64%; }
 
   /* network map: islands per access point, devices as buttons on their lines */
-  .mapcard { margin-top: 16px; padding: 16px; }
+  .mapcard { margin-top: var(--gap); padding: 14px; }
   .maphead { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-bottom: 12px; }
   .maphead h2 { flex: 1 1 auto; }
   .btn.sm { min-height: 34px; padding: 0 14px; font-size: 13px; }
@@ -393,7 +393,7 @@ export const PANEL_CSS = `
   .tiles .tile.bad b, .tile.bad b { color: var(--bad); }
   .tile b { display: block; font-size: 20px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tile small { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .section { margin-top: 18px; }
+  .section { margin-top: var(--gap); }
   .section > .label { display: block; margin-bottom: 8px; }
   dl { margin: 0; display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 6px 12px; }
   dt { color: var(--muted); }
@@ -466,7 +466,7 @@ export const PANEL_CSS = `
   .phead h1 { font-size: 24px; font-weight: 500; margin: 4px 0 0; letter-spacing: -.01em; }
   .phead .lead { margin: 6px 0 0; }
   .pheadrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
-  .pheadrow > .btn-row { margin-left: auto; }
+  .pheadrow > .btn-row, .pheadrow > .btn { margin-left: auto; }
   .col h2 { font-size: 16px; font-weight: 500; margin: 0 0 8px; }
   .col label.search { margin: 12px 0 4px; }
   .count { color: var(--muted); font-size: 13px; margin: 12px 0 4px; }
@@ -581,7 +581,7 @@ export const PANEL_CSS = `
   .topdev .bar { display: flex; }
   .topdev .bar i.bd { background: var(--accent); }
   .topdev .bar i.bu { background: var(--up); }
-  .spectrum { margin-top: 16px; }
+  .spectrum { margin-top: var(--gap); }
   figure.spec { margin: 14px 0 0; }
   figure.spec figcaption { font-size: 13px; margin-bottom: 4px; }
   figure.spec figcaption small { color: var(--muted); font-size: 12px; margin-left: 6px; }
@@ -716,7 +716,7 @@ export const PANEL_CSS = `
   button.chip { cursor: pointer; border: 1px solid transparent; }
   button.chip[aria-pressed="true"] { border-color: currentColor; }
   ul.logrows li.mark .pdesc { font-weight: 500; }
-  .course { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .course { margin-top: var(--gap); padding-top: 14px; border-top: 1px solid var(--line); }
   .course .chead { margin-bottom: 4px; }
   .course .sub { font-size: 14px; font-weight: 500; }
   .course > summary { cursor: pointer; list-style: none; }
@@ -813,7 +813,7 @@ export const PANEL_CSS = `
   .pftile.open b { color: var(--warn); }
   .pftile small { color: var(--muted); font-size: 12px; }
   .pffilters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
-  .pffilters .fchip { min-height: 30px; font-size: 13px; }
+  .pffilters .fchip { min-height: 32px; font-size: 13px; }
   .pffilters .fchip em { font-style: normal; color: var(--muted); }
   .pfdev { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
   .pfdev + .pfdev { margin-top: 12px; }
@@ -889,7 +889,7 @@ export const PANEL_CSS = `
   .boxhero .ihead .ico { width: 48px; height: 48px; border-radius: 14px; }
   .boxhero .ihead .who b { font-size: 20px; }
   .boxhero .ihead .chip { margin-left: auto; flex: none; }
-  .boxhero .tiles { margin-top: 16px; }
+  .boxhero .tiles { margin-top: 14px; }
   .tile .gauge { display: block; height: 4px; margin-top: 6px; border-radius: 2px; background: var(--line); overflow: hidden; }
   .tile .gauge i { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
   .tile.gv.warn .gauge i { background: var(--warn); }
@@ -1015,7 +1015,7 @@ export const PANEL_CSS = `
   .topdev .amount { text-align: right; white-space: nowrap; }
   .topdev small, .vol small { color: var(--muted); font-size: 12px; }
   @media (max-width: 560px) { .topdev li { grid-template-columns: 1fr auto; } .topdev .bar { grid-column: 1 / -1; order: 3; } }
-  .volume { margin-top: 18px; }
+  .volume { margin-top: var(--gap); }
   .vols { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 8px; }
   .vols .vol { display: flex; flex-direction: column; gap: 4px; background: var(--soft); border-radius: 12px; padding: 10px 14px; min-width: 0; }
   .vols b { font-size: 18px; font-weight: 500; line-height: 1.3; white-space: nowrap; font-variant-numeric: tabular-nums; }
@@ -1067,7 +1067,7 @@ export const PANEL_CSS = `
   .alayout { display: block; }
   .amaphead { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; justify-content: space-between; margin-bottom: 12px; }
   .achips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .achip { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 12px; border-radius: 15px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; color: var(--text); }
+  .achip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid var(--line); background: var(--surface); font-size: 13px; color: var(--text); }
   .achip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); }
   .achip em { font-style: normal; color: var(--muted); }
   .agrid { display: grid; grid-template-columns: 28px repeat(16, minmax(0, 1fr)); gap: 3px; margin-top: 12px; max-width: 620px; /* 28 label + 16 cells of 34 px + gaps */ }
@@ -1110,8 +1110,8 @@ export const PANEL_CSS = `
   .adetail dt { color: var(--muted); }
   .adetail dd { margin: 0; text-align: right; overflow-wrap: anywhere; }
   .adetail .small { font-size: 12px; margin-top: 10px; }
-  .adetail .spaced { display: block; margin-top: 16px; }
-  .adetail .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+  .adetail .spaced { display: block; margin-top: 14px; }
+  .adetail .actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   .adetail .soon { font-size: 12px; color: var(--muted); margin: 8px 0 0; }
   .badge { display: inline-block; padding: 1px 9px; border-radius: 10px; font-size: 12px; font-weight: 500; background: var(--soft); color: var(--muted); }
   .badge.dyn { background: var(--accent-soft); color: var(--accent-hover); }
@@ -1344,7 +1344,7 @@ export const PANEL_CSS = `
   .ph-hstate { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
   .ph-hbtns { justify-content: flex-start; align-items: center; margin-top: 14px; }
   .ph-hbtns .btn.text { background: none; border-color: transparent; color: var(--muted); font-weight: 400; }
-  .ph-hint .tiles { margin-top: 16px; }
+  .ph-hint .tiles { margin-top: 14px; }
   /* today on the phone page: the gold of the phone tile on the overview, a soft gradient like the box and internet cards */
   .phtoday { --tone: light-dark(#a56a00, #f2c27a); background: linear-gradient(135deg, color-mix(in srgb, var(--tone) 9%, var(--surface)), var(--surface) 72%); }
   .phtoday .chead { align-items: center; gap: 10px; }
@@ -1353,8 +1353,9 @@ export const PANEL_CSS = `
   .phtoday .phico svg { width: 17px; height: 17px; }
   /* the facts of a card: no boxes, the value free on the gradient like on the internet card; the tone comes from --tone of the card */
   .facts.t-inet { --tone: var(--accent); }
+  .facts.t-wlan { --tone: light-dark(#0b7f95, #55c2d6); }
   .facts.t-net { --tone: var(--up); }
-  .facts.t-net, .facts.t-inet { background: linear-gradient(135deg, color-mix(in srgb, var(--tone) 9%, var(--surface)), var(--surface) 72%); }
+  .facts.t-net, .facts.t-inet, .facts.t-wlan { background: linear-gradient(135deg, color-mix(in srgb, var(--tone) 9%, var(--surface)), var(--surface) 72%); }
   .facts .tiles, .facts .pftiles, .facts .checktiles { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); gap: 16px 28px; }
   .facts.bare .tiles { margin: 0; padding-top: 0; border-top: 0; }
   .facts .tile { background: none; border-radius: 0; padding: 0; }
@@ -1365,7 +1366,7 @@ export const PANEL_CSS = `
   .facts .tile .gauge i { background-color: var(--tone); }
   .facts .tile b.na { font-size: 15px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
   .ph-hint .tile small { white-space: normal; overflow: visible; text-overflow: clip; }
-  .ph-hprev { margin-top: 16px; opacity: .6; pointer-events: none; }
+  .ph-hprev { margin-top: var(--gap); opacity: .6; pointer-events: none; }
   .ph-hrow { display: grid; grid-template-columns: 22px minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
   .ph-hrow small { color: var(--muted); font-size: 13px; }
   .ph-hrow .k.in { color: var(--ok); } .ph-hrow .k.out { color: var(--accent); }

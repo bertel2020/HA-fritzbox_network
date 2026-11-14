@@ -90,6 +90,22 @@ function securityLabel(beacon, g) {
   return beacon ? g.security[beacon] ?? null : null;
 }
 
+/** The numbers at the top of the page: networks on, devices on Wi-Fi now, the guest access. */
+function factsCard(wlan, ctx) {
+  const { t } = ctx;
+  const f = t.wlan.facts;
+  const nets = Array.isArray(wlan.networks) ? wlan.networks : [];
+  const on = enabledNetworks(wlan).length;
+  const devices = (ctx.clients ?? []).filter((c) => c.online && c.link_type === "wlan").length;
+  const guest = wlan.guest ? (wlan.guest.enabled ? f.guestOn : f.guestOff) : f.guestNone;
+  const tile = (label, value, small = "", cls = "") => `<div class="tile${cls ? ` ${cls}` : ""}"><span class="label">${escapeHtml(label)}</span><b>${escapeHtml(value)}</b>${small ? `<small>${escapeHtml(small)}</small>` : ""}</div>`;
+  return `<section class="card sec facts bare t-wlan"><div class="tiles">
+    ${tile(f.active, fill(f.activeOf, { n: on, total: nets.length }), "", on ? "" : "bad")}
+    ${tile(f.devices, String(devices), f.devicesSub)}
+    ${tile(f.guest, guest, "", wlan.guest && wlan.guest.enabled ? "" : "neutral")}
+  </div></section>`;
+}
+
 /** The devices that are in the guest network now. */
 function guestOnline(ctx) {
   return (ctx.clients ?? []).filter((c) => c.guest && c.online);
@@ -148,5 +164,5 @@ export function renderWlan(wlan, ctx) {
   const nets = Array.isArray(wlan.networks) && wlan.networks.length
     ? networksCard(wlan, c)
     : `<section class="card"><div class="empty"><span>${ic("wifi")}</span><b>${escapeHtml(w.noWlan)}</b><span>${escapeHtml(w.noWlanHint)}</span></div></section>`;
-  return `${head}${nets}${guestCard(wlan.guest ?? null, c)}`;
+  return `${head}${Array.isArray(wlan.networks) && wlan.networks.length ? factsCard(wlan, c) : ""}${nets}${guestCard(wlan.guest ?? null, c)}`;
 }

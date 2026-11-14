@@ -252,7 +252,7 @@ export function renderDevice(client, ctx) {
   return `${headHtml(client, ctx)}
     <div class="chips-row">${chips}</div>${note}
     <div class="dsecs">
-      <section class="card sec wide"><span class="label">${escapeHtml(t.connection)}</span>${pathHtml(client, data, t, ctx.threshold)}${tilesHtml(client, data, t)}</section>
+      <section class="card sec wide facts t-net"><span class="label">${escapeHtml(t.connection)}</span>${pathHtml(client, data, t, ctx.threshold)}${tilesHtml(client, data, t)}</section>
       ${trendSection(client, ctx)}
       ${controlsCard(client, data, canWrite, t)}
       <section class="card sec"><span class="label">${escapeHtml(t.master)}</span><dl>${master}</dl>

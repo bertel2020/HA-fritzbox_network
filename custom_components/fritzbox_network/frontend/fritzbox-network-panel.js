@@ -1213,7 +1213,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div id="wlan-view" hidden></div>
           <div id="migrate-view" hidden></div>
           <div class="col" id="cleanup-view" hidden>
-            <div class="phead"><h1>${t.cleanup.title}</h1><p class="lead">${t.cleanup.lead}</p></div>
+            <div class="phead"><h1 class="sr">${t.cleanup.title}</h1></div>
             <section class="card pad">
               <div class="range"><span id="days-head">${t.cleanup.since}</span><div id="days-seg"></div></div>
               <label class="search"><span class="sr">${t.cleanup.search}</span>${ic("search")}<input type="search" id="c-search" placeholder="${t.cleanup.search}" aria-label="${t.cleanup.search}"></label>
@@ -1222,7 +1222,7 @@ class FritzboxNetworkPanel extends HTMLElement {
             <section class="card pad" id="hidden"></section>
           </div>
           <div class="col" id="filter-view" hidden>
-            <div class="phead"><h1>${t.filter.title}</h1><p class="lead">${t.filter.lead}</p></div>
+            <div class="phead"><h1 class="sr">${t.filter.title}</h1></div>
             <div id="f-controls"></div>
             <section class="card pad" id="f-picker-wrap" hidden>
               <h2>${t.filter.pickTitle}</h2>

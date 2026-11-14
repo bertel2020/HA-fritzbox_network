@@ -99,7 +99,7 @@ function row(r, t) {
 export function renderMigrate(scan, ctx) {
   const { t } = ctx;
   const m = t.migrate;
-  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(m.title)}</h1><p class="lead">${escapeHtml(m.lead)}</p></div>`;
+  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(m.title)}</h1></div>`;
   const rescan = `<button class="btn" data-act="mig-rescan" data-k="mig-rescan">${escapeHtml(m.rescan)}</button>`;
   if (scan === null || scan === undefined) {
     return `${head}<section class="card sec" aria-busy="true"><p role="status">${escapeHtml(m.scanning)}</p></section>`;

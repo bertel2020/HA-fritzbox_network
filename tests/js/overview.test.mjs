@@ -65,7 +65,7 @@ test("nothing stands out: no notes, and the tiles say what is there", () => {
   assert.equal(tiles[2].value, "–");
   assert.equal(tiles[2].sub, "FRITZ!Box 7590");
   const html = overview.renderOverview(state, { t, now: NOW, language: "de", canWrite: true });
-  assert.match(html, /<h1 id="dtitle" tabindex="-1">Übersicht<\/h1>/);
+  assert.match(html, /<h1 id="dtitle" tabindex="-1" class="sr">Übersicht<\/h1>/);
   assert.match(html, /class="chip ok"><i class="dot on" aria-hidden="true"><\/i>Alles in Ordnung/);
   assert.match(html, /data-act="reconnect"/);
   assert.doesNotMatch(html, /href="#\/capture"|data-key="guest"/);

@@ -192,9 +192,8 @@ export function renderOverview(state, ctx) {
   const o = t.overview;
   const issues = collectIssues(state, t, ctx.now);
   const tiles = overviewTiles(state, t, ctx);
-  const head = `<div class="phead"><div class="pheadrow"><h1 id="dtitle" tabindex="-1">${escapeHtml(o.title)}</h1>
-    <button class="btn" data-act="ov-refresh" data-k="ov-refresh"${ctx.busy ? " disabled" : ""}>${escapeHtml(o.refresh)}</button></div>
-    <p class="lead">${escapeHtml(o.lead)}</p></div>`;
+  const head = `<div class="phead"><div class="pheadrow"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(o.title)}</h1>
+    <button class="btn" data-act="ov-refresh" data-k="ov-refresh"${ctx.busy ? " disabled" : ""}>${escapeHtml(o.refresh)}</button></div></div>`;
   const list = issues.length
     ? `<ul class="issues">${issues.map(issueHtml).join("")}</ul>`
     : `<p class="allgood"><span class="chip ok"><i class="dot on" aria-hidden="true"></i>${escapeHtml(o.allGood)}</span></p>`;

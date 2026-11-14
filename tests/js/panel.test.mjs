@@ -814,7 +814,7 @@ test("the port forwardings card shows tiles and filters, and what the box did no
   const t = texts.panelTexts("de");
   const entries = [forwarding({ description: "Games", external_port: 27015, external_port_end: 27030, internal_port: 27000, internal_port_end: 27015 }), forwarding({ description: "VPN", external_port: 1194, internal_port: 1194, enabled: false })];
   const html = portsPage.renderPorts({ entries, manual_known: true }, { t, filter: "all" });
-  assert.match(html, /class="pftile open"><b>1<\/b><small>offen aus dem Internet/);
+  assert.match(html, /class="pftile open"><small>offen aus dem Internet<\/small><b>1<\/b>/);
   assert.match(html, /<span class="mono">27015–27030<\/span><span class="arrow" aria-hidden="true">→<\/span><span class="mono">27000–27015<\/span>/);
   assert.match(html, /<span class="mono">1194<\/span><small>von außen und am Gerät/);
   assert.match(html, /data-act="ports-filter" data-f="open" data-k="pf-open" aria-pressed="false">Offen<em>1<\/em>/);
@@ -1094,7 +1094,7 @@ test("the address page draws the map, escapes names and says what it is still re
   assert.doesNotMatch(list, /<tr class="arow[^"]*" data-aip="10"/);
   // one status column, sortable columns, the DHCP range as a second chip, no detail beside the list
   assert.match(list, /aria-sort="ascending"><button class="sortb" data-asort="ip"/);
-  assert.match(list, /<span class="chips"><span class="badge fix">fest<\/span><span class="pchip"[^>]*>DHCP<\/span><\/span>/);
+  assert.match(list, /<span class="achipcol"><span class="badge fix">fest<\/span><span class="pchip"[^>]*>DHCP<\/span><\/span>/);
   assert.doesNotMatch(list, /adetail|id="a-detail"|Zuletzt gesehen/);
   assert.doesNotMatch(list, /<th scope="col">Gruppe/);
   // a device chosen opens the popup over the page, with the steps and the way out

@@ -178,7 +178,7 @@ test("the box page shows model, firmware, uptime, temperature, the line and the 
   assert.match(html, /<h1 id="dtitle" tabindex="-1" class="sr">Box<\/h1>/);
   assert.doesNotMatch(html, /class="lead"/);
   assert.match(html, /FRITZ!Box 7590 AX/);
-  assert.match(html, /FRITZ!OS 8\.25/);
+  assert.match(html, /FRITZ!OS<\/span><b>8\.25/);
   assert.match(html, /23 d 4 Std\./);
   assert.match(html, /61,5 °C/);
   assert.match(html, /synchron/);
@@ -889,18 +889,18 @@ test("the connection test, the log and the capture are pages of the box, each re
   p._enterTab();
   await new Promise((resolve) => setTimeout(resolve));
   assert.deepEqual(typesOf(calls), ["diagnose/latency"]);
-  assert.match(p._html["check-view"], /<h1 id="dtitle" tabindex="-1">Verbindungstest<\/h1>/);
+  assert.match(p._html["check-view"], /<h1 id="dtitle" tabindex="-1" class="sr">Verbindungstest<\/h1>/);
   assert.match(p._html["check-view"], /data-act="check-run"/);
   p._state.tab = "log";
   p._enterTab();
   await new Promise((resolve) => setTimeout(resolve));
   assert.deepEqual(typesOf(calls), ["diagnose/latency", "diagnose/log"]);
-  assert.match(p._html["log-view"], /<h1 id="dtitle" tabindex="-1">Protokoll<\/h1>/);
+  assert.match(p._html["log-view"], /<h1 id="dtitle" tabindex="-1" class="sr">Protokoll<\/h1>/);
   p._state.tab = "capture";
   p._enterTab();
   await new Promise((resolve) => setTimeout(resolve));
   assert.deepEqual(typesOf(calls).at(-1), "capture/status");
-  assert.match(p._html["capture-view"], /<h1 id="dtitle" tabindex="-1">Mitschnitt<\/h1>/);
+  assert.match(p._html["capture-view"], /<h1 id="dtitle" tabindex="-1" class="sr">Mitschnitt<\/h1>/);
 });
 
 test("the radio check is on the Wi-Fi page; the connection test keeps its verdict with the way there", async () => {
