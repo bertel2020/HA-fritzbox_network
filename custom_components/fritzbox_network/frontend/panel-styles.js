@@ -34,6 +34,7 @@ export const PANEL_CSS = `
     --code-text: #d7dee6;
     --scale: 1;
     --radius: 16px;
+    --gap: 12px; /* between cards and sections */
     /* buttons, fields and switches of a group share one corner; round chips and tags stay pills */
     --control-radius: 10px;
     --shadow-c: light-dark(rgb(16 24 40 / 14%), rgb(0 0 0 / 40%));
@@ -122,7 +123,7 @@ export const PANEL_CSS = `
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--input-line); flex: none; }
   .dot.on { background: var(--ok); }
   .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
-  .card + .card { margin-top: 16px; }
+  .card + .card { margin-top: var(--gap); }
   h2 { font-size: 16px; font-weight: 500; margin: 0; }
   .label { font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
   .muted { color: var(--muted); }
@@ -218,7 +219,7 @@ export const PANEL_CSS = `
     .fmenu [role="menuitemradio"] { min-height: 48px; }
   }
 
-  .ap { margin-top: 16px; overflow: hidden; }
+  .ap { margin-top: var(--gap); overflow: hidden; }
   .ap-head { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 16px; text-align: left; min-width: 0; }
   .ico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-hover); flex: none; }
   .who { flex: 1; min-width: 0; }
@@ -323,7 +324,7 @@ export const PANEL_CSS = `
   .hidden-note { font-size: 12px; color: var(--muted); margin: 0 0 4px 18px; }
   @container app (max-width: 600px) {
     .mapcard, .toolbar { padding: 12px; }
-    .isles { grid-template-columns: minmax(0, 1fr); gap: 16px; }
+    .isles { grid-template-columns: minmax(0, 1fr); gap: var(--gap); }
     .isle:not(.root) { margin-left: 26px; }
     .isle { padding: 10px; }
     .nodes { grid-template-columns: repeat(auto-fill, minmax(62px, 1fr)); }
@@ -359,8 +360,8 @@ export const PANEL_CSS = `
   .chips-row + .entities-note { border-top: 0; padding-top: 0; margin-top: 10px; }
   .dsecs { display: grid; gap: 12px; margin-top: 14px; }
   .dsecs .card + .card { margin-top: 0; }
-  @container app (min-width: 900px) { .dsecs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; } .dsecs .wide { grid-column: 1 / -1; } }
-  .sec { padding: 16px; min-width: 0; }
+  @container app (min-width: 900px) { .dsecs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--gap); align-items: start; } .dsecs .wide { grid-column: 1 / -1; } }
+  .sec { padding: 14px; min-width: 0; }
   .sec > .label { display: block; margin-bottom: 10px; }
   .path { display: flex; align-items: center; min-width: 0; padding-bottom: 22px; }
   .path .pn { display: flex; align-items: center; gap: 8px; min-width: 0; flex: 0 1 auto; padding: 6px 10px; border-radius: 12px; background: var(--soft); }
@@ -384,7 +385,7 @@ export const PANEL_CSS = `
     .path .pl.weak i { border-color: var(--warn); }
   }
   /* one tile for every figure of the panel: the label above, the value, a small line below */
-  .tiles, .checktiles, .pftiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 10px; }
+  .tiles, .checktiles, .pftiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
   .tiles { margin-top: 12px; }
   .tile { background: var(--soft); border-radius: 12px; padding: 10px 14px; min-width: 0; }
   .tile .label { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
@@ -439,7 +440,7 @@ export const PANEL_CSS = `
   input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); flex: none; }
   .selbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 12px 16px; border-radius: 12px; background: var(--accent-soft); }
   .seg { display: inline-grid; grid-auto-flow: column; gap: 2px; padding: 3px; background: var(--soft); border: 1px solid var(--line); border-radius: var(--control-radius); max-width: 100%; }
-  .seg button { padding: 0 14px; min-height: 34px; font-weight: 500; color: var(--muted); border-radius: 7px; white-space: nowrap; transition: color .15s, background .15s; }
+  .seg button { padding: 0 12px; min-height: 32px; font-weight: 500; color: var(--muted); border-radius: 7px; white-space: nowrap; transition: color .15s, background .15s; }
   .seg button:hover { color: var(--text); }
   .seg button[aria-pressed="true"], .seg button[aria-selected="true"], .seg button[aria-checked="true"] { background: var(--surface); color: var(--accent-hover); box-shadow: 0 1px 2px var(--shadow-c), 0 0 0 1px var(--line); }
   @container app (max-width: 600px) { .seg { grid-auto-flow: row; width: 100%; } .seg button { border-left: 0; border-top: 0; text-align: left; } .seg button:first-child { border-top: 0; }
@@ -454,11 +455,11 @@ export const PANEL_CSS = `
   .stat.bad { background: var(--bad-soft); color: var(--bad); }
   .stat.ok { background: var(--ok-soft); color: var(--ok); }
   .note { border-radius: 12px; padding: 12px 14px; margin-top: 12px; background: var(--warn-soft); color: var(--warn); }
-  .two { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+  .two { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); align-items: start; }
   @container app (min-width: 900px) { .two { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .two .card + .card { margin-top: 0; } }
 
   /* dialog + toast */
-  .col > * + *, #f-controls > * + * { margin-top: 16px; }
+  .col > * + *, #f-controls > * + * { margin-top: var(--gap); }
   /* the head of every page: the title (for the screen reader only on Internet, Box, Phone and Diagnosis), with its main action
      at the right in a .pheadrow, and the lead below; no box of its own, so a hidden title leaves no empty row (and no gap) */
   .phead { display: contents; }
@@ -505,14 +506,14 @@ export const PANEL_CSS = `
   .pill2 b { color: var(--text); font-size: 15px; font-weight: 600; margin-right: 2px; }
   .pill2.ok { background: var(--ok-soft); color: var(--ok); }
   .pill2.bad { background: var(--bad-soft); color: var(--bad); }
-  #internet-view .card + .card, #internet-view .card + .two, #internet-view .two + .card { margin-top: 16px; }
+  #internet-view .card + .card, #internet-view .card + .two, #internet-view .two + .card { margin-top: var(--gap); }
   #internet-view .two > .card { margin-top: 0; }
-  .icols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+  .icols { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); align-items: start; }
   @container app (min-width: 900px) { .icols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
   @container app (min-width: 900px) { .icols.single { grid-template-columns: minmax(0, 1fr); } }
-  .icol { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .icol { display: flex; flex-direction: column; gap: var(--gap); min-width: 0; }
   #internet-view .icol > .card { margin-top: 0; }
-  #internet-view .hero + .card, #internet-view .card + .icols, #internet-view .icols + .card, #internet-view .icols + section { margin-top: 16px; }
+  #internet-view .hero + .card, #internet-view .card + .icols, #internet-view .icols + .card, #internet-view .icols + section { margin-top: var(--gap); }
   .hero { background: linear-gradient(135deg, var(--accent-soft), transparent 70%), var(--surface); }
   .strip { display: grid; grid-template-columns: minmax(250px, 1.2fr) minmax(0, 1.4fr) minmax(0, 1.4fr); gap: 16px 24px; align-items: center; }
   .strip .ihead .who small { white-space: normal; overflow: visible; text-overflow: clip; }
@@ -655,7 +656,7 @@ export const PANEL_CSS = `
   .routerow { border-radius: 10px; padding-left: 8px; padding-right: 8px; }
   .routerow:hover { background: var(--soft); }
   .routerow[aria-current="true"] { background: var(--accent-soft); }
-  .routelayout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start; margin-top: 16px; }
+  .routelayout { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--gap); align-items: start; margin-top: var(--gap); }
   @container app (max-width: 900px) { .routelayout { grid-template-columns: minmax(0, 1fr); } }
   .routelayout > .card + .card { margin-top: 0; }
   .routedetail dl { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 12px 0 0; }
@@ -673,7 +674,7 @@ export const PANEL_CSS = `
   .rlink { width: 2px; height: 14px; background: var(--ok); position: relative; }
   .rlink.off { background: var(--line); }
   .rlink span { position: absolute; left: 10px; top: 0; font-size: 11px; color: var(--muted); white-space: nowrap; line-height: 14px; }
-  #routes-view > * + * { margin-top: 16px; }
+  #routes-view > * + * { margin-top: var(--gap); }
   .routenet b { display: block; font-weight: 500; }
   .routenet small { color: var(--muted); }
   .btn.del { color: var(--bad); }
@@ -686,7 +687,7 @@ export const PANEL_CSS = `
   .vpnname { flex: 1; min-width: 0; }
   .vpnname b { display: block; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .vpnname small { color: var(--muted); }
-  #vpn-view .card, #vpn-view .hint { margin-top: 16px; }
+  #vpn-view .card, #vpn-view .hint { margin-top: var(--gap); }
   .radiorow .rtop { display: flex; justify-content: space-between; align-items: baseline; }
   .radiorow .rpct { font-variant-numeric: tabular-nums; font-weight: 500; }
   .radiorow.warn .rpct { color: var(--warn); }
@@ -779,7 +780,7 @@ export const PANEL_CSS = `
   ul.logrows { margin-top: 10px; max-height: 420px; overflow: auto; }
   ul.logrows .pmap { white-space: nowrap; }
   .capbtns { display: flex; gap: 6px; flex-wrap: wrap; }
-  .subtabs { margin-bottom: 14px; }
+  .subtabs { margin-bottom: var(--gap); }
   .detectrow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 4px 0 8px; }
   .detectrow small { color: var(--muted); flex: 1 1 260px; }
   .capexisting { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -949,7 +950,7 @@ export const PANEL_CSS = `
   :host([compact]) .toast { bottom: 84px; }
 
   /* the flat list as a table */
-  .tablecard { margin-top: 16px; overflow: hidden; }
+  .tablecard { margin-top: var(--gap); overflow: hidden; }
   .tablewrap { overflow-x: auto; }
   .devtable { width: 100%; border-collapse: collapse; }
   .devtable th { text-align: left; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); font-weight: 600; padding: 0; border-bottom: 1px solid var(--line); white-space: nowrap; background: var(--surface); }
@@ -1041,9 +1042,9 @@ export const PANEL_CSS = `
   .trend path.area { fill: var(--accent); opacity: .12; stroke: none; }
 
   /* address page */
-  #addresses-view > * + *, #addresses-view .alayout + * { margin-top: 16px; }
-  #volume-view > * + *, #ports-view > * + *, #check-view > * + *, #log-view > * + *, #capture-view > * + * { margin-top: 16px; }
-  .diagrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(440px, 100%), 1fr)); gap: 16px; align-items: start; }
+  #addresses-view > * + *, #addresses-view .alayout + * { margin-top: var(--gap); }
+  #volume-view > * + *, #ports-view > * + *, #check-view > * + *, #log-view > * + *, #capture-view > * + * { margin-top: var(--gap); }
+  .diagrow { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(440px, 100%), 1fr)); gap: var(--gap); align-items: start; }
   .diagrow > .card { margin-top: 0; }
   #addresses-view .atiles { margin-top: 0; }
   #addresses-view .tile b, #addresses-view .tile small { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
@@ -1226,7 +1227,7 @@ export const PANEL_CSS = `
   .dot.warn { background: var(--warn); }
   .dot.bad { background: var(--bad); }
   #migbanner .banner { margin-bottom: 16px; }
-  #box-view > * + *, #wlan-view > * + *, #migrate-view > * + * { margin-top: 16px; }
+  #box-view > * + *, #wlan-view > * + *, #migrate-view > * + * { margin-top: var(--gap); }
   #box-view .two > .card { margin-top: 0; }
   .bad-ico { color: var(--bad); display: inline-flex; }
   .tile .na { color: var(--muted); font-weight: 400; font-size: 14px; }
@@ -1331,7 +1332,7 @@ export const PANEL_CSS = `
     --s-in: light-dark(#1baf7a, #199e70); --s-out: light-dark(#2a78d6, #3987e5); --s-miss: light-dark(#eb6834, #d95926); --s-spam: light-dark(#6250d6, #9085e9);
     --h0: light-dark(#eef1f4, #22272e); --h1: light-dark(#cde2fb, #163a63); --h2: light-dark(#9ec5f4, #184f95); --h3: light-dark(#6da7ec, #256abf); --h4: light-dark(#3987e5, #5598e7); --h5: light-dark(#1c5cab, #9ec5f4);
     --h-ink-lo: light-dark(#1b1f24, #e6e9ed); --h-ink-hi: light-dark(#fff, #0b1a26);
-    display: grid; gap: 16px; min-width: 0;
+    display: grid; gap: var(--gap); min-width: 0;
   }
   #phone-view[hidden] { display: none; }
   #phone-view .card + .card, #phone-view .two > .card, #phone-view .ph-col > .card { margin-top: 0; }
@@ -1355,13 +1356,13 @@ export const PANEL_CSS = `
   .ph-src select.ph-entry { width: auto; max-width: 100%; height: 32px; font-size: 13px; }
   .chead .ph-src { margin: 0; }
   .ph-view { justify-self: start; }
-  .ph-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; margin-bottom: 12px; }
+  .ph-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
   .ph-bar .ph-src { margin: 0 0 0 auto; justify-content: flex-end; text-align: right; }
   .ph-seg { display: flex; flex-wrap: nowrap; max-width: 100%; overflow-x: auto; scrollbar-width: none; }
-  .ph-seg button { flex: none; min-height: 36px; padding: 0 12px; border-top: 0; border-left: 0; text-align: center; }
+  .ph-seg button { flex: none; min-height: 32px; padding: 0 12px; border-top: 0; border-left: 0; text-align: center; }
   .ph-seg button:first-child { border-left: 0; }
   .ph-seg button .n { font-size: 12px; opacity: .8; margin-left: 5px; font-variant-numeric: tabular-nums; }
-  .ph-col { display: grid; gap: 16px; min-width: 0; }
+  .ph-col { display: grid; gap: var(--gap); min-width: 0; }
   .ph-notes .hintline { align-items: flex-start; }
   .ph-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 8px; }
   .ph-search { flex: 1 1 200px; min-width: 0; }
@@ -1506,7 +1507,7 @@ export const PANEL_CSS = `
   .ph-limit b { color: var(--text); font-weight: 500; }
   .ph-limit svg { flex: none; margin-top: 1px; }
   .ph-delta { font-variant-numeric: tabular-nums; color: var(--text); }
-  .ph-vsec { margin-top: 16px; min-width: 0; }
+  .ph-vsec { margin-top: var(--gap); min-width: 0; }
   .ph-vwrap { position: relative; overflow-x: auto; }
   .ph-chart { display: block; max-width: none; }
   .ph-chart .grid { stroke: var(--line); stroke-width: 1; }
@@ -1562,7 +1563,7 @@ export const PANEL_CSS = `
     .copybtn svg.i, .iconbtn svg.i { width: 20px; height: 20px; }
   }
   /* the overview: a tile per area that leads to its page, what stands out on all pages, quick actions */
-  #overview-view > * + * { margin-top: 16px; }
+  #overview-view > * + * { margin-top: var(--gap); }
   .tiles5 { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
   @container app (max-width: 600px) { .tiles5 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
   .stile { display: block; min-width: 0; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); color: var(--text); text-decoration: none; transition: background .15s; }
@@ -1572,7 +1573,7 @@ export const PANEL_CSS = `
   .stile .v small { margin-left: 4px; font-size: 13px; font-weight: 400; letter-spacing: 0; color: var(--muted); }
   .stile .s { display: flex; align-items: center; gap: 6px; margin-top: 4px; min-width: 0; font-size: 12px; color: var(--muted); }
   .stile .s > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ovcols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; align-items: start; }
+  .ovcols { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); align-items: start; }
   @container app (min-width: 900px) { .ovcols { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
   .ovcols > .card + .card { margin-top: 0; }
   .ovcols h2.label .chip { margin-left: 8px; text-transform: none; letter-spacing: 0; }
