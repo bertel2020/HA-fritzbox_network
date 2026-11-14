@@ -2,7 +2,7 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
-## Unveröffentlicht
+## 1.11.0 – 2026-11-14
 
 ### Neu
 
@@ -26,6 +26,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 - Panel, Gerät: Umbenennen, In der Netzkarte und Mitschneiden stehen neben dem Namen, Seltenes (In Home Assistant, Logbuch in HA, Verlauf in HA, Entfernen) hinter „⋯“. Die zwei Hinweise der Stammdaten sind einer.
 - Panel, Geräteliste: Suche, Sortieren, Gruppieren und Ansicht stehen in einer Zeile, die auf schmalen Bildschirmen umbricht; die Zeile „N Geräte · M online“ entfällt (die Zahlen stehen an den Filtern, bei einer Suche „3 von 15 angezeigt“). Die Hinweise zum Netz sind auf eine Zeile eingeklappt.
 - Panel: Alle Seiten zeigen beim Laden dieselbe Platzhalter-Karte und bei einem Fehler dieselbe Karte mit „Erneut versuchen“, auch die Meldung des Panels selbst.
+- Panel: Einheitlicher Look: Kennzahlen stehen frei auf den Karten (ohne Kachelboxen), mit Verlauf je Bereich (Netzwerk, Internet, WLAN, Telefon); eine Zahlengröße (26/300, groß 30/300), ein Kartenkopf, 12 px Abstand und eine Chip-Größe überall; Seiten ohne sichtbaren Titel und Einleitung (der Titel bleibt für Screenreader). Portfreigaben als Karte je Gerät mit Status als Punkt und Wort, Datenvolumen als drei Karten (Zusammenfassung, Tage, Top-Geräte), Telefon-Statistik als getrennte Karten, Übersicht mit Icons, Balken und Hover.
 
 ### Behoben
 

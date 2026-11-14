@@ -2,7 +2,7 @@
 
 All notable changes to this integration are recorded here.
 
-## Unreleased
+## 1.11.0 – 2026-11-14
 
 ### New
 
@@ -26,6 +26,7 @@ All notable changes to this integration are recorded here.
 - Panel, device: Rename, In the network map and Record stand next to the name, the rare ones (In Home Assistant, Logbook in HA, History in HA, Remove) behind "⋯". The two notes of the master data are one.
 - Panel, device list: search, sort, group and view are one row that wraps on narrow screens; the line "N devices · M online" is gone (the numbers are on the filters, during a search "3 of 15 shown"). The notes on the network are folded to one line.
 - Panel: every page shows the same placeholder card while loading and the same card with "Try again" on an error, the panel's own message too.
+- Panel: one look throughout: key figures sit free on the cards (no tile boxes), with a gradient per area (network, internet, Wi-Fi, phone); one figure size (26/300, large 30/300), one card head, 12 px gaps and one chip size everywhere; pages without a visible title and lead (the title stays for screen readers). Port forwarding as one card per device with the state as dot and word, data volume as three cards (summary, days, top devices), phone statistics as separate cards, an overview with icons, bars and hover.
 
 ### Fixed
 
