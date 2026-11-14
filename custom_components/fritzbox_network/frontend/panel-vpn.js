@@ -141,7 +141,7 @@ function group(title, list, ctx) {
 export function renderVpn(data, ctx) {
   const { t } = ctx;
   const v = t.vpnPage;
-  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(v.title)}</h1><p class="lead">${escapeHtml(v.lead)}</p></div>`;
+  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(v.title)}</h1></div>`;
   if (!Array.isArray(data?.vpn)) return `${head}<div class="card"><div class="empty"><b>${escapeHtml(v.noData)}</b></div></div>`;
   const m = vpnModel(data);
   if (!m.connections.length) return `${head}<div class="card"><div class="empty"><b>${escapeHtml(v.none)}</b><p>${escapeHtml(v.noneHint)}</p></div></div>`;
