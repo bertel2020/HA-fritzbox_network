@@ -160,5 +160,5 @@ export function renderVpn(data, ctx) {
         )
         .join("")}</ul></section>`
     : "";
-  return `${head}<div class="tiles vpntiles">${tiles}</div>${group(v.devices, m.devices, ctx)}${group(v.sites, m.sites, ctx)}${remote}${statsSection(m, ctx)}${hintNote(v.hint, t)}`;
+  return `${head}<section class="card sec facts bare t-inet"><div class="tiles vpntiles">${tiles}</div></section>${group(v.devices, m.devices, ctx)}${group(v.sites, m.sites, ctx)}${remote}${statsSection(m, ctx)}${hintNote(v.hint, t)}`;
 }

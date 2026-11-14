@@ -27,7 +27,7 @@ export function renderConnection(check, latency, ctx) {
   const c = t.diag.check;
   const running = check === "running";
   const result = check && check !== "running" && check !== "failed" ? stepTiles(check, c) : "";
-  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(t.diag.connection)}</span>
+  return `<section class="card sec facts t-inet"><div class="chead"><span class="label">${escapeHtml(t.diag.connection)}</span>
     <div class="btn-row tight"><button class="btn p" data-act="check-run"${running ? " disabled" : ""}>${escapeHtml(running ? c.running : c.run)}</button></div></div>
     ${check === "failed" ? `<p class="hint">${escapeHtml(c.error)}</p>` : result}
     ${latencySection(latency, ctx)}
@@ -37,5 +37,5 @@ export function renderConnection(check, latency, ctx) {
 /** The head of a page that came from the diagnosis (connection test, event log, capture): its title, its lead. */
 export function diagHead(page, t) {
   const p = t.diag.pages[page];
-  return `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(p.title)}</h1><p class="lead">${escapeHtml(p.lead)}</p></div>`;
+  return `<div class="phead"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(p.title)}</h1></div>`;
 }

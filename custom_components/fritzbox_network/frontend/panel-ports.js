@@ -116,7 +116,7 @@ export function renderPorts(state, ctx) {
   const p = t.inet.ports;
   const filter = PORT_FILTERS.includes(ctx.filter) ? ctx.filter : "all";
   const head = `<span class="label">${escapeHtml(p.title)}</span>`;
-  const card = (body) => `<section class="card sec pfcard">${head}${body}</section>`;
+  const card = (body) => `<section class="card sec pfcard facts t-net">${head}${body}</section>`;
   if (state === "failed") return errorCard(t, p.failed, { retry: "ports-retry" });
   if (!state) return loadingCard(t);
   const m = portsModel(state.entries, filter);
@@ -125,9 +125,9 @@ export function renderPorts(state, ctx) {
     return card(`<div class="empty"><b>${escapeHtml(gap ? p.noneUnknown : p.none)}</b></div><p class="pfnote">${escapeHtml(p.hint)}</p>`);
   }
   const tiles = `<div class="pftiles">
-    <div class="pftile${m.open ? " open" : ""}"><b>${m.open}</b><small>${escapeHtml(p.tileOpen)}</small></div>
-    <div class="pftile"><b>${m.closed}</b><small>${escapeHtml(p.tileClosed)}</small></div>
-    <div class="pftile"><b>${m.devices}</b><small>${escapeHtml(m.devices === 1 ? p.tileDevice : p.tileDevices)}</small></div></div>`;
+    <div class="pftile${m.open ? " open" : ""}"><small>${escapeHtml(p.tileOpen)}</small><b>${m.open}</b></div>
+    <div class="pftile"><small>${escapeHtml(p.tileClosed)}</small><b>${m.closed}</b></div>
+    <div class="pftile"><small>${escapeHtml(m.devices === 1 ? p.tileDevice : p.tileDevices)}</small><b>${m.devices}</b></div></div>`;
   const warn = gap ? `<p class="pfnote warn">${escapeHtml(p.manualUnknown)}</p>` : "";
   const filters = `<div class="pffilters" role="group" aria-label="${escapeHtml(p.filterLabel)}">${PORT_FILTERS.map(
     (f) => `<button class="fchip" data-act="ports-filter" data-f="${f}" data-k="pf-${f}" aria-pressed="${f === filter}">${escapeHtml(p.filters[f])}<em>${m.counts[f]}</em></button>`

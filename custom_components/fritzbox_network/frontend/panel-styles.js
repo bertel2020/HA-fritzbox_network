@@ -1352,8 +1352,10 @@ export const PANEL_CSS = `
   .phtoday .phico { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; flex: none; background: color-mix(in srgb, var(--tone) 16%, var(--surface)); color: var(--tone); }
   .phtoday .phico svg { width: 17px; height: 17px; }
   /* the facts of a card: no boxes, the value free on the gradient like on the internet card; the tone comes from --tone of the card */
-  .facts.t-net { --tone: var(--up); background: linear-gradient(135deg, color-mix(in srgb, var(--tone) 9%, var(--surface)), var(--surface) 72%); }
-  .facts .tiles { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); gap: 16px 28px; }
+  .facts.t-inet { --tone: var(--accent); }
+  .facts.t-net { --tone: var(--up); }
+  .facts.t-net, .facts.t-inet { background: linear-gradient(135deg, color-mix(in srgb, var(--tone) 9%, var(--surface)), var(--surface) 72%); }
+  .facts .tiles, .facts .pftiles, .facts .checktiles { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); gap: 16px 28px; }
   .facts.bare .tiles { margin: 0; padding-top: 0; border-top: 0; }
   .facts .tile { background: none; border-radius: 0; padding: 0; }
   .facts .tile b { font-size: 26px; font-weight: 300; letter-spacing: -.02em; color: var(--tone); }
@@ -1659,4 +1661,13 @@ export const PANEL_CSS = `
   .palclose { display: none; flex: none; margin-right: -8px; }
   :host([compact]) .palfoot, :host([compact]) .palin kbd { display: none; }
   :host([compact]) .palclose { display: inline-grid; }
+  /* ports and the connection test on the same footing: label above the value, no boxes */
+  .facts .pftile { background: none; border-radius: 0; padding: 0; display: grid; }
+  .facts .pftile small { order: -1; display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
+  .facts .pftile b { font-size: 26px; font-weight: 300; letter-spacing: -.02em; color: var(--tone); }
+  .facts .pftile.open b { color: var(--warn); }
+  .facts .checktile { background: none; padding: 0; border-radius: 0; }
+  .facts .checktile .ico { background: color-mix(in srgb, var(--tone) 14%, var(--surface)); }
+  .facts .checktile.bad .ico { background: var(--bad-soft); }
+  .facts .checktile.bad b { color: var(--bad); }
 `;
