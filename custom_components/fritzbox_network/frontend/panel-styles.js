@@ -881,6 +881,11 @@ export const PANEL_CSS = `
   .tile.err.warn b { color: var(--warn); }
   @container app (max-width: 420px) { .ltable { grid-template-columns: 1fr 1fr; } .ltable > .n { grid-column: 1 / -1; padding-bottom: 0; } .ltable > .v { border-top: 0; } }
   .ihead .who b { display: block; font-size: 18px; font-weight: 500; }
+  /* the box: a soft green-teal that reads as "running", next to the blue of the internet card; both fade out to the surface */
+  .boxhero { background: linear-gradient(135deg, color-mix(in srgb, var(--ok-soft) 70%, var(--accent-soft)), transparent 72%), var(--surface); }
+  .boxhero .tile { background: color-mix(in srgb, var(--surface) 55%, var(--soft)); }
+  .boxhero .ihead .ico { background: color-mix(in srgb, var(--ok-soft) 60%, var(--accent-soft)); color: var(--ok); }
+  .hero .tile { background: color-mix(in srgb, var(--surface) 55%, var(--soft)); }
   .boxhero .ihead .ico { width: 48px; height: 48px; border-radius: 14px; }
   .boxhero .ihead .who b { font-size: 20px; }
   .boxhero .ihead .chip { margin-left: auto; flex: none; }
