@@ -119,7 +119,7 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
   // devices: online of all, new and blocked ones
   const counts = panelCounts(data, now, state?.threshold);
   const extra = [counts.new ? fill(o.fresh, { n: counts.new }) : "", counts.blocked ? fill(o.blocked, { n: counts.blocked }) : ""].filter(Boolean);
-  tiles.push({ id: "net", href: pageHash("net"), label: t.tabs.netDevices, value: String(counts.online), unit: `/ ${counts.all}`, sub: [o.online, ...extra].join(" · "), tone: "" });
+  tiles.push({ id: "net", href: pageHash("net"), label: t.tabs.netDevices, value: String(counts.online), unit: `/ ${counts.all}`, sub: [o.online, ...extra].join(" · "), tone: "", bar: counts.all ? (counts.online / counts.all) * 100 : null });
   // the box: up for how long, its load and temperature where it tells them
   const info = state?.box && typeof state.box === "object" ? state.box : null;
   const restarting = state?.boxRestart && state.boxRestart.phase !== "back";
@@ -134,7 +134,7 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
       : [];
     const model = (data.nodes ?? []).find((n) => n.role === "master")?.model ?? "";
     const [value, unit] = uptime === null ? ["–", ""] : split(formatDuration(uptime, t.inet.units).split(" ").slice(0, 2).join(" "));
-    tiles.push({ id: "box", href: pageHash("box"), label: t.tabs.box, value, unit, sub: loads.join(" · ") || model || o.notRead, tone: "" });
+    tiles.push({ id: "box", href: pageHash("box"), label: t.tabs.box, value, unit, sub: loads.join(" · ") || model || o.notRead, tone: "", bar: typeof info?.cpu_load === "number" ? info.cpu_load : null });
   }
   // Wi-Fi: devices on it, and the verdict of the radio check
   const wlan = (data.clients ?? []).filter((c) => c.online && c.link_type === "wlan").length;
@@ -167,11 +167,14 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
 
 const ISSUE_ICONS = { bad: "alert", warn: "alert", info: "info" };
 
+const TILE_ICONS = { internet: "globe", net: "network", box: "router", wlan: "wifi", phone: "phone" };
+
 function tileHtml(tile) {
   const dot = tile.tone ? `<i class="dot ${tile.tone === "ok" ? "on" : tile.tone}" aria-hidden="true"></i>` : "";
-  return `<a class="stile" href="${escapeHtml(tile.href)}" data-k="ov-${tile.id}"><span class="label">${escapeHtml(tile.label)}</span>
-    <span class="v">${escapeHtml(tile.value)}${tile.unit ? `<small>${escapeHtml(tile.unit)}</small>` : ""}</span>
-    <span class="s">${dot}<span>${escapeHtml(tile.sub)}</span></span></a>`;
+  const bar = typeof tile.bar === "number" ? `<span class="sbar" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, tile.bar))}%"></i></span>` : "";
+  return `<a class="stile t-${escapeHtml(tile.id)}" href="${escapeHtml(tile.href)}" data-k="ov-${tile.id}"><span class="sico" aria-hidden="true">${ic(TILE_ICONS[tile.id] ?? "info")}</span><span class="label">${escapeHtml(tile.label)}</span>
+    <span class="v">${escapeHtml(tile.value)}${tile.unit ? `<small>${escapeHtml(tile.unit)}</small>` : ""}</span>${bar}
+    <span class="s">${dot}<span>${escapeHtml(tile.sub)}</span></span><span class="sgo" aria-hidden="true">${ic("chev")}</span></a>`;
 }
 
 function issueHtml(issue) {

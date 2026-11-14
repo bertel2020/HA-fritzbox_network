@@ -1566,10 +1566,23 @@ export const PANEL_CSS = `
   #overview-view > * + * { margin-top: var(--gap); }
   .tiles5 { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; }
   @container app (max-width: 600px) { .tiles5 { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-  .stile { display: block; min-width: 0; padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); color: var(--text); text-decoration: none; transition: background .15s; }
-  .stile:hover { background: var(--soft); }
-  .stile .label { display: block; }
-  .stile .v { display: block; margin-top: 6px; font-size: 26px; font-weight: 300; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stile { --tone: var(--accent); position: relative; display: block; min-width: 0; padding: 14px 16px; background: linear-gradient(135deg, color-mix(in srgb, var(--tone) 9%, var(--surface)), var(--surface) 72%); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); color: var(--text); text-decoration: none; transition: border-color .15s, box-shadow .15s, transform .15s; }
+  .stile.t-internet { --tone: var(--accent); }
+  .stile.t-net { --tone: var(--up); }
+  .stile.t-box { --tone: light-dark(#14806f, #4cc9b0); }
+  .stile.t-wlan { --tone: light-dark(#0b7f95, #55c2d6); }
+  .stile.t-phone { --tone: light-dark(#a56a00, #f2c27a); }
+  .stile:hover { border-color: color-mix(in srgb, var(--tone) 45%, var(--line)); }
+  @media (prefers-reduced-motion: no-preference) { .stile:hover { transform: translateY(-2px); } }
+  .stile .sico { position: absolute; top: 12px; right: 14px; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--tone) 16%, var(--surface)); color: var(--tone); }
+  .stile .sico svg { width: 17px; height: 17px; }
+  .stile .sgo { position: absolute; right: 12px; bottom: 10px; opacity: 0; color: var(--tone); transition: opacity .15s; }
+  .stile .sgo svg { width: 14px; height: 14px; transform: rotate(-90deg); }
+  .stile:hover .sgo, .stile:focus-visible .sgo { opacity: 1; }
+  .stile .sbar { display: block; height: 4px; margin-top: 8px; border-radius: 2px; background: color-mix(in srgb, var(--tone) 14%, var(--line)); overflow: hidden; }
+  .stile .sbar i { display: block; height: 100%; border-radius: 2px; background: var(--tone); }
+  .stile .label { display: block; padding-right: 36px; }
+  .stile .v { display: block; margin-top: 6px; font-size: 28px; font-weight: 400; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .stile .v small { margin-left: 4px; font-size: 13px; font-weight: 400; letter-spacing: 0; color: var(--muted); }
   .stile .s { display: flex; align-items: center; gap: 6px; margin-top: 4px; min-width: 0; font-size: 12px; color: var(--muted); }
   .stile .s > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
