@@ -253,9 +253,10 @@ function volumeCard(ctx) {
   const volTile = (x, top) => {
     const total = x.down + x.up;
     const share = total ? (x.down / total) * 100 : 50;
-    return `<div class="vtile"><div class="vpair"><span class="hint">${escapeHtml(x.label)}${x.note ? ` <span class="since">${escapeHtml(x.note)}</span>` : ""}</span><span class="vtot">${escapeHtml(t.trafficTotal)} <b>${sizeOf(total)}</b></span></div>
+    return `<div class="vtile"><span class="vlabel">${escapeHtml(x.label)}${x.note ? ` <span class="since">${escapeHtml(x.note)}</span>` : ""}</span>
+      <b class="vtot">${sizeOf(total)}</b>
       <div class="vwrap" style="width:${Math.max((total / top) * 100, 12).toFixed(1)}%"><div class="vsplit" role="img" aria-label="↓ ${sizeOf(x.down)} · ↑ ${sizeOf(x.up)}"><i class="vd" style="width:${share.toFixed(1)}%"></i><i class="vu" style="width:${(100 - share).toFixed(1)}%"></i></div></div>
-      <div class="vpair"><div><b class="vdn"><i>↓</i> ${sizeOf(x.down)}</b><small>${Math.round(share)} %</small></div><div class="vr"><b class="vup"><i>↑</i> ${sizeOf(x.up)}</b><small>${total ? 100 - Math.round(share) : 50} %</small></div></div>
+      <div class="vpair"><span class="vdn"><i>↓</i> ${sizeOf(x.down)} <small>${Math.round(share)} %</small></span><span class="vup"><i>↑</i> ${sizeOf(x.up)} <small>${total ? 100 - Math.round(share) : 50} %</small></span></div>
       ${x.compare ? `<div class="cmp">${x.compare}</div>` : ""}</div>`;
   };
   const days = range === 365 ? 365 : range === 30 ? 30 : 14;
@@ -280,12 +281,13 @@ function volumeCard(ctx) {
   const more = rest.length ? `<p class="hint">${escapeHtml(fill(i.topMore, { n: rest.length, size: formatBytes(rest.reduce((a, r) => a + r.total, 0), language) }))}</p>` : "";
   const items = known ? [tile(1), tile(7), tile(30), monthTile()] : [];
   const scale = volTop(items);
-  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(i.volume)}</span><div class="seg" role="group" aria-label="${escapeHtml(i.volume)}">${buttons}</div></div>
-    ${known ? `<div class="vtiles">${items.map((x) => volTile(x, scale)).join("")}</div>
-    <div class="vbody"><div class="vdays"><div class="subhead">${escapeHtml(i.perDay)}</div>${dayBars(dailyTotals(traffic, days), language, t)}</div>
-      <div><div class="subhead">${escapeHtml(fill(i.topTitle, { range: t.trafficRanges[range] }))}</div>
-      ${rows.length ? `<ol class="topdev">${list}</ol>${more}` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}</div></div>` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}
-    ${hintNote(i.topHint, t)}</section>`;
+  const summary = `<section class="card sec facts t-inet"><div class="chead"><span class="label">${escapeHtml(i.volume)}</span><div class="seg" role="group" aria-label="${escapeHtml(i.volume)}">${buttons}</div></div>
+    ${known ? `<div class="vtiles">${items.map((x) => volTile(x, scale)).join("")}</div>` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}</section>`;
+  if (!known) return summary;
+  return `${summary}
+    <section class="card sec"><div class="chead"><span class="label">${escapeHtml(i.perDay)}</span></div>${dayBars(dailyTotals(traffic, days), language, t)}</section>
+    <section class="card sec"><div class="chead"><span class="label">${escapeHtml(fill(i.topTitle, { range: t.trafficRanges[range] }))}</span></div>
+      ${rows.length ? `<ol class="topdev">${list}</ol>${more}` : `<p class="hint">${escapeHtml(i.topNone)}</p>`}${hintNote(i.topHint, t)}</section>`;
 }
 
 /** A button that copies a value to the clipboard. */

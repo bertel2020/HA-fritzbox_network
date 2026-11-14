@@ -539,24 +539,21 @@ export const PANEL_CSS = `
   .dnsbox[open] summary::after { content: " ▴"; }
   .dnsbox summary small { color: var(--muted); font-size: 12px; }
   .dnsbox .dnscols { margin-top: 8px; }
-  .vtiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 12px; }
-  .vtile { background: var(--soft); border-radius: 12px; padding: 10px 14px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .vtiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px 28px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); }
+  .vtile { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+  .vtile .vlabel { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .vtile .vtot { font-size: 26px; font-weight: 300; letter-spacing: -.02em; line-height: 1.2; color: var(--tone); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .vtile .cmp { display: flex; flex-wrap: wrap; gap: 2px 6px; align-items: center; font-size: 12px; color: var(--muted); }
   .vtile .chip { white-space: nowrap; border-radius: 8px; padding: 0 6px; font-size: 11px; font-weight: 500; background: var(--neutral-soft, var(--soft)); color: var(--text); }
   .vtile .chip.hi { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
   .vtile .chip.lo { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
-  .vtile .since { color: var(--warn); font-size: 11px; }
-  .vtile .vpair { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
-  .vtile .vpair > div { display: flex; flex-direction: column; min-width: 0; }
-  .vtile .vr { text-align: right; }
-  .vtile .vtot { font-size: 12px; color: var(--muted); white-space: nowrap; }
-  .vtile .vtot b { font-weight: 500; color: var(--text); }
-  .vtile .vsplit { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--surface); }
+  .vtile .since { color: var(--warn); font-size: 11px; text-transform: none; letter-spacing: 0; }
+  .vtile .vpair { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .vtile .vsplit { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: color-mix(in srgb, var(--tone) 10%, var(--soft)); }
   .vtile .vsplit i { display: block; height: 100%; }
   .vtile .vsplit i.vd { background: var(--accent); }
   .vtile .vsplit i.vu { background: var(--up); margin-left: 2px; }
-  .vtile b { font-size: 18px; font-weight: 500; line-height: 1.3; white-space: nowrap; font-variant-numeric: tabular-nums; }
-  .vtile b i { font-style: normal; font-weight: 600; }
+  .vtile .vpair i { font-style: normal; font-weight: 600; }
   .vtile .vdn { color: var(--accent); } .vtile .vup { color: var(--up); }
   .vtile small { color: var(--muted); font-size: 11px; }
   /* the volume has a page of its own: the days over the whole width, who used the most below */
