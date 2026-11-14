@@ -881,6 +881,16 @@ export const PANEL_CSS = `
   .tile.err.warn b { color: var(--warn); }
   @container app (max-width: 420px) { .ltable { grid-template-columns: 1fr 1fr; } .ltable > .n { grid-column: 1 / -1; padding-bottom: 0; } .ltable > .v { border-top: 0; } }
   .ihead .who b { display: block; font-size: 18px; font-weight: 500; }
+  .boxhero .ihead .ico { width: 48px; height: 48px; border-radius: 14px; }
+  .boxhero .ihead .who b { font-size: 20px; }
+  .boxhero .ihead .chip { margin-left: auto; flex: none; }
+  .boxhero .tiles { margin-top: 16px; }
+  .tile .gauge { display: block; height: 4px; margin-top: 6px; border-radius: 2px; background: var(--line); overflow: hidden; }
+  .tile .gauge i { display: block; height: 100%; border-radius: 2px; background: var(--accent); }
+  .tile.gv.warn .gauge i { background: var(--warn); }
+  .tile.gv.bad .gauge i { background: var(--bad); }
+  .tile.gv.warn b { color: var(--warn); }
+  .tile.gv.bad b { color: var(--bad); }
   .ihead .who small { color: var(--muted); }
   .stat.warn { background: var(--warn-soft); color: var(--warn); }
   .spark { width: 100%; height: 72px; display: block; margin-top: 8px; }

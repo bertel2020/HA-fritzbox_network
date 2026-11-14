@@ -63,20 +63,24 @@ function hero(info, ctx) {
       : when(lastMs, language);
   const temp =
     typeof info.cpu_temperature === "number"
-      ? tile(b.cpuTemp, `<b>${escapeHtml(down ? "–" : `${info.cpu_temperature.toLocaleString(language || "en", { maximumFractionDigits: 1 })} °C`)}</b>`, down ? b.unreachable : "")
+      ? tile(b.cpuTemp, `<b>${escapeHtml(down ? "–" : `${info.cpu_temperature.toLocaleString(language || "en", { maximumFractionDigits: 1 })} °C`)}</b>`, down ? b.unreachable : "", down ? "" : `gv${info.cpu_temperature >= 95 ? " bad" : info.cpu_temperature >= 85 ? " warn" : ""}`)
       : tile(b.cpuTemp, `<b class="na">${escapeHtml(b.notReported)}</b>`, b.notReportedHint);
+  const level = (value, warn, bad) => (value >= bad ? " bad" : value >= warn ? " warn" : "");
   const usage = (label, value) =>
     typeof value === "number"
-      ? tile(label, `<b>${escapeHtml(down ? "–" : `${value.toLocaleString(language || "en")} %`)}</b>`, down ? b.unreachable : "")
+      ? tile(
+          label,
+          `<b>${escapeHtml(down ? "–" : `${value.toLocaleString(language || "en")} %`)}</b>${down ? "" : `<span class="gauge" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, value))}%"></i></span>`}`,
+          down ? b.unreachable : "",
+          down ? "" : `gv${level(value, 80, 95)}`,
+        )
       : tile(label, `<b class="na">${escapeHtml(b.notReported)}</b>`, b.notReportedUsage);
   const stat = down
     ? `<span class="chip warn"><i class="dot warn" aria-hidden="true"></i>${escapeHtml(b.restarting)}</span>`
     : `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${escapeHtml(b.running)}</span>`;
-  const sub = [info.firmware ? `FRITZ!OS ${info.firmware}` : ""].filter(Boolean).join(" · ");
-  return `<section class="card sec">
-    <div class="chead"><span class="label">${escapeHtml(t.box)}</span>${stat}</div>
+  return `<section class="card sec boxhero">
     <div class="ihead"><span class="ico">${ic("router")}</span>
-      <span class="who"><b>${escapeHtml(info.model ?? t.box)}</b>${sub ? `<small>${escapeHtml(sub)}</small>` : ""}</span></div>
+      <span class="who"><b>${escapeHtml(info.model ?? t.box)}</b></span>${stat}</div>
     <div class="tiles tiles3">
       ${tile(b.uptime, `<b>${escapeHtml(down ? "–" : formatDuration(uptime, t.inet.units))}</b>`, b.noRestart)}
       ${tile(b.lastRestart, `<b>${escapeHtml(last)}</b>`, back && restart.backAt ? fill(b.lastRestartTook, { time: minSec(restart.backAt - restart.requestedAt) }) : b.noReason)}
