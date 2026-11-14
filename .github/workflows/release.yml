@@ -77,6 +77,10 @@ jobs:
           fi
           echo "" >> notes.md
           echo "Vollständiger Änderungsverlauf: [CHANGELOG.md](https://github.com/$REPOSITORY/blob/main/CHANGELOG.md)" >> notes.md
+          # Support footer, the same text for every release. Read from main,
+          # so that re-running the workflow for an older tag (which does not
+          # have the file) gets it too.
+          git show origin/main:.github/release-footer.md >> notes.md
 
       - name: Determine release title
         id: title
