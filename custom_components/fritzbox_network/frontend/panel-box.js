@@ -78,13 +78,13 @@ function hero(info, ctx) {
   const stat = down
     ? `<span class="chip warn"><i class="dot warn" aria-hidden="true"></i>${escapeHtml(b.restarting)}</span>`
     : `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${escapeHtml(b.running)}</span>`;
-  return `<section class="card sec boxhero">
+  return `<section class="card sec boxhero facts">
     <div class="ihead"><span class="ico">${ic("router")}</span>
       <span class="who"><b>${escapeHtml(info.model ?? t.box)}</b></span>${stat}</div>
     <div class="tiles tiles3">
       ${tile(b.uptime, `<b>${escapeHtml(down ? "–" : formatDuration(uptime, t.inet.units))}</b>`, b.noRestart)}
-      ${tile(b.lastRestart, `<b>${escapeHtml(last)}</b>`, back && restart.backAt ? fill(b.lastRestartTook, { time: minSec(restart.backAt - restart.requestedAt) }) : b.noReason)}
-      ${tile(b.firmware, `<b>${escapeHtml(info.firmware ?? "–")}</b>`)}
+      ${tile(b.lastRestart, `<b>${escapeHtml(last)}</b>`, back && restart.backAt ? fill(b.lastRestartTook, { time: minSec(restart.backAt - restart.requestedAt) }) : b.noReason, "neutral")}
+      ${tile(b.firmware, `<b>${escapeHtml(info.firmware ?? "–")}</b>`, "", "neutral")}
       ${usage(b.cpuLoad, info.cpu_load)}
       ${temp}
       ${usage(b.ramUsage, info.ram_usage)}

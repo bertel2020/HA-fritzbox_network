@@ -429,12 +429,12 @@ function tiles(m, t) {
   const tile = (label, value, sub, meter = "", cls = "") =>
     `<div class="tile${cls}"><span class="label">${escapeHtml(label)}</span><b>${escapeHtml(value)}</b>${meter}<small>${escapeHtml(sub)}</small></div>`;
   const meter = (share, color) => `<div class="ameter"><i style="width:${Math.min(100, share * 100).toFixed(1)}%;background:${color}"></i></div>`;
-  return `<div class="tiles atiles">
+  return `<section class="card sec facts bare t-net"><div class="tiles atiles">
     ${tile(a.tiles.net, `${m.baseText}0/${m.prefix}`, fill(a.tiles.mask, { mask: m.mask }))}
     ${tile(a.tiles.gateway, m.gateway ?? "–", fill(a.tiles.gatewaySub, { name: m.gatewayName, dhcp: m.dhcp ? a.on : a.off }))}
     ${tile(a.tiles.pool, m.hasPool ? `.${m.poolFrom} – .${m.poolTo}` : a.tiles.noPool, m.hasPool ? poolSub(m, a, percent) : "", m.hasPool ? meter(m.poolUsed / (m.poolSize || 1), percent >= 80 ? "var(--warn)" : "var(--accent)") : "")}
     ${usageTile(m, a)}
-  </div>`;
+  </div></section>`;
 }
 
 function hintsCard(m, hints, own, t) {
@@ -782,8 +782,8 @@ function zonesCard(m, t, language) {
 export function renderAddresses(ctx) {
   const { t, addr, clients, nodes } = ctx;
   const a = t.addr;
-  const back = `${ctx.subTabs ?? ""}<div class="phead"><div class="pheadrow"><h1 id="dtitle" tabindex="-1">${escapeHtml(a.title)}</h1>
-    ${addr.status === "ready" ? `<div class="btn-row tight"><button class="btn" data-aentry="new" data-k="entry-open" aria-haspopup="dialog"><span aria-hidden="true">+</span> ${escapeHtml(a.entries.open)}</button>${groupsButton(addr.own ?? emptyOwn(), t)}<button class="btn" data-aexport="scroll" data-k="x-scroll">${escapeHtml(a.export.open)}</button></div>` : ""}</div><p class="lead">${escapeHtml(a.lead)}</p></div>`;
+  const back = `${ctx.subTabs ?? ""}<div class="phead"><div class="pheadrow"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(a.title)}</h1>
+    ${addr.status === "ready" ? `<div class="btn-row tight"><button class="btn" data-aentry="new" data-k="entry-open" aria-haspopup="dialog"><span aria-hidden="true">+</span> ${escapeHtml(a.entries.open)}</button>${groupsButton(addr.own ?? emptyOwn(), t)}<button class="btn" data-aexport="scroll" data-k="x-scroll">${escapeHtml(a.export.open)}</button></div>` : ""}</div></div>`;
   if (addr.status === "loading") return `${back}${loadingCard(t)}`;
   if (addr.status === "failed") return `${back}${errorCard(t, a.failed, { retry: "addr-retry" })}`;
   const own = addr.own ?? emptyOwn();

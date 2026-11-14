@@ -206,7 +206,7 @@ export function renderRoutes(routes, ctx) {
     : "";
   const selected = m.routes.find((r) => r.network === ctx.sel) ?? m.routes[0];
   const c = { ...ctx, sel: selected.network, home: routes.home };
-  return `${head}${newForm}${noHome}<div class="tiles routetiles">${tiles}</div>${hints}
+  return `${head}${newForm}${noHome}<section class="card sec facts bare t-net"><div class="tiles routetiles">${tiles}</div></section>${hints}
     <div class="routelayout">
       <section class="card sec"><span class="label">${escapeHtml(v.listTitle)}</span><ul class="vpnlist">${m.routes.map((r) => row(r, c)).join("")}</ul></section>
       <aside class="card sec routedetail" aria-live="polite">${detail(selected, c)}</aside>

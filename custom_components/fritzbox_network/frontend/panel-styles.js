@@ -466,6 +466,7 @@ export const PANEL_CSS = `
   .phead h1 { font-size: 24px; font-weight: 500; margin: 4px 0 0; letter-spacing: -.01em; }
   .phead .lead { margin: 6px 0 0; }
   .pheadrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+  .pheadrow > .btn-row { margin-left: auto; }
   .col h2 { font-size: 16px; font-weight: 500; margin: 0 0 8px; }
   .col label.search { margin: 12px 0 4px; }
   .count { color: var(--muted); font-size: 13px; margin: 12px 0 4px; }
@@ -883,10 +884,8 @@ export const PANEL_CSS = `
   @container app (max-width: 420px) { .ltable { grid-template-columns: 1fr 1fr; } .ltable > .n { grid-column: 1 / -1; padding-bottom: 0; } .ltable > .v { border-top: 0; } }
   .ihead .who b { display: block; font-size: 18px; font-weight: 500; }
   /* the box: a soft green-teal that reads as "running", next to the blue of the internet card; both fade out to the surface */
-  .boxhero { background: linear-gradient(135deg, color-mix(in srgb, var(--ok-soft) 70%, var(--accent-soft)), transparent 72%), var(--surface); }
-  .boxhero .tile { background: color-mix(in srgb, var(--surface) 55%, var(--soft)); }
+  .boxhero { --tone: light-dark(#14806f, #4cc9b0); background: linear-gradient(135deg, color-mix(in srgb, var(--ok-soft) 70%, var(--accent-soft)), transparent 72%), var(--surface); }
   .boxhero .ihead .ico { background: color-mix(in srgb, var(--ok-soft) 60%, var(--accent-soft)); color: var(--ok); }
-  .hero .tile { background: color-mix(in srgb, var(--surface) 55%, var(--soft)); }
   .boxhero .ihead .ico { width: 48px; height: 48px; border-radius: 14px; }
   .boxhero .ihead .who b { font-size: 20px; }
   .boxhero .ihead .chip { margin-left: auto; flex: none; }
@@ -1352,7 +1351,17 @@ export const PANEL_CSS = `
   .phtoday .chead .ph-src { margin-left: auto; }
   .phtoday .phico { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; flex: none; background: color-mix(in srgb, var(--tone) 16%, var(--surface)); color: var(--tone); }
   .phtoday .phico svg { width: 17px; height: 17px; }
-  .phtoday .tile { background: color-mix(in srgb, var(--surface) 55%, var(--soft)); }
+  /* the facts of a card: no boxes, the value free on the gradient like on the internet card; the tone comes from --tone of the card */
+  .facts.t-net { --tone: var(--up); background: linear-gradient(135deg, color-mix(in srgb, var(--tone) 9%, var(--surface)), var(--surface) 72%); }
+  .facts .tiles { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--line); gap: 16px 28px; }
+  .facts.bare .tiles { margin: 0; padding-top: 0; border-top: 0; }
+  .facts .tile { background: none; border-radius: 0; padding: 0; }
+  .facts .tile b { font-size: 26px; font-weight: 300; letter-spacing: -.02em; color: var(--tone); }
+  .facts .tile.neutral b { color: var(--text); }
+  .facts .tile.bad b { color: var(--bad); }
+  .facts .tile.ok b { color: var(--ok); }
+  .facts .tile .gauge i { background-color: var(--tone); }
+  .facts .tile b.na { font-size: 15px; font-weight: 400; color: var(--muted); letter-spacing: 0; }
   .ph-hint .tile small { white-space: normal; overflow: visible; text-overflow: clip; }
   .ph-hprev { margin-top: 16px; opacity: .6; pointer-events: none; }
   .ph-hrow { display: grid; grid-template-columns: 22px minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }
