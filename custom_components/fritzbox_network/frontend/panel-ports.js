@@ -1,6 +1,6 @@
 /** The port forwardings page of the internet tab: by device, one row per forwarding, IPv4 and IPv6 as one. */
 
-import { errorCard, escapeHtml, formatDuration, loadingCard } from "./shared.js";
+import { errorCard, escapeHtml, formatDuration, hintNote, loadingCard } from "./shared.js";
 import { fill } from "./texts.js";
 
 export const PORT_FILTERS = ["all", "open", "closed", "ipv6", "upnp"];
@@ -74,29 +74,26 @@ export function portsModel(entries, filter = "all") {
   return { rows, open, closed: rows.length - open, devices, counts, groups };
 }
 
-function stateChip(row, p) {
+function stateLabel(row, p) {
   const text = { open: p.stateOpen, closed: p.stateClosed, part: p.statePart }[row.state];
-  const tone = { open: "open", closed: "", part: "part" }[row.state];
-  return `<span class="chip ${tone}"><i class="dot ${row.state === "closed" ? "" : "warn"}" aria-hidden="true"></i>${escapeHtml(text)}</span>`;
+  return `<span class="pfstate ${row.state}"><i class="dot ${row.state === "closed" ? "" : "warn"}" aria-hidden="true"></i>${escapeHtml(text)}</span>`;
 }
 
 function ruleRow(row, t) {
   const p = t.inet.ports;
-  const families = row.families
-    .map((f) => `<span class="chip info${f.enabled ? "" : " dim"}">${f.family === "ipv6" ? "IPv6" : "IPv4"}</span>`)
-    .join("");
-  const upnp = row.source === "upnp"
-    ? `<span class="chip">${escapeHtml(row.lease ? `${p.upnpChip} · ${fill(p.lease, { time: formatDuration(row.lease, t.inet.units) })}` : p.upnpChip)}</span>`
-    : "";
+  const meta = [
+    row.protocol ? `<span class="mono">${escapeHtml(row.protocol)}</span>` : "",
+    ...row.families.map((f) => `<span${f.enabled ? "" : ' class="dim"'}>${f.family === "ipv6" ? "IPv6" : "IPv4"}</span>`),
+    row.source === "upnp" ? `<span>${escapeHtml(row.lease ? `${p.upnpChip} · ${fill(p.lease, { time: formatDuration(row.lease, t.inet.units) })}` : p.upnpChip)}</span>` : "",
+  ].filter(Boolean).join('<span aria-hidden="true"> · </span>');
   const same = row.external_port === row.internal_port && (row.external_port_end ?? null) === (row.internal_port_end ?? null);
   const ports = same
     ? `<span class="mono">${escapeHtml(portText(row.external_port, row.external_port_end))}</span><small>${escapeHtml(p.portSame)}</small>`
-    : `<span class="mono">${escapeHtml(portText(row.external_port, row.external_port_end))}</span><span class="arrow" aria-hidden="true">→</span><span class="mono">${escapeHtml(portText(row.internal_port, row.internal_port_end))}</span><small>${escapeHtml(p.portDiff)}</small>`;
+    : `<span class="mono">${escapeHtml(portText(row.external_port, row.external_port_end))}</span><span class="arrow" aria-hidden="true">→</span><span class="mono">${escapeHtml(portText(row.internal_port, row.internal_port_end))}</span>`;
   const name = row.description ? `<b>${escapeHtml(row.description)}</b>` : `<b class="muted">${escapeHtml(p.noName)}</b>`;
   return `<div class="pfrule ${row.state === "closed" ? "closed" : ""}">
-    <div>${stateChip(row, p)}</div>
-    <div class="pfname">${name}${families}${upnp}</div>
-    <div class="pfproto"><span class="chip proto">${escapeHtml(row.protocol ?? "")}</span></div>
+    ${stateLabel(row, p)}
+    <div class="pfname">${name}<small>${meta}</small></div>
     <div class="pfports">${ports}</div></div>`;
 }
 
@@ -105,9 +102,8 @@ function groupCard(group, t) {
   const name = escapeHtml(group.name ?? p.noClient);
   const title = group.deviceId ? `<button class="linklike" data-dev="${escapeHtml(group.deviceId)}">${name}</button>` : name;
   const online = group.online === null ? "" : `<span class="chip"><i class="dot ${group.online ? "on" : ""}" aria-hidden="true"></i>${escapeHtml(group.online ? p.online : p.offline)}</span>`;
-  return `<div class="pfdev"><div class="pfhead"><b>${title}</b>${group.address && group.address !== group.name ? `<span class="mono muted">${escapeHtml(group.address)}</span>` : ""}<span class="sp"></span>${online}</div>
-    <div class="pfcols" aria-hidden="true"><span>${escapeHtml(p.cols.state)}</span><span>${escapeHtml(p.cols.rule)}</span><span>${escapeHtml(p.cols.protocol)}</span><span class="r">${escapeHtml(p.cols.port)}</span></div>
-    ${group.rows.map((row) => ruleRow(row, t)).join("")}</div>`;
+  return `<section class="card sec pfdev"><div class="pfhead"><b>${title}</b>${group.address && group.address !== group.name ? `<span class="mono muted">${escapeHtml(group.address)}</span>` : ""}<span class="sp"></span>${online}</div>
+    ${group.rows.map((row) => ruleRow(row, t)).join("")}</section>`;
 }
 
 /** The card; messages where the box tells nothing or no forwarding is set. */
@@ -132,6 +128,6 @@ export function renderPorts(state, ctx) {
   const filters = `<div class="pffilters" role="group" aria-label="${escapeHtml(p.filterLabel)}">${PORT_FILTERS.map(
     (f) => `<button class="fchip" data-act="ports-filter" data-f="${f}" data-k="pf-${f}" aria-pressed="${f === filter}">${escapeHtml(p.filters[f])}<em>${m.counts[f]}</em></button>`
   ).join("")}</div>`;
-  const body = m.groups.length ? m.groups.map((g) => groupCard(g, t)).join("") : `<div class="empty"><b>${escapeHtml(p.noMatch)}</b></div>`;
-  return card(`${tiles}${warn}${filters}${body}<p class="pfnote">${escapeHtml(p.hint)}</p>`);
+  const body = m.groups.length ? m.groups.map((g) => groupCard(g, t)).join("") : `<section class="card sec"><div class="empty"><b>${escapeHtml(p.noMatch)}</b></div></section>`;
+  return `${card(`${tiles}${warn}`)}${filters}${body}${hintNote(p.hint, t)}`;
 }

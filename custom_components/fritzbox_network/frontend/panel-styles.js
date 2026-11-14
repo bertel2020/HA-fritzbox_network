@@ -812,30 +812,29 @@ export const PANEL_CSS = `
   .pftile b { display: block; font-size: 22px; font-weight: 500; line-height: 1.25; }
   .pftile.open b { color: var(--warn); }
   .pftile small { color: var(--muted); font-size: 12px; }
-  .pffilters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+  .pffilters { display: flex; flex-wrap: wrap; gap: 8px; }
   .pffilters .fchip { min-height: 32px; font-size: 13px; }
   .pffilters .fchip em { font-style: normal; color: var(--muted); }
-  .pfdev { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
-  .pfdev + .pfdev { margin-top: 12px; }
-  .pfhead { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--soft); }
+  .pfdev { padding-bottom: 6px; }
+  .pfhead { display: flex; align-items: center; gap: 10px; padding-bottom: 10px; }
   .pfhead b { font-weight: 500; }
   .pfhead .sp { flex: 1; }
-  .pfcols, .pfrule { display: grid; grid-template-columns: 96px minmax(0, 1fr) 64px minmax(190px, auto); gap: 4px 16px; align-items: center; padding: 10px 14px; }
-  .pfcols { padding-top: 8px; padding-bottom: 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); }
-  .pfcols .r { text-align: right; }
-  .pfrule + .pfrule { border-top: 1px solid var(--line); }
+  .pfrule { display: grid; grid-template-columns: 84px minmax(0, 1fr) auto; gap: 4px 16px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .pfstate { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .pfstate.open { color: var(--warn); }
+  .pfstate.part { color: var(--accent-hover); }
   .pfrule.closed .pfname, .pfrule.closed .pfports { opacity: .55; }
-  .pfname { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; min-width: 0; }
+  .pfname { display: grid; min-width: 0; }
   .pfname b { font-weight: 500; }
-  .pfports { text-align: right; white-space: nowrap; }
+  .pfname small { color: var(--muted); font-size: 12px; }
+  .pfname small .dim { opacity: .55; text-decoration: line-through; }
+  .pfports { text-align: right; white-space: nowrap; font-size: 15px; }
   .pfports .arrow { color: var(--muted); padding: 0 4px; }
   .pfports small { display: block; color: var(--muted); font-size: 11.5px; }
   .pfnote { margin: 14px 0 0; padding: 10px 12px; border-radius: 12px; font-size: 13px; background: var(--soft); color: var(--muted); }
-  .pfnote.warn { background: var(--warn-soft); color: var(--warn); margin: 0 0 12px; }
+  .pfnote.warn { background: var(--warn-soft); color: var(--warn); margin: 12px 0 0; }
   @container app (max-width: 720px) {
-    .pfcols { display: none; }
     .pfrule { grid-template-columns: auto minmax(0, 1fr); }
-    .pfrule .pfproto { grid-column: 2; }
     .pfrule .pfports { grid-column: 1 / -1; text-align: left; }
   }
   button.linklike { background: none; border: 0; padding: 0; font: inherit; color: var(--accent-hover); cursor: pointer; text-decoration: underline; }

@@ -765,7 +765,7 @@ test("the port forwarding page lists them by device, and says when there are non
   assert.match(html, /UPnP · ends after 1 h 0 min/);
   // a device the box does not list is shown by its address, without the online chip
   assert.match(html, /<b>192\.0\.2\.250<\/b>/);
-  assert.match(html, /class="chip open"><i class="dot warn" aria-hidden="true"><\/i>open/);
+  assert.match(html, /class="pfstate open"><i class="dot warn" aria-hidden="true"><\/i>open/);
   assert.match(page({ entries: [], manual_known: true }), /No ports are open to the internet/);
   assert.match(page("failed"), /did not tell its port forwardings[\s\S]*data-act="ports-retry"[^>]*>Try again/);
   assert.match(page(null), /class="card skel" aria-busy="true"><span class="sr">Loading/);
