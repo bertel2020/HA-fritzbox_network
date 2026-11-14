@@ -761,7 +761,8 @@ function entryDialog(m, ctx) {
 
 function zonesCard(m, t, language) {
   const a = t.addr;
-  const bar = m.zones.map((z) => `<div class="z-${z.id}" style="flex:${Math.max(1, z.size)}">${escapeHtml(a.zones[z.id])}</div>`).join("");
+  const zoneTitle = (z) => `${a.zones[z.id]}: .${z.from} – .${z.to}\n${a.zoneNotes[z.id]}\n${fill(a.zoneSplit, { fixed: z.fixed, dynamic: z.dynamic })}`;
+  const bar = m.zones.map((z) => `<div class="z-${z.id}" style="flex:${Math.max(1, z.size)}" title="${escapeHtml(zoneTitle(z))}">${escapeHtml(a.zones[z.id])}</div>`).join("");
   const rows = m.zones
     .map((z) => {
       const used = z.fixed + z.dynamic;
