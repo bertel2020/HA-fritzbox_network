@@ -339,7 +339,7 @@ export function addressRows(addresses) {
 /** One table of the addresses that were in use, the newest dial-in first; the one in use now is marked. */
 function addressHistory(addresses, language, t) {
   const i = t.inet;
-  const day = (ms) => new Date(ms).toLocaleDateString(language, { day: "numeric", month: "short" });
+  const day = (ms) => new Date(ms).toLocaleString(language, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
   const rows = addressRows(addresses);
   const head = `<div class="chead"><span class="label">${escapeHtml(i.addressHistory)}</span></div>`;
   if (rows.length < 2) return `<section class="card sec">${head}<p class="hint">${escapeHtml(i.addressNone)}</p>${hintNote(i.addressHint, t)}</section>`;
