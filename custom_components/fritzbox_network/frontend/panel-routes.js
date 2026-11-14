@@ -183,7 +183,7 @@ export function renderRoutes(routes, ctx) {
   const v = t.routesPage;
   const canAdd = Boolean(ctx.canWrite && routes?.home);
   const add = canAdd && !ctx.draft ? `<div class="btn-row tight"><button class="btn" data-act="route-new" data-k="route-new" aria-haspopup="dialog"><span aria-hidden="true">+</span> ${escapeHtml(v.form.open)}</button></div>` : "";
-  const head = `${ctx.subTabs ?? ""}<div class="phead"><div class="pheadrow"><h1 id="dtitle" tabindex="-1">${escapeHtml(v.title)}</h1>${add}</div><p class="lead">${escapeHtml(v.lead)}</p></div>`;
+  const head = `${ctx.subTabs ?? ""}<div class="phead"><div class="pheadrow"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(v.title)}</h1>${add}</div></div>`;
   if (routes === null) return `${head}${loadingCard(t)}`;
   if (routes === "failed" || !Array.isArray(routes?.entries)) return `${head}${errorCard(t, v.failed, { retry: "routes-retry" })}`;
   const newForm = ctx.draft && canAdd ? form({ ...ctx, routes: routes.entries, home: routes.home }) : "";
