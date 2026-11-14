@@ -66,5 +66,5 @@ export function renderHidden(state, t) {
     )
     .join("");
   return `<button class="foldhead" data-act="toggle-hidden" data-k="toggle-hidden" aria-expanded="${open}"><span>${escapeHtml(c.hiddenTitle)}</span><em>${hidden.length}</em><span class="chev" aria-hidden="true">${open ? "▾" : "▸"}</span></button>
-    ${open ? `<p class="lead">${escapeHtml(c.hiddenLead)}</p>${rows}` : ""}`;
+    ${open ? `<p class="hint">${escapeHtml(c.hiddenLead)}</p>${rows}` : ""}`;
 }

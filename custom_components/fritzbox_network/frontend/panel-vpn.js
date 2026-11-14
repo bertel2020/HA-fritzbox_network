@@ -83,7 +83,7 @@ function statsSection(m, ctx) {
   const rows = m.connections.filter((c) => c.stats).map((c) => ({ ...c, stats: { ...c.stats, ...(ctx.vpnHistory?.[c.key] ?? {}) } }));
   if (!rows.length) return "";
   // the sessions come with their own request: until they are there the chart says so
-  if (!ctx.vpnHistory) return `<section class="card sec"><span class="label">${escapeHtml(v.statsTitle)}</span><div class="empty"><span>${escapeHtml(t.loading)}</span></div></section>`;
+  if (!ctx.vpnHistory) return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(v.statsTitle)}</span></div><div class="empty"><span>${escapeHtml(t.loading)}</span></div></section>`;
   const range = VPN_RANGES[ctx.vpnRange] ? ctx.vpnRange : "week";
   const to = Math.round(now);
   const from = to - VPN_RANGES[range];
@@ -134,7 +134,7 @@ function card(connection, ctx) {
 
 function group(title, list, ctx) {
   if (!list.length) return "";
-  return `<section class="card sec"><span class="label">${escapeHtml(title)}</span><ul class="vpnlist">${list.map((c) => card(c, ctx)).join("")}</ul></section>`;
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(title)}</span></div><ul class="vpnlist">${list.map((c) => card(c, ctx)).join("")}</ul></section>`;
 }
 
 /** The page; a message where the box tells no WireGuard connections. */
@@ -152,7 +152,7 @@ export function renderVpn(data, ctx) {
     .map(([value, label]) => `<div class="tile"><span class="label">${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`)
     .join("");
   const remote = m.remote.length
-    ? `<section class="card sec"><span class="label">${escapeHtml(v.remoteTitle)}</span><ul class="vpnlist">${m.remote
+    ? `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(v.remoteTitle)}</span></div><ul class="vpnlist">${m.remote
         .map(
           (c) => `<li class="vpnrow ${c.online ? "up" : "off"}"><span aria-hidden="true">${ic("shield")}</span>
             <div class="vpnname"><b>${escapeHtml(c.name)}</b><small>${escapeHtml(c.ip ?? "")}</small></div>

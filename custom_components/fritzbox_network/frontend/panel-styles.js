@@ -385,13 +385,15 @@ export const PANEL_CSS = `
     .path .pl.weak i { border-color: var(--warn); }
   }
   /* one tile for every figure of the panel: the label above, the value, a small line below */
-  .tiles, .checktiles, .pftiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 8px; }
+  .tiles, .checktiles, .pftiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px 28px; }
   .tiles { margin-top: 12px; }
-  .tile { background: var(--soft); border-radius: 12px; padding: 10px 14px; min-width: 0; }
+  .tile { min-width: 0; }
+  .tile.txt { background: var(--soft); border-radius: 12px; padding: 10px 14px; }
+  .tile.txt b { font-size: 15px; font-weight: 500; letter-spacing: 0; }
   .tile .label { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; }
   .tiles .tile.ok b, .tile.ok b { color: var(--ok); }
   .tiles .tile.bad b, .tile.bad b { color: var(--bad); }
-  .tile b { display: block; font-size: 20px; font-weight: 500; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .tile b { display: block; font-size: 26px; font-weight: 300; letter-spacing: -.02em; font-variant-numeric: tabular-nums; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .tile small { display: block; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .section { margin-top: var(--gap); }
   .section > .label { display: block; margin-bottom: 8px; }
@@ -556,16 +558,12 @@ export const PANEL_CSS = `
   .vtile .vpair i { font-style: normal; font-weight: 600; }
   .vtile .vdn { color: var(--accent); } .vtile .vup { color: var(--up); }
   .vtile small { color: var(--muted); font-size: 11px; }
-  /* the volume has a page of its own: the days over the whole width, who used the most below */
-  .vbody { display: grid; grid-template-columns: minmax(0, 1fr); gap: 4px 24px; }
-  .vbody .topdev .amount small { display: block; }
   .tile .since { color: var(--warn); font-size: 11px; text-transform: none; letter-spacing: 0; }
   .tile .cmp { display: flex; flex-wrap: wrap; gap: 2px 6px; align-items: center; margin-top: 2px; font-size: 12px; color: var(--muted); }
   .tile .chip { white-space: nowrap; border-radius: 8px; padding: 0 6px; font-size: 11px; font-weight: 500; background: var(--neutral-soft, var(--soft)); color: var(--text); }
   .tile .chip.hi { background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
   .tile .chip.lo { background: color-mix(in srgb, var(--ok) 18%, transparent); color: var(--ok); }
   .tile .peak { margin-top: 6px; font-size: 12px; color: var(--muted); }
-  .subhead { margin: 16px 0 6px; font-size: 12px; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
   .plot { position: relative; touch-action: pan-y; }
   .plot:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 8px; }
   .plot .cursor { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed var(--muted); pointer-events: none; }
@@ -733,7 +731,7 @@ export const PANEL_CSS = `
   .bhgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
   @container app (max-width: 720px) { .bhgrid { grid-template-columns: minmax(0, 1fr); } }
   .bhm .bhhead { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
-  .bhm .bhnow { font-size: 22px; font-weight: 500; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .bhm .bhnow { font-size: 26px; font-weight: 300; font-variant-numeric: tabular-nums; white-space: nowrap; }
   .bhm.hm-cpu .bhnow { color: var(--accent); }
   .bhm.hm-temp .bhnow { color: var(--warn); } .bhm.hm-ram .bhnow { color: var(--up); }
   .bhplot { display: grid; grid-template-columns: 26px minmax(0, 1fr); gap: 6px; margin-top: 10px; }
@@ -1426,7 +1424,7 @@ export const PANEL_CSS = `
   .ph-whonum { color: var(--muted); }
   .ph-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
   .ph-timer { text-align: right; }
-  .ph-timer b { display: block; font-size: 30px; font-weight: 500; font-variant-numeric: tabular-nums; line-height: 1.1; color: var(--tone); }
+  .ph-timer b { display: block; font-size: 30px; font-weight: 300; font-variant-numeric: tabular-nums; line-height: 1.1; color: var(--tone); }
   .ph-timer small { color: var(--muted); }
   .ph-steps { display: flex; align-items: center; padding: 0 16px 14px; margin: 0; list-style: none; font-size: 12px; color: var(--muted); }
   .ph-steps li { display: inline-flex; align-items: center; gap: 6px; }
@@ -1599,7 +1597,7 @@ export const PANEL_CSS = `
   .stile .sbar { display: block; height: 4px; margin-top: 8px; border-radius: 2px; background: color-mix(in srgb, var(--tone) 14%, var(--line)); overflow: hidden; }
   .stile .sbar i { display: block; height: 100%; border-radius: 2px; background: var(--tone); }
   .stile .label { display: block; padding-right: 36px; }
-  .stile .v { display: block; margin-top: 6px; font-size: 28px; font-weight: 400; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .stile .v { display: block; margin-top: 6px; font-size: 26px; font-weight: 300; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .stile .v small { margin-left: 4px; font-size: 13px; font-weight: 400; letter-spacing: 0; color: var(--muted); }
   .stile .s { display: flex; align-items: center; gap: 6px; margin-top: 4px; min-width: 0; font-size: 12px; color: var(--muted); }
   .stile .s > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

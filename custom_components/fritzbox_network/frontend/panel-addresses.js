@@ -285,7 +285,7 @@ function poolCard(m, ctx) {
     if (change.tooSmall) preview += line("bad", fill(p.tooSmall, { n: [...m.devices.values()].filter((d) => d.kind === "dyn").length }));
   }
   const ok = change && !change.error && !change.same && !change.tooSmall;
-  return `<section class="card sec"><span class="label">${escapeHtml(p.title)}</span><p class="hint">${escapeHtml(p.lead)}</p>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(p.title)}</span></div><p class="hint">${escapeHtml(p.lead)}</p>
     <form class="poolform" id="a-poolform" autocomplete="off">
       <span class="mono poolbase">${escapeHtml(m.baseText)}</span>
       <div class="afield"><label for="a-pf">${escapeHtml(p.from)}</label><input id="a-pf" data-k="a-pf" inputmode="numeric" value="${escapeHtml(draft.first)}"></div>
@@ -310,7 +310,7 @@ function exportCard(m, ctx) {
   const check = (key, label) =>
     `<label class="acheck"><input type="checkbox" data-aopt="${key}" ${opts[key] ? "checked" : ""}><span>${escapeHtml(label)}</span></label>`;
   const incomplete = addr.progress ? `<p class="hint">${escapeHtml(fill(e.incomplete, addr.progress))}</p>` : "";
-  return `<section class="card sec" id="a-export"><span class="label">${escapeHtml(e.title)}</span><p class="hint">${escapeHtml(e.lead)}</p>
+  return `<section class="card sec" id="a-export"><div class="chead"><span class="label">${escapeHtml(e.title)}</span></div><p class="hint">${escapeHtml(e.lead)}</p>
     <div class="aopts">${check("free", e.optFree)}${check("mac", e.optMac)}${check("map", e.optMap)}${check("poolNames", e.optPoolNames)}</div>${incomplete}
     <div class="btn-row"><button class="btn" data-aexport="csv" data-k="x-csv">${escapeHtml(e.csv)}</button>
       <button class="btn" data-aexport="json" data-k="x-json">${escapeHtml(e.json)}</button>
@@ -451,7 +451,7 @@ function hintsCard(m, hints, own, t) {
         .join("")
     : `<p class="hint">${escapeHtml(a.hintNone)}</p>`;
   const again = muted.length ? `<div class="muted-row">${escapeHtml(fill(a.hintMuted, { n: muted.length }))} · <button data-aunmute>${escapeHtml(a.hintShowAgain)}</button></div>` : "";
-  return `<section class="card sec"><span class="label">${escapeHtml(a.hintsTitle)}</span><div class="ahints">${body}</div>${again}</section>`;
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(a.hintsTitle)}</span></div><div class="ahints">${body}</div>${again}</section>`;
 }
 
 const cell_entry = (c) => (c.entry?.name && !c.device ? c.entry.name : "");
@@ -771,7 +771,7 @@ function zonesCard(m, t, language) {
         <div class="num"><b>${used}</b> / ${z.size} <span class="muted">· ${z.size ? Math.round((used / z.size) * 100) : 0} %</span></div></div>`;
     })
     .join("");
-  return `<section class="card sec"><span class="label">${escapeHtml(a.zonesTitle)}</span>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(a.zonesTitle)}</span></div>
     <div class="abar">${bar}</div><div class="azones">${rows}</div>${hintNote(a.zonesNote, t)}</section>`;
 }
 

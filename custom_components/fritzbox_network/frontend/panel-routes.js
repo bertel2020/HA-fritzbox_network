@@ -83,7 +83,7 @@ function form(ctx) {
     .filter((c) => c.ip)
     .map((c) => `<option value="${escapeHtml(c.ip)}">${escapeHtml(c.name ?? "")}${c.online === false ? ` (${escapeHtml(f.offlineTag)})` : ""}</option>`)
     .join("");
-  return `<section class="card sec routeform" aria-label="${escapeHtml(f.title)}"><span class="label">${escapeHtml(f.title)}</span>
+  return `<section class="card sec routeform" aria-label="${escapeHtml(f.title)}"><div class="chead"><span class="label">${escapeHtml(f.title)}</span></div>
     <div class="afield"><label for="r-net">${escapeHtml(f.network)}</label>
       <input type="text" id="r-net" data-k="r-net" class="mono" autocomplete="off" placeholder="10.9.0.0/24" value="${escapeHtml(draft.network)}"><small class="muted">${escapeHtml(f.networkHint)}</small></div>
     <div class="afield"><label for="r-gw">${escapeHtml(f.gateway)}</label>
@@ -208,7 +208,7 @@ export function renderRoutes(routes, ctx) {
   const c = { ...ctx, sel: selected.network, home: routes.home };
   return `${head}${newForm}${noHome}<section class="card sec facts bare t-net"><div class="tiles routetiles">${tiles}</div></section>${hints}
     <div class="routelayout">
-      <section class="card sec"><span class="label">${escapeHtml(v.listTitle)}</span><ul class="vpnlist">${m.routes.map((r) => row(r, c)).join("")}</ul></section>
+      <section class="card sec"><div class="chead"><span class="label">${escapeHtml(v.listTitle)}</span></div><ul class="vpnlist">${m.routes.map((r) => row(r, c)).join("")}</ul></section>
       <aside class="card sec routedetail" aria-live="polite">${detail(selected, c)}</aside>
     </div>
     ${hintNote(v.hint, t)}`;

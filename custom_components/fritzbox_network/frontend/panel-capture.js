@@ -145,7 +145,7 @@ export function renderCapture(capture, ctx) {
     ? `<ul class="capfiles">${capture.files.map((f) => fileLine(f, t, language, clients, capture.interfaces)).join("")}</ul>`
     : `<p class="hint">${escapeHtml(c.none)}</p>`;
   const files = `<div class="capexisting"><span class="label">${escapeHtml(fill(c.existing, { n: capture.files.length }))}</span>${list}</div>`;
-  return `<section class="card sec"><span class="label">${escapeHtml(c.title)}</span>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(c.title)}</span></div>
     ${controls}
     ${busy ? running(job, t, language) : result(job, t, language)}
     ${files}

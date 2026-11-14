@@ -737,7 +737,7 @@ function hintPage(ctx) {
   const toggle = hidden
     ? `<button class="btn text" data-act="ph-show" data-k="ph-show">${esc(h.show)}</button>`
     : `<button class="btn text" data-act="ph-hide" data-k="ph-hide">${esc(h.hide)}</button>`;
-  const features = h.features.map(([title, text]) => `<div class="tile"><b>${esc(title)}</b><small>${esc(text)}</small></div>`).join("");
+  const features = h.features.map(([title, text]) => `<div class="tile txt"><b>${esc(title)}</b><small>${esc(text)}</small></div>`).join("");
   const rows = h.sample
     .map(([kind, name, when, what]) => `<div class="ph-hrow"><span class="k ${kind}" aria-hidden="true">${kind === "out" ? "↗" : "↙"}</span><b>${esc(name)}</b><small>${esc(when)}</small><small>${esc(what)}</small></div>`)
     .join("");

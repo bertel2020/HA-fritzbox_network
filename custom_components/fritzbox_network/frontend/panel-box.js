@@ -108,7 +108,7 @@ function lineCard(info, ctx) {
   const line = info.line ?? {};
   const access = accessLabel(line.access_type, t);
   const bytes = (n) => escapeHtml(down ? "–" : formatBytes(n, language));
-  return `<section class="card sec"><span class="label">${escapeHtml(b.line)}</span>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(b.line)}</span></div>
     <dl class="kv"><dt>${escapeHtml(b.lineTitle)}${access ? `<br><small class="muted mono">${escapeHtml(access)}</small>` : ""}</dt><dd>${chip(down ? false : line.linked ?? null, b.linked, b.notLinked, b.linkUnknown)}</dd></dl>
     <div class="tiles counter">
       ${tile(b.received, `<b>${bytes(info.bytes_received)}</b>`, b.sinceRestart)}
@@ -150,7 +150,7 @@ function actionsCard(info, ctx) {
   const down = restart && restart.phase === "down";
   const off = !canWrite || down ? " disabled" : "";
   const why = !canWrite ? a.noRights : down ? a.busy : "";
-  return `<section class="card sec"><span class="label">${escapeHtml(a.title)}</span>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(a.title)}</span></div>
     <div class="act"><span class="ico">${ic("restart")}</span><div><b>${escapeHtml(a.rebootName)}</b><small>${escapeHtml(a.rebootSub)}</small></div>
       <button class="btn dp" data-act="reboot" data-k="reboot" aria-haspopup="dialog"${off}>${escapeHtml(a.reboot)}</button></div>
     ${restart ? restartBlock(restart, ctx) : ""}

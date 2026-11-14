@@ -119,7 +119,7 @@ export function renderRadio(data, ctx) {
     ? `<p class="hintline warn"><span aria-hidden="true">${ic("alert")}</span><span>${escapeHtml(fill(r.issues, { n: check.issues }))}</span></p>
       <ul class="ports">${check.findings.map((f) => `<li><span class="pdesc">${escapeHtml(finding(f))}</span></li>`).join("")}</ul>`
     : `<p class="hintline info"><span aria-hidden="true">${ic("check")}</span><span>${escapeHtml(r.ok)}</span></p>`;
-  return `<section class="card sec"><span class="label">${escapeHtml(r.title)}</span>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(r.title)}</span></div>
     ${verdict}${blocks}
     ${noteHtml(t.diag.note, r.hint)}</section>`;
 }
@@ -133,6 +133,6 @@ export function renderRadioVerdict(data, ctx) {
   const line = check.issues
     ? `<p class="hintline warn"><span aria-hidden="true">${ic("alert")}</span><span>${escapeHtml(fill(r.issuesShort, { n: check.issues }))}</span></p>`
     : `<p class="hintline info"><span aria-hidden="true">${ic("check")}</span><span>${escapeHtml(r.ok)}</span></p>`;
-  return `<section class="card sec"><span class="label">${escapeHtml(r.title)}</span>${line}
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(r.title)}</span></div>${line}
     <p class="hint"><button class="tlink" data-tab="wlan" data-k="radio-wlan">${escapeHtml(t.toWlan)} ›</button></p></section>`;
 }

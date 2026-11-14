@@ -63,7 +63,7 @@ function networksCard(wlan, ctx) {
   const same = nets.length > 1 && names.size === 1;
   const allOff = !enabledNetworks(wlan).length;
   const notes = [same ? w.sameName : "", w.meshFollows].filter(Boolean).join(" ");
-  return `<section class="card sec"><span class="label">${escapeHtml(w.radios)}</span>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(w.radios)}</span></div>
     ${allOff ? `<p class="hintline warn"><span aria-hidden="true">${ic("alert")}</span><span>${escapeHtml(w.allOff)}</span></p>` : ""}
     ${nets.map((n) => networkRow(n, ctx)).join("")}
     <p class="hint">${escapeHtml(notes)}</p>
@@ -123,7 +123,7 @@ function guestCard(guest, ctx) {
   const { t } = ctx;
   const g = t.wlan.guest;
   if (!guest) {
-    return `<section class="card sec"><span class="label">${escapeHtml(g.title)}</span><div class="empty"><span>${ic("guest")}</span><b>${escapeHtml(g.none)}</b><span>${escapeHtml(g.noneHint)}</span></div></section>`;
+    return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(g.title)}</span></div><div class="empty"><span>${ic("guest")}</span><b>${escapeHtml(g.none)}</b><span>${escapeHtml(g.noneHint)}</span></div></section>`;
   }
   const busy = ctx.busy?.has("guest");
   const ssid = guest.ssid || g.name;
@@ -138,7 +138,7 @@ function guestCard(guest, ctx) {
         <button class="btn" data-act="wlan-pw" data-k="wlan-pw" aria-haspopup="dialog">${escapeHtml(g.edit)}</button>
         ${guest.enabled ? `<button class="btn" data-act="wlan-qr" data-k="wlan-qr" aria-haspopup="dialog"${loading ? " disabled" : ""}>${escapeHtml(loading ? g.loadingQr : g.showQr)}</button>` : ""}</div>`
     : `<p class="hint">${escapeHtml(g.qrLocked)}</p>`;
-  return `<section class="card sec"><span class="label">${escapeHtml(g.title)}</span>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(g.title)}</span></div>
     <div class="guest"><div>
       <div class="net first ${guest.enabled ? "" : "off"}">
         <span class="ico">${ic("guest")}</span>

@@ -73,7 +73,7 @@ export function renderLog(log, ctx) {
     const more = shown.length > SHOWN ? `<p class="hint">${escapeHtml(fill(c.more, { n: SHOWN }))}</p>` : "";
     body = `${chips}${shown.length ? `<ul class="ports logrows">${rows}</ul>${more}` : `<p class="hint">${escapeHtml(c.none)}</p>`}`;
   }
-  return `<section class="card sec"><span class="label">${escapeHtml(c.title)}</span>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(c.title)}</span></div>
     <div class="seg logseg" role="radiogroup" aria-label="${escapeHtml(c.title)}">${groups}</div>
     ${body}
     ${noteHtml(t.diag.note, c.hint)}</section>`;

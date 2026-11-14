@@ -81,7 +81,7 @@ function controlsCard(client, data, canWrite, t) {
     t.wolHint,
     `<button class="btn sm" data-act="wol" data-k="wol" ${wolReason || client.online ? "disabled" : ""}>${escapeHtml(t.wake)}</button>`
   );
-  return `<section class="card sec"><span class="label">${escapeHtml(t.controls)}</span>${status}${profile}${priority}${wol}</section>`;
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(t.controls)}</span></div>${status}${profile}${priority}${wol}</section>`;
 }
 
 function bandName(band, t) {
@@ -252,10 +252,10 @@ export function renderDevice(client, ctx) {
   return `${headHtml(client, ctx)}
     <div class="chips-row">${chips}</div>${note}
     <div class="dsecs">
-      <section class="card sec wide facts t-net"><span class="label">${escapeHtml(t.connection)}</span>${pathHtml(client, data, t, ctx.threshold)}${tilesHtml(client, data, t)}</section>
+      <section class="card sec wide facts t-net"><div class="chead"><span class="label">${escapeHtml(t.connection)}</span></div>${pathHtml(client, data, t, ctx.threshold)}${tilesHtml(client, data, t)}</section>
       ${trendSection(client, ctx)}
       ${controlsCard(client, data, canWrite, t)}
-      <section class="card sec"><span class="label">${escapeHtml(t.master)}</span><dl>${master}</dl>
+      <section class="card sec"><div class="chead"><span class="label">${escapeHtml(t.master)}</span></div><dl>${master}</dl>
         ${groupsSection(client, data, t)}
         ${notes.length ? noteHtml(t.hintLabel, ...notes) : ""}</section>
     </div>`;

@@ -92,7 +92,7 @@ function lineQuality(dsl, language, t) {
   const error = (label, value, note, tone = "") =>
     `<div class="tile err ${tone}"><span class="label">${escapeHtml(label)}</span><b>${escapeHtml(value === null || value === undefined ? "–" : String(value))}</b>${note ? `<small>${escapeHtml(note)}</small>` : ""}</div>`;
   const crcTone = typeof dsl.crc_errors === "number" && dsl.crc_errors > 0 ? "warn" : "";
-  return `<section class="card sec"><span class="label lq">${escapeHtml(i.line)}${kind ? `<span class="chip info">${escapeHtml(kind)}</span>` : ""}</span>
+  return `<section class="card sec"><div class="chead"><span class="label lq">${escapeHtml(i.line)}${kind ? `<span class="chip info">${escapeHtml(kind)}</span>` : ""}</span></div>
     <div class="ltable" role="table">
       <span class="h"></span><span class="h"><span aria-hidden="true">↓</span> ${escapeHtml(i.down)}</span><span class="h"><span aria-hidden="true">↑</span> ${escapeHtml(i.up)}</span>
       <span class="n">${escapeHtml(i.lineRate)}${hasMax ? `<small>${escapeHtml(i.lineMaxShort)}</small>` : ""}</span>${rate(dsl.rate_down, dsl.max_rate_down)}${rate(dsl.rate_up, dsl.max_rate_up)}
@@ -380,7 +380,7 @@ function events(internet, t, now, language) {
         `<li><time datetime="${escapeHtml(e.time)}" title="${escapeHtml(eventTime(e.time, now, t, language).title)}">${escapeHtml(eventTime(e.time, now, t, language).text)}</time><span>${escapeHtml(fill(i.kinds[e.kind] ?? e.kind, { detail: e.detail ?? "" }))}</span></li>`
     )
     .join("");
-  return `<section class="card sec"><span class="label">${escapeHtml(i.events)}</span>
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(i.events)}</span></div>
     ${items ? `<ul class="events">${items}</ul>` : `<p class="hint">${escapeHtml(i.eventsNone)}</p>`}
     ${hintNote(i.eventsHint, t)}</section>`;
 }
@@ -492,7 +492,7 @@ export function renderInternet(internet, ctx) {
     </section>
     <div class="icols${internet.dsl ? "" : " single"}">
       <div class="icol">
-        <section class="card sec"><span class="label">${escapeHtml(i.load)}</span>
+        <section class="card sec"><div class="chead"><span class="label">${escapeHtml(i.load)}</span></div>
           ${chart(internet, language, t)}
           ${hintNote(i.measureNote, t)}</section>
         ${events(internet, t, now, language)}
