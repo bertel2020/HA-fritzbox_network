@@ -1219,6 +1219,8 @@ export const PANEL_CSS = `
   .acheck { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
   .abar { display: flex; height: 34px; border-radius: 10px; overflow: hidden; border: 1px solid var(--line); margin: 4px 0 18px; }
   .abar div { display: grid; place-items: center; font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+  .abar div { cursor: default; transition: filter .15s; }
+  .abar div:hover { filter: saturate(1.5) brightness(.96); }
   .abar .z-low, .abar .z-high { background: var(--fixed-soft); color: var(--fixed); }
   .abar .z-pool { background: var(--accent-soft); color: var(--accent-hover); }
   .abar .z-whole { background: var(--free); }
