@@ -844,7 +844,7 @@ const en = {
     issuesTitle: "What stands out",
     allGood: "All is well",
     quickTitle: "Quick actions",
-    quick: { check: "Check the connection", reconnect: "Reconnect", guest: "Guest Wi-Fi", capture: "Capture" },
+    quick: { check: "Check the connection", reconnect: "Reconnect", guest: "Guest Wi-Fi", guestOn: "on", guestOff: "off" },
     issues: {
       down: "Internet is down",
       noiseVeryLow: "Very low noise margin",
@@ -2436,7 +2436,7 @@ const de = {
     issuesTitle: "Auffälligkeiten",
     allGood: "Alles in Ordnung",
     quickTitle: "Schnellaktionen",
-    quick: { check: "Verbindung prüfen", reconnect: "Neu verbinden", guest: "Gast-WLAN", capture: "Mitschnitt" },
+    quick: { check: "Verbindung prüfen", reconnect: "Neu verbinden", guest: "Gast-WLAN", guestOn: "an", guestOff: "aus" },
     issues: {
       down: "Internet getrennt",
       noiseVeryLow: "Störabstand sehr niedrig",

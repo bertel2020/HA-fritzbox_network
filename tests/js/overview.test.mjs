@@ -68,7 +68,12 @@ test("nothing stands out: no notes, and the tiles say what is there", () => {
   assert.match(html, /<h1 id="dtitle" tabindex="-1">Übersicht<\/h1>/);
   assert.match(html, /class="chip ok"><i class="dot on" aria-hidden="true"><\/i>Alles in Ordnung/);
   assert.match(html, /data-act="reconnect"/);
-  assert.match(html, /href="#\/capture"/);
+  assert.doesNotMatch(html, /href="#\/capture"|data-key="guest"/);
+  const withGuest = { ...state, wlan: { networks: [], guest: { enabled: true, ssid: "Gäste" } } };
+  const guestHtml = overview.renderOverview(withGuest, { t, now: NOW, canWrite: true });
+  assert.match(guestHtml, /role="switch" aria-checked="true"[^>]*data-act="wlan-switch" data-key="guest" data-on="0"/);
+  assert.match(guestHtml, /an · Gäste/);
+  assert.match(overview.renderOverview(withGuest, { t, now: NOW, canWrite: false }), /data-key="guest"[^>]*disabled/);
   assert.doesNotMatch(overview.renderOverview(state, { t, now: NOW, canWrite: false }), /data-act="reconnect"/);
 });
 

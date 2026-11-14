@@ -1553,7 +1553,17 @@ export const PANEL_CSS = `
   .issue small { display: block; margin-top: 2px; font-size: 12px; color: var(--muted); }
   .issue .tlink { color: var(--accent-hover); text-decoration: none; }
   .allgood { margin: 0; }
-  .quick { display: flex; flex-wrap: wrap; gap: 8px; }
+  .quick { list-style: none; margin: 4px 0 0; padding: 0; }
+  .quick li + li { border-top: 1px solid var(--line); }
+  .qrow { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 0; background: none; border: 0; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+  .qrow.qswitch { cursor: default; }
+  .qrow .ic { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 10px; background: var(--accent-soft); color: var(--accent-hover); }
+  .qrow .ic svg { width: 18px; height: 18px; }
+  .qrow .qt { flex: 1; min-width: 0; }
+  .qrow .qt small { display: block; margin-top: 1px; font-size: 12px; color: var(--muted); }
+  .qrow .qgo { color: var(--muted); }
+  .qrow .qgo svg { width: 16px; height: 16px; }
+  button.qrow:hover .qt { color: var(--accent-hover); }
 
   /* the command palette: a dialog over the page, a sheet over the whole screen on a phone */
   .palscrim { position: fixed; inset: 0; z-index: 25; padding: 10vh 16px 16px; background: rgb(0 0 0 / 40%); }

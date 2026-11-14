@@ -387,6 +387,9 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._unsub = null;
     this._updatedAt = 0;
     this._onHash = () => {
+      // an address outside the panel (the settings of the integration, a logbook) is not ours to draw
+      if (this._path && globalThis.location.pathname !== this._path) return;
+      this._path = globalThis.location.pathname;
       const state = this._state;
       const next = routeFromHash(globalThis.location.hash);
       const entered = next.tab !== state.tab;
@@ -497,6 +500,9 @@ class FritzboxNetworkPanel extends HTMLElement {
   connectedCallback() {
     this._syncCompact();
     globalThis.addEventListener("hashchange", this._onHash);
+    // Home Assistant's router pushes addresses without a hashchange
+    globalThis.addEventListener("location-changed", this._onHash);
+    globalThis.addEventListener("popstate", this._onHash);
     globalThis.addEventListener("keydown", this._onGlobalKey);
     this._clock = setInterval(() => this._tick(), 5000);
     this._callClock = setInterval(() => this._tickCall(), 1000);
@@ -507,6 +513,8 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   disconnectedCallback() {
     globalThis.removeEventListener("hashchange", this._onHash);
+    globalThis.removeEventListener("location-changed", this._onHash);
+    globalThis.removeEventListener("popstate", this._onHash);
     globalThis.removeEventListener("keydown", this._onGlobalKey);
     clearInterval(this._clock);
     clearInterval(this._callClock);
@@ -1786,6 +1794,12 @@ class FritzboxNetworkPanel extends HTMLElement {
       if (event.target.id === "palscrim" || event.target.closest?.('[data-act="pal-close"]')) return this._closePalette();
       return;
     }
+    // a link to a page of the panel: Home Assistant would push the address without a hashchange, so go there ourselves
+    const link = event.target.closest?.('a[href^="#/"]');
+    if (link && !event.defaultPrevented && !(event.ctrlKey || event.metaKey || event.shiftKey || event.altKey)) {
+      event.preventDefault();
+      return this._go(link.getAttribute("href"));
+    }
     if (event.target.id === "a-groups") return this._closeGroups();
     if (event.target.id === "a-entries") return this._closeEntry();
     const target = event.target.closest("button, a[data-act], [data-filter], [data-ap], [data-dev], [data-act], [data-aip]");
@@ -1998,8 +2012,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         const offered = pagesOf(ds.tab, state);
         page = offered.includes(state.lastPage[ds.tab]) ? state.lastPage[ds.tab] : (offered[0] ?? ds.tab);
       }
-      globalThis.location.hash = pageHash(page);
-      return;
+      return this._go(pageHash(page));
     } else if (ds.act === "pick-all") {
       for (const d of visibleStale(state)) state.picked.add(d.mac);
     } else if (ds.act === "pick-none") {
@@ -2235,6 +2248,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     }
     state.wlanBusy = new Set([...state.wlanBusy, key]);
     this._renderWlan();
+    if (state.tab === "overview") this._renderOverview();
     try {
       state.wlan = await this._ws("wlan/switch", { key, enabled });
       if (key === "guest" && !enabled) this._dropSecret();
@@ -2244,6 +2258,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     } finally {
       state.wlanBusy = new Set([...state.wlanBusy].filter((k) => k !== key));
       this._renderWlan();
+      if (state.tab === "overview") this._renderOverview();
       // the switch was locked while the box switched: the focus goes back to it
       const active = this.shadowRoot.activeElement;
       if (!active || active === this) this.shadowRoot.querySelector(`[data-k="wl-${CSS.escape(key)}"]`)?.focus({ preventScroll: true });
@@ -2531,6 +2546,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const keep = () => {};
     const reads = [
       this._ws("ports/list").then((ports) => (state.ports = ports), keep),
+      this._ws("wlan/list").then((wlan) => (state.wlan = wlan), keep),
       // a route being typed keeps the list it was typed against
       state.routesDraft ? null : this._ws("routes/list").then((routes) => (state.routes = routes), keep),
       // during a restart the restart asks the box itself
@@ -2548,7 +2564,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const state = this._state;
     this._set(
       "overview-view",
-      renderOverview(state, { t: this._t, language: this._hass?.language, now: Date.now(), canWrite: Boolean(state.data?.can_write), busy: this._overviewBusy })
+      renderOverview(state, { t: this._t, language: this._hass?.language, now: Date.now(), canWrite: Boolean(state.data?.can_write), busy: this._overviewBusy, guestBusy: state.wlanBusy.has("guest") })
     );
   }
 
@@ -2803,6 +2819,12 @@ class FritzboxNetworkPanel extends HTMLElement {
   _openInHa() {
     const client = this._selected();
     if (client?.device_id) this._navigate(`/config/devices/device/${client.device_id}`);
+  }
+
+  /** Opens a page by its address; the same address again still draws the page anew. */
+  _go(hash) {
+    if (globalThis.location.hash === hash) this._onHash();
+    else globalThis.location.hash = hash;
   }
 
   _navigate(path) {

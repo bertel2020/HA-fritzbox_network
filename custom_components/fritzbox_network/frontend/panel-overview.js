@@ -195,16 +195,15 @@ export function renderOverview(state, ctx) {
   const list = issues.length
     ? `<ul class="issues">${issues.map(issueHtml).join("")}</ul>`
     : `<p class="allgood"><span class="chip ok"><i class="dot on" aria-hidden="true"></i>${escapeHtml(o.allGood)}</span></p>`;
-  const reconnect = ctx.canWrite && state?.data?.internet
-    ? `<button class="btn" data-act="reconnect" data-k="ov-reconnect" aria-haspopup="dialog">${escapeHtml(o.quick.reconnect)}</button>`
+  const row = (icon, act, key, label, aria = "") => `<li><button class="qrow" data-act="${act}" data-k="${key}"${aria}><span class="ic" aria-hidden="true">${ic(icon)}</span><span class="qt">${escapeHtml(label)}</span><span class="qgo" aria-hidden="true">${ic("chev")}</span></button></li>`;
+  const guest = state?.wlan && typeof state.wlan === "object" ? state.wlan.guest : null;
+  const guestRow = guest
+    ? `<li class="qrow qswitch"><span class="ic" aria-hidden="true">${ic("guest")}</span><span class="qt">${escapeHtml(o.quick.guest)}<small>${escapeHtml(guest.enabled ? o.quick.guestOn : o.quick.guestOff)}${guest.ssid ? ` · ${escapeHtml(guest.ssid)}` : ""}</small></span>
+        <button class="switch${ctx.guestBusy ? " busy" : ""}" role="switch" aria-checked="${guest.enabled}" aria-label="${escapeHtml(o.quick.guest)}" data-act="wlan-switch" data-key="guest" data-on="${guest.enabled ? "0" : "1"}" data-k="ov-guest"${!ctx.canWrite || ctx.guestBusy ? " disabled" : ""}></button></li>`
     : "";
+  const reconnect = ctx.canWrite && state?.data?.internet ? row("restart", "reconnect", "ov-reconnect", o.quick.reconnect, ' aria-haspopup="dialog"') : "";
   const quick = `<section class="card sec"><h2 class="label">${escapeHtml(o.quickTitle)}</h2>
-    <div class="quick">
-      <button class="btn" data-act="ov-check" data-k="ov-check">${escapeHtml(o.quick.check)}</button>
-      ${reconnect}
-      <a class="btn" href="${pageHash("wlan")}" data-k="ov-guest">${escapeHtml(o.quick.guest)}</a>
-      <a class="btn" href="${pageHash("capture")}" data-k="ov-capture">${escapeHtml(o.quick.capture)}</a>
-    </div></section>`;
+    <ul class="quick">${row("check", "ov-check", "ov-check", o.quick.check)}${reconnect}${guestRow}</ul></section>`;
   return `${head}
     <section class="tiles5" aria-label="${escapeHtml(o.tilesLabel)}">${tiles.map(tileHtml).join("")}</section>
     <div class="ovcols">
