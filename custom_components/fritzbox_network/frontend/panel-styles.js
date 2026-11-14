@@ -1344,6 +1344,13 @@ export const PANEL_CSS = `
   .ph-hbtns { justify-content: flex-start; align-items: center; margin-top: 14px; }
   .ph-hbtns .btn.text { background: none; border-color: transparent; color: var(--muted); font-weight: 400; }
   .ph-hint .tiles { margin-top: 16px; }
+  /* today on the phone page: the gold of the phone tile on the overview, a soft gradient like the box and internet cards */
+  .phtoday { --tone: light-dark(#a56a00, #f2c27a); background: linear-gradient(135deg, color-mix(in srgb, var(--tone) 9%, var(--surface)), var(--surface) 72%); }
+  .phtoday .chead { align-items: center; gap: 10px; }
+  .phtoday .chead .ph-src { margin-left: auto; }
+  .phtoday .phico { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; flex: none; background: color-mix(in srgb, var(--tone) 16%, var(--surface)); color: var(--tone); }
+  .phtoday .phico svg { width: 17px; height: 17px; }
+  .phtoday .tile { background: color-mix(in srgb, var(--surface) 55%, var(--soft)); }
   .ph-hint .tile small { white-space: normal; overflow: visible; text-overflow: clip; }
   .ph-hprev { margin-top: 16px; opacity: .6; pointer-events: none; }
   .ph-hrow { display: grid; grid-template-columns: 22px minmax(0, 1.2fr) minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line); font-size: 13px; }

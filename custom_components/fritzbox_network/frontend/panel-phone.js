@@ -248,7 +248,7 @@ function todayCard(model, ctx) {
       ? tile(d.spam, model.today.spamToday !== null ? `<b>${model.today.spamToday}</b>` : na, model.today.spamTotal !== null ? fill(d.spamTotal, { n: model.today.spamTotal }) : "")
       : "",
   ].join("");
-  return `<section class="card sec" aria-labelledby="ph-today-h"><div class="chead"><span class="label" id="ph-today-h">${esc(d.title)}</span><span class="ph-src">${esc(d.window)}</span></div><div class="tiles">${tiles}</div></section>`;
+  return `<section class="card sec phtoday" aria-labelledby="ph-today-h"><div class="chead"><span class="phico" aria-hidden="true">${ic("phone")}</span><span class="label" id="ph-today-h">${esc(d.title)}</span><span class="ph-src">${esc(d.window)}</span></div><div class="tiles">${tiles}</div></section>`;
 }
 
 // ---------- call list ----------
