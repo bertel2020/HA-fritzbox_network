@@ -2,13 +2,16 @@
 
 import {
   STALE_STEPS,
+  SUB_LABELS,
   WEAK_SIGNAL_DBM,
   errorCard,
   escapeHtml,
   loadingCard,
   rememberNote,
   filterChanged,
+  hashParams,
   nearestStep,
+  PANEL_FILTERS,
   pagerFor,
   isBlocked,
   pageHash,
@@ -34,7 +37,7 @@ import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet, renderPortsPage, renderVolume } from "./panel-internet.js";
 import { renderVpn } from "./panel-vpn.js";
 import { renderRoutes } from "./panel-routes.js";
-import { captureDefaults, defaultInterface, renderCapture } from "./panel-capture.js";
+import { captureDefaults, captureForDevice, defaultInterface, renderCapture } from "./panel-capture.js";
 import { diagHead, renderConnection } from "./panel-check.js";
 import { renderLog } from "./panel-log.js";
 import { renderRadio, renderRadioVerdict } from "./panel-radio.js";
@@ -53,11 +56,15 @@ import { AddressMethods } from "./panel-address-methods.js";
 import { ChartMethods } from "./panel-chart-methods.js";
 import { mixin } from "./panel-mixin.js";
 import { PhoneMethods } from "./panel-phone-methods.js";
+import { renderOverview } from "./panel-overview.js";
+import { paletteEntries, paletteItem, paletteMove, renderPalette, renderPaletteList, searchPalette } from "./panel-palette.js";
 
 const DOMAIN = "fritzbox_network";
 const BOX_KEY = `${DOMAIN}_panel_box`;
 const VIEW_KEY = `${DOMAIN}_panel_view`;
 const HISTORY_REFRESH_MS = 300000;
+// the overview reads the box, the routes and the port forwardings at most this often by itself
+const OVERVIEW_REFRESH_MS = 300000;
 const VPN_HISTORY_REFRESH_MS = 60000;
 const PAGE_KEY = "fritzbox_network_page_size";
 const PHONE_HIDDEN_KEY = "fritzbox_network_phone_hidden";
@@ -180,6 +187,7 @@ const ICON_URL = new URL("./brand/icon.png", import.meta.url).href;
  * the switch between them at the top of each; the first page is the one a tab opens at first.
  */
 export const TAB_GROUPS = {
+  overview: ["overview"],
   net: ["net", "wlan", "addresses", "routes"],
   internet: ["internet", "volume", "ports", "vpn"],
   box: ["box", "check", "log", "capture"],
@@ -187,12 +195,10 @@ export const TAB_GROUPS = {
   devices: ["filter", "cleanup", "migrate"],
 };
 export const TABS = Object.keys(TAB_GROUPS);
-// a page named like its tab is called differently in the switch: "Network" › "Devices"
-const SUB_LABELS = { net: "netDevices", internet: "connection", box: "boxStatus" };
 
 /** The tab a page belongs to. */
 export function groupOf(page) {
-  return TABS.find((group) => TAB_GROUPS[group].includes(page)) ?? "net";
+  return TABS.find((group) => TAB_GROUPS[group].includes(page)) ?? "overview";
 }
 
 /** The pages of a tab that are offered: VPN where the box tells its connections, switching over while FRITZ!Box Tools is set up. */
@@ -229,7 +235,7 @@ export function renderSubTabs(active, t, state = {}) {
 }
 
 /** The icons of the tabs, shown in the bar at the bottom of a narrow screen. */
-const NAV_ICONS = { net: "network", internet: "globe", box: "router", phone: "phone" };
+const NAV_ICONS = { overview: "home", net: "network", internet: "globe", box: "router", phone: "phone" };
 
 /**
  * The tabs. Internet carries a dot for the state of the line, Box one while it restarts, Phone
@@ -242,7 +248,7 @@ export function renderNav(state, t, { icons = false, bottom = false } = {}) {
   const line = state.data?.internet;
   const open = groupOf(state.tab);
   const phone = Boolean(state.phoneFound) || (!bottom && !state.phoneHidden);
-  const ids = ["net", "internet", "box", ...(phone ? ["phone"] : [])];
+  const ids = ["overview", "net", "internet", "box", ...(phone ? ["phone"] : [])];
   const focusable = ids.includes(open) ? open : ids[0];
   const tab = (id, extra = "", label = "", quiet = false) =>
     `<button role="tab"${quiet ? ' class="quiet"' : ""} tabindex="${id === focusable ? 0 : -1}" data-tab="${id}" aria-selected="${id === open}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${icons ? `<span class="ni">${ic(NAV_ICONS[id])}${extra}</span><span class="nl">${escapeHtml(t.tabs[id])}</span>` : `${escapeHtml(t.tabs[id])}${extra}`}</button>`;
@@ -255,6 +261,7 @@ export function renderNav(state, t, { icons = false, bottom = false } = {}) {
   const phoneNote = ringing ? t.phone.ringingTab : unread ? fill(t.phone.unread, { n: unread }) : "";
   const phoneExtra = ringing ? `<i class="dot warn" aria-hidden="true"></i>` : unread ? `<em>${unread}</em>` : "";
   return [
+    tab("overview"),
     tab("net"),
     tab("internet", dot, label),
     tab("box", restarting ? `<i class="dot warn" aria-hidden="true"></i>` : "", restarting ? `${t.tabs.box}, ${t.boxPage.restarting}` : ""),
@@ -360,7 +367,11 @@ class FritzboxNetworkPanel extends HTMLElement {
       phoneRinging: false,
       phoneLive: "",
       phone: phoneUi(),
+      phoneMissed: null,
     };
+    this._applyParams(route.tab, hashParams(globalThis.location?.hash));
+    // the command palette while it is open: { query, sel, groups, back }
+    this._pal = null;
     // the device page was opened from the list or the map: back is a step back in the history
     this._openedHere = false;
     this._listScroll = 0;
@@ -386,6 +397,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       state.sel = next.device;
       state.menu = false;
       if (!next.device) this._openedHere = false;
+      this._applyParams(next.tab, hashParams(globalThis.location.hash));
       if (entered) this._enterTab();
       this._update();
       if (state.sel && state.sel !== was) this._showDevicePage();
@@ -393,7 +405,19 @@ class FritzboxNetworkPanel extends HTMLElement {
       if (this._afterNav === "search") {
         this._afterNav = null;
         if (state.tab === "net" && !state.sel) this.shadowRoot.querySelector("#q")?.focus();
+      } else if (this._afterNav === "page") {
+        // opened from the command palette: the focus goes to the title of the page (a device page does that itself)
+        this._afterNav = null;
+        if (!state.sel) this._focusPage();
       }
+    };
+    // Ctrl/⌘ K opens the command palette from anywhere on the page while the panel is shown
+    this._onGlobalKey = (event) => {
+      if (event.key?.toLowerCase() !== "k" || !(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) return;
+      if (!this.getClientRects?.().length || this.shadowRoot.querySelector("#backdrop")?.classList.contains("open")) return;
+      event.preventDefault();
+      if (this._pal) this._closePalette();
+      else this._openPalette();
     };
     this._resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => {
       this._syncCompact();
@@ -473,6 +497,7 @@ class FritzboxNetworkPanel extends HTMLElement {
   connectedCallback() {
     this._syncCompact();
     globalThis.addEventListener("hashchange", this._onHash);
+    globalThis.addEventListener("keydown", this._onGlobalKey);
     this._clock = setInterval(() => this._tick(), 5000);
     this._callClock = setInterval(() => this._tickCall(), 1000);
     this._resize?.observe(this);
@@ -482,6 +507,7 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   disconnectedCallback() {
     globalThis.removeEventListener("hashchange", this._onHash);
+    globalThis.removeEventListener("keydown", this._onGlobalKey);
     clearInterval(this._clock);
     clearInterval(this._callClock);
     clearTimeout(this._enableTimer);
@@ -603,7 +629,8 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   /** Fetches what the page just opened needs. */
   _enterTab() {
-    if (this._state.tab === "cleanup") this._loadCleanup();
+    if (this._state.tab === "overview") this._loadOverview();
+    else if (this._state.tab === "cleanup") this._loadCleanup();
     else if (this._state.tab === "filter") this._loadFilter();
     else if (this._state.tab === "ports") this._loadPorts();
     else if (this._state.tab === "check") this._loadLatency();
@@ -835,11 +862,13 @@ class FritzboxNetworkPanel extends HTMLElement {
       const state = this._state;
       const first = !state.capture || state.capture === "failed";
       state.capture = await this._ws("capture/status");
-      if (first) state.captureForm = captureDefaults(state.capture.limits);
+      // a device chosen before the page was read (from its page, the palette or a link) stays chosen
+      if (first) state.captureForm = { ...captureDefaults(state.capture.limits), mac: state.captureForm.mac };
       // the box may offer other interfaces than last time: keep the choice only if it is still there
       if (!state.capture.interfaces.some((i) => i.id === state.captureForm.interface)) {
         state.captureForm.interface = defaultInterface(state.capture.interfaces);
       }
+      if (first && state.captureForm.mac) state.captureForm = captureForDevice(state.captureForm, state.captureForm.mac, state.capture.interfaces);
     } catch {
       this._state.capture = "failed";
     }
@@ -910,8 +939,8 @@ class FritzboxNetworkPanel extends HTMLElement {
         this._update();
         this._captureTimer = setTimeout(() => this._loadCapture(), 1000);
       } else if (ds.act === "cap-device") {
-        state.captureForm = { ...state.captureForm, interface: state.captureForm.interface.startsWith("2-") ? defaultInterface(state.capture.interfaces) : state.captureForm.interface, mac: this._selected()?.mac ?? "" };
-        globalThis.location.hash = pageHash("capture");
+        // the same address as a link to the capture of a device: "#/capture?mac=…"
+        globalThis.location.hash = pageHash("capture", { mac: this._selected()?.mac ?? "" });
         return;
       } else if (ds.act === "cap-detect") {
         state.captureDetecting = true;
@@ -1034,6 +1063,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     for (const busy of ["_historyBusy", "_trafficYearBusy", "_vpnHistoryBusy", "_trendBusy", "_ipBusy", "_fixedBusy"]) this[busy] = false;
     this._historyAt = null;
     this._vpnHistoryAt = null;
+    this._overviewAt = null;
     this._state.enabling = new Set();
     this._state.cleanup = null;
     this._state.cleanupDays = null;
@@ -1129,6 +1159,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div class="header-end">
             <select id="box" aria-label="${t.box}" hidden></select>
             <span id="lookhost"></span>
+            <button class="iconbtn" id="palbtn" data-act="palette" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K" title="${escapeHtml(t.palette.open)}" aria-label="${escapeHtml(t.palette.open)}" hidden>${ic("search")}</button>
             <span id="managehost"></span>
             <a class="iconbtn intlink" href="/config/integrations/integration/${DOMAIN}" data-act="integration" title="${escapeHtml(t.integrationTitle)}" aria-label="${escapeHtml(t.integrationTitle)}">${ic("external")}</a>
           </div>
@@ -1139,6 +1170,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div id="migbanner"></div>
           <div id="note"></div>
           <div id="subtabs"></div>
+          <div id="overview-view" hidden></div>
           <div id="net-view" hidden>
             <h1 class="sr" id="ltitle" tabindex="-1">${t.tabs.netDevices}</h1>
             <div id="hints"></div>
@@ -1196,6 +1228,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       </div>
       <nav role="tablist" id="bnav" aria-label="${t.navLabel}"></nav>
       <div class="backdrop" id="backdrop"><div class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="dlg-title" id="dialog"></div></div>
+      <div class="palscrim" id="palscrim" hidden></div>
       <div class="toast" id="toast" role="status"></div>`;
     const menu = this.shadowRoot.querySelector("ha-menu-button");
     if (menu) {
@@ -1205,6 +1238,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const style = this.shadowRoot.querySelector("style");
     style.textContent = scaleFonts(style.textContent);
     this._html = {};
+    this._pal = null;
     this._resize?.observe(this.shadowRoot.querySelector("#body"));
     this._renderBox();
     this._update();
@@ -1292,10 +1326,12 @@ class FritzboxNetworkPanel extends HTMLElement {
     const onDevice = tab === "net" && Boolean(state.sel);
     netView.hidden = !ready || tab !== "net" || onDevice;
     root.querySelector("#device-view").hidden = !ready || !onDevice;
-    for (const page of ["internet", "volume", "ports", "vpn", "box", "check", "log", "capture", "phone", "wlan", "addresses", "routes", "cleanup", "filter", "migrate"]) {
+    for (const page of ["overview", "internet", "volume", "ports", "vpn", "box", "check", "log", "capture", "phone", "wlan", "addresses", "routes", "cleanup", "filter", "migrate"]) {
       root.querySelector(`#${page}-view`).hidden = !ready || tab !== page;
     }
     root.querySelector("#live-chip").hidden = !ready;
+    root.querySelector("#palbtn").hidden = !ready;
+    if (!ready && this._pal) this._closePalette(false);
     const stale = ready ? panelCounts(state.data, Date.now(), state.threshold).stale : 0;
     this._set("nav", ready ? renderNav(state, t, { icons: true }) : "");
     this._set("bnav", ready ? renderNav(state, t, { icons: true, bottom: true }) : "");
@@ -1307,6 +1343,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const master = (state.data.nodes ?? []).find((n) => n.role === "master");
     root.querySelector("#sub").textContent = boxSubline(master);
     this._tick();
+    if (tab === "overview") return this._renderOverview();
     if (tab === "internet" || tab === "volume" || tab === "ports") return this._renderInternet();
     if (tab === "vpn") return this._renderVpn();
     if (tab === "check" || tab === "log" || tab === "capture") return this._renderDiagnose();
@@ -1547,6 +1584,7 @@ class FritzboxNetworkPanel extends HTMLElement {
   _onKey(event) {
     const root = this.shadowRoot;
     const state = this._state;
+    if (this._pal) return this._onPalKey(event);
     if (root.querySelector("#backdrop")?.classList.contains("open")) return;
     if (event.key === "Escape" && state.addr?.entryOpen) return this._closeEntry();
     if (event.key === "Escape" && state.addr?.groupsOpen) return this._closeGroups();
@@ -1703,6 +1741,7 @@ class FritzboxNetworkPanel extends HTMLElement {
 
   _onInput(event) {
     const el = event.target;
+    if (el.id === "pal-q") return this._palSearch(el.value);
     if (el.id === "q") {
       this._state.query = el.value;
       this._update();
@@ -1739,6 +1778,13 @@ class FritzboxNetworkPanel extends HTMLElement {
     // the "⋯" menu of the device closes on a click outside it and once an entry is chosen
     for (const more of this.shadowRoot.querySelectorAll("details.moremenu[open]")) {
       if (!more.contains(event.target) || event.target.closest?.(".mitem")) more.open = false;
+    }
+    if (this._pal) {
+      // a click on an option runs it, one beside the palette closes it
+      const option = event.target.closest?.("[data-pal]");
+      if (option) return this._palRun(Number(option.dataset.pal));
+      if (event.target.id === "palscrim" || event.target.closest?.('[data-act="pal-close"]')) return this._closePalette();
+      return;
     }
     if (event.target.id === "a-groups") return this._closeGroups();
     if (event.target.id === "a-entries") return this._closeEntry();
@@ -1829,6 +1875,12 @@ class FritzboxNetworkPanel extends HTMLElement {
     } else if (ds.act === "internet") {
       globalThis.location.hash = "#/internet";
       return;
+    } else if (ds.act === "palette") {
+      return this._openPalette();
+    } else if (ds.act === "ov-refresh") {
+      return this._loadOverview({ force: true });
+    } else if (ds.act === "ov-check") {
+      return this._checkConnection();
     } else if (ds.act === "integration") {
       // the settings of the integration, inside Home Assistant and without loading it again
       event.preventDefault();
@@ -2444,10 +2496,204 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (await this._resubscribeAfterReload()) await this._loadFilter();
   }
 
+  /**
+   * What a route asks to have chosen on its page: the device of a capture ("#/capture?mac=…"), the
+   * filter or the search of the list ("#/net?filter=new", "#/net?q=nas"). Unknown values are left alone.
+   */
+  _applyParams(tab, params) {
+    const state = this._state;
+    if (tab === "capture" && params.mac) {
+      const interfaces = state.capture && typeof state.capture === "object" ? state.capture.interfaces : null;
+      state.captureForm = captureForDevice(state.captureForm, params.mac, interfaces);
+    }
+    if (tab === "net") {
+      const filter = params.filter;
+      if (filter && (PANEL_FILTERS.includes(filter) || filter.startsWith("label:"))) state.filter = filter;
+      if (typeof params.q === "string") {
+        state.query = params.q;
+        const q = this.shadowRoot?.querySelector("#q");
+        if (q) q.value = params.q;
+      }
+    }
+  }
+
+  /**
+   * What the overview needs beyond the subscription: the box (uptime, load), the routes and the port
+   * forwardings, the same reads their pages make. Read when the overview opens, at most every five
+   * minutes, or at once with "Refresh"; a read that fails leaves what was there.
+   */
+  async _loadOverview({ force = false } = {}) {
+    const state = this._state;
+    if (this._overviewBusy || (!force && this._overviewAt && Date.now() - this._overviewAt < OVERVIEW_REFRESH_MS)) return;
+    this._overviewBusy = true;
+    this._overviewAt = Date.now();
+    if (force) this._update();
+    const keep = () => {};
+    const reads = [
+      this._ws("ports/list").then((ports) => (state.ports = ports), keep),
+      // a route being typed keeps the list it was typed against
+      state.routesDraft ? null : this._ws("routes/list").then((routes) => (state.routes = routes), keep),
+      // during a restart the restart asks the box itself
+      state.boxRestart?.phase === "down" ? null : this._ws("box/info").then((info) => (state.box = info), keep),
+    ];
+    try {
+      await Promise.all(reads.filter(Boolean));
+    } finally {
+      this._overviewBusy = false;
+    }
+    this._update();
+  }
+
+  _renderOverview() {
+    const state = this._state;
+    this._set(
+      "overview-view",
+      renderOverview(state, { t: this._t, language: this._hass?.language, now: Date.now(), canWrite: Boolean(state.data?.can_write), busy: this._overviewBusy })
+    );
+  }
+
+  /** "Check the connection" of the overview and the palette: the connection test opens and runs. */
+  _checkConnection() {
+    this._afterNav = "page";
+    if (this._state.tab === "check") this._afterNav = null;
+    globalThis.location.hash = pageHash("check");
+    if (this._state.check !== "running") this._runCheck();
+  }
+
+  /** The focus on the title of the page open now, as after a click on a tab. */
+  _focusPage() {
+    const state = this._state;
+    const root = this.shadowRoot;
+    const view = state.tab === "net" ? root.querySelector("#ltitle") : root.querySelector(`#${state.tab}-view h1`);
+    (view ?? root.querySelector(`#${state.tab}-view`))?.focus?.({ preventScroll: true });
+  }
+
+  /** Opens the command palette; the focus goes into its search and comes back where it was when it closes. */
+  _openPalette() {
+    const root = this.shadowRoot;
+    const host = root.querySelector("#palscrim");
+    if (!host || !this._state.data || this._error) return;
+    if (this._state.menu) this._setMenu(false, false);
+    if (this._state.look) {
+      this._state.look = false;
+      this._update();
+    }
+    this._pal = { query: "", sel: 0, groups: [], back: root.activeElement ?? null };
+    host.innerHTML = renderPalette(this._t);
+    host.hidden = false;
+    this._palSearch("");
+    host.querySelector("#pal-q")?.focus();
+  }
+
+  /** Closes the palette; restore: the focus goes back where it was before. */
+  _closePalette(restore = true) {
+    const pal = this._pal;
+    if (!pal) return;
+    this._pal = null;
+    const root = this.shadowRoot;
+    const host = root.querySelector("#palscrim");
+    if (host) {
+      host.hidden = true;
+      host.innerHTML = "";
+    }
+    if (!restore) return;
+    const back = pal.back?.isConnected ? pal.back : root.querySelector("#palbtn");
+    back?.focus?.({ preventScroll: true });
+  }
+
+  /** The results for the text in the search of the palette, the first one chosen. */
+  _palSearch(query) {
+    const pal = this._pal;
+    if (!pal) return;
+    const state = this._state;
+    const pages = TABS.flatMap((group) => pagesOf(group, state).map((id) => ({ id, group })));
+    const entries = paletteEntries(
+      { clients: state.data?.clients ?? [], pages, canWrite: Boolean(state.data?.can_write), internet: Boolean(state.data?.internet) },
+      this._t
+    );
+    pal.query = query;
+    pal.groups = searchPalette(query, entries);
+    pal.sel = 0;
+    this._palDraw();
+  }
+
+  /** Draws the list of the palette and tells the search field (and a screen reader) which option is chosen. */
+  _palDraw() {
+    const pal = this._pal;
+    const root = this.shadowRoot;
+    const list = root.querySelector("#pal-list");
+    if (!pal || !list) return;
+    const t = this._t;
+    list.innerHTML = renderPaletteList(pal.groups, { t, query: pal.query, sel: pal.sel });
+    const total = pal.groups.reduce((n, g) => n + g.items.length, 0);
+    const input = root.querySelector("#pal-q");
+    if (total) input?.setAttribute("aria-activedescendant", `pal-o-${pal.sel}`);
+    else input?.removeAttribute("aria-activedescendant");
+    const count = root.querySelector("#pal-count");
+    if (count) count.textContent = total ? fill(total === 1 ? t.palette.resultsOne : t.palette.results, { n: total }) : fill(t.palette.none, { q: pal.query.trim() });
+    root.querySelector(`#pal-o-${pal.sel}`)?.scrollIntoView?.({ block: "nearest" });
+  }
+
+  /** The keys of the open palette: the arrows choose, Tab goes to the next group, Enter runs, Esc closes; the focus stays in it. */
+  _onPalKey(event) {
+    const pal = this._pal;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      this._closePalette();
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      this._palRun(pal.sel);
+      return;
+    }
+    if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Tab") {
+      // Tab never leaves the dialog: it moves between the groups
+      event.preventDefault();
+      pal.sel = paletteMove(pal.groups, pal.sel, event.key, event.shiftKey);
+      this._palDraw();
+    }
+  }
+
+  /** Runs an option of the palette: opens its page (a device, a page with a device chosen) or does its action. */
+  _palRun(index) {
+    const item = paletteItem(this._pal?.groups ?? [], index);
+    if (!item) return;
+    const state = this._state;
+    if (item.hash) {
+      const same = item.hash === globalThis.location.hash;
+      this._closePalette(same);
+      if (same) return;
+      if (item.hash.startsWith("#/device/")) {
+        // back from the device leads to the list, not out of the panel
+        this._listScroll = 0;
+        this._openedHere = false;
+      } else this._afterNav = "page";
+      globalThis.location.hash = item.hash;
+      return;
+    }
+    this._closePalette();
+    if (item.act === "check") return this._checkConnection();
+    if (item.act === "reconnect" || item.act === "reboot") return this._interrupt(item.act);
+    if (item.act === "look") {
+      state.look = true;
+      this._update();
+      this.shadowRoot.querySelector("#lookmenu [aria-checked=true]")?.focus();
+      return;
+    }
+    if (item.act?.startsWith("look-")) {
+      this._look = { ...this._look, mode: item.act.slice(5) };
+      rememberLook(this._look);
+      this._applyLook();
+      this._update();
+    }
+  }
+
   _leaveDevice() {
     // without a history entry of our own (opened by link) back would leave the panel
     if (this._openedHere) globalThis.history.back();
-    else globalThis.location.hash = "#/";
+    else globalThis.location.hash = pageHash("net");
   }
 
   /** Back to the map with the device marked; a filter that hides it is lifted first. */

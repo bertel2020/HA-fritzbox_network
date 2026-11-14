@@ -365,30 +365,56 @@ export function apSummary(data, node) {
   };
 }
 
-/** The part of a #/device/<id> route that names the device; null for any other route. */
+/** A hash without its "?…" part: the route; the part after it carries what a page should show chosen. */
+const routePart = (hash) => String(hash ?? "").split("?")[0];
+
+/**
+ * The part of a #/device/<id> route that names the device; null for any other route. The MAC
+ * may also be written with colons or dashes and in capitals: "#/device/3C:A6:2F:20:00:04".
+ */
 export function deviceFromHash(hash) {
-  const match = /^#\/device\/([0-9a-f]{12})$/.exec(hash ?? "");
-  return match ? match[1] : null;
+  const match = /^#\/device\/((?:[0-9a-f]{2}[:-]?){5}[0-9a-f]{2})$/i.exec(routePart(hash));
+  return match ? match[1].replace(/[:-]/g, "").toLowerCase() : null;
 }
 
-/** The pages of the panel reached by "#/<page>"; the network list is "#/". */
-const PAGES = ["wlan", "addresses", "routes", "internet", "volume", "ports", "vpn", "box", "check", "log", "capture", "phone", "filter", "cleanup", "migrate"];
+/** What a route asks to have chosen on its page, "#/capture?mac=…" or "#/net?filter=new": the values by name; {} without. */
+export function hashParams(hash) {
+  const text = String(hash ?? "");
+  const at = text.indexOf("?");
+  if (at < 0) return {};
+  return Object.fromEntries(new URLSearchParams(text.slice(at + 1)));
+}
+
+/** A page named like its tab is called differently in the switch of pages: "Network" › "Devices". */
+export const SUB_LABELS = { net: "netDevices", internet: "connection", box: "boxStatus" };
+
+/** The pages of the panel reached by "#/<page>"; the start page (the overview) is "#/". */
+const PAGES = ["overview", "net", "wlan", "addresses", "routes", "internet", "volume", "ports", "vpn", "box", "check", "log", "capture", "phone", "filter", "cleanup", "migrate"];
 /** Older addresses of pages that have moved: the phone used to live under the box, the diagnosis is the box's connection test now. */
 const MOVED = { "box/phone": "phone", diagnose: "check" };
 
-/** Which page a #/… route shows: the network (also for a device) or one of PAGES; an old address leads to where its page is now. */
+/**
+ * Which page a #/… route shows: a device (on the network), one of PAGES, or the overview for "#/"
+ * and any address it does not know; an old address leads to where its page is now.
+ */
 export function routeFromHash(hash) {
   const device = deviceFromHash(hash);
   if (device) return { tab: "net", device };
-  const path = /^#\/([a-z]+(?:\/[a-z]+)?)$/.exec(hash ?? "")?.[1];
+  const path = /^#\/([a-z]+(?:\/[a-z]+)?)$/.exec(routePart(hash))?.[1];
   if (path && MOVED[path]) return { tab: MOVED[path], device: null };
-  return { tab: PAGES.includes(path) ? path : "net", device: null };
+  return { tab: PAGES.includes(path) ? path : "overview", device: null };
 }
 
-/** The address of a page: "#/" for the network, "#/<page>" otherwise. */
-export function pageHash(page) {
-  if (page === "net") return "#/";
-  return `#/${page}`;
+/**
+ * The address of a page, "#/<page>", with what it should show chosen: pageHash("capture", { mac })
+ * is "#/capture?mac=3c:a6:…". Empty values are left out.
+ */
+export function pageHash(page, params = {}) {
+  const query = Object.entries(params)
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value).replace(/%3A/gi, ":")}`)
+    .join("&");
+  return `#/${page}${query ? `?${query}` : ""}`;
 }
 
 /** The offline devices that have been gone for at least this many days. */

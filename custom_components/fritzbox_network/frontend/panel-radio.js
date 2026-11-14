@@ -94,6 +94,12 @@ function radioLine(radio, t) {
     <small>${escapeHtml(parts.join(" · "))}</small></li>`;
 }
 
+/** What one finding of the radio check says, "Repeater, 5 GHz: the radio is 78 % busy …". */
+export function radioFindingText(f, t) {
+  const band = t.bandGroups[f.band] ?? f.band ?? "";
+  return fill(t.diag.radio.findings[f.kind], { node: f.node, band, percent: f.percent, dbm: f.dbm, n: f.n });
+}
+
 /** The card; nothing where the box tells no access points. */
 export function renderRadio(data, ctx) {
   const { t, language } = ctx;
@@ -108,10 +114,7 @@ export function renderRadio(data, ctx) {
         <span class="chip ${node.uplinkWeak ? "warn" : ""}">${escapeHtml(uplinkText(node, t, language))}</span>${wired ? `<small>${escapeHtml(wired)}</small>` : ""}</div>${lines}</div>`;
     })
     .join("");
-  const finding = (f) => {
-    const band = t.bandGroups[f.band] ?? f.band ?? "";
-    return fill(r.findings[f.kind], { node: f.node, band, percent: f.percent, dbm: f.dbm, n: f.n });
-  };
+  const finding = (f) => radioFindingText(f, t);
   const verdict = check.issues
     ? `<p class="hintline warn"><span aria-hidden="true">${ic("alert")}</span><span>${escapeHtml(fill(r.issues, { n: check.issues }))}</span></p>
       <ul class="ports">${check.findings.map((f) => `<li><span class="pdesc">${escapeHtml(finding(f))}</span></li>`).join("")}</ul>`

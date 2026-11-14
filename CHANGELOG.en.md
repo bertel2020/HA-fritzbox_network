@@ -4,6 +4,12 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+### New
+
+- Panel: the **Overview** is the first tab and the start page (`#/`, `#/overview`): tiles for Internet, Devices, Box, Wi-Fi and (with FRITZ!Box Telefon) Phone that lead to their pages; "What stands out" gathers the notes of all pages in one list with a link to the page where each is dealt with, else "All is well"; quick actions Check the connection, Reconnect, Guest Wi-Fi and Capture. The device list now has the address `#/net`; on narrow screens the overview is the first entry of the bar at the bottom.
+- Panel: search and commands with `Ctrl`/`⌘`+`K` or the magnifier in the header: devices (name, IP, MAC), pages (sub-pages and Manage too, German and English) and actions (check the connection, reconnect, restart the box, capture, appearance). The arrow keys select, Enter opens, Tab switches the group, Esc closes; full screen on a phone.
+- Panel: links with a choice: `#/capture?mac=…` opens the capture with the device chosen, `#/net?filter=…` and `#/net?q=…` the device list with a filter or a search, `#/device/<MAC>` takes the MAC with colons too. The old addresses keep working.
+
 ### Changed
 
 - Panel: "Manage" (Include, Clean up, Switch over) is no tab any more but a gear at the top right of the header next to the link to the integration; the count of the devices offline for long is on the gear. The addresses `#/filter`, `#/cleanup` and `#/migrate` stay.
@@ -20,6 +26,7 @@ All notable changes to this integration are recorded here.
 
 ### Fixed
 
+- Panel, capture: a device chosen before the page was first opened (with "Record") stays chosen.
 - Panel, include: when nothing changes, the preview only says "Nothing changes with this setting.", without "are removed", the warning and the red button.
 - Panel: the line under the title names the model only once when the box is called like its model ("FRITZ!Box 7590" instead of "FRITZ!Box 7590 · FRITZ!Box 7590").
 

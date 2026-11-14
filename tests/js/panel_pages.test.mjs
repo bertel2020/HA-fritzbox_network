@@ -95,20 +95,20 @@ const typesOf = (calls) => calls.map((c) => c.type.replace("fritzbox_network/", 
 
 // ---------- tabs ----------
 
-test("there are three tabs, and the phone one; Wi-Fi, addresses and routes are pages of the network, VPN of the internet, the diagnosis of the box", () => {
+test("there are the overview and three tabs, and the phone one; Wi-Fi, addresses and routes are pages of the network, VPN of the internet, the diagnosis of the box", () => {
   const nav = panel.renderNav({ tab: "wlan", data: {} }, t);
   const labels = [...nav.matchAll(/<button[^>]*data-tab="(\w+)"/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ["net", "internet", "box", "phone"]);
+  assert.deepEqual(labels, ["overview", "net", "internet", "box", "phone"]);
   // hidden by the reader, and FRITZ!Box Telefon not there: no phone tab
   const hidden = panel.renderNav({ tab: "wlan", data: {}, phoneHidden: true }, t);
-  assert.deepEqual([...hidden.matchAll(/<button[^>]*data-tab="(\w+)"/g)].map((m) => m[1]), ["net", "internet", "box"]);
+  assert.deepEqual([...hidden.matchAll(/<button[^>]*data-tab="(\w+)"/g)].map((m) => m[1]), ["overview", "net", "internet", "box"]);
   // the bar at the bottom has the phone only where FRITZ!Box Telefon is found
   const bottom = (state) => [...panel.renderNav({ tab: "wlan", data: {}, ...state }, t, { icons: true, bottom: true }).matchAll(/data-tab="(\w+)"/g)].map((m) => m[1]);
-  assert.deepEqual(bottom({}), ["net", "internet", "box"]);
-  assert.deepEqual(bottom({ phoneFound: true }), ["net", "internet", "box", "phone"]);
-  assert.deepEqual(bottom({ phoneFound: true, phoneHidden: true }), ["net", "internet", "box", "phone"]);
+  assert.deepEqual(bottom({}), ["overview", "net", "internet", "box"]);
+  assert.deepEqual(bottom({ phoneFound: true }), ["overview", "net", "internet", "box", "phone"]);
+  assert.deepEqual(bottom({ phoneFound: true, phoneHidden: true }), ["overview", "net", "internet", "box", "phone"]);
   // on the phone page without FRITZ!Box Telefon, the bottom bar still has a tab in the tab order
-  assert.match(panel.renderNav({ tab: "phone", data: {} }, t, { bottom: true }), /^<button role="tab" tabindex="0" data-tab="net" aria-selected="false"/);
+  assert.match(panel.renderNav({ tab: "phone", data: {} }, t, { bottom: true }), /^<button role="tab" tabindex="0" data-tab="overview" aria-selected="false"/);
   assert.match(nav, /data-tab="net" aria-selected="true"/);
   assert.deepEqual(panel.TAB_GROUPS.net, ["net", "wlan", "addresses", "routes"]);
   assert.deepEqual(panel.TAB_GROUPS.internet, ["internet", "volume", "ports", "vpn"]);
@@ -140,13 +140,13 @@ test("VPN is offered only with WireGuard, switching over only while FRITZ!Box To
   assert.match(panel.renderSubTabs("filter", t, { migrate: { core: { entry_id: "c" } } }), /data-tab="migrate"[^>]*>Umsteigen/);
 });
 
-test("the new pages are routes of their own, an old or unknown one leads to the network", async () => {
+test("the new pages are routes of their own, an old or unknown one leads to the overview", async () => {
   const shared = await import(`${base}shared.js`);
   for (const page of ["wlan", "box", "migrate", "vpn", "addresses", "routes", "volume", "ports", "check", "log", "capture"]) assert.deepEqual(shared.routeFromHash(`#/${page}`), { tab: page, device: null });
-  assert.deepEqual(shared.routeFromHash("#/nonsense"), { tab: "net", device: null });
+  assert.deepEqual(shared.routeFromHash("#/nonsense"), { tab: "overview", device: null });
   // the diagnosis moved into the box: its old address opens the connection test
   assert.deepEqual(shared.routeFromHash("#/diagnose"), { tab: "check", device: null });
-  assert.deepEqual(shared.routeFromHash("#/diagnose/x"), { tab: "net", device: null });
+  assert.deepEqual(shared.routeFromHash("#/diagnose/x"), { tab: "overview", device: null });
 });
 
 test("the box tab carries a dot while the box restarts", () => {
@@ -674,7 +674,7 @@ test("/ searches the devices from every page: it opens the list and puts the foc
     const body = { tagName: "BODY", getAttribute: () => null, classList: { contains: () => false } };
     p._onKey({ key: "/", target: body, preventDefault: () => (prevented = true) });
     assert.equal(prevented, true);
-    assert.equal(globalThis.location.hash, "#/");
+    assert.equal(globalThis.location.hash, "#/net");
     p._onHash();
     assert.equal(p._state.tab, "net");
     assert.equal(focused, true);
@@ -946,6 +946,9 @@ test("Record traffic of a device opens the capture page of the box with the devi
   p._selected = () => ({ mac: "aa:bb" });
   globalThis.location.hash = "";
   await p._onCapture({ act: "cap-device" });
-  assert.equal(globalThis.location.hash, "#/capture");
+  // the same link as from anywhere else: the page opens with the device chosen
+  assert.equal(globalThis.location.hash, "#/capture?mac=aa:bb");
+  const { hashParams } = await import(`${base}shared.js`);
+  p._applyParams("capture", hashParams(globalThis.location.hash));
   assert.equal(p._state.captureForm.mac, "aa:bb");
 });

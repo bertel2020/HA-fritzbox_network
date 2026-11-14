@@ -4,6 +4,12 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ## Unveröffentlicht
 
+### Neu
+
+- Panel: Die **Übersicht** ist der erste Tab und die Startseite (`#/`, `#/overview`): Kacheln für Internet, Geräte, Box, WLAN und (mit FRITZ!Box Telefon) Telefon, die zu ihren Seiten führen; „Auffälligkeiten“ sammelt die Hinweise aller Seiten in einer Liste mit Link zur Seite, auf der sie behoben werden, sonst „Alles in Ordnung“; Schnellaktionen Verbindung prüfen, Neu verbinden, Gast-WLAN und Mitschnitt. Die Geräteliste hat jetzt die Adresse `#/net`; auf schmalen Bildschirmen steht die Übersicht als erster Eintrag in der Leiste unten.
+- Panel: Suche und Befehle mit `Strg`/`⌘`+`K` oder der Lupe im Kopf: Geräte (Name, IP, MAC), Seiten (auch Unterseiten und Verwalten, deutsch und englisch) und Aktionen (Verbindung prüfen, Neu verbinden, Box neu starten, Mitschnitt, Darstellung). Pfeiltasten wählen, Enter öffnet, Tab wechselt die Gruppe, Esc schließt; auf dem Handy als Vollbild.
+- Panel: Links mit Vorauswahl: `#/capture?mac=…` öffnet den Mitschnitt mit dem Gerät, `#/net?filter=…` und `#/net?q=…` die Geräteliste mit Filter oder Suche, `#/device/<MAC>` nimmt die MAC auch mit Doppelpunkten. Die alten Adressen gelten weiter.
+
 ### Geändert
 
 - Panel: „Verwalten“ (Einbinden, Aufräumen, Umsteigen) ist kein Tab mehr, sondern ein Zahnrad oben rechts im Kopf neben dem Link zur Integration; der Zähler der lange offline Geräte steht am Zahnrad. Die Adressen `#/filter`, `#/cleanup` und `#/migrate` bleiben.
@@ -20,6 +26,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Behoben
 
+- Panel, Mitschnitt: Ein Gerät, das vor dem ersten Öffnen der Seite gewählt wurde (über „Mitschneiden“), bleibt gewählt.
 - Panel, Einbinden: Ändert sich nichts, zeigt die Vorschau nur „Mit diesem Filter ändert sich nichts.“, ohne „werden entfernt“, Warnung und roten Knopf.
 - Panel: Die Zeile unter dem Titel nennt das Modell nur einmal, wenn die Box so heißt wie ihr Modell („FRITZ!Box 7590“ statt „FRITZ!Box 7590 · FRITZ!Box 7590“).
 

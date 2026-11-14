@@ -1126,7 +1126,7 @@ test("the pool card is only offered to someone who may write, and warns before i
 test("the pages are tabs, the internet tab carries the state of the line, the gear of Manage the clean-up count", () => {
   const html = panel.renderNav({ tab: "internet", data: { internet: { connected: false } } }, t);
   const labels = [...html.matchAll(/<button[^>]*>([^<]+)/g)].map((m) => m[1]);
-  assert.deepEqual(labels, ["Netzwerk", "Internet", "Box", "Telefon"]);
+  assert.deepEqual(labels, ["Übersicht", "Netzwerk", "Internet", "Box", "Telefon"]);
   assert.match(html, /data-tab="internet" aria-selected="true" aria-label="Internet, Getrennt"/);
   assert.match(html, /<i class="dot " aria-hidden="true"><\/i>/);
   assert.doesNotMatch(html, /data-tab="devices"/);
@@ -1324,7 +1324,7 @@ test("the gear of Manage is the current page on all of its pages, and each page 
     const nav = panel.renderNav({ tab, data: null }, t);
     assert.doesNotMatch(nav, /data-tab="(devices|cleanup|filter)"|aria-selected="true"/);
     // no tab of the bar is open: the first one is in the tab order, so the bar can still be reached
-    assert.match(nav, /^<button role="tab" tabindex="0" data-tab="net"/);
+    assert.match(nav, /^<button role="tab" tabindex="0" data-tab="overview"/);
     assert.equal([...nav.matchAll(/tabindex="0"/g)].length, 1);
   }
   assert.doesNotMatch(panel.renderManage({ tab: "net" }, t, 0), /aria-current/);

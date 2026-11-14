@@ -187,10 +187,10 @@ test("the phone tab is always there, quiet without fritzbox_phone and gone only 
   assert.match(nav, /data-tab="box"[^>]*>Box<\/button><button role="tab" tabindex="0" data-tab="phone" aria-selected="true" aria-label="Telefon, 2 neue Nachrichten">Telefon<em>2<\/em><\/button>$/);
   assert.deepEqual(shared.routeFromHash("#/phone"), { tab: "phone", device: null });
   assert.deepEqual(shared.routeFromHash("#/box/phone"), { tab: "phone", device: null });
-  assert.deepEqual(shared.routeFromHash("#/box/nonsense"), { tab: "net", device: null });
+  assert.deepEqual(shared.routeFromHash("#/box/nonsense"), { tab: "overview", device: null });
   assert.equal(shared.pageHash("phone"), "#/phone");
   assert.equal(shared.pageHash("box"), "#/box");
-  assert.equal(shared.pageHash("net"), "#/");
+  assert.equal(shared.pageHash("net"), "#/net");
   assert.equal(panel.groupOf("phone"), "phone");
 });
 

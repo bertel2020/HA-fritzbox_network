@@ -13,6 +13,17 @@ export function defaultInterface(interfaces) {
   return (interfaces.find((i) => i.id === "1-lan") ?? interfaces[0])?.id ?? "";
 }
 
+/**
+ * The form with one device chosen (from its page, the command palette or a link "#/capture?mac=…").
+ * The traffic of one device is only on the interfaces of the home network: an interface of the
+ * internet side ("2-…") gives way to the usual one, as far as the interfaces are known.
+ */
+export function captureForDevice(form, mac, interfaces) {
+  const wan = String(form.interface ?? "").startsWith("2-");
+  const iface = mac && wan && interfaces?.length ? defaultInterface(interfaces) : form.interface;
+  return { ...form, interface: iface, mac: String(mac ?? "").toLowerCase() };
+}
+
 // The usual order of the boxes (the 7590 AX measured): the first access point is 2.4 GHz, the second 5 GHz.
 // Used until the detection has measured it.
 const USUAL_BANDS = { "1-vap0": "2_4ghz", "1-vap1": "5ghz" };

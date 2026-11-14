@@ -39,7 +39,7 @@ export function networkHints(data, t) {
 }
 
 // hints about the radios and the mesh: their details are on the Wi-Fi page
-const ON_WLAN = new Set(["radioBusy", "uplinkWeak", "repeaterLost"]);
+export const ON_WLAN = new Set(["radioBusy", "uplinkWeak", "repeaterLost"]);
 
 /**
  * The card with the hints, folded to one line: the first hint and how many more there are. Opened,

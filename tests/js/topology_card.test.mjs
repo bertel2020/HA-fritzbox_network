@@ -328,11 +328,12 @@ test("the route names a device only for a valid hash", () => {
 });
 
 test("the route names the page", () => {
-  assert.deepEqual(card.routeFromHash(""), { tab: "net", device: null });
+  assert.deepEqual(card.routeFromHash(""), { tab: "overview", device: null });
+  assert.deepEqual(card.routeFromHash("#/net"), { tab: "net", device: null });
   assert.deepEqual(card.routeFromHash("#/cleanup"), { tab: "cleanup", device: null });
   assert.deepEqual(card.routeFromHash("#/filter"), { tab: "filter", device: null });
   assert.deepEqual(card.routeFromHash("#/device/3c2af4a1b2c3"), { tab: "net", device: "3c2af4a1b2c3" });
-  assert.deepEqual(card.routeFromHash("#/nonsense"), { tab: "net", device: null });
+  assert.deepEqual(card.routeFromHash("#/nonsense"), { tab: "overview", device: null });
 });
 
 test("the clean-up slider keeps the devices gone for at least that long", () => {
