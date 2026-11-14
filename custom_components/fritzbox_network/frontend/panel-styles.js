@@ -1348,7 +1348,7 @@ export const PANEL_CSS = `
   /* today on the phone page: the gold of the phone tile on the overview, a soft gradient like the box and internet cards */
   .phtoday { --tone: light-dark(#a56a00, #f2c27a); background: linear-gradient(135deg, color-mix(in srgb, var(--tone) 9%, var(--surface)), var(--surface) 72%); }
   .phtoday .chead { align-items: center; gap: 10px; }
-  .phtoday .chead .ph-src { margin-left: auto; }
+  .phtoday .chead .ph-src, .phtoday .chead .seg { margin-left: auto; }
   .phtoday .phico { width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; flex: none; background: color-mix(in srgb, var(--tone) 16%, var(--surface)); color: var(--tone); }
   .phtoday .phico svg { width: 17px; height: 17px; }
   /* the facts of a card: no boxes, the value free on the gradient like on the internet card; the tone comes from --tone of the card */

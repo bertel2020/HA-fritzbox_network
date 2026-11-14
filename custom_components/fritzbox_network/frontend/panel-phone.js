@@ -5,7 +5,7 @@
  * calls its services from the panel; it never talks to the box itself.
  */
 
-import { escapeHtml, hintNote } from "./shared.js";
+import { escapeHtml, hintNote, noteHtml } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { BOOK_ROWS, CALL_FILTERS, digits, HISTORY_PERIODS, PERIODS, PERIOD_DAYS, SERIES, callKind, dialable, displayName, filterCalls, filterCounts, foldHeat, heatGrid, isOutgoing, onBlocklist, phoneStats, searchBook, shortNumber, wsStats } from "./phone-model.js";
@@ -791,8 +791,9 @@ export function statsView(model, ctx) {
   const heat = st.heat ?? heatGrid([]);
   const hourly = heatShape(heat, width).hourly;
   const tamTile = parts.tamTile ? tile(parts.tamTile.label, parts.tamTile.value, esc(parts.tamTile.small)) : "";
-  return `<section class="card sec" aria-labelledby="ph-stat-h">${head}
-    <p class="ph-limit">${ic("help")}<span><b>${esc(notes[0])}</b> ${esc(notes.slice(1).join(" "))}</span></p>
+  const sect = (label, extra, body, cls = "") => `<section class="card sec${cls}"><div class="chead"><span class="label">${esc(label)}</span>${extra}</div>${body}</section>`;
+  const summaryHead = head.replace('<div class="chead"><span class="label" id="ph-stat-h">', `<div class="chead"><span class="phico" aria-hidden="true">${ic("phone")}</span><span class="label" id="ph-stat-h">`);
+  const summary = `<section class="card sec phtoday facts phstats" aria-labelledby="ph-stat-h">${summaryHead}
     ${staleNote(model, ctx)}
     <div class="tiles">
       ${tile(s.calls, sum.n, `${deltaHtml(sum.n, prev?.n, "n", t)}${st.perDay !== null ? ` · ${esc(fill(s.perDay, { n: fmt1(st.perDay) }))}` : ""}`)}
@@ -801,19 +802,13 @@ export function statsView(model, ctx) {
       ${spamTile}
       ${tamTile}
     </div>
-    <p class="hint">${esc(compareText)}</p>
-    <div class="ph-vsec"><div class="chead"><span class="label">${esc(s.chart[st.bars.unit])}</span>${toggle("bars")}</div>${legend}
-      <div class="ph-vwrap">${ui.tables?.bars ? barTable(st.bars, ctx) : barChart(st.bars, width, ctx)}<div class="ph-tip" role="tooltip" hidden></div></div></div>
-    <div class="ph-vsec"><div class="chead"><span class="label">${esc(s.heat)}</span>${toggle("heat")}</div>
-      <div class="ph-vwrap">${ui.tables?.heat ? heatTable(heat, width, ctx) : heatChart(heat, width, ctx)}<div class="ph-tip" role="tooltip" hidden></div></div>
-      <p class="hint">${esc(hourly ? s.heatHintHours : s.heatHint)}</p></div>
-    <div class="two ph-two">
-      <div class="ph-vsec"><div class="chead"><span class="label">${esc(s.topIn)}</span></div>${rankList(st.topIn, s.topIn, "tin", model, ctx)}</div>
-      <div class="ph-vsec"><div class="chead"><span class="label">${esc(s.topOut)}</span></div>${rankList(st.topOut, s.topOut, "tout", model, ctx)}</div>
-    </div>
-    <div class="ph-vsec"><div class="chead"><span class="label">${esc(s.perLine)}</span></div>${rankList(st.lines.map((l) => ({ ...l, name: "", talk: 0 })), s.perLine, "own", model, ctx, true)}<p class="hint">${esc(s.perLineHint)}</p></div>
-    ${model.privacy ? `<p class="hint">${esc(s.privacy)}</p>` : ""}
-    <p class="hint">${esc(parts.sourceText)}</p></section>`;
+    <p class="hint">${esc(compareText)}</p>${noteHtml(t.hintLabel, notes.join(" "))}</section>`;
+  const bars = sect(s.chart[st.bars.unit], toggle("bars"), `${legend}<div class="ph-vwrap">${ui.tables?.bars ? barTable(st.bars, ctx) : barChart(st.bars, width, ctx)}<div class="ph-tip" role="tooltip" hidden></div></div>`);
+  const heatCard = sect(s.heat, toggle("heat"), `<div class="ph-vwrap">${ui.tables?.heat ? heatTable(heat, width, ctx) : heatChart(heat, width, ctx)}<div class="ph-tip" role="tooltip" hidden></div></div><p class="hint">${esc(hourly ? s.heatHintHours : s.heatHint)}</p>`);
+  const tops = `<div class="two ph-two">${sect(s.topIn, "", rankList(st.topIn, s.topIn, "tin", model, ctx))}${sect(s.topOut, "", rankList(st.topOut, s.topOut, "tout", model, ctx))}</div>`;
+  const lines = sect(s.perLine, "", `${rankList(st.lines.map((l) => ({ ...l, name: "", talk: 0 })), s.perLine, "own", model, ctx, true)}<p class="hint">${esc(s.perLineHint)}</p>`);
+  const foot = `${model.privacy ? `<p class="hint">${esc(s.privacy)}</p>` : ""}<p class="hint">${esc(parts.sourceText)}</p>`;
+  return `${summary}${bars}${heatCard}${tops}${lines}${foot}`;
 }
 
 // ---------- the page ----------
