@@ -559,7 +559,7 @@ function listView(m, ctx) {
         })
         .join("");
       const tone = rowHints.some((h) => h.level === "bad") ? " rowbad" : rowHints.some((h) => h.level === "warn") ? " rowwarn" : "";
-      const chips = (badge) => `<span class="chips">${badge}${c.pool ? `<span class="pchip" title="${escapeHtml(a.poolTitle)}">${escapeHtml(a.poolChip)}</span>` : ""}</span>`;
+      const chips = (badge) => `<span class="achipcol">${badge}${c.pool ? `<span class="pchip" title="${escapeHtml(a.poolTitle)}">${escapeHtml(a.poolChip)}</span>` : ""}</span>`;
       let divider = "";
       if (bySort && m.zones.length > 1) {
         const z = m.zones.find((x) => c.n >= x.from && c.n <= x.to);

@@ -1122,7 +1122,7 @@ export const PANEL_CSS = `
   th[aria-sort="ascending"] .sortb, th[aria-sort="descending"] .sortb { color: var(--text); }
   .zonerow td { height: 30px; padding: 4px 10px; background: var(--soft); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
   .zonerow td b { color: var(--text); font-weight: 500; margin-right: 4px; }
-  .chips { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+  .achipcol { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 3px; }
   .pchip { padding: 0 8px; border-radius: 10px; font-size: 11px; font-weight: 500; background: var(--accent-soft); color: var(--accent-hover); }
   .st { display: inline-flex; flex-wrap: wrap; align-items: center; color: var(--muted); }
   .st.on { color: var(--ok); }
