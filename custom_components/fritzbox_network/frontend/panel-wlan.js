@@ -141,7 +141,7 @@ function guestCard(guest, ctx) {
 export function renderWlan(wlan, ctx) {
   const { t } = ctx;
   const w = t.wlan;
-  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1">${escapeHtml(w.title)}</h1><p class="lead">${escapeHtml(w.lead)}</p></div>`;
+  const head = `<div class="phead"><h1 id="dtitle" tabindex="-1" class="sr">${escapeHtml(w.title)}</h1></div>`;
   if (wlan === null || wlan === undefined) return `${head}${loadingCard(t)}`;
   if (wlan === "failed" || typeof wlan !== "object") return `${head}${errorCard(t, w.failed, { retry: "wlan-retry", detail: ctx.error })}`;
   const c = { ...ctx, canWrite: Boolean(wlan.can_write) };
