@@ -41,6 +41,10 @@ The integration works locally with the FRITZ!Box (TR-064) and makes no connectio
   <img src="screenshots-en/net-light.png" alt="Side panel with the device list" width="100%">
 </p>
 
+<p align="center">
+  <img src="screenshots-en/box-light.png" alt="Side panel with the box page: uptime, CPU, temperature and RAM with their course" width="100%">
+</p>
+
 | Network map | Device page |
 | --- | --- |
 | ![Network map](screenshots-en/map-light.png) | ![Device page](screenshots-en/device-light.png) |

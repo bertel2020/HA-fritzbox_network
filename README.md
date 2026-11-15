@@ -41,6 +41,10 @@ Die Integration arbeitet lokal mit der FRITZ!Box (TR-064) und baut keine Interne
   <img src="screenshots/net-light.png" alt="Seitenpanel mit der Geräteliste" width="100%">
 </p>
 
+<p align="center">
+  <img src="screenshots/box-light.png" alt="Seitenpanel mit der Box-Seite: Laufzeit, CPU, Temperatur und RAM mit Verlauf" width="100%">
+</p>
+
 | Netzkarte | Gerätedetail |
 | --- | --- |
 | ![Netzkarte](screenshots/map-light.png) | ![Gerätedetail](screenshots/device-light.png) |
