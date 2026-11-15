@@ -86,6 +86,20 @@ The integration works locally with the FRITZ!Box (TR-064) and makes no connectio
 - **Gentle**: Only two requests to the FRITZ!Box per poll (host list and mesh), never one per device.
 - **Easy setup**: A new address or a new password without setting up again, diagnostics to share.
 
+## How it differs from "AVM FRITZ!Box Tools"
+
+The core integration and FRITZ!Box Cockpit both talk TR-064 to the box. The differences:
+
+| | Core "FRITZ!Box Tools" | FRITZ!Box Cockpit |
+| --- | --- | --- |
+| Devices | Entity IDs follow the device name | Devices by MAC address, entity IDs stay when you rename |
+| Interface | Entities and the standard dashboard | Side panel (network map, internet, VPN, routes, diagnosis) and dashboard cards |
+| History | Only through the Home Assistant recorder | Own course for CPU, RAM, temperature, connection and data volume |
+| VPN, routes, mesh | Not included | Switch WireGuard, static routes, mesh topology |
+| Telephony | Call forwarding, `dial` | Not included; use "FRITZ!Box Telefon" |
+
+Both can run side by side, but then every device exists twice. The full comparison and the switch are in the [guide](docs/USER-GUIDE.md#next-to-the-core-integration).
+
 ## Quick start
 
 1. **Prepare the FRITZ!Box**: Enable TR-064 (*Home Network → Network → Network Settings → "Allow access for applications"*) and create a dedicated user with the right "FRITZ!Box settings" (*System → FRITZ!Box Users*).

@@ -86,6 +86,20 @@ Die Integration arbeitet lokal mit der FRITZ!Box (TR-064) und baut keine Interne
 - **Schonend**: Pro Abfrage nur zwei Anfragen an die FRITZ!Box (Geräteliste und Mesh), nie eine pro Gerät.
 - **Einfache Einrichtung**: Neue Adresse oder neues Kennwort ohne Neueinrichtung, Diagnosedaten zum Weitergeben.
 
+## Unterschied zu „AVM FRITZ!Box Tools“
+
+Die Core-Integration und FRITZ!Box Cockpit sprechen beide TR-064 mit der Box. Die Unterschiede:
+
+| | Core „FRITZ!Box Tools“ | FRITZ!Box Cockpit |
+| --- | --- | --- |
+| Geräte | Entity-IDs hängen am Gerätenamen | Geräte nach MAC-Adresse, Entity-IDs bleiben beim Umbenennen gleich |
+| Oberfläche | Entitäten und Standard-Dashboard | Seitenpanel (Netzkarte, Internet, VPN, Routen, Diagnose) und Dashboard-Karten |
+| Verläufe | Nur über den Recorder von Home Assistant | CPU, RAM, Temperatur, Verbindung und Datenvolumen mit eigenem Verlauf |
+| VPN, Routen, Mesh | Nicht enthalten | WireGuard schalten, statische Routen, Mesh-Topologie |
+| Telefonie | Rufumleitungen, `dial` | Nicht enthalten, dafür „FRITZ!Box Telefon“ |
+
+Beide können parallel laufen, doppeln dann aber jedes Gerät. Die vollständige Gegenüberstellung und den Umstieg findest du in der [Anleitung](docs/USER-GUIDE.de.md#zusammen-mit-der-core-integration).
+
 ## Schnellstart
 
 1. **FRITZ!Box vorbereiten**: TR-064 aktivieren (*Heimnetz → Netzwerk → Netzwerkeinstellungen → „Zugriff für Anwendungen zulassen“*) und einen eigenen Benutzer mit dem Recht „FRITZ!Box Einstellungen“ anlegen (*System → FRITZ!Box-Benutzer*).
