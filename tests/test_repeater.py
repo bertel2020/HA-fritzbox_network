@@ -109,7 +109,9 @@ def _with_repeater(fake_client):
 async def _setup(hass, entry, chosen=(REPEATER,)):
     hass.config_entries.async_update_entry(entry, options={"repeaters": list(chosen)})
     await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
+    # the first poll of each repeater runs as a background task; wait for it, or the entities
+    # of the repeater may not exist yet
+    await hass.async_block_till_done(wait_background_tasks=True)
     return entry.runtime_data
 
 
