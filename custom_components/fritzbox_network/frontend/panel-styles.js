@@ -1508,10 +1508,13 @@ export const PANEL_CSS = `
   .ph-player input[type=range] { width: 100%; accent-color: var(--accent); }
   .ph-player .t { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .ph-cbody { min-width: 0; padding: 4px 0; }
-  .ph-ct-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; align-items: center; margin-bottom: 6px; }
-  .ph-ct-row[data-kind="email"] { grid-template-columns: minmax(0, 1fr) auto; }
+  .dialog input[type="text"], .dialog input[type="tel"], .dialog input[type="email"], .dialog select { width: 100%; height: 42px; box-sizing: border-box; border-radius: var(--control-radius); border: 1px solid var(--input-line); background: var(--surface); color: var(--text); padding: 0 12px; min-width: 0; font: inherit; }
+  .dialog input[type="text"]:focus-visible, .dialog input[type="tel"]:focus-visible, .dialog input[type="email"]:focus-visible, .dialog select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; border-color: var(--accent); }
+  .ph-ct-row { display: grid; grid-template-columns: 132px minmax(0, 1fr) 36px; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .ph-ct-row .icon-btn { width: 36px; height: 36px; }
+  .ph-ct-row[data-kind="email"] { grid-template-columns: minmax(0, 1fr) 36px; }
   .ph-ct-vip { margin-top: 14px; }
-  .ph-ct-sec { margin-top: 18px; display: grid; gap: 6px; justify-items: start; }
+  .ph-ct-sec { margin-top: 20px; display: grid; gap: 8px; justify-items: start; }
   .ph-ct-sec > div { display: grid; gap: 6px; width: 100%; }
   .ph-ct-sec .ph-ct-row { margin-bottom: 0; }
   .ph-ct-add { border-color: transparent; background: none; color: var(--accent); padding: 0 8px; margin-left: -8px; }
