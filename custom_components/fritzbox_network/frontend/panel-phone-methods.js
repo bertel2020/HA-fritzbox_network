@@ -518,7 +518,7 @@ export class PhoneMethods {
       },
       html: `${ask ? `<label class="field"><span class="label">${escapeHtml(c.numberField)}</span><input id="ph-ct-num" type="tel" maxlength="40" inputmode="tel" autocomplete="off"></label>` : `<p class="mono">${escapeHtml(fill(c.number, { number }))}</p>`}
         ${joinHtml}
-        <div id="ph-ct-new"><label class="field"><span class="label">${escapeHtml(c.name)}</span><input id="ph-ct-name" type="text" maxlength="64" value="${escapeHtml(suggestion.slice(0, 64))}"></label>
+        <div id="ph-ct-new"><label class="field"><span class="label">${escapeHtml(c.name)}</span><input id="ph-ct-name" type="text" maxlength="64" autocomplete="off" value="${escapeHtml(suggestion.slice(0, 64))}"></label>
         ${suggestion ? `<p class="hint">${escapeHtml(c.suggestion)}</p>` : ""}
         ${bookHtml}</div>`,
       ok: c.ok,
@@ -592,14 +592,20 @@ export class PhoneMethods {
       focus: "#ph-ct-name",
       html: `<label class="field"><span class="label">${escapeHtml(c.name)}</span><input id="ph-ct-name" type="text" maxlength="64" value="${escapeHtml(contact?.name ?? "")}"></label>
         <label class="acheck ph-ct-vip"><input id="ph-ct-vip" type="checkbox"${contact?.vip ? " checked" : ""}><span>${escapeHtml(c.vip)}</span></label>
-        <div class="field"><span class="label">${escapeHtml(c.numbers)}</span><div id="ph-ct-nums">${(known?.length ? known : [undefined]).map((n) => numberRow(n)).join("")}</div>
-          <button type="button" class="btn sm" id="ph-ct-addnum">${escapeHtml(c.addNumber)}</button></div>
-        <div class="field"><span class="label">${escapeHtml(c.emails)}</span><div id="ph-ct-mails">${(contact?.emails ?? []).map((m) => emailRow(m)).join("")}</div>
-          <button type="button" class="btn sm" id="ph-ct-addmail">${escapeHtml(c.addEmail)}</button></div>
+        <div class="ph-ct-sec"><span class="label">${escapeHtml(c.numbers)}</span><div id="ph-ct-nums">${(known?.length ? known : [undefined]).map((n) => numberRow(n)).join("")}</div>
+          <button type="button" class="btn sm ph-ct-add" id="ph-ct-addnum">+ ${escapeHtml(c.addNumber)}</button></div>
+        <div class="ph-ct-sec"><span class="label">${escapeHtml(c.emails)}</span><div id="ph-ct-mails">${(contact?.emails ?? []).map((m) => emailRow(m)).join("")}</div>
+          <button type="button" class="btn sm ph-ct-add" id="ph-ct-addmail">+ ${escapeHtml(c.addEmail)}</button></div>
         ${bookHtml}
-        ${contact ? `<button type="button" class="btn sm d" id="ph-ct-del">${escapeHtml(c.delete)}</button>` : ""}`,
+        ${contact ? `<button type="button" class="btn d" id="ph-ct-del">${escapeHtml(c.delete)}</button>` : ""}`,
       ok: contact ? c.save : c.ok,
       onOpen: (dialog) => {
+        // "Delete" sits with the buttons of the dialog, on the left, away from Save
+        const del = dialog.querySelector("#ph-ct-del");
+        if (del) {
+          del.style.marginRight = "auto";
+          dialog.querySelector(".btn-row")?.prepend?.(del);
+        }
         const nums = dialog.querySelector("#ph-ct-nums");
         const mails = dialog.querySelector("#ph-ct-mails");
         dialog.onclick = (event) => {

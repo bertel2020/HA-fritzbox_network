@@ -1510,8 +1510,14 @@ export const PANEL_CSS = `
   .ph-cbody { min-width: 0; padding: 4px 0; }
   .ph-ct-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; align-items: center; margin-bottom: 6px; }
   .ph-ct-row[data-kind="email"] { grid-template-columns: minmax(0, 1fr) auto; }
-  .ph-ct-vip { margin-top: 12px; }
-  #ph-ct-del { margin-top: 16px; }
+  .ph-ct-vip { margin-top: 14px; }
+  .ph-ct-sec { margin-top: 18px; display: grid; gap: 6px; justify-items: start; }
+  .ph-ct-sec > div { display: grid; gap: 6px; width: 100%; }
+  .ph-ct-sec .ph-ct-row { margin-bottom: 0; }
+  .ph-ct-add { border-color: transparent; background: none; color: var(--accent); padding: 0 8px; margin-left: -8px; }
+  .ph-ct-add:hover { background: var(--accent-soft); }
+  .dialog .ph-ct-sec ~ .hint { margin-top: 18px; }
+  .dialog .ph-ct-sec ~ .field { margin-top: 18px; }
   .ph-nums { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
   .ph-num { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 4px 0 12px; border-radius: 17px; border: 1px solid var(--line); font-size: 13px; max-width: 100%; }
   .ph-num small { color: var(--muted); }
