@@ -564,13 +564,13 @@ export class PhoneMethods {
     if (uid && !contact) return;
     const kinds = ["home", "mobile", "work", "fax_work", "other"];
     const numberRow = (n = { number: "", type: "home" }) => `<div class="ph-ct-row" data-kind="number">
-      <select class="ph-ct-type" aria-label="${escapeHtml(c.kind)}">${kinds.map((k) => `<option value="${k}"${k === n.type ? " selected" : ""}>${escapeHtml(c.kinds[k])}</option>`).join("")}</select>
+      <select class="ph-ct-type" aria-label="${escapeHtml(c.kind)}">${(kinds.includes(n.type) ? kinds : [...kinds, n.type]).map((k) => `<option value="${k}"${k === n.type ? " selected" : ""}>${escapeHtml(c.kinds[k] ?? t.phone.book.numType[k] ?? k)}</option>`).join("")}</select>
       <input class="ph-ct-value" type="tel" maxlength="32" inputmode="tel" autocomplete="off" aria-label="${escapeHtml(c.numberField)}" value="${escapeHtml(n.number)}">
       <button type="button" class="icon-btn" data-rm aria-label="${escapeHtml(c.removeNumber)}">${ic("trash")}</button></div>`;
     const emailRow = (m = "") => `<div class="ph-ct-row" data-kind="email">
       <input class="ph-ct-value" type="email" maxlength="128" autocomplete="off" aria-label="${escapeHtml(c.emailField)}" value="${escapeHtml(m)}">
       <button type="button" class="icon-btn" data-rm aria-label="${escapeHtml(c.removeEmail)}">${ic("trash")}</button></div>`;
-    const known = contact?.numbers.map((n) => ({ number: n.number, type: kinds.includes(n.type) ? n.type : "other" }));
+    const known = contact?.numbers.map((n) => ({ number: n.number, type: /^[a-z_]{1,16}$/.test(n.type) ? n.type : "other" }));
     const bookHtml = contact
       ? ""
       : books.length > 1
