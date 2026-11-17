@@ -2,6 +2,12 @@
 
 Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
+## Unveröffentlicht
+
+### Neu
+
+- Panel, Telefonbuch: Kontakte lassen sich jetzt **anlegen, bearbeiten und löschen**. Das Formular hat Name, VIP-Markierung, beliebig viele Nummern mit Art (privat, mobil, geschäftlich, Fax, sonstige) und E-Mail-Adressen; bei mehreren Telefonbüchern wählt man das Telefonbuch. Jede Zeile hat einen Stift zum Bearbeiten, im Formular steht „Kontakt löschen“ (mit Rückfrage). Die E-Mail-Adressen eines Kontakts stehen in der Liste. Braucht eine Version von FRITZ!Box Telefon mit den Aktionen `update_contact` und `delete_contact`.
+
 ## 1.11.0 – 2026-11-14
 
 ### Neu

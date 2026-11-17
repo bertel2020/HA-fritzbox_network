@@ -258,6 +258,7 @@ export function parseContacts(list) {
         uniqueid: str(c.uniqueid),
         vip: c.vip === true,
         numbers: (Array.isArray(c.numbers) ? c.numbers : []).map((n) => ({ number: str(n?.number), type: str(n?.type) })).filter((n) => n.number),
+        emails: (Array.isArray(c.emails) ? c.emails : []).map(str).filter(Boolean),
       };
     })
     .sort((x, y) => Number(y.vip) - Number(x.vip) || x.name.localeCompare(y.name, "de"));
@@ -281,6 +282,17 @@ export function parseBook(entityId, stateObj, deviceTitle = "") {
     available: usable(stateObj),
     contacts,
   };
+}
+
+/**
+ * What is wrong with the contact form, as the text of the dialog; null when it can be saved. The
+ * form is { name, numbers: [{ number, type }], emails: [] } with the empty fields already left out.
+ */
+export function contactIssue(form, c) {
+  if (!str(form.name).trim()) return c.noName;
+  if (!form.numbers.length) return c.noNumberAtAll;
+  if (!form.numbers.every((n) => dialable(n.number))) return c.noNumber;
+  return form.emails.every((m) => /^[^\s@]+@[^\s@]+$/.test(m)) ? null : c.noEmail;
 }
 
 /** The contacts of a book that match a search over name and number. */

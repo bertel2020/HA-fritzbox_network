@@ -1114,17 +1114,65 @@ test("the phone book is closed by default with its count and opens with a tap; i
   assert.doesNotMatch(vip, /Büro Schmidt/);
 });
 
-test("the new contact button asks for the number too", async () => {
+// the fake dialog has no HTML parser: the rows of the contact form are handed to it by hand
+function fillContactForm(dialog, { name, vip = false, numbers = [], emails = [] }) {
+  const field = (value) => ({ value });
+  dialog.querySelector("#ph-ct-name").value = name;
+  dialog.querySelector("#ph-ct-vip").checked = vip;
+  const rows = numbers.map((n) => ({ querySelector: (sel) => (sel === ".ph-ct-type" ? field(n.type) : field(n.number)) }));
+  dialog.querySelectorAll = (sel) => (sel.includes("#ph-ct-nums") ? rows : sel.includes("#ph-ct-mails") ? emails.map(field) : []);
+}
+
+test("the new contact button opens the whole form and creates the contact with all of it", async () => {
   const { p, calls, root } = makePanel({}, { services: { add_contact: {} }, api: null });
   const asked = p._onPhoneClick({ act: "ph-newcontact" });
   const dialog = root.els["#dialog"];
-  assert.match(dialog.innerHTML, /id="ph-ct-num"/);
-  dialog.querySelector("#ph-ct-num").value = "0301234567";
-  dialog.querySelector("#ph-ct-name").value = "Neu";
+  for (const id of ["ph-ct-name", "ph-ct-vip", "ph-ct-nums", "ph-ct-mails", "ph-ct-addnum", "ph-ct-addmail"]) assert.match(dialog.innerHTML, new RegExp(`id="${id}"`));
+  assert.doesNotMatch(dialog.innerHTML, /ph-ct-del/);
+  fillContactForm(dialog, { name: "Neu", vip: true, numbers: [{ number: "0301234567", type: "work" }, { number: "0171 5", type: "mobile" }], emails: ["neu@example.com"] });
   dialog.querySelector("#dlg-yes").onclick();
   await asked;
   await settle();
-  assert.equal(calls.find((c) => c.service === "add_contact")?.data.number, "0301234567");
+  assert.deepEqual(calls.find((c) => c.service === "add_contact")?.data, {
+    name: "Neu",
+    numbers: [{ number: "0301234567", type: "work" }, { number: "0171 5", type: "mobile" }],
+    emails: ["neu@example.com"],
+    vip: true,
+    phonebook_id: 0,
+  });
+});
+
+test("the contact form says what is missing and stays open", () => {
+  const c = { noName: "N", noNumberAtAll: "A", noNumber: "B", noEmail: "E" };
+  assert.equal(model.contactIssue({ name: " ", numbers: [], emails: [] }, c), "N");
+  assert.equal(model.contactIssue({ name: "x", numbers: [], emails: [] }, c), "A");
+  assert.equal(model.contactIssue({ name: "x", numbers: [{ number: "abc", type: "home" }], emails: [] }, c), "B");
+  assert.equal(model.contactIssue({ name: "x", numbers: [{ number: "030 1", type: "home" }], emails: ["nope"] }, c), "E");
+  assert.equal(model.contactIssue({ name: "x", numbers: [{ number: "030 1", type: "home" }], emails: ["a@b.de"] }, c), null);
+});
+
+test("a contact is edited and deleted from its row", async () => {
+  const { p, calls, root } = makePanel({}, { services: { update_contact: {}, delete_contact: {} } });
+  p._phone.books[0].phonebookId = 0;
+  const entity = p._phone.books[0].entityId;
+  const weber = p._phone.books[0].contacts.find((x) => x.name === "Dr. Weber");
+  weber.uniqueid = "3";
+  const asked = p._onPhoneClick({ act: "ph-editcontact", phEnt: entity, phUid: "3" });
+  const dialog = root.els["#dialog"];
+  assert.match(dialog.innerHTML, /value="Dr\. Weber"/);
+  assert.match(dialog.innerHTML, /id="ph-ct-del"/);
+  fillContactForm(dialog, { name: "Dr. Weber (Praxis)", numbers: [{ number: "030 9", type: "work" }], emails: [] });
+  dialog.querySelector("#dlg-yes").onclick();
+  await asked;
+  await settle();
+  assert.deepEqual(calls.find((c) => c.service === "update_contact")?.data, {
+    contact_id: "3",
+    name: "Dr. Weber (Praxis)",
+    numbers: [{ number: "030 9", type: "work" }],
+    emails: [],
+    vip: false,
+    phonebook_id: 0,
+  });
 });
 
 test("a number of a call can go to an existing contact with the action of fritzbox_phone", async () => {

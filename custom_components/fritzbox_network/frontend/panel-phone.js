@@ -501,10 +501,12 @@ function bookCard(model, ctx) {
               const fax = n.type.startsWith("fax");
               return `<span class="ph-num"><span class="mono">${esc(n.number)}</span>${type ? `<small>${esc(type)}</small>` : ""}${fax || !dialable(n.number) ? "" : `<button class="icon-btn" data-act="ph-dial" data-ph-num="${esc(n.number)}" data-ph-name="${esc(c.name)}" data-k="ph-bd-${esc(key)}-${esc(n.number)}" aria-label="${esc(fill(b.call, { name: c.name, type: type || "–" }))}"${off(model)}>${ic("phone")}</button>`}</span>`;
             })
-            .join("")}</div>`;
+            .join("")}</div>${c.emails.length ? `<div class="ph-nums">${c.emails.map((m) => `<span class="ph-num"><span class="mono">${esc(m)}</span><small>${esc(b.email)}</small></span>`).join("")}</div>` : ""}`;
       const st = hide ? { n: 0, last: null } : statsOf(c);
       const stat = st.n ? `<small class="ph-cstat">${esc(fill(b.calls, { n: st.n }))}${st.last ? `, ${esc(fill(b.last, { when: dayLabel(st.last, ctx.now, t, ctx.language) }))}` : ""}</small>` : "";
-      return `${label}<div class="ph-row ph-contact"><div class="ph-line two"><span class="ph-ico">${initial}</span><div class="ph-cbody">${body}${stat}</div></div></div>`;
+      const editable = !hide && !model.offline && c.uniqueid && Number.isInteger(book.phonebookId);
+      const edit = editable ? `<span class="ph-act"><button class="icon-btn" data-act="ph-editcontact" data-ph-ent="${esc(book.entityId)}" data-ph-uid="${esc(c.uniqueid)}" data-k="ph-ed-${esc(key)}" aria-haspopup="dialog" aria-label="${esc(fill(b.edit, { name: c.name }))}">${ic("pencil")}</button></span>` : "";
+      return `${label}<div class="ph-row ph-contact"><div class="ph-line${editable ? "" : " two"}"><span class="ph-ico">${initial}</span><div class="ph-cbody">${body}${stat}</div>${edit}</div></div>`;
     })
     .join("");
   const more = found.length > shown.length ? `<p class="hint">${esc(fill(b.more, { n: found.length - shown.length }))}</p>` : "";

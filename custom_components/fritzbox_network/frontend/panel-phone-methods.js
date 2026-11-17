@@ -6,7 +6,8 @@
  */
 import { openDialog, openFormDialog, showToast } from "./panel-dialogs.js";
 import { dialSuggestions, liveBand, lookupBody, mmss, renderPhone } from "./panel-phone.js";
-import { HISTORY_PERIODS, PERIODS, PERIOD_DAYS, PHONE_DOMAIN, REVEAL_MS, SIGN_EXPIRES_S, SIGN_REUSE_MS, WS_PARTS, dialable, fetchPhoneWs, parseWsEntries, phoneLoaded, phoneTrigger, readPhoneModel, wsCode } from "./phone-model.js";
+import { HISTORY_PERIODS, PERIODS, PERIOD_DAYS, PHONE_DOMAIN, REVEAL_MS, SIGN_EXPIRES_S, SIGN_REUSE_MS, WS_PARTS, contactIssue, dialable, fetchPhoneWs, parseWsEntries, phoneLoaded, phoneTrigger, readPhoneModel, wsCode } from "./phone-model.js";
+import { ic } from "./icons.js";
 import { escapeHtml } from "./shared.js";
 import { fill } from "./texts.js";
 
@@ -327,7 +328,8 @@ export class PhoneMethods {
       ui.bookFilter = ds.phVal;
       return redraw(`ph-bf-${ds.phVal}`);
     }
-    if (act === "ph-newcontact") return this._phoneContact("");
+    if (act === "ph-newcontact") return this._phoneContactEditor(null, null);
+    if (act === "ph-editcontact") return this._phoneContactEditor(ds.phEnt, ds.phUid);
     if (act === "ph-book") {
       ui.book = ds.phEnt;
       return redraw(`ph-b-${ds.phEnt}`);
@@ -543,6 +545,108 @@ export class PhoneMethods {
     number = answer.number;
     if ((await this._phoneService("add_contact", { number, name, phonebook_id: book })) === undefined) return;
     showToast(this.shadowRoot, fill(c.done, { name }));
+    this._phoneSync({ parts: ["phonebooks"] });
+  }
+
+  /**
+   * The form for a whole contact: name, VIP mark, any number of numbers with their type and
+   * e-mail addresses. Without a contact it creates one (add_contact; with several phone books the
+   * dialog offers the choice), with one it changes it (update_contact) and offers to delete it
+   * (delete_contact). The box is asked for the entry again on saving, so the form works on what
+   * the box has, not on what the page had read a moment ago.
+   */
+  async _phoneContactEditor(entityId, uid) {
+    const t = this._t;
+    const c = t.phone.contact;
+    const books = (this._phone?.books ?? []).filter((b) => Number.isInteger(b.phonebookId));
+    const book = books.find((b) => b.entityId === entityId) ?? books[0];
+    const contact = uid ? book?.contacts.find((x) => x.uniqueid === uid) : null;
+    if (uid && !contact) return;
+    const kinds = ["home", "mobile", "work", "fax_work", "other"];
+    const numberRow = (n = { number: "", type: "home" }) => `<div class="ph-ct-row" data-kind="number">
+      <select class="ph-ct-type" aria-label="${escapeHtml(c.kind)}">${kinds.map((k) => `<option value="${k}"${k === n.type ? " selected" : ""}>${escapeHtml(c.kinds[k])}</option>`).join("")}</select>
+      <input class="ph-ct-value" type="tel" maxlength="32" inputmode="tel" autocomplete="off" aria-label="${escapeHtml(c.numberField)}" value="${escapeHtml(n.number)}">
+      <button type="button" class="icon-btn" data-rm aria-label="${escapeHtml(c.removeNumber)}">${ic("trash")}</button></div>`;
+    const emailRow = (m = "") => `<div class="ph-ct-row" data-kind="email">
+      <input class="ph-ct-value" type="email" maxlength="128" autocomplete="off" aria-label="${escapeHtml(c.emailField)}" value="${escapeHtml(m)}">
+      <button type="button" class="icon-btn" data-rm aria-label="${escapeHtml(c.removeEmail)}">${ic("trash")}</button></div>`;
+    const known = contact?.numbers.map((n) => ({ number: n.number, type: kinds.includes(n.type) ? n.type : "other" }));
+    const bookHtml = contact
+      ? ""
+      : books.length > 1
+        ? `<label class="field"><span class="label">${escapeHtml(c.bookField)}</span><select id="ph-ct-book">${books.map((b) => `<option value="${b.phonebookId}">${escapeHtml(b.name)}</option>`).join("")}</select></label>`
+        : books.length === 1
+          ? `<p class="hint">${escapeHtml(fill(c.bookIn, { name: books[0].name }))}</p>`
+          : `<p class="hint">${escapeHtml(fill(c.book, { name: "" }))}</p>`;
+    let removing = false;
+    const readForm = (dialog) => ({
+      name: dialog.querySelector("#ph-ct-name").value.trim().slice(0, 64),
+      vip: dialog.querySelector("#ph-ct-vip").checked,
+      numbers: [...dialog.querySelectorAll("#ph-ct-nums .ph-ct-row")]
+        .map((row) => ({ number: row.querySelector(".ph-ct-value").value.trim(), type: row.querySelector(".ph-ct-type").value }))
+        .filter((n) => n.number),
+      emails: [...dialog.querySelectorAll("#ph-ct-mails .ph-ct-value")].map((i) => i.value.trim()).filter(Boolean),
+    });
+    const answer = await openFormDialog(this.shadowRoot, t, {
+      title: contact ? c.editTitle : c.newTitle,
+      focus: "#ph-ct-name",
+      html: `<label class="field"><span class="label">${escapeHtml(c.name)}</span><input id="ph-ct-name" type="text" maxlength="64" value="${escapeHtml(contact?.name ?? "")}"></label>
+        <label class="acheck ph-ct-vip"><input id="ph-ct-vip" type="checkbox"${contact?.vip ? " checked" : ""}><span>${escapeHtml(c.vip)}</span></label>
+        <div class="field"><span class="label">${escapeHtml(c.numbers)}</span><div id="ph-ct-nums">${(known?.length ? known : [undefined]).map((n) => numberRow(n)).join("")}</div>
+          <button type="button" class="btn sm" id="ph-ct-addnum">${escapeHtml(c.addNumber)}</button></div>
+        <div class="field"><span class="label">${escapeHtml(c.emails)}</span><div id="ph-ct-mails">${(contact?.emails ?? []).map((m) => emailRow(m)).join("")}</div>
+          <button type="button" class="btn sm" id="ph-ct-addmail">${escapeHtml(c.addEmail)}</button></div>
+        ${bookHtml}
+        ${contact ? `<button type="button" class="btn sm d" id="ph-ct-del">${escapeHtml(c.delete)}</button>` : ""}`,
+      ok: contact ? c.save : c.ok,
+      onOpen: (dialog) => {
+        const nums = dialog.querySelector("#ph-ct-nums");
+        const mails = dialog.querySelector("#ph-ct-mails");
+        dialog.onclick = (event) => {
+          const rm = event.target.closest?.("[data-rm]");
+          if (rm) {
+            const row = rm.closest(".ph-ct-row");
+            const list = row.parentElement;
+            // a contact keeps at least one number row
+            if (list === nums && nums.children.length === 1) row.querySelector("input").value = "";
+            else row.remove();
+            return;
+          }
+          const id = event.target.closest?.("button")?.id;
+          if (id === "ph-ct-addnum" && nums.children.length < 10) {
+            nums.insertAdjacentHTML("beforeend", numberRow());
+            nums.lastElementChild.querySelector("input").focus();
+          } else if (id === "ph-ct-addmail" && mails.children.length < 10) {
+            mails.insertAdjacentHTML("beforeend", emailRow());
+            mails.lastElementChild.querySelector("input").focus();
+          } else if (id === "ph-ct-del") {
+            removing = true;
+            dialog.querySelector("#dlg-yes").click();
+          }
+        };
+      },
+      validate: (dialog) => (removing ? null : contactIssue(readForm(dialog), c)),
+      read: (dialog) => {
+        if (removing) return { remove: true };
+        const book = dialog.querySelector("#ph-ct-book");
+        return { ...readForm(dialog), book: book ? Number(book.value) : (books[0]?.phonebookId ?? 0) };
+      },
+    });
+    if (answer === null) return;
+    if (answer.remove) {
+      const sure = await openDialog(this.shadowRoot, t, { title: c.deleteTitle, body: fill(c.deleteBody, { name: contact.name }), ok: c.delete, danger: true });
+      if (!sure) return;
+      if ((await this._phoneService("delete_contact", { contact_id: uid, phonebook_id: book.phonebookId })) === undefined) return;
+      showToast(this.shadowRoot, fill(c.deleted, { name: contact.name }));
+    } else if (contact) {
+      const { name, vip, numbers, emails } = answer;
+      if ((await this._phoneService("update_contact", { contact_id: uid, name, numbers, emails, vip, phonebook_id: book.phonebookId })) === undefined) return;
+      showToast(this.shadowRoot, fill(c.saved, { name }));
+    } else {
+      const { name, vip, numbers, emails, book: bookId } = answer;
+      if ((await this._phoneService("add_contact", { name, numbers, emails, vip, phonebook_id: bookId })) === undefined) return;
+      showToast(this.shadowRoot, fill(c.done, { name }));
+    }
     this._phoneSync({ parts: ["phonebooks"] });
   }
 
