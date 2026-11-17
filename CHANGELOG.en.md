@@ -4,6 +4,8 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+## 1.12.0 – 2026-11-17
+
 ### New
 
 - Panel, phone book: contacts can now be **created, edited and deleted**. The form has name, VIP mark, any number of numbers with a type (home, mobile, work, fax, other) and e-mail addresses; with several phone books you choose the book. Every row has a pencil to edit it, the form has "Delete contact" (with a confirmation). The e-mail addresses of a contact show in the list. Needs a version of FRITZ!Box Telefon with the actions `update_contact` and `delete_contact`.
