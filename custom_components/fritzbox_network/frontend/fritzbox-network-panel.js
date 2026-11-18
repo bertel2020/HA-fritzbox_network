@@ -18,6 +18,7 @@ import {
   panelCounts,
   routeFromHash,
   toggleMac,
+  copyText,
 } from "./shared.js";
 import { fill, panelTexts } from "./texts.js";
 import { PANEL_CSS } from "./panel-styles.js";
@@ -2332,7 +2333,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       const password = state.wlanSecret?.password;
       if (!password) return;
       try {
-        await globalThis.navigator.clipboard.writeText(password);
+        await copyText(password);
         showToast(this.shadowRoot, this._t.wlan.guest.copied);
       } catch (err) {
         showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
@@ -2346,7 +2347,7 @@ class FritzboxNetworkPanel extends HTMLElement {
   async _copyValue(value) {
     if (!value) return;
     try {
-      await globalThis.navigator.clipboard.writeText(value);
+      await copyText(value);
       showToast(this.shadowRoot, fill(this._t.inet.copied, { value }));
     } catch (err) {
       showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));

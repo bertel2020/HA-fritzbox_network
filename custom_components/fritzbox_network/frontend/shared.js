@@ -844,3 +844,22 @@ export function seriesStats(values) {
 export function pointColumn(points, index) {
   return (points ?? []).map((p) => (typeof p[index] === "number" ? p[index] : null));
 }
+
+/**
+ * Puts text on the clipboard. Over plain http (no secure context) the browser has no clipboard
+ * API, so the old way through a selected text field is the fallback.
+ */
+export async function copyText(text, root = globalThis.document) {
+  if (globalThis.navigator?.clipboard?.writeText) return globalThis.navigator.clipboard.writeText(text);
+  const field = root.createElement("textarea");
+  field.value = text;
+  field.setAttribute("readonly", "");
+  field.style.cssText = "position:fixed;top:0;left:0;opacity:0";
+  root.body.append(field);
+  field.select();
+  try {
+    if (!root.execCommand("copy")) throw new Error("copy is not allowed here");
+  } finally {
+    field.remove();
+  }
+}
