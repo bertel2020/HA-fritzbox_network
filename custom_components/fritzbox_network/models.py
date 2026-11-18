@@ -191,6 +191,39 @@ class DslInfo:
 
 
 @dataclass(frozen=True)
+class DynDnsInfo:
+    """The dynamic DNS entry of the box and its MyFRITZ name; the password is never read."""
+
+    enabled: bool | None
+    provider: str | None
+    domain: str | None
+    # what the box says about the last update of each address family, as it writes it
+    status_ipv4: str | None
+    status_ipv6: str | None
+    myfritz_enabled: bool | None
+    myfritz_name: str | None
+
+
+def parse_dyndns(ddns: dict[str, Any], myfritz: dict[str, Any]) -> DynDnsInfo | None:
+    """The DynDNS entry from GetDDNSInfo and the MyFRITZ state; None where the box says neither."""
+    if not ddns and not myfritz:
+        return None
+
+    def flag(value: Any) -> bool | None:
+        return None if value is None else bool(value)
+
+    return DynDnsInfo(
+        enabled=flag(ddns.get("NewEnabled")),
+        provider=_address(ddns.get("NewProviderName")),
+        domain=_address(ddns.get("NewDomain")),
+        status_ipv4=_address(ddns.get("NewStatusIPv4")),
+        status_ipv6=_address(ddns.get("NewStatusIPv6")),
+        myfritz_enabled=flag(myfritz.get("NewEnabled")),
+        myfritz_name=_address(myfritz.get("NewDynDNSName")),
+    )
+
+
+@dataclass(frozen=True)
 class InternetInfo:
     """The connection of the box to the internet; rates in kbit/s, bytes counted since boot."""
 
@@ -210,6 +243,7 @@ class InternetInfo:
     dsl: DslInfo | None
     # whether the cable of the line is plugged in and has a signal (the physical link)
     linked: bool | None = None
+    dyndns: DynDnsInfo | None = None
 
 
 @dataclass(frozen=True)
@@ -891,6 +925,7 @@ def parse_internet(
         linked={"Up": True, "Down": False, "NoCarrier": False}.get(
             link.get("NewPhysicalLinkStatus")
         ),
+        dyndns=parse_dyndns(slow.get("GetDDNSInfo", {}), slow.get("GetInfo", {})),
     )
 
 

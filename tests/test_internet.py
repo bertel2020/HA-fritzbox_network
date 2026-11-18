@@ -64,6 +64,30 @@ def test_the_internet_connection_is_read_from_the_actions():
     assert (info.dsl.fec_errors, info.dsl.crc_errors) == (96, 0)
 
 
+def test_the_dyndns_entry_is_read_without_its_password():
+    slow = {
+        **INTERNET_SLOW,
+        "GetDDNSInfo": {
+            "NewEnabled": True,
+            "NewProviderName": "Example DNS",
+            "NewDomain": "home.example.org",
+            "NewStatusIPv4": "success",
+            "NewStatusIPv6": "",
+            "NewPassword": "secret",
+        },
+        "GetInfo": {"NewEnabled": True, "NewDynDNSName": "abc123.myfritz.net"},
+    }
+    dyndns = parse_internet(INTERNET_FAST, slow).dyndns
+    assert (dyndns.provider, dyndns.domain) == ("Example DNS", "home.example.org")
+    assert (dyndns.status_ipv4, dyndns.status_ipv6) == ("success", None)
+    assert dyndns.myfritz_name == "abc123.myfritz.net"
+    assert "secret" not in repr(dyndns)
+
+
+def test_a_box_without_dyndns_has_no_entry():
+    assert parse_internet(INTERNET_FAST, INTERNET_SLOW).dyndns is None
+
+
 def test_the_spectrum_averages_the_used_tones_and_leaves_gaps_empty():
     assert spectrum("10,20,0,0,30,50", buckets=3) == (15, 0, 40)
     assert spectrum("10,20,30", buckets=6) == (10, 10, 20, 20, 30, 30)

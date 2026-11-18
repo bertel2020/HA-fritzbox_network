@@ -13,7 +13,7 @@ from .coordinator import FritzNetworkConfigEntry
 
 TO_REDACT_ENTRY = {CONF_HOST, CONF_USERNAME, CONF_PASSWORD}
 # the addresses of the connection and the servers behind it say who and where the user is
-TO_REDACT_INTERNET = {"external_ipv4", "external_ipv6", "ipv6_prefix", "dns"}
+TO_REDACT_INTERNET = {"external_ipv4", "external_ipv6", "ipv6_prefix", "dns", "dyndns"}
 TO_REDACT_HOST = {"mac", "name", "ip", "hostname", "friendly_name", "mac_list", "model"}
 
 

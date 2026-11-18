@@ -82,6 +82,10 @@ INTERNET_SLOW = (
     ("WANIPConn1", "X_AVM_DE_GetDNSServer"),
     ("WANIPConn1", "X_AVM_DE_GetIPv6DNSServer"),
     ("WANDSLInterfaceConfig1", "X_AVM-DE_GetDSLInfo"),
+    # the dynamic DNS entry of the box (without its password) and the MyFRITZ name; the results
+    # are by action name, so "GetInfo" here is only the one of MyFRITZ
+    ("X_AVM-DE_RemoteAccess1", "GetDDNSInfo"),
+    ("X_AVM-DE_MyFritz1", "GetInfo"),
 )
 SECURITY_SERVICE = "LANConfigSecurity1"
 RIGHT_ADMIN = "BoxAdmin"

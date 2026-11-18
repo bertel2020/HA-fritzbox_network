@@ -499,7 +499,26 @@ export function renderInternet(internet, ctx) {
       </div>
       ${internet.dsl ? `<div class="icol">${lineQuality(internet.dsl, language, t)}</div>` : ""}
     </div>
+    ${dyndnsCard(internet.dyndns, t)}
     ${addressHistory(internet.addresses, language, t)}`;
+}
+
+/** The DynDNS entry of the box and its MyFRITZ name; nothing where the box has neither set up. */
+function dyndnsCard(dyndns, t) {
+  if (!dyndns || (!dyndns.enabled && !dyndns.myfritz_enabled)) return "";
+  const d = t.inet.dyndns;
+  const row = (label, value) => (value ? addrItem(label, value, value, t) : "");
+  const status = (label, text) => {
+    if (!text) return "";
+    // the box writes "success" or a message of the provider; only the first is good news
+    const good = /^(success|ok|erfolgreich)/i.test(text);
+    return `<div class="kv"><span class="k">${escapeHtml(label)}</span><span class="${good ? "ok" : "bad"}">${escapeHtml(text)}</span></div>`;
+  };
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(d.title)}</span></div>
+    <div class="addr">
+      ${dyndns.enabled ? `${row(d.provider, dyndns.provider)}${row(d.domain, dyndns.domain)}${status(d.statusV4, dyndns.status_ipv4)}${status(d.statusV6, dyndns.status_ipv6)}` : ""}
+      ${dyndns.myfritz_enabled ? row(d.myfritz, dyndns.myfritz_name) : ""}
+    </div></section>`;
 }
 
 /** Internet › Data volume: the volume of the line with the bars of the days over the whole width. */

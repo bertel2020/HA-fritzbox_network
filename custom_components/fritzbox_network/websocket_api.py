@@ -285,6 +285,7 @@ def _internet(coordinator: FritzNetworkCoordinator) -> dict[str, Any] | None:
         "ipv6_prefix_length": info.ipv6_prefix_length,
         "dns": list(info.dns),
         "dsl": asdict(info.dsl) if info.dsl else None,
+        "dyndns": asdict(info.dyndns) if info.dyndns else None,
         "throughput": None
         if rate is None
         else {"down": round(rate[0], 1), "up": round(rate[1], 1)},
