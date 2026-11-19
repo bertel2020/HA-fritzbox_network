@@ -30,6 +30,7 @@ from .api import FritzNetworkClient
 from .const import (
     CONF_ADOPT_NAMES,
     CONF_CONSIDER_HOME,
+    CONF_DEVICE_TRACKING,
     CONF_FILTER_DEVICES,
     CONF_FILTER_MODE,
     CONF_HIDDEN_MACS,
@@ -47,6 +48,7 @@ from .const import (
     CONF_WAKE_ON_LAN_WIFI,
     DEFAULT_ADOPT_NAMES,
     DEFAULT_CONSIDER_HOME,
+    DEFAULT_DEVICE_TRACKING,
     DEFAULT_IGNORE_GUESTS,
     DEFAULT_IGNORE_PRIVATE_MACS,
     DEFAULT_SCAN_INTERVAL,
@@ -366,6 +368,10 @@ class FritzNetworkOptionsFlow(OptionsFlow):
                     CONF_CONSIDER_HOME,
                     default=options.get(CONF_CONSIDER_HOME, DEFAULT_CONSIDER_HOME),
                 ): vol.All(int, vol.Range(min=0, max=900)),
+                vol.Optional(
+                    CONF_DEVICE_TRACKING,
+                    default=options.get(CONF_DEVICE_TRACKING, DEFAULT_DEVICE_TRACKING),
+                ): bool,
                 vol.Optional(
                     CONF_ADOPT_NAMES,
                     default=options.get(CONF_ADOPT_NAMES, DEFAULT_ADOPT_NAMES),

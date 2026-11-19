@@ -67,6 +67,7 @@
         "data": {
           "scan_interval": "Abfrageintervall (Sekunden)",
           "consider_home": "Als anwesend werten für (Sekunden)",
+          "device_tracking": "Anwesenheits-Entitäten anlegen (Gerätetracker)",
           "adopt_names": "Gerätenamen aus der FRITZ!Box übernehmen",
           "show_vendor": "Hersteller eines Geräts anzeigen",
           "wake_on_lan_wifi": "Wake on LAN auch für WLAN-Geräte",
@@ -83,6 +84,7 @@
         },
         "data_description": {
           "consider_home": "Wie lange ein Gerät nach dem Offline-Gehen noch als anwesend gilt.",
+          "device_tracking": "Aus: kein Gerätetracker je Gerät, vorhandene werden entfernt. Die übrigen Entitäten eines Geräts (Internetzugang, Signal usw.) bleiben. Panel und Ereignisse für neue Geräte arbeiten weiter.",
           "adopt_names": "Namen, die du in Home Assistant selbst vergibst, werden nie überschrieben.",
           "show_vendor": "Der Hersteller stammt aus der MAC-Adresse, aus einer Liste, die mit Home Assistant mitkommt; es wird nichts verschickt. Er erscheint als Hersteller des Geräts in Home Assistant und im Ereignis für neue Geräte. Das Panel zeigt ihn unabhängig davon. Private (zufällige) Adressen haben keinen. Schaltest du das aus, bleibt ein bereits eingetragener Hersteller stehen.",
           "wake_on_lan_wifi": "Standardmäßig aus: Ein WLAN-Gerät im Standby hört ein Magic Packet meist nicht, deshalb gibt es den Knopf und den Schalter „Automatisch Wake on LAN“ nur für Geräte, die nicht bekanntermaßen am WLAN hängen. Schalte das ein, wenn deine WLAN-Geräte aufwachen (manche Fernseher tun es). Schaltest du es aus, bleibt Angelegtes bestehen.",

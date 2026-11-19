@@ -4,6 +4,8 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+- Option **Create device trackers** (on by default): when off there is no device tracker per device, and the existing ones are removed. The counterpart of "device tracking" of the core integration.
+
 ### Changed
 
 - "Consider home for" now defaults to **30 seconds** (it was 180). A device counts as away half a minute after it goes offline. Saved values stay; only those who never changed it notice. A device that briefly drops off the Wi-Fi can make the tracker flicker more often: raise the value in the options then.

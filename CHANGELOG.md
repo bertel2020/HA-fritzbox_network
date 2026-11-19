@@ -4,6 +4,8 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ## Unveröffentlicht
 
+- Option **Gerätetracker anlegen** (Standard an): ausgeschaltet gibt es keinen Gerätetracker je Gerät, vorhandene werden entfernt. Gegenstück zum „Gerätetracking“ der Core-Integration.
+
 ### Geändert
 
 - „Als anwesend werten für“ steht jetzt standardmäßig auf **30 Sekunden** (vorher 180). Ein Gerät gilt nach dem Offline-Gehen also nach einer halben Minute als abwesend. Gespeicherte Werte bleiben; nur wer den Wert nie geändert hat, merkt es. Bei Geräten, die sich im WLAN kurz abmelden, kann der Tracker so öfter flackern: dann den Wert in den Optionen erhöhen.

@@ -67,6 +67,7 @@
         "data": {
           "scan_interval": "Polling interval (seconds)",
           "consider_home": "Consider home for (seconds)",
+          "device_tracking": "Create presence entities (device trackers)",
           "adopt_names": "Take over device names from the FRITZ!Box",
           "show_vendor": "Show the vendor of a device",
           "wake_on_lan_wifi": "Wake on LAN also for Wi-Fi devices",
@@ -83,6 +84,7 @@
         },
         "data_description": {
           "consider_home": "How long an offline device still counts as home.",
+          "device_tracking": "Off: no device tracker per device, and the existing ones are removed. The other entities of a device (internet access, signal and so on) stay. The panel and the events for new devices keep working.",
           "adopt_names": "Names you set yourself in Home Assistant are never overwritten.",
           "show_vendor": "The vendor comes from the MAC address, from a list that ships with Home Assistant; nothing is sent anywhere. It shows as the manufacturer of the device in Home Assistant and in the new device event. The panel shows it whatever this says. Private (randomized) addresses have none. Turning this off does not remove a manufacturer already entered.",
           "wake_on_lan_wifi": "Off by default: a Wi-Fi device in standby mostly does not hear a magic packet, so the button and the automatic Wake on LAN switch are only created for devices not known to sit on Wi-Fi. Turn this on if your Wi-Fi devices wake up (some TVs do). Turning it off does not remove what was created.",

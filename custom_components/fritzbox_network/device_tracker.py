@@ -7,9 +7,13 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 
-from .const import KEY_TRACKER
+from .const import CONF_DEVICE_TRACKING, DEFAULT_DEVICE_TRACKING, KEY_TRACKER
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
-from .entity import FritzNetworkClientEntity, async_setup_client_entities
+from .entity import (
+    FritzNetworkClientEntity,
+    async_remove_entities,
+    async_setup_client_entities,
+)
 from .models import Host, client_uid
 
 PARALLEL_UPDATES = 0
@@ -20,6 +24,10 @@ async def async_setup_entry(
     entry: FritzNetworkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
+    if not entry.options.get(CONF_DEVICE_TRACKING, DEFAULT_DEVICE_TRACKING):
+        # tracking turned off: no presence entities, and the ones made before go
+        async_remove_entities(hass, entry, "device_tracker", lambda uid: True)
+        return
     async_setup_client_entities(
         entry,
         async_add_entities,

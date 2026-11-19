@@ -731,3 +731,23 @@ async def test_unique_ids_from_before_they_carried_the_box_are_renamed_in_place(
     assert legacy_client_uid("SERIAL1_internet_download") is None
     # two boxes never share the id of one device
     assert client_uid("A", WLAN, "ip_address") != client_uid("B", WLAN, "ip_address")
+
+
+async def test_with_tracking_turned_off_there_are_no_trackers_and_the_old_ones_go(
+    hass, fake_client, entry
+):
+    await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+    registry = er.async_get(hass)
+    assert registry.async_get("device_tracker.fritz_020000000003") is not None
+
+    hass.config_entries.async_update_entry(entry, options={"device_tracking": False})
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    assert registry.async_get("device_tracker.fritz_020000000003") is None
+    # what else a device has stays
+    assert any(
+        e.domain != "device_tracker"
+        for e in er.async_entries_for_config_entry(registry, entry.entry_id)
+    )
