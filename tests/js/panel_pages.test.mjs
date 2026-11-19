@@ -969,3 +969,68 @@ test("Record traffic of a device opens the capture page of the box with the devi
   p._applyParams("capture", hashParams(globalThis.location.hash));
   assert.equal(p._state.captureForm.mac, "aa:bb");
 });
+
+// ---------- the card "In Home Assistant" ----------
+
+const entRegistry = [
+  { entity_id: "device_tracker.fritz_tv", platform: "fritzbox_network", device_id: "d1", original_name: "TV", disabled_by: null, labels: [] },
+  { entity_id: "button.fritz_tv_wake_on_lan", platform: "fritzbox_network", device_id: "d1", original_name: "Wake on LAN", disabled_by: "integration", labels: [] },
+  { entity_id: "select.fritz_tv_access_profile", platform: "fritzbox_network", device_id: "d1", original_name: "Profil", disabled_by: "user", labels: [] },
+];
+
+function entPanel() {
+  const { p, calls } = makePanel(
+    {
+      "config/entity_registry/list": entRegistry,
+      "config/label_registry/list": [{ label_id: "tv", name: "Fernseher" }],
+      "search/related": (msg) => (msg.item_id === "device_tracker.fritz_tv" ? { automation: ["automation.tv"] } : {}),
+      "config/entity_registry/update": { reload_delay: 20 },
+    },
+    "net"
+  );
+  p._hass.states = {};
+  p._state.data.clients = [{ id: "01", mac: "01", name: "TV", device_id: "d1", online: true }];
+  p._state.sel = "01";
+  return { p, calls };
+}
+
+test("the card reads the registry, the labels and where each entity is used once, and again only much later", async () => {
+  const { p, calls } = entPanel();
+  await p._maybeLoadEntities();
+  assert.deepEqual(p._state.ents.rows.map((r) => r.entity_id), ["device_tracker.fritz_tv", "button.fritz_tv_wake_on_lan", "select.fritz_tv_access_profile"]);
+  assert.deepEqual(p._state.ents.related["device_tracker.fritz_tv"], { automation: ["automation.tv"] });
+  assert.deepEqual(p._state.ents.labels, [{ label_id: "tv", name: "Fernseher" }]);
+  const types = calls.map((c) => c.type);
+  assert.equal(types.filter((x) => x === "config/entity_registry/list").length, 1);
+  assert.equal(types.filter((x) => x === "search/related").length, 3);
+  await p._maybeLoadEntities();
+  assert.equal(calls.filter((c) => c.type === "config/entity_registry/list").length, 1);
+  // a device without a device in Home Assistant is not asked
+  p._state.data.clients[0].device_id = null;
+  p._state.ents = null;
+  await p._maybeLoadEntities();
+  assert.equal(p._state.ents, null);
+});
+
+test("a failed reading leaves the card saying so, and the page works", async () => {
+  const { p } = entPanel();
+  p._hass.callWS = async () => {
+    throw new Error("no");
+  };
+  await p._maybeLoadEntities();
+  assert.equal(p._state.ents.rows, null);
+});
+
+test("'Enable all' of the card turns on what the integration left off, and only that", async () => {
+  const { p, calls } = entPanel();
+  await p._maybeLoadEntities();
+  await p._enable("all");
+  const updates = calls.filter((c) => c.type === "config/entity_registry/update");
+  assert.deepEqual(updates.map((c) => [c.entity_id, c.disabled_by]), [["button.fritz_tv_wake_on_lan", null]]);
+  // the one the user turned off is turned on by its own switch
+  await p._enable("select.fritz_tv_access_profile");
+  assert.deepEqual(calls.filter((c) => c.type === "config/entity_registry/update").at(-1).entity_id, "select.fritz_tv_access_profile");
+  // once their states show, the card reads again
+  p._enabled();
+  assert.equal(p._state.ents.at, 0);
+});

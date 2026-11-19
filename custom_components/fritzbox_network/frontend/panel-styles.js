@@ -359,7 +359,6 @@ export const PANEL_CSS = `
   .mitem:hover:not([disabled]), .mitem:focus-visible { background: var(--soft); }
   .mitem[disabled] { opacity: .45; cursor: default; }
   .mitem .t { flex: 1; min-width: 0; }
-  .chips-row + .entities-note { border-top: 0; padding-top: 0; margin-top: 10px; }
   .dsecs { display: grid; gap: 12px; margin-top: 14px; }
   .dsecs .card + .card { margin-top: 0; }
   @container app (min-width: 900px) { .dsecs { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--gap); align-items: start; } .dsecs .wide { grid-column: 1 / -1; } }
@@ -422,7 +421,28 @@ export const PANEL_CSS = `
   .inet-status.ok { background: color-mix(in srgb, var(--ok) 14%, transparent); color: var(--ok); }
   .inet-status.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
   .sec > .inet-status + .action { border-top: 0; }
-  .entities-note { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line-2); font-size: 12px; color: var(--muted); }
+  .entcard .chead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .entcard .chead .grow { flex: 1; min-width: 0; }
+  .entcard .chead small { display: block; color: var(--muted); }
+  .entcard .entlist > summary { cursor: pointer; color: var(--accent-hover); font-size: 13px; padding: 6px 0; }
+  .entcard .ents { list-style: none; margin: 0; padding: 0; }
+  .entcard .ent { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1.6fr) auto auto; gap: 12px; align-items: center; padding: 8px 0; border-top: 1px solid var(--line-2); }
+  .entcard .ent b { font-weight: 500; display: block; } .entcard .ent small { color: var(--muted); display: block; }
+  .entcard .id { display: flex; align-items: center; gap: 4px; min-width: 0; } .entcard .id .mono { overflow-wrap: anywhere; font-size: 12px; }
+  .entcard .icon-btn.sm { width: 28px; height: 28px; } .entcard .icon-btn.sm svg.i { width: 16px; height: 16px; }
+  .entcard .stat { white-space: nowrap; }
+  .entcard .entmore { display: grid; grid-template-columns: 130px 1fr; gap: 6px 14px; margin: 10px 0 0; padding-top: 10px; border-top: 1px solid var(--line-2); }
+  .entcard .entmore dt { color: var(--muted); } .entcard .entmore dd { margin: 0; display: flex; gap: 6px; flex-wrap: wrap; align-items: flex-start; }
+  .entcard .used { list-style: none; margin: 0; padding: 0; } .entcard .used li { padding: 1px 0; }
+  .entcard .muted { color: var(--muted); }
+  .entcard .note.warn { background: var(--warn-soft); border-left: 4px solid var(--warn); border-radius: 12px; padding: 10px 14px; margin: 6px 0 10px; }
+  .entcard .note b { display: block; font-weight: 500; } .entcard .note p { margin: 2px 0 0; color: var(--muted); }
+  .entcard .hint { margin: 10px 0 0; } .entcard .foot { display: flex; gap: 8px; margin-top: 10px; }
+  @container app (max-width: 600px) {
+    .entcard .ent { grid-template-columns: minmax(0, 1fr) auto; }
+    .entcard .ent .id { grid-column: 1 / 3; } .entcard .ent .stat { display: none; }
+    .entcard .entmore { grid-template-columns: 1fr; gap: 0; } .entcard .entmore dd { margin-bottom: 8px; }
+  }
   .btn-row { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 12px; }
   .sec .note { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; font-size: 13px; }
   .sec .note span { flex: 1 1 180px; }

@@ -6,6 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Panel, device page: the new card **In Home Assistant** replaces the narrow note "For automations, N entities are ready". It lists the entities of the device with the entity ID to copy, the state and a switch to turn it on or off, has **Enable all**, shows area and labels and **where the entities are used** (automations, scripts, scenes, groups, persons). Turning one off asks first. A device with a locally assigned MAC and its tracker off gets a note.
 - Option **Create device trackers** (on by default): when off there is no device tracker per device, and the existing ones are removed. The counterpart of "device tracking" of the core integration.
 - Panel, device list: the "More" menu has the filter **Locally assigned MAC** (second character of the MAC 2, 6, A or E; on phones mostly a random, private address). **Guest** is always in the menu now, also with no devices; when "Ignore guests" (or "Ignore private MACs") is on, the menu says that such devices are left out.
 - Panel, Switch over: **Carry over settings** copies name, icon, area, labels and aliases of the entities of "FRITZ!Box Tools" (and the area, name and labels of their devices) to their counterparts here, where nothing is set yet. Nothing is deleted, moved or switched off; the IDs here stay, and each row shows the automations that use the old ID. **Undo** takes what was copied away again. The panel sends the list you confirmed and the server checks it again. Until now there was only the preview.

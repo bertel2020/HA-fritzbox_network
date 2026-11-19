@@ -6,6 +6,7 @@ globalThis.HTMLElement = class {};
 const base = "../../custom_components/fritzbox_network/frontend/";
 const network = await import(`${base}panel-network.js`);
 const device = await import(`${base}panel-device.js`);
+const entities = await import(`${base}panel-entities.js`);
 const texts = await import(`${base}texts.js`);
 const cleanup = await import(`${base}panel-cleanup.js`);
 const filter = await import(`${base}panel-filter.js`);
@@ -193,15 +194,14 @@ test("the connection path goes through the repeater with the line of its uplink"
   assert.equal(offline.at(-2).text, "offline");
 });
 
-test("the controls work without entities; a note offers to switch the entities on", () => {
+test("the controls work without entities", () => {
   const off = { states: { "switch.tv_i": { state: "off" } } };
   const html = device.renderDevice(data.clients[0], { t, now: NOW, data, hass: off, threshold: -75 });
   assert.match(html, /data-sw="priority"[^>]*>/);
   assert.doesNotMatch(html, /data-sw="priority"[^>]*disabled/);
-  assert.match(html, /Für Automationen stehen 3 Entitäten bereit/);
-  assert.match(html, /data-enable="all"[^>]*>Aktivieren/);
-  // all entities are there: no note
-  assert.doesNotMatch(device.renderDevice(data.clients[0], { t, now: NOW, data, hass, threshold: -75 }), /data-enable="all"/);
+  // the card "In Home Assistant" is read after the page opens; until then it says so
+  assert.match(html, /entcard" aria-busy="true"[^>]*>[\s\S]*Liest, was Home Assistant von diesem Gerät kennt/);
+  assert.doesNotMatch(html, /entities-note/);
 });
 
 test("the plan to switch on lists only what is off, can be written and is not under way", () => {
@@ -1859,4 +1859,108 @@ test("a menu hangs under its button, and under the right end of it where it woul
   assert.equal(shared.menuLeft(830, 585, 805, 300), 505);
   // never left of the row
   assert.equal(shared.menuLeft(200, 10, 60, 300), 0);
+});
+
+// ---------- the card "In Home Assistant" ----------
+
+const registry = [
+  { entity_id: "device_tracker.fritz_tv", platform: "fritzbox_network", device_id: "d1", name: null, original_name: "TV", disabled_by: null, labels: ["tv"] },
+  { entity_id: "switch.fritz_tv_internet_access", platform: "fritzbox_network", device_id: "d1", name: null, original_name: "Internetzugang", disabled_by: null, labels: [] },
+  { entity_id: "button.fritz_tv_wake_on_lan", platform: "fritzbox_network", device_id: "d1", name: null, original_name: "Wake on LAN", disabled_by: "integration", labels: [] },
+  { entity_id: "select.fritz_tv_access_profile", platform: "fritzbox_network", device_id: "d1", name: null, original_name: "Zugangsprofil", disabled_by: "user", labels: [] },
+  { entity_id: "sensor.other", platform: "other", device_id: "d1", name: null, original_name: "Other", disabled_by: null, labels: [] },
+  { entity_id: "sensor.elsewhere", platform: "fritzbox_network", device_id: "d2", name: null, original_name: "Elsewhere", disabled_by: null, labels: [] },
+];
+const entHass = {
+  states: {
+    "device_tracker.fritz_tv": { state: "home" },
+    "switch.fritz_tv_internet_access": { state: "on" },
+    "automation.tv": { state: "on", attributes: { friendly_name: "Fernseher an" } },
+  },
+  devices: { d1: { area_id: "living", labels: [] } },
+  areas: { living: { name: "Wohnzimmer" } },
+};
+
+test("the entities of the card are those of this integration on this device, tracker first", () => {
+  const rows = entities.deviceEntities(registry, data.clients[0]);
+  assert.deepEqual(rows.map((r) => r.entity_id), [
+    "device_tracker.fritz_tv",
+    "switch.fritz_tv_internet_access",
+    "button.fritz_tv_wake_on_lan",
+    "select.fritz_tv_access_profile",
+  ]);
+  assert.equal(rows[0].name, "TV");
+  assert.deepEqual(entities.deviceEntities(registry, { ...data.clients[0], device_id: null }), []);
+  assert.deepEqual(entities.deviceEntities(null, data.clients[0]), []);
+});
+
+test("'Enable all' turns on what the integration left off, not what the user turned off, nor what is under way", () => {
+  const rows = entities.deviceEntities(registry, data.clients[0]);
+  assert.deepEqual(entities.offRows(rows).map((r) => r.entity_id), ["button.fritz_tv_wake_on_lan"]);
+  assert.deepEqual(entities.offRows(rows, new Set(["button.fritz_tv_wake_on_lan"])), []);
+});
+
+test("where the entities are used: each place once, by name, in a fixed order", () => {
+  const related = {
+    "device_tracker.fritz_tv": { automation: ["automation.tv", "automation.other"], person: ["person.anna"] },
+    "switch.fritz_tv_internet_access": { automation: ["automation.tv"], script: ["script.night"] },
+  };
+  const used = entities.usedBy(related, entHass);
+  // an id Home Assistant has no name for stays as it is
+  assert.deepEqual(used.map((u) => [u.kind, u.name]), [
+    ["automation", "automation.other"],
+    ["automation", "Fernseher an"],
+    ["script", "script.night"],
+    ["person", "person.anna"],
+  ]);
+  assert.deepEqual(entities.usesOf(related, "device_tracker.fritz_tv"), ["automation.tv", "automation.other", "person.anna"]);
+  assert.deepEqual(entities.usesOf(related, "none"), []);
+});
+
+test("the card shows the entities with state and switch, the area, the labels and the places of use", () => {
+  const rows = entities.deviceEntities(registry, data.clients[0]);
+  const ents = { mac: data.clients[0].mac, at: NOW, rows, related: { "device_tracker.fritz_tv": { automation: ["automation.tv"] } }, labels: [{ label_id: "tv", name: "Fernseher" }] };
+  const html = entities.entitiesCard(data.clients[0], { t, hass: entHass, ents });
+  assert.match(html, /4 Entitäten, 1 davon noch aus/);
+  assert.match(html, /data-enable="all"[^>]*>Alle aktivieren/);
+  assert.match(html, /<span class="mono">device_tracker\.fritz_tv<\/span>/);
+  assert.match(html, /aktiv · zuhause/);
+  // only the tracker names its state; a switch is "active" whatever it is switched to
+  assert.doesNotMatch(html, /aktiv · an/);
+  assert.match(html, /aus \(von dir\)/);
+  assert.match(html, /data-ent-toggle="switch\.fritz_tv_internet_access"[^>]*>/);
+  assert.match(html, /role="switch" aria-checked="false"[^>]*data-ent-toggle="button\.fritz_tv_wake_on_lan"/);
+  assert.match(html, /<dt>Bereich<\/dt><dd>Wohnzimmer<\/dd>/);
+  assert.match(html, /<span class="chip">Fernseher<\/span>/);
+  assert.match(html, /Automation <b>Fernseher an<\/b>/);
+  assert.match(html, /Entity-ID kopieren: device_tracker\.fritz_tv/);
+  // the list is open while something is off
+  assert.match(html, /<details class="entlist"[^>]* open>/);
+  // being turned on: the row says so and its switch waits
+  const under = entities.entitiesCard(data.clients[0], { t, hass: entHass, ents, enabling: new Set(["button.fritz_tv_wake_on_lan"]) });
+  assert.match(under, /wird eingeschaltet/);
+  assert.doesNotMatch(under, /data-enable="all"/);
+});
+
+test("the card is short when everything is on, and says when it could not read", () => {
+  const rows = entities.deviceEntities(registry, data.clients[0]).filter((r) => !r.disabled_by);
+  const ents = { mac: data.clients[0].mac, at: NOW, rows, related: {}, labels: [] };
+  const html = entities.entitiesCard(data.clients[0], { t, hass: entHass, ents });
+  assert.match(html, /2 Entitäten, alle aktiv/);
+  assert.doesNotMatch(html, /data-enable="all"/);
+  assert.doesNotMatch(html, /<details class="entlist"[^>]* open>/);
+  assert.match(html, /nicht gesetzt|von keiner Automation/);
+  assert.match(entities.entitiesCard(data.clients[0], { t, hass: entHass, ents: { mac: data.clients[0].mac, rows: null } }), /ließen sich nicht lesen/);
+  assert.equal(entities.entitiesCard({ ...data.clients[0], device_id: null }, { t, hass: entHass, ents }), "");
+  // the reading belongs to another device: the card waits for its own
+  assert.match(entities.entitiesCard(data.clients[0], { t, hass: entHass, ents: { ...ents, mac: "other" } }), /aria-busy="true"/);
+});
+
+test("a device with a locally assigned MAC and its tracker off gets the note about the address", () => {
+  const phone = { ...data.clients[0], private_mac: true };
+  const rows = [{ entity_id: "device_tracker.fritz_p", domain: "device_tracker", name: "Phone", disabled_by: "integration", labels: [], area_id: null }];
+  const html = entities.entitiesCard(phone, { t, hass: entHass, ents: { mac: phone.mac, at: NOW, rows, related: {}, labels: [] } });
+  assert.match(html, /Der Gerätetracker ist aus/);
+  const plain = entities.entitiesCard(data.clients[0], { t, hass: entHass, ents: { mac: phone.mac, at: NOW, rows, related: {}, labels: [] } });
+  assert.doesNotMatch(plain, /Der Gerätetracker ist aus/);
 });

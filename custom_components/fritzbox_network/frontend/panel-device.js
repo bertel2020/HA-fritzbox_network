@@ -4,6 +4,7 @@ import { BANDS, escapeHtml, plotAttrs, formatBytes, isBlocked, noteHtml, noteOpe
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { whenText } from "./panel-network.js";
+import { entitiesCard } from "./panel-entities.js";
 
 /** The state of an entity of the integration, or null where it does not exist or is gone. */
 export function entityState(hass, entityId) {
@@ -245,16 +246,13 @@ export function renderDevice(client, ctx) {
 
   // one note for the card: what a group is, and what Home Assistant records (its logbook and history are behind "⋯")
   const notes = [client.actions?.internet_access ? t.groupsHint : "", client.entity_id ? t.historyHint : ""].filter(Boolean);
-  const off = enablePlan(client, hass, canWrite, enabling);
-  const note = off.length
-    ? `<div class="entities-note"><span>${escapeHtml(fill(t.entitiesNote, { n: off.length }))}</span><button class="btn sm" data-enable="all" data-k="en-all">${escapeHtml(t.entitiesEnable)}</button></div>`
-    : "";
   return `${headHtml(client, ctx)}
-    <div class="chips-row">${chips}</div>${note}
+    <div class="chips-row">${chips}</div>
     <div class="dsecs">
       <section class="card sec wide facts t-net"><div class="chead"><span class="label">${escapeHtml(t.connection)}</span></div>${pathHtml(client, data, t, ctx.threshold)}${tilesHtml(client, data, t)}</section>
       ${trendSection(client, ctx)}
       ${controlsCard(client, data, canWrite, t)}
+      ${entitiesCard(client, { t, hass, enabling, ents: ctx.ents })}
       <section class="card sec"><div class="chead"><span class="label">${escapeHtml(t.master)}</span></div><dl>${master}</dl>
         ${groupsSection(client, data, t)}
         ${notes.length ? noteHtml(t.hintLabel, ...notes) : ""}</section>

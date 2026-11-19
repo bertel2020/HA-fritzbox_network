@@ -46,6 +46,7 @@ import { renderRadio, renderRadioVerdict } from "./panel-radio.js";
 import { DEFAULT_PAGE_SIZE, PAGE_SIZES, renderTable } from "./panel-table.js";
 import { renderHints } from "./panel-hints.js";
 import { enablePlan, renderDevice } from "./panel-device.js";
+import { deviceEntities, offRows, usesOf } from "./panel-entities.js";
 import { openDialog, openFormDialog, openPasswordDialog, showToast } from "./panel-dialogs.js";
 import { sinceText } from "./panel-phone.js";
 import { WS_PARTS } from "./phone-model.js";
@@ -348,6 +349,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       hl: null,
       // entities switched on in the registry, until Home Assistant shows their state
       enabling: new Set(),
+      // what Home Assistant knows of the open device: its entities, where they are used, the labels
+      ents: null,
       // the page each tab showed last, opened again by the tab
       lastPage: {},
       box: null,
@@ -1076,6 +1079,8 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._vpnHistoryAt = null;
     this._overviewAt = null;
     this._state.enabling = new Set();
+    this._state.ents = null;
+    this._entsBusy = false;
     this._state.cleanup = null;
     this._state.cleanupDays = null;
     this._state.picked = new Set();
@@ -1531,6 +1536,7 @@ class FritzboxNetworkPanel extends HTMLElement {
         pager: pagerFor(this._order(), state.sel),
         view: state.view,
         enabling: state.enabling,
+        ents: state.ents,
         trend: state.trend,
         ip: state.ip,
         language: this._hass?.language,
@@ -1538,6 +1544,73 @@ class FritzboxNetworkPanel extends HTMLElement {
     );
     this._maybeLoadTrend();
     this._maybeLoadIp();
+    this._maybeLoadEntities();
+  }
+
+  /**
+   * What Home Assistant knows of the open device: the entities of the integration on it (also the
+   * ones that are off), where each is used, and the names of the labels. Read when the page opens
+   * and now and then; the registry list is the whole registry, so it is read once per page.
+   */
+  async _maybeLoadEntities() {
+    const client = this._selected();
+    const known = this._state.ents;
+    if (!client?.device_id || this._entsBusy || !this._hass?.callWS) return;
+    if (known?.mac === client.mac && Date.now() - known.at < HISTORY_REFRESH_MS) return;
+    this._entsBusy = true;
+    const mac = client.mac;
+    let ents = { mac, at: Date.now(), rows: null, related: {}, labels: [] };
+    try {
+      const [registry, labels] = await Promise.all([
+        this._hass.callWS({ type: "config/entity_registry/list" }),
+        this._hass.callWS({ type: "config/label_registry/list" }).catch(() => []),
+      ]);
+      const rows = deviceEntities(registry, client);
+      const related = {};
+      await Promise.all(
+        rows.map(async (row) => {
+          try {
+            related[row.entity_id] = await this._hass.callWS({ type: "search/related", item_type: "entity", item_id: row.entity_id });
+          } catch {
+            // an entity whose uses cannot be read just shows none
+          }
+        })
+      );
+      ents = { mac, at: Date.now(), rows, related, labels };
+    } catch {
+      // the card says it could not read; the rest of the page is not affected
+    } finally {
+      this._entsBusy = false;
+    }
+    this._state.ents = ents;
+    if (this._selected()?.mac === mac) this._renderDetail();
+  }
+
+  /** Turns one entity of the device on or off in Home Assistant; off asks first, and names where it is used. */
+  async _toggleEntity(entityId) {
+    const t = this._t;
+    const state = this._state;
+    const row = state.ents?.rows?.find((r) => r.entity_id === entityId);
+    if (!row) return;
+    if (row.disabled_by) return this._enable(entityId);
+    const uses = usesOf(state.ents.related, entityId);
+    const names = uses.map((id) => this._hass.states?.[id]?.attributes?.friendly_name ?? id);
+    const ok = await openDialog(this.shadowRoot, t, {
+      title: fill(t.ents.offTitle, { name: row.name }),
+      body: uses.length ? fill(t.ents.offBodyUsed, { n: uses.length }) : t.ents.offBody,
+      list: names.length ? names : null,
+      ok: t.ents.offOk,
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      const result = await this._hass.callWS({ type: "config/entity_registry/update", entity_id: entityId, disabled_by: "user" });
+      row.disabled_by = "user";
+      showToast(this.shadowRoot, fill(t.ents.toastOff, { s: typeof result?.reload_delay === "number" ? result.reload_delay : 30 }));
+    } catch (err) {
+      showToast(this.shadowRoot, fill(t.toastFailed, { error: err?.message ?? err }));
+    }
+    this._renderDetail();
   }
 
   /** Whether the box always gives the open device the same address: read once when its page opens. */
@@ -1905,6 +1978,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       return;
     } else if (ds.enable) {
       return this._enable(ds.enable);
+    } else if (ds.entToggle) {
+      return this._toggleEntity(ds.entToggle);
     } else if (ds.act === "show-map") {
       return this._showInMap();
     } else if (state.tab === "addresses" && this._onAddressClick(ds, target)) {
@@ -2803,9 +2878,12 @@ class FritzboxNetworkPanel extends HTMLElement {
   async _enable(which) {
     const t = this._t;
     const state = this._state;
+    const client = this._selected();
+    // "all" turns on what the integration made but left off; read from the registry once the card has it
+    const known = state.ents?.mac === client?.mac ? offRows(state.ents.rows, state.enabling).map((r) => r.entity_id) : null;
     const entities =
       which === "all"
-        ? enablePlan(this._selected(), this._hass, Boolean(state.data?.can_write), state.enabling)
+        ? known ?? enablePlan(client, this._hass, Boolean(state.data?.can_write), state.enabling)
         : [which];
     if (!entities.length) return;
     for (const entity of entities) state.enabling.add(entity);
@@ -2836,6 +2914,7 @@ class FritzboxNetworkPanel extends HTMLElement {
   _enabled() {
     clearTimeout(this._enableTimer);
     this._state.enabling = new Set();
+    if (this._state.ents) this._state.ents.at = 0; // read again: what was off is on now
     this._signature = null;
     this._resubscribeAfterReload();
     this._renderDetail();
