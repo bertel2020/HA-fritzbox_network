@@ -2,6 +2,8 @@
 
 Stand: 2026-11-07 · Status: Vorschlag, noch kein Code · Mockup: [`mockups/telefon.html`](../../mockups/telefon.html)
 
+> **Überholt (2026-11-19):** Der Entwurf [`phone-merge.md`](phone-merge.md) nimmt die Telefonie ins Cockpit auf. Die Aussagen „Telefonie bleibt außen vor“ und „kein Python-Code“ gelten dann nicht mehr; dieses Dokument bleibt bis dahin gültig.
+
 Ziel: Unter dem Reiter **Box** gibt es einen Unterreiter **Telefon** neben **Übersicht**, aber nur, wenn die Integration [FRITZ!Box Telefon](https://github.com/bertel2020/HA-fritzbox_phone) (`fritzbox_phone`) geladen ist. Die Seite **liest nur** deren Entitäten (`hass.states`) und **ruft deren Dienste** (`hass.callService`). Sie rechnet, filtert und schreibt nichts selbst, was `fritzbox_phone` schon kann, und spricht nie direkt mit der Box. FRITZ!Box Netzwerk bekommt dafür **keinen Python-Code**.
 
 Das widerspricht nicht dem Beschluss in [`panel-core-gap.md`](panel-core-gap.md) („Telefonie bleibt außen vor“, kein eigener Reiter Telefon): Telefonie bleibt im Backend draußen, und es kommt kein Reiter dazu, nur ein Unterreiter, der ohne die andere Integration gar nicht erscheint.

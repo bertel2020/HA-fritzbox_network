@@ -1,5 +1,7 @@
 # Panel: was FRITZ!Box Tools (Core `fritz`) überflüssig macht
 
+> **Überholt (2026-11-19):** Der Entwurf [`phone-merge.md`](phone-merge.md) nimmt die Telefonie ins Cockpit auf. „Telefonie bleibt außen vor“ gilt dann nicht mehr; dieses Dokument bleibt bis dahin gültig.
+
 Stand: 2026-11-07 · Status: Vorschlag, noch kein Code · Mockups:
 [`mockups/box.html`](../../mockups/box.html),
 [`mockups/wlan.html`](../../mockups/wlan.html),
