@@ -83,6 +83,8 @@ UNHIDE_COMMAND = f"{DOMAIN}/devices/unhide"
 RECONNECT_COMMAND = f"{DOMAIN}/internet/reconnect"
 REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
 MIGRATE_SCAN_COMMAND = f"{DOMAIN}/migrate/scan"
+MIGRATE_RUN_COMMAND = f"{DOMAIN}/migrate/run"
+MIGRATE_UNDO_COMMAND = f"{DOMAIN}/migrate/undo"
 BOX_INFO_COMMAND = f"{DOMAIN}/box/info"
 BOX_HISTORY_COMMAND = f"{DOMAIN}/box/history"
 BOX_HISTORY_SWITCH_COMMAND = f"{DOMAIN}/box/history/switch"
@@ -1408,14 +1410,59 @@ async def ws_wlan_password(
     {vol.Required("type"): MIGRATE_SCAN_COMMAND, vol.Required("entry_id"): str}
 )
 @websocket_api.require_admin
-@callback
-def ws_migrate_scan(
+@websocket_api.async_response
+async def ws_migrate_scan(
     hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
 ) -> None:
     """What taking over the entities of the core integration would do. Reads, changes nothing."""
     if (found := _loaded_coordinator(hass, connection, msg)) is None:
         return
-    connection.send_result(msg["id"], migration.scan(hass, found[0]))
+    result = migration.scan(hass, found[0])
+    journal = await migration.async_journal(hass, found[0])
+    result["done"] = {"time": journal["time"], "count": len(journal["moved"])} if journal else None
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): MIGRATE_RUN_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("token"): str,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_migrate_run(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Take over the entities of the core integration, if the preview is still the one confirmed."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    try:
+        result = await migration.async_run(hass, found[0], msg["token"])
+    except migration.MigrationRefused as err:
+        connection.send_error(msg["id"], err.code, err.code)
+        return
+    connection.send_result(msg["id"], result)
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): MIGRATE_UNDO_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_migrate_undo(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Give the entities taken over back to the core integration, from the journal of the move."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    try:
+        result = await migration.async_undo(hass, found[0])
+    except migration.MigrationRefused as err:
+        connection.send_error(msg["id"], err.code, err.code)
+        return
+    connection.send_result(msg["id"], result)
 
 
 @websocket_api.websocket_command(
@@ -1811,6 +1858,8 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_device_action)
     websocket_api.async_register_command(hass, ws_reboot)
     websocket_api.async_register_command(hass, ws_migrate_scan)
+    websocket_api.async_register_command(hass, ws_migrate_run)
+    websocket_api.async_register_command(hass, ws_migrate_undo)
     websocket_api.async_register_command(hass, ws_box_info)
     websocket_api.async_register_command(hass, ws_wlan_list)
     websocket_api.async_register_command(hass, ws_wlan_switch)

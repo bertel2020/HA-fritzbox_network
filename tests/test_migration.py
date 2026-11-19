@@ -1,9 +1,21 @@
 """The preview of taking over the entities of the core integration: it reads and changes nothing."""
 
-from homeassistant.helpers import entity_registry as er
-from pytest_homeassistant_custom_component.common import MockConfigEntry
+from unittest.mock import AsyncMock
+
+from homeassistant.config_entries import ConfigEntryDisabler, ConfigEntryState
+from homeassistant.helpers import device_registry as dr, entity_registry as er
+import pytest
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    MockModule,
+    mock_integration,
+)
 
 from custom_components.fritzbox_network.migration import (
+    MigrationRefused,
+    async_journal,
+    async_run,
+    async_undo,
     counterpart,
     port_counterpart,
     repeater_counterpart,
@@ -258,3 +270,184 @@ async def test_a_port_forwarding_is_taken_over_by_its_description(hass, fake_cli
     row = _rows(scan(hass, entry))[made[f"{SERIAL}-port_forward_{slug}"].entity_id]
     assert row["status"] == "migrate"
     assert row["target_entity_id"] == "switch.fritz_network_port_tcp_5027"
+
+
+def _fake_core_integration(hass):
+    """The real core integration needs libraries this project lacks; it is not the subject."""
+    mock_integration(
+        hass,
+        MockModule(
+            "fritz",
+            async_setup_entry=AsyncMock(return_value=True),
+            async_unload_entry=AsyncMock(return_value=True),
+        ),
+    )
+
+
+async def _take_over(hass, entry, *unique_ids):
+    _fake_core_integration(hass)
+    await _setup(hass, entry)
+    core, made = _core(hass, *unique_ids)
+    return core, made, scan(hass, entry)
+
+
+async def test_taking_over_moves_the_core_entity_onto_the_device_here(hass, fake_client, entry):
+    uid = f"{SERIAL}-is_connected"
+    core, made, preview = await _take_over(hass, entry, ("binary_sensor", uid))
+    registry = er.async_get(hass)
+    devices = dr.async_get(hass)
+    core_id = made[uid].entity_id
+    ours = registry.async_get("binary_sensor.fritz_network_internet_connected")
+    # the core row has its own marks, the one here has others: both are kept
+    registry.async_update_entity(core_id, name="My line", labels={"a"}, icon="mdi:lan")
+    registry.async_update_entity(ours.entity_id, labels={"b"})
+
+    result = await async_run(hass, entry, preview["token"])
+    await hass.async_block_till_done()
+
+    assert result["moved"] == 1 and result["failed"] == []
+    moved = registry.async_get(core_id)
+    assert (moved.platform, moved.unique_id) == ("fritzbox_network", ours.unique_id)
+    assert moved.config_entry_id == entry.entry_id
+    assert moved.device_id == ours.device_id and devices.async_get(moved.device_id)
+    assert (moved.name, moved.icon, moved.labels) == ("My line", "mdi:lan", {"a", "b"})
+    # ours is gone, and nothing is found twice
+    assert registry.async_get(ours.entity_id) is None or ours.entity_id == core_id
+    assert (
+        registry.async_get_entity_id("binary_sensor", "fritzbox_network", ours.unique_id) == core_id
+    )
+    # the core integration is off, not deleted
+    assert core.disabled_by is ConfigEntryDisabler.USER
+    assert core.state is ConfigEntryState.NOT_LOADED
+    # the entry reloaded: the entity lives under the id of the core one
+    assert hass.states.get(core_id) is not None
+    assert (await async_journal(hass, entry))["moved"][0]["entity_id"] == core_id
+
+
+async def test_the_area_and_name_of_the_core_device_go_to_the_one_here(hass, fake_client, entry):
+    from homeassistant.helpers import area_registry as ar
+
+    uid = f"{SERIAL}-is_connected"
+    core, made, preview = await _take_over(hass, entry, ("binary_sensor", uid))
+    registry, devices = er.async_get(hass), dr.async_get(hass)
+    ours = registry.async_get("binary_sensor.fritz_network_internet_connected")
+    area = ar.async_get(hass).async_create("Cellar")
+    core_device = devices.async_get_or_create(
+        config_entry_id=core.entry_id, identifiers={("fritz", SERIAL)}, name="Box"
+    )
+    devices.async_update_device(core_device.id, area_id=area.id, name_by_user="Router")
+    registry.async_update_entity(made[uid].entity_id, device_id=core_device.id)
+
+    await async_run(hass, entry, preview["token"])
+
+    here = devices.async_get(ours.device_id)
+    assert (here.area_id, here.name_by_user) == (area.id, "Router")
+
+
+async def test_a_changed_preview_is_refused(hass, fake_client, entry):
+    _, _, preview = await _take_over(hass, entry, ("binary_sensor", f"{SERIAL}-is_connected"))
+    _core(hass, ("sensor", f"{SERIAL}-kb_s_sent"))
+
+    with pytest.raises(MigrationRefused) as err:
+        await async_run(hass, entry, preview["token"])
+    assert err.value.code == "changed"
+    assert await async_journal(hass, entry) is None
+
+
+async def test_nothing_to_take_over_is_refused(hass, fake_client, entry):
+    _fake_core_integration(hass)
+    await _setup(hass, entry)
+    with pytest.raises(MigrationRefused) as err:
+        await async_run(hass, entry, scan(hass, entry)["token"])
+    assert err.value.code == "no_core"
+    _core(hass, ("button", f"{SERIAL}-cleanup"))
+    with pytest.raises(MigrationRefused) as err:
+        await async_run(hass, entry, scan(hass, entry)["token"])
+    assert err.value.code == "nothing"
+
+
+async def test_the_entities_without_a_counterpart_stay_with_the_core_integration(
+    hass, fake_client, entry
+):
+    keep = f"{SERIAL}-cleanup"
+    uid = f"{SERIAL}-is_connected"
+    core, made, preview = await _take_over(hass, entry, ("binary_sensor", uid), ("button", keep))
+    await async_run(hass, entry, preview["token"])
+
+    left = er.async_get(hass).async_get(made[keep].entity_id)
+    assert (left.platform, left.config_entry_id) == ("fritz", core.entry_id)
+
+
+async def test_a_second_run_is_refused_until_the_first_is_undone(hass, fake_client, entry):
+    uid = f"{SERIAL}-is_connected"
+    core, made, preview = await _take_over(
+        hass, entry, ("binary_sensor", uid), ("sensor", f"{SERIAL}-kb_s_sent")
+    )
+    await async_run(hass, entry, preview["token"])
+    await hass.async_block_till_done()
+    with pytest.raises(MigrationRefused) as err:
+        await async_run(hass, entry, scan(hass, entry)["token"])
+    assert err.value.code in ("already_done", "nothing")
+
+
+async def test_undo_gives_the_entities_back_and_turns_the_core_integration_on(
+    hass, fake_client, entry
+):
+    uid = f"{SERIAL}-is_connected"
+    core, made, preview = await _take_over(hass, entry, ("binary_sensor", uid))
+    registry = er.async_get(hass)
+    core_id = made[uid].entity_id
+    before = registry.async_get(core_id)
+    await async_run(hass, entry, preview["token"])
+    await hass.async_block_till_done()
+
+    result = await async_undo(hass, entry)
+    await hass.async_block_till_done()
+
+    assert result == {"back": 1, "failed": []}
+    back = registry.async_get(core_id)
+    assert (back.platform, back.unique_id, back.config_entry_id) == (
+        "fritz",
+        uid,
+        core.entry_id,
+    )
+    assert back.device_id == before.device_id
+    assert core.disabled_by is None
+    # ours is made again under its usual id
+    assert registry.async_get("binary_sensor.fritz_network_internet_connected") is not None
+    assert await async_journal(hass, entry) is None
+    with pytest.raises(MigrationRefused) as err:
+        await async_undo(hass, entry)
+    assert err.value.code == "no_journal"
+
+
+async def test_the_panel_runs_and_undoes_the_takeover(hass, hass_ws_client, fake_client, entry):
+    _fake_core_integration(hass)
+    await _setup(hass, entry)
+    _core(hass, ("binary_sensor", f"{SERIAL}-is_connected"))
+    client = await hass_ws_client(hass)
+    await client.send_json_auto_id({"type": COMMAND, "entry_id": entry.entry_id})
+    preview = (await client.receive_json())["result"]
+    assert preview["done"] is None
+
+    await client.send_json_auto_id(
+        {"type": "fritzbox_network/migrate/run", "entry_id": entry.entry_id, "token": "stale"}
+    )
+    assert (await client.receive_json())["error"]["code"] == "changed"
+    await client.send_json_auto_id(
+        {
+            "type": "fritzbox_network/migrate/run",
+            "entry_id": entry.entry_id,
+            "token": preview["token"],
+        }
+    )
+    ran = await client.receive_json()
+    assert ran["success"] and ran["result"]["moved"] == 1
+    await hass.async_block_till_done()
+
+    await client.send_json_auto_id({"type": COMMAND, "entry_id": entry.entry_id})
+    assert (await client.receive_json())["result"]["done"]["count"] == 1
+    await client.send_json_auto_id(
+        {"type": "fritzbox_network/migrate/undo", "entry_id": entry.entry_id}
+    )
+    assert (await client.receive_json())["result"]["back"] == 1

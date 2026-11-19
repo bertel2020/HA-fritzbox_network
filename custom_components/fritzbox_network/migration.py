@@ -9,24 +9,34 @@ separate step the user starts on purpose.
 The counterpart is only taken where it exists in the entity registry of this integration: an
 entity that is not made here (no right, no hardware, off by default and never turned on) would
 leave the moved entity orphaned.
+
+``async_run`` does the move, ``async_undo`` takes it back from the journal it wrote. The move keeps
+the devices of this integration: the entity of the core integration is moved onto the device here
+(the registry has no way to merge two devices), and the area, name and labels of the core device
+are carried over where the device here has none. The core entities without a counterpart stay with
+the core integration, which is disabled, never deleted.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 import hashlib
+import logging
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntryDisabler
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import entity_registry as er
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.device_registry import format_mac
-from homeassistant.util import slugify
+from homeassistant.helpers.storage import Store
+from homeassistant.util import dt as dt_util, slugify
 
 from .const import DOMAIN, KEY_PORT_PREFIX
 from .coordinator import FritzNetworkConfigEntry
 from .models import client_uid
 
 CORE_DOMAIN = "fritz"
+_LOGGER = logging.getLogger(__name__)
 
 # the entities of a box, by the key in the unique id of the core integration ("<serial>-<key>");
 # the value is the key here, or None where there is none
@@ -298,3 +308,166 @@ def scan(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> dict[str, Any]:
         "rows": [r.as_dict() for r in rows],
         "token": token,
     }
+
+
+STORE_VERSION = 1
+
+
+class MigrationRefused(Exception):
+    """The move was not started; ``code`` says why (the panel shows a text for it)."""
+
+    def __init__(self, code: str) -> None:
+        super().__init__(code)
+        self.code = code
+
+
+def _store(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> Store[dict[str, Any]]:
+    return Store(hass, STORE_VERSION, f"{DOMAIN}.core_migration.{entry.entry_id}")
+
+
+async def async_journal(
+    hass: HomeAssistant, entry: FritzNetworkConfigEntry
+) -> dict[str, Any] | None:
+    """What a move did and can be taken back from, None where there was none."""
+    return await _store(hass, entry).async_load()
+
+
+def _carry_device(hass: HomeAssistant, from_id: str | None, to_id: str | None) -> None:
+    """Area, name and labels of the core device to the one here, where this has none."""
+    if not from_id or not to_id or from_id == to_id:
+        return
+    devices = dr.async_get(hass)
+    source, target = devices.async_get(from_id), devices.async_get(to_id)
+    if source is None or target is None:
+        return
+    changes: dict[str, Any] = {}
+    if source.area_id and not target.area_id:
+        changes["area_id"] = source.area_id
+    if source.name_by_user and not target.name_by_user:
+        changes["name_by_user"] = source.name_by_user
+    if source.labels - target.labels:
+        changes["labels"] = target.labels | source.labels
+    if changes:
+        devices.async_update_device(to_id, **changes)
+
+
+async def async_run(
+    hass: HomeAssistant, entry: FritzNetworkConfigEntry, token: str
+) -> dict[str, Any]:
+    """Take over the entities of the core integration; the preview with this token is what runs.
+
+    Refused (``MigrationRefused``) when the preview has moved on since the token was made, when
+    there is nothing to take over, or when an earlier move has not been taken back. What goes wrong
+    for one entity is reported and the rest goes on.
+    """
+    preview = scan(hass, entry)
+    if preview["core"] is None:
+        raise MigrationRefused("no_core")
+    if preview["token"] != token:
+        raise MigrationRefused("changed")
+    rows = [r for r in preview["rows"] if r["status"] == STATUS_MIGRATE]
+    if not rows:
+        raise MigrationRefused("nothing")
+    if await async_journal(hass, entry):
+        raise MigrationRefused("already_done")
+
+    registry = er.async_get(hass)
+    # the entities can only be moved while the core integration is not loaded; disabling it
+    # also keeps it from coming back with the duplicates after a restart
+    core_ids = sorted(
+        {
+            core.config_entry_id
+            for row in rows
+            if (core := registry.async_get(row["core_entity_id"])) and core.config_entry_id
+        }
+    )
+    for core_id in core_ids:
+        await hass.config_entries.async_set_disabled_by(core_id, ConfigEntryDisabler.USER)
+
+    moved: list[dict[str, Any]] = []
+    failed: list[dict[str, str]] = []
+    for row in rows:
+        core = registry.async_get(row["core_entity_id"])
+        target = registry.async_get(row["target_entity_id"])
+        if core is None or target is None or core.platform != CORE_DOMAIN:
+            failed.append({"entity_id": row["core_entity_id"], "reason": "changed"})
+            continue
+        record = {
+            "entity_id": core.entity_id,
+            "config_entry_id": core.config_entry_id,
+            "unique_id": core.unique_id,
+            "device_id": core.device_id,
+            "new_unique_id": target.unique_id,
+            "removed_entity_id": target.entity_id,
+        }
+        try:
+            _carry_device(hass, core.device_id, target.device_id)
+            registry.async_update_entity(
+                core.entity_id,
+                labels=core.labels | target.labels,
+                aliases=set(core.aliases) | set(target.aliases),
+            )
+            # ours goes first: its unique id is the one the moved entity takes, and the registry
+            # does not look for a clash under the platform it comes from
+            registry.async_remove(target.entity_id)
+            registry.async_update_entity_platform(
+                core.entity_id,
+                DOMAIN,
+                new_config_entry_id=entry.entry_id,
+                new_unique_id=target.unique_id,
+                new_device_id=target.device_id,
+            )
+        except (ValueError, KeyError) as err:
+            _LOGGER.warning("Could not take over %s: %s", core.entity_id, err)
+            failed.append({"entity_id": core.entity_id, "reason": "error"})
+            continue
+        moved.append(record)
+
+    await _store(hass, entry).async_save(
+        {
+            "time": dt_util.utcnow().isoformat(),
+            "core_entries": core_ids,
+            "moved": moved,
+        }
+    )
+    hass.config_entries.async_schedule_reload(entry.entry_id)
+    return {"moved": len(moved), "failed": failed, "core_entries": core_ids}
+
+
+async def async_undo(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> dict[str, Any]:
+    """Give the moved entities back to the core integration and turn it on again.
+
+    The entities of this integration that were removed for the move are made again when the
+    entry reloads, with their usual IDs. Best effort: what has changed since is not touched.
+    """
+    journal = await async_journal(hass, entry)
+    if not journal:
+        raise MigrationRefused("no_journal")
+    registry = er.async_get(hass)
+    # the entities must not be loaded to be moved
+    await hass.config_entries.async_unload(entry.entry_id)
+    back = 0
+    failed: list[str] = []
+    for record in journal["moved"]:
+        item = registry.async_get(record["entity_id"])
+        if item is None or item.platform != DOMAIN or item.unique_id != record["new_unique_id"]:
+            failed.append(record["entity_id"])
+            continue
+        try:
+            registry.async_update_entity_platform(
+                item.entity_id,
+                CORE_DOMAIN,
+                new_config_entry_id=record["config_entry_id"],
+                new_unique_id=record["unique_id"],
+                new_device_id=record["device_id"],
+            )
+        except (ValueError, KeyError) as err:
+            _LOGGER.warning("Could not give back %s: %s", item.entity_id, err)
+            failed.append(item.entity_id)
+            continue
+        back += 1
+    for core_id in journal["core_entries"]:
+        await hass.config_entries.async_set_disabled_by(core_id, None)
+    await _store(hass, entry).async_remove()
+    hass.config_entries.async_schedule_reload(entry.entry_id)
+    return {"back": back, "failed": failed}

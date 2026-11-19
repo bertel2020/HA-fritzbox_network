@@ -500,12 +500,19 @@ const scan = {
   token: "abc",
 };
 
-test("the preview counts the results, groups the rows and names the reasons; nothing can be taken over yet", () => {
+test("the preview counts the results, groups the rows and names the reasons; taking over is offered", () => {
   assert.deepEqual(migratePage.migrateCounts(scan.rows), { all: 4, migrate: 1, conflict: 1, none: 1, skip: 1 });
   const html = migratePage.renderMigrate(scan, { t, filter: "all" });
   assert.match(html, /Von FRITZ!Box Tools umsteigen/);
-  assert.match(html, /Übernehmen gibt es noch nicht/);
-  assert.doesNotMatch(html, /data-act="mig-run"|Übernehmen …/);
+  assert.match(html, /Bis du bestätigst, wird nichts geändert/);
+  assert.match(html, /data-act="mig-run"[^>]*>Übernehmen …/);
+  assert.doesNotMatch(html, /data-act="mig-undo"/);
+  // nothing to take over: no button; once done: the way back instead
+  assert.doesNotMatch(migratePage.renderMigrate({ ...scan, rows: scan.rows.filter((r) => r.status !== "migrate") }, { t, filter: "all" }), /data-act="mig-run"/);
+  const done = migratePage.renderMigrate({ ...scan, done: { time: "2026-11-19T10:00:00+00:00", count: 7 } }, { t, filter: "all" });
+  assert.match(done, /Übernommen: 7 Entitäten/);
+  assert.match(done, /data-act="mig-undo"[^>]*>Rückgängig …/);
+  assert.doesNotMatch(done, /data-act="mig-run"/);
   assert.match(html, /<div class="tile ok"><span class="label">Übernehmen<\/span><b>1<\/b>/);
   assert.match(html, /<div class="tile bad"><span class="label">Konflikte<\/span><b>1<\/b>/);
   assert.match(html, /data-f="all"[^>]*aria-pressed="true">Alle<b>4<\/b>/);

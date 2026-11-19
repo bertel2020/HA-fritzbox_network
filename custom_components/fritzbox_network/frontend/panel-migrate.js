@@ -92,9 +92,22 @@ function row(r, t) {
     ${why.length ? `<div class="why ${tone}">${why.map((w) => escapeHtml(w)).join("<br>")}</div>` : ""}</li>`;
 }
 
+/** The banner above the list: take over, or, once that is done, undo. */
+function actionBanner(scan, counts, ctx, rescan) {
+  const m = ctx.t.migrate;
+  if (scan.done) {
+    const undo = `<button class="btn" data-act="mig-undo" data-k="mig-undo">${escapeHtml(m.undo)}</button>`;
+    return `<div class="banner info" role="note">${ic("swap")}<div><b>${escapeHtml(fill(m.doneTitle, { n: scan.done.count }))}</b><span>${escapeHtml(m.doneBody)}</span></div><div class="btn-row tight">${undo}</div></div>`;
+  }
+  const run = counts.migrate
+    ? `<button class="btn primary" data-act="mig-run" data-k="mig-run">${escapeHtml(m.run)}</button>`
+    : "";
+  return `<div class="banner info" role="note">${ic("swap")}<div><b>${escapeHtml(m.notYet)}</b></div><div class="btn-row tight">${run}${rescan}</div></div>`;
+}
+
 /**
  * The page. scan is what migrate/scan answered: null while it is read, "failed" where it could not.
- * ctx: t, filter (all or one of the results). The preview only reads; taking over is not built yet.
+ * ctx: t, filter (all or one of the results). scan.done is set once the entities were taken over.
  */
 export function renderMigrate(scan, ctx) {
   const { t } = ctx;
@@ -134,7 +147,7 @@ export function renderMigrate(scan, ctx) {
     .join("");
   const stateText = m.state[core.state] ?? core.state ?? "";
   return `${head}
-    <div class="banner info" role="note">${ic("swap")}<div><b>${escapeHtml(m.notYet)}</b></div><div class="btn-row tight">${rescan}</div></div>
+    ${actionBanner(scan, counts, ctx, rescan)}
     <section class="card sec">
       <div class="ihead"><span class="ico">${ic("swap")}</span>
         <span class="who"><b>${escapeHtml(core.title ?? "FRITZ!Box Tools")}</b><small>${escapeHtml([m.sameBox, stateText, fill(m.entities, { n: counts.all })].filter(Boolean).join(" · "))}</small></span></div>

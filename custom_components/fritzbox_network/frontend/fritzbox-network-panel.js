@@ -2392,6 +2392,47 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._update();
   }
 
+  /** Takes over the entities of FRITZ!Box Tools after a confirmation; the list shown is the one the server checks. */
+  async _runMigrate() {
+    const t = this._t;
+    const m = t.migrate;
+    const scan = this._state.migrate;
+    if (!scan || typeof scan !== "object") return;
+    const rows = (scan.rows ?? []).filter((r) => r.status === "migrate");
+    if (!rows.length) return;
+    const ok = await openDialog(this.shadowRoot, t, {
+      title: fill(m.runTitle, { n: rows.length }),
+      body: m.runBody,
+      list: rows.map((r) => r.core_name || r.core_entity_id),
+      ok: m.runOk,
+      danger: true,
+    });
+    if (!ok) return;
+    try {
+      const result = await this._ws("migrate/run", { token: scan.token });
+      showToast(this.shadowRoot, fill(m.toastDone, { n: result.moved }));
+      if (result.failed.length) showToast(this.shadowRoot, fill(m.toastFailed, { n: result.failed.length }));
+    } catch (err) {
+      showToast(this.shadowRoot, m.errors[err?.code] ?? fill(t.toastFailed, { error: err?.message ?? err }));
+    }
+    await this._loadMigrate();
+  }
+
+  /** Gives the entities taken over back to FRITZ!Box Tools, from the journal of the move. */
+  async _undoMigrate() {
+    const t = this._t;
+    const m = t.migrate;
+    const ok = await openDialog(this.shadowRoot, t, { title: m.undoTitle, body: m.undoBody, ok: m.undoOk, danger: true });
+    if (!ok) return;
+    try {
+      const result = await this._ws("migrate/undo");
+      showToast(this.shadowRoot, fill(m.toastUndone, { n: result.back }));
+    } catch (err) {
+      showToast(this.shadowRoot, m.errors[err?.code] ?? fill(t.toastFailed, { error: err?.message ?? err }));
+    }
+    await this._loadMigrate();
+  }
+
   _renderMigrate() {
     this._set("migrate-view", renderMigrate(this._state.migrate, { t: this._t, filter: this._state.migrateFilter }));
   }
@@ -2411,6 +2452,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       return;
     }
     if (ds.act === "mig-rescan") return this._loadMigrate();
+    if (ds.act === "mig-run") return this._runMigrate();
+    if (ds.act === "mig-undo") return this._undoMigrate();
     if (ds.act === "mig-filter") {
       state.migrateFilter = ds.f;
       this._renderMigrate();

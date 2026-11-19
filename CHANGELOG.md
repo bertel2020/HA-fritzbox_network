@@ -12,6 +12,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Panel, Umsteigen: **Übernehmen** zieht die Entitäten der Core-Integration „FRITZ!Box Tools“ auf diese Integration um, mit Entity-ID, Name, Symbol, Bereich und Labels; Verlauf und Automationen laufen weiter. FRITZ!Box Tools wird dabei ausgeschaltet, nicht gelöscht; **Rückgängig** gibt alles zurück. Das Panel schickt die bestätigte Liste mit, der Server prüft sie noch einmal. Bisher gab es nur die Vorschau.
 - Sensoren **Leitungsrate (laut Box)** für Download und Upload (standardmäßig aus): der Höchstwert der Leitung, den die Box meldet (Layer 1), auch bei DSL. Er entspricht dem Core-Sensor „Max. Verbindungsdurchsatz“ und ist das Ziel der Übernahme. Bei DSL schwankt er zwischen Sync- und möglicher Rate, auch ohne neue Synchronisation (gemessen an einer FRITZ!Box 7590 AX).
 - Sensor **Internet verbunden seit** (standardmäßig aus): der Zeitpunkt, an dem die Verbindung aufgebaut wurde, wie die Verbindungszeit der Core-Integration. Er bleibt zwischen den Abfragen gleich. Damit lässt sich die Core-Entität übernehmen; die Vorschau führt sie nicht mehr als unverträglich.
 - Button **Lange offline Geräte aufräumen** (standardmäßig aus): blendet alle Geräte aus, die länger als in den Optionen eingestellt offline sind, wie „Alle“ in der Reparatur. Gedacht für Automationen und als Gegenstück zum Cleanup-Button der Core-Integration; ausgeblendete Geräte holst du im Panel zurück.
