@@ -4,6 +4,10 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ## Unveröffentlicht
 
+### Behoben
+
+- Gerätetracker neuer Geräte sind wieder **an**. Home Assistant 2026.11 schaltet Tracker von Routern standardmäßig aus, dadurch bekam jedes neu erkannte Gerät (oft Handys mit zufälliger MAC-Adresse) einen ausgeschalteten Tracker. Bereits ausgeschaltete bleiben aus; schalte sie unter Einstellungen › Geräte & Dienste › Entitäten ein.
+
 - Option **Gerätetracker anlegen** (Standard an): ausgeschaltet gibt es keinen Gerätetracker je Gerät, vorhandene werden entfernt. Gegenstück zum „Gerätetracking“ der Core-Integration.
 
 ### Geändert

@@ -4,6 +4,10 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+### Fixed
+
+- Device trackers of new devices are **on** again. Home Assistant 2026.11 turns the trackers of routers off by default, so every newly found device (often phones with a random MAC address) got a tracker that was off. Those already off stay off; turn them on under Settings › Devices & services › Entities.
+
 - Option **Create device trackers** (on by default): when off there is no device tracker per device, and the existing ones are removed. The counterpart of "device tracking" of the core integration.
 
 ### Changed

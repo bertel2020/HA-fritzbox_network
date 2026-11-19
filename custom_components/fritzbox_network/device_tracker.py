@@ -40,6 +40,14 @@ class FritzNetworkTracker(FritzNetworkClientEntity, ScannerEntity):
 
     _attr_name = None
 
+    @property
+    def entity_registry_enabled_default(self) -> bool:
+        """On from the start. Home Assistant 2026.11 leaves a scanner entity off by default
+        ("most scanned network clients are not worth tracking"), which would turn off the tracker
+        of every new device; the tracker is what this integration is for, and the option to turn
+        trackers off is a separate one."""
+        return True
+
     def __init__(self, coordinator: FritzNetworkCoordinator, host: Host) -> None:
         super().__init__(coordinator, host, "device_tracker", KEY_TRACKER)
         # ScannerEntity makes the MAC its unique id; with several boxes it is the box and the MAC

@@ -751,3 +751,10 @@ async def test_with_tracking_turned_off_there_are_no_trackers_and_the_old_ones_g
         e.domain != "device_tracker"
         for e in er.async_entries_for_config_entry(registry, entry.entry_id)
     )
+
+
+def test_a_tracker_is_on_by_default_whatever_home_assistant_does_for_scanner_entities():
+    from custom_components.fritzbox_network.device_tracker import FritzNetworkTracker
+
+    # Home Assistant 2026.11 turns scanner entities off by default; ours must not be
+    assert FritzNetworkTracker.entity_registry_enabled_default.fget(object()) is True
