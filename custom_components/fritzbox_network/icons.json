@@ -218,6 +218,9 @@
       "reboot": {
         "default": "mdi:restart"
       },
+      "cleanup": {
+        "default": "mdi:broom"
+      },
       "reconnect": {
         "default": "mdi:connection"
       },

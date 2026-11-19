@@ -330,6 +330,9 @@
       "reboot": {
         "name": "Restart box"
       },
+      "cleanup": {
+        "name": "Clean up offline devices"
+      },
       "reconnect": {
         "name": "Reconnect to the internet"
       },

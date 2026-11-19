@@ -4,6 +4,10 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ## Unveröffentlicht
 
+### Neu
+
+- Button **Lange offline Geräte aufräumen** (standardmäßig aus): blendet alle Geräte aus, die länger als in den Optionen eingestellt offline sind, wie „Alle“ in der Reparatur. Gedacht für Automationen und als Gegenstück zum Cleanup-Button der Core-Integration; ausgeblendete Geräte holst du im Panel zurück.
+
 ## 1.12.0 – 2026-11-17
 
 ### Neu

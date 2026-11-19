@@ -126,3 +126,22 @@ async def test_a_device_that_came_back_while_the_form_was_open_is_not_hidden(
 
     assert result["type"].value == "create_entry"
     assert OFFLINE not in entry.options.get("hidden_macs", [])
+
+
+async def test_the_cleanup_button_hides_the_stale_devices(hass, fake_client, entry):
+    from homeassistant.helpers import entity_registry as er
+
+    await _setup(hass, entry, stale_days=30)
+    reg = er.async_get(hass)
+    item = reg.async_get("button.fritz_network_cleanup")
+    assert item is not None and item.disabled_by is not None  # off by default
+    reg.async_update_entity("button.fritz_network_cleanup", disabled_by=None)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    hass.states.async_set(OFFLINE_SENSOR, _ago(40))
+    await hass.services.async_call(
+        "button", "press", {"entity_id": "button.fritz_network_cleanup"}, blocking=True
+    )
+    await hass.async_block_till_done()
+    assert OFFLINE in entry.options["hidden_macs"]

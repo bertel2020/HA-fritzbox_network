@@ -208,6 +208,23 @@ def async_update_internet_issues(hass: HomeAssistant, entry: FritzNetworkConfigE
         )
 
 
+async def async_hide_stale(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> int:
+    """Hide the devices that have been offline longer than the limit; the number hidden.
+
+    The same as ticking all in the repair. Hidden devices can be shown again in the panel.
+    """
+    macs = {host.mac for host, _ in stale_hosts(hass, entry)}
+    if not macs:
+        return 0
+    hidden = set(entry.options.get(CONF_HIDDEN_MACS, []))
+    hass.config_entries.async_update_entry(
+        entry, options={**entry.options, CONF_HIDDEN_MACS: sorted(hidden | macs)}
+    )
+    await entry.runtime_data.async_request_refresh()
+    await async_update_stale_issue(hass, entry)
+    return len(macs)
+
+
 class StaleDevicesFlow(RepairsFlow):
     """Pick the devices to hide; all of them are ticked."""
 

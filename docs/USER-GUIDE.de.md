@@ -412,6 +412,7 @@ Automationen, die auf Core-Entity-IDs verweisen, musst du auf die neuen IDs umst
 | Internetverbindung, IP, Durchsatz, Bytes, DSL-Werte | Internet-Sensoren und -Karte; Durchsatz an, der Rest aus |
 | Leitung (`is_linked`) | Binärsensor „Leitung“ (aus) |
 | Neustart, Neu verbinden | Buttons (aus) und Panel mit Rückfrage |
+| Cleanup (Geräte aufräumen) | Button „Lange offline Geräte aufräumen“ (aus) und Panel |
 | Betriebszeit, CPU-Temperatur | „Letzter Neustart“ und „CPU-Temperatur“ |
 | Firmware-Update | Update-Entität, mit Installieren |
 | WLAN-Schalter, Gast-WLAN | Schalter je Band und Gast-WLAN |

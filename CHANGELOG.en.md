@@ -4,6 +4,10 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+### New
+
+- Button **Clean up offline devices** (off by default): hides every device that has been offline longer than the limit in the options, like "All" in the repair. Meant for automations and as the counterpart of the core integration's cleanup button; bring hidden devices back in the panel.
+
 ## 1.12.0 – 2026-11-17
 
 ### New

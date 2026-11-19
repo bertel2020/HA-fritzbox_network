@@ -187,6 +187,7 @@ KEY_REFRESH = "refresh"
 KEY_REBOOT = "reboot"
 KEY_REPEATER_REBOOT = "repeater_reboot"
 KEY_RECONNECT = "reconnect"
+KEY_CLEANUP = "cleanup"
 
 # Keys of the Wi-Fi radio sensors of an access point; the band is added to the unique id.
 KEY_RADIO_CHANNEL = "radio_channel"

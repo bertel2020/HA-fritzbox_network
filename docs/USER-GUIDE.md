@@ -412,6 +412,7 @@ Automations that refer to core entity ids have to be changed to the new ids; the
 | Internet connection, IP, throughput, bytes, DSL values | Internet sensors and card; throughput on, the rest off |
 | Line (`is_linked`) | Binary sensor "Line" (off) |
 | Restart, reconnect | Buttons (off) and the panel with a confirmation |
+| Cleanup | Button "Clean up offline devices" (off) and the panel |
 | Uptime, CPU temperature | "Last restart" and "CPU temperature" |
 | Firmware update | Update entity, with Install |
 | Wi-Fi switches, guest Wi-Fi | A switch per band and the guest Wi-Fi |

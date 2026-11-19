@@ -330,6 +330,9 @@
       "reboot": {
         "name": "Box neu starten"
       },
+      "cleanup": {
+        "name": "Lange offline Geräte aufräumen"
+      },
       "reconnect": {
         "name": "Internetverbindung neu aufbauen"
       },

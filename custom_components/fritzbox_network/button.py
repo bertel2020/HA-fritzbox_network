@@ -14,6 +14,7 @@ from homeassistant.helpers.update_coordinator import UpdateFailed
 from .const import (
     AREA_CLIENTS,
     DOMAIN,
+    KEY_CLEANUP,
     KEY_REBOOT,
     KEY_RECONNECT,
     KEY_REFRESH,
@@ -31,6 +32,7 @@ from .entity import (
     switch_areas,
 )
 from .models import Host
+from .repairs import async_hide_stale
 
 PARALLEL_UPDATES = 0
 
@@ -40,7 +42,7 @@ async def async_setup_entry(
     entry: FritzNetworkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    async_add_entities([FritzNetworkRefresh(entry.runtime_data)])
+    async_add_entities([FritzNetworkRefresh(entry.runtime_data), FritzNetworkCleanup(hass, entry)])
     if not entry.runtime_data.can_write:
         return
     async_add_entities(
@@ -85,6 +87,30 @@ class FritzNetworkRefresh(ButtonEntity):
 
     async def async_press(self) -> None:
         await self._coordinator.async_request_refresh()
+
+
+class FritzNetworkCleanup(ButtonEntity):
+    """Hide the devices that have been offline longer than the limit in the options.
+
+    Local only, it asks nothing of the box. Off by default: it removes devices from Home
+    Assistant, which the panel or the repair shows first. They can be shown again in the panel.
+    """
+
+    _attr_has_entity_name = True
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
+    _attr_translation_key = KEY_CLEANUP
+
+    def __init__(self, hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
+        self._hass = hass
+        self._entry = entry
+        coordinator = entry.runtime_data
+        self._attr_unique_id = f"{coordinator.serial}_{KEY_CLEANUP}"
+        self.entity_id = f"button.fritz_network_{KEY_CLEANUP}"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, coordinator.serial)})
+
+    async def async_press(self) -> None:
+        await async_hide_stale(self._hass, self._entry)
 
 
 class FritzNetworkBoxButton(ButtonEntity):
