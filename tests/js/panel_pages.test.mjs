@@ -694,6 +694,16 @@ test("/ searches the devices from every page: it opens the list and puts the foc
   }
 });
 
+// ---------- the "more" menu of a device ----------
+
+test("the more menu of a device is as wide as its items, not as its 40 px button", async () => {
+  const styles = await import(`${base}panel-styles.js`);
+  const css = Object.values(styles).find((v) => typeof v === "string" && v.includes(".moremenu"));
+  assert.ok(css);
+  // .fmenu caps its width at 100% of the anchor; the anchor is the button, so the cap is lifted
+  assert.match(css, /\.moremenu \.fmenu \{[^}]*width: 240px; max-width: min\(240px, calc\(100vw - 32px\)\)/);
+});
+
 // ---------- the width the bar at the bottom follows ----------
 
 test("the bar at the bottom follows the width of the panel, not of the window", async () => {

@@ -352,7 +352,8 @@ export const PANEL_CSS = `
   .moremenu > summary { list-style: none; cursor: pointer; }
   .moremenu > summary::-webkit-details-marker { display: none; }
   .moremenu[open] > summary { background: var(--accent-soft); color: var(--accent-hover); }
-  @container app (min-width: 601px) { .moremenu .fmenu { left: auto; right: 0; width: 240px; } }
+  /* the menu hangs from the right end of the row; .fmenu caps its width at 100% of its anchor, which here is the 40 px button, so the cap is lifted */
+  .moremenu .fmenu { left: auto; right: 0; width: 240px; max-width: min(240px, calc(100vw - 32px)); }
   .mitem { display: flex; width: 100%; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border-radius: 8px; text-align: left; }
   .mitem:hover:not([disabled]), .mitem:focus-visible { background: var(--soft); }
   .mitem[disabled] { opacity: .45; cursor: default; }
