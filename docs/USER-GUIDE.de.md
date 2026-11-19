@@ -405,15 +405,15 @@ Der Zeitplan braucht das Recht „FRITZ!Box Einstellungen“. Hat sich die Adres
 
 ## Zusammen mit der Core-Integration
 
-Die Core-Integration „AVM FRITZ!Box Tools“ kann parallel laufen. Seit Home Assistant 2026.8 gehört jedes Gerät genau einer Integration; es entstehen also **zwei getrennte Geräte** pro Netzwerkgerät, mit doppelten Trackern und doppelter Last auf der Box (jede Integration lädt die Beschreibung der Box und fragt sie ständig ab; ein langsames Laden kann daran liegen). Schalte im Core das Gerätetracking aus oder entferne die Core-Integration, sobald du auf diese umgestiegen bist.
+Die Core-Integration „AVM FRITZ!Box Tools“ kann parallel laufen. Seit Home Assistant 2026.8 gehört jedes Gerät genau einer Integration; es entstehen also **zwei getrennte Geräte** pro Netzwerkgerät, mit doppelten Trackern und doppelter Last auf der Box (jede Integration lädt die Beschreibung der Box und fragt sie ständig ab; ein langsames Laden kann daran liegen). Schalte die Core-Integration aus, sobald du auf diese umgestiegen bist; wie, steht unter „So steigst du um“.
 
-Automationen, die auf Core-Entity-IDs verweisen, musst du auf die neuen IDs umstellen; eine automatische Übernahme gibt es nicht.
+Eine automatische Umstellung der Verweise (Automationen, Dashboards, Personen) gibt es nicht: Die Entitäten hier behalten ihre IDs, und die Core-Entitäten werden nicht umbenannt oder verschoben. Das Panel (Verwalten › Umsteigen) zeigt dir, wo die Core-Entitäten benutzt werden, und kopiert ihre Einstellungen.
 
 ### Was die Core-Integration kann und wo es hier steht
 
 | Core „FRITZ!Box Tools“ | Hier |
 |---|---|
-| Gerätetracker | Gerätetracker nach MAC, mit „Als anwesend werten“ |
+| Gerätetracker, „Gerätetracking“ (Option) | Gerätetracker nach MAC, mit „Als anwesend werten“ (30 s); neue Geräte bekommen ihn eingeschaltet (Home Assistant 2026.11 schaltet Tracker von Routern sonst aus). Die Option „Gerätetracker anlegen“ ist das Gegenstück zum Gerätetracking |
 | Internetverbindung, IP, Durchsatz, Bytes, DSL-Werte | Internet-Sensoren und -Karte; Durchsatz an, der Rest aus |
 | Verbindungszeit, Höchstrate der Leitung | „Internet verbunden seit“ und „Leitungsrate (laut Box)“ (aus) |
 | Leitung (`is_linked`) | Binärsensor „Leitung“ (aus) |
@@ -421,7 +421,7 @@ Automationen, die auf Core-Entity-IDs verweisen, musst du auf die neuen IDs umst
 | Cleanup (Geräte aufräumen) | Button „Lange offline Geräte aufräumen“ (aus) und Panel |
 | Betriebszeit, CPU-Temperatur | „Letzter Neustart“ und „CPU-Temperatur“ |
 | Firmware-Update | Update-Entität, mit Installieren |
-| WLAN-Schalter, Gast-WLAN | Schalter je Band und Gast-WLAN |
+| WLAN-Schalter, Gast-WLAN | Schalter je Band und Gast-WLAN der Box; die WLAN-Schalter eines Repeaters sind aus, weil im Mesh die Box das WLAN einstellt |
 | Gast-WLAN-QR, Passwort setzen | Bild (aus) und Aktion `set_guest_wifi_password` |
 | Internetzugang, Priorität, Wake on LAN je Gerät | ja, dazu Zugangsprofile als Auswahl |
 | Portfreigabe-Schalter (nur für den Home-Assistant-Rechner) | Schalter je Portfreigabe, standardmäßig aus |
@@ -430,6 +430,16 @@ Automationen, die auf Core-Entity-IDs verweisen, musst du auf die neuen IDs umst
 | Repeater als eigener Eintrag (Neustart, WLAN, Update der Repeater) | Repeater lassen sich in den Optionen zum Steuern auswählen (siehe unten); sie bleiben dabei Geräte der Box |
 
 Darüber hinaus gibt es hier VPN, Routen, Mesh-Topologie, Verläufe und das Seitenpanel.
+
+### So steigst du um
+
+1. **Beide laufen lassen** und vergleichen: Im Panel unter *Verwalten › Umsteigen* siehst du, welche Core-Entität hier ein Gegenstück hat und wo die Core-Entitäten benutzt werden.
+2. **Einstellungen übernehmen** (dort): kopiert Name, Symbol, Bereich und Labels der Core-Entitäten auf die hier. Gelöscht wird nichts.
+3. **Verweise umstellen**, von Hand: Automationen, Dashboards und Personen, die Core-Entitäten nennen, auf die neuen IDs. Denk auch an **Labels**: Nutzt eine andere Integration oder ein Skript ein Label (zum Beispiel für die Auswahl von Entitäten), liegt es nur an den Core-Entitäten, bis du es hier setzt; „Einstellungen übernehmen“ erledigt das für die übernommenen. Beachte außerdem Entitäten, die hier standardmäßig aus sind (CPU-Temperatur, Neustart, Gast-WLAN-QR): Wer sie vom Core kennt, schaltet sie hier ein.
+4. **Ein, zwei Tage warten**, ob Automationen mit den neuen Trackern sauber schalten. Beim Tracker gilt hier „Als anwesend werten“ 30 Sekunden, beim Core 180: Wer es länger will, stellt es in den Optionen ein.
+5. **Core ausschalten, nicht löschen** (Einstellungen › Geräte & Dienste › FRITZ!Box Tools › ⋮ › Deaktivieren), auch den Eintrag eines Repeaters. So bleibt ein Rückweg. Gelöscht wird er erst, wenn alles läuft.
+
+Der Verlauf der Core-Entitäten bleibt in Home Assistant liegen, wächst aber nicht weiter; die Entitäten hier beginnen ihren Verlauf neu.
 
 ### Repeater steuern
 

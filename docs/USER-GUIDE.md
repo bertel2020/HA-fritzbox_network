@@ -405,15 +405,15 @@ The schedule needs the right "FRITZ!Box settings". If the address of a device ch
 
 ## Next to the core integration
 
-The core integration "AVM FRITZ!Box Tools" can run in parallel. Since Home Assistant 2026.8 every device belongs to exactly one integration; you therefore get **two separate devices** per network device, with duplicate trackers and double the load on the box (each integration loads the description of the box and keeps asking it; a slow load can come from that). Turn off device tracking in the core integration or remove it once you have switched to this one.
+The core integration "AVM FRITZ!Box Tools" can run in parallel. Since Home Assistant 2026.8 every device belongs to exactly one integration; you therefore get **two separate devices** per network device, with duplicate trackers and double the load on the box (each integration loads the description of the box and keeps asking it; a slow load can come from that). Turn the core integration off once you have switched to this one; "How to switch over" says how.
 
-Automations that refer to core entity ids have to be changed to the new ids; there is no automatic migration.
+There is no automatic change of the references (automations, dashboards, persons): the entities here keep their ids, and the core entities are not renamed or moved. The panel (Manage › Switch over) shows where the core entities are used and copies their settings.
 
 ### What the core integration does and where it is here
 
 | Core "FRITZ!Box Tools" | Here |
 |---|---|
-| Device trackers | Device trackers by MAC, with "Consider home" |
+| Device trackers, "device tracking" (option) | Device trackers by MAC, with "Consider home" (30 s); new devices get it turned on (Home Assistant 2026.11 turns the trackers of routers off otherwise). The option "Create device trackers" is the counterpart of device tracking |
 | Internet connection, IP, throughput, bytes, DSL values | Internet sensors and card; throughput on, the rest off |
 | Connection time, maximum rate of the link | "Internet connected since" and "Link rate (as reported by the box)" (off) |
 | Line (`is_linked`) | Binary sensor "Line" (off) |
@@ -421,7 +421,7 @@ Automations that refer to core entity ids have to be changed to the new ids; the
 | Cleanup | Button "Clean up offline devices" (off) and the panel |
 | Uptime, CPU temperature | "Last restart" and "CPU temperature" |
 | Firmware update | Update entity, with Install |
-| Wi-Fi switches, guest Wi-Fi | A switch per band and the guest Wi-Fi |
+| Wi-Fi switches, guest Wi-Fi | A switch per band and the guest Wi-Fi of the box; the Wi-Fi switches of a repeater are off because in a mesh the box sets the Wi-Fi |
 | Guest Wi-Fi QR, set password | Image (off) and the action `set_guest_wifi_password` |
 | Internet access, priority, Wake on LAN per device | yes, plus access profiles as a selection |
 | Port forwarding switches (only for the Home Assistant computer) | A switch per port forwarding, off by default |
@@ -430,6 +430,16 @@ Automations that refer to core entity ids have to be changed to the new ids; the
 | Repeater as an entry of its own (restart, Wi-Fi, update of the repeaters) | Repeaters can be chosen for control in the options (see below); they stay devices of the box |
 
 On top of that there are VPN, routes, mesh topology, history and the side panel here.
+
+### How to switch over
+
+1. **Run both** and compare: in the panel under *Manage › Switch over* you see which core entity has a counterpart here and where the core entities are used.
+2. **Carry over settings** (there): copies name, icon, area and labels of the core entities to the ones here. Nothing is deleted.
+3. **Change the references** by hand: automations, dashboards and persons that name core entities, to the new ids. Think of **labels** too: if another integration or a script uses a label (for example to pick entities), it sits on the core entities only until you set it here; "Carry over settings" does that for the ones carried over. Also note the entities that are off by default here (CPU temperature, restart, guest Wi-Fi QR): whoever knows them from the core turns them on here.
+4. **Wait a day or two** to see whether automations switch cleanly with the new trackers. "Consider home" is 30 seconds here and 180 in the core: whoever wants it longer sets it in the options.
+5. **Turn the core off, do not delete it** (Settings › Devices & services › FRITZ!Box Tools › ⋮ › Disable), also the entry of a repeater. That leaves a way back. Delete it only when everything works.
+
+The history of the core entities stays in Home Assistant but does not grow any more; the entities here start their history anew.
 
 ### Controlling repeaters
 

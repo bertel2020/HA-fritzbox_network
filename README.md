@@ -101,8 +101,9 @@ Die Core-Integration und FRITZ!Box Cockpit sprechen beide TR-064 mit der Box. Di
 | Verläufe | Nur über den Recorder von Home Assistant | CPU, RAM, Temperatur, Verbindung und Datenvolumen mit eigenem Verlauf |
 | VPN, Routen, Mesh | Nicht enthalten | WireGuard schalten, statische Routen, Mesh-Topologie |
 | Telefonie | Rufumleitungen, `dial` | Nicht enthalten, dafür „FRITZ!Box Telefon“ |
+| Umstieg | – | Das Panel zeigt, was hier ein Gegenstück hat und wo die Core-Entitäten benutzt werden, und kopiert Namen, Bereiche und Labels |
 
-Beide können parallel laufen, doppeln dann aber jedes Gerät. Die vollständige Gegenüberstellung und den Umstieg findest du in der [Anleitung](docs/USER-GUIDE.de.md#zusammen-mit-der-core-integration).
+Beide können parallel laufen, doppeln dann aber jedes Gerät; zum Umstieg lässt du sie erst nebeneinander laufen, stellst die Verweise um und schaltest die Core-Integration dann aus. Die vollständige Gegenüberstellung und den Umstieg findest du in der [Anleitung](docs/USER-GUIDE.de.md#zusammen-mit-der-core-integration).
 
 ## Schnellstart
 

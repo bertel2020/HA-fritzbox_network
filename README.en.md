@@ -101,8 +101,9 @@ The core integration and FRITZ!Box Cockpit both talk TR-064 to the box. The diff
 | History | Only through the Home Assistant recorder | Own course for CPU, RAM, temperature, connection and data volume |
 | VPN, routes, mesh | Not included | Switch WireGuard, static routes, mesh topology |
 | Telephony | Call forwarding, `dial` | Not included; use "FRITZ!Box Telefon" |
+| Switching over | – | The panel shows what has a counterpart here and where the core entities are used, and copies names, areas and labels |
 
-Both can run side by side, but then every device exists twice. The full comparison and the switch are in the [guide](docs/USER-GUIDE.md#next-to-the-core-integration).
+Both can run side by side, but then every device exists twice; to switch, let them run side by side first, change the references and then turn the core integration off. The full comparison and the switch are in the [guide](docs/USER-GUIDE.md#next-to-the-core-integration).
 
 ## Quick start
 
