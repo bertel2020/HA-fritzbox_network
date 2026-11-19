@@ -6,26 +6,23 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Option **Create device trackers** (on by default): when off there is no device tracker per device, and the existing ones are removed. The counterpart of "device tracking" of the core integration.
 - Panel, device list: the "More" menu has the filter **Locally assigned MAC** (second character of the MAC 2, 6, A or E; on phones mostly a random, private address). **Guest** is always in the menu now, also with no devices; when "Ignore guests" (or "Ignore private MACs") is on, the menu says that such devices are left out.
+- Panel, Switch over: **Carry over settings** copies name, icon, area, labels and aliases of the entities of "FRITZ!Box Tools" (and the area, name and labels of their devices) to their counterparts here, where nothing is set yet. Nothing is deleted, moved or switched off; the IDs here stay, and each row shows the automations that use the old ID. **Undo** takes what was copied away again. The panel sends the list you confirmed and the server checks it again. Until now there was only the preview.
+- Sensors **Link rate (as reported by the box)** for download and upload (off by default): the maximum of the link the box reports (layer 1), on DSL too. It is the counterpart of the core sensor "Max connection throughput" and the target of the takeover. On DSL it moves between the sync rate and the attainable rate, even without a new sync (measured on a FRITZ!Box 7590 AX).
+- Sensor **Internet connected since** (off by default): the time the connection was set up, like the connection uptime of the core integration. It stays the same between polls. The core entity can be taken over now; the preview no longer lists it as incompatible.
+- Button **Clean up offline devices** (off by default): hides every device that has been offline longer than the limit in the options, like "All" in the repair. Meant for automations and as the counterpart of the core integration's cleanup button; bring hidden devices back in the panel.
+
+### Changed
+
+- Repeater: the **Wi-Fi switches** (per band and guest Wi-Fi) are **off** by default. A repeater in the mesh gets its Wi-Fi from the box, and what is switched at the repeater alone may be set back at the next synchronisation. Switches already made stay as they are; whoever does not need them turns them off under Settings › Devices & services › Entities.
+- "Consider home for" now defaults to **30 seconds** (it was 180). A device counts as away half a minute after it goes offline. Saved values stay; only those who never changed it notice. A device that briefly drops off the Wi-Fi can make the tracker flicker more often: raise the value in the options then.
 
 ### Fixed
 
 - Panel, device list: the "More" menu hangs right under its button now. It stood at the left end of the row of filters before, so it was offset under "All". Where it would stick out on the right, its right edge lines up with the button; on a phone it stays a sheet from the bottom.
 - Panel, device: the "⋯" menu (In Home Assistant, logbook, history, remove) showed narrow icons without text, because its width was capped to the 40 px button. It is 240 px wide now.
 - Device trackers of new devices are **on** again. Home Assistant 2026.11 turns the trackers of routers off by default, so every newly found device (often phones with a random MAC address) got a tracker that was off. Those already off stay off; turn them on under Settings › Devices & services › Entities.
-
-- Option **Create device trackers** (on by default): when off there is no device tracker per device, and the existing ones are removed. The counterpart of "device tracking" of the core integration.
-
-### Changed
-
-- "Consider home for" now defaults to **30 seconds** (it was 180). A device counts as away half a minute after it goes offline. Saved values stay; only those who never changed it notice. A device that briefly drops off the Wi-Fi can make the tracker flicker more often: raise the value in the options then.
-
-### New
-
-- Panel, Switch over: **Carry over settings** copies name, icon, area, labels and aliases of the entities of "FRITZ!Box Tools" (and the area, name and labels of their devices) to their counterparts here, where nothing is set yet. Nothing is deleted, moved or switched off; the IDs here stay, and each row shows the automations that use the old ID. **Undo** takes what was copied away again. The panel sends the list you confirmed and the server checks it again. Until now there was only the preview.
-- Sensors **Link rate (as reported by the box)** for download and upload (off by default): the maximum of the link the box reports (layer 1), on DSL too. It is the counterpart of the core sensor "Max connection throughput" and the target of the takeover. On DSL it moves between the sync rate and the attainable rate, even without a new sync (measured on a FRITZ!Box 7590 AX).
-- Sensor **Internet connected since** (off by default): the time the connection was set up, like the connection uptime of the core integration. It stays the same between polls. The core entity can be taken over now; the preview no longer lists it as incompatible.
-- Button **Clean up offline devices** (off by default): hides every device that has been offline longer than the limit in the options, like "All" in the repair. Meant for automations and as the counterpart of the core integration's cleanup button; bring hidden devices back in the panel.
 
 ## 1.12.0 – 2026-11-17
 

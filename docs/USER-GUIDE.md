@@ -437,12 +437,12 @@ In the options of the box, choose under **Repeaters to control** the repeaters f
 
 - the sensor **Last restart** (on),
 - the button **Restart** (off),
-- the **Wi-Fi switches** per band (on) and, if the repeater reports a guest network, the **Guest Wi-Fi** switch (on),
+- the **Wi-Fi switches** per band (**off**, see below) and, if the repeater reports a guest network, the **Guest Wi-Fi** switch (**off**),
 - the image **Guest Wi-Fi QR code** (off, because it shows the password, like the one of the box),
 - the sensor **CPU temperature** (off; only for repeaters that show it, and only read while it is on),
 - the **Update** entity "Firmware" with the Install button.
 
-The integration logs in to the repeater itself for this, with the **user and password of the box**; that worked on a FRITZ!Repeater 1200 AX, and a repeater that does not accept the login stays unavailable. The address comes from the device list of the box, so a new address is followed. A repeater is asked every 5 minutes, independently of the box; if it cannot be reached only its own entities are unavailable. It needs the right "FRITZ!Box settings". Not checked is whether the box sets a Wi-Fi back that you switch at the repeater at the next synchronisation; a repeater in the mesh takes its Wi-Fi settings from the box.
+The integration logs in to the repeater itself for this, with the **user and password of the box**; that worked on a FRITZ!Repeater 1200 AX, and a repeater that does not accept the login stays unavailable. The address comes from the device list of the box, so a new address is followed. A repeater is asked every 5 minutes, independently of the box; if it cannot be reached only its own entities are unavailable. It needs the right "FRITZ!Box settings". The Wi-Fi switches of a repeater are therefore **off by default**: a repeater in the mesh takes its Wi-Fi settings from the box, and it is not checked whether the box sets a Wi-Fi back that you switch at the repeater at the next synchronisation. You switch the networks at the box (the switch per band and the guest Wi-Fi of the box). If you need the switches at the repeater after all, for example for a repeater outside a mesh, turn them on under Settings › Devices & services › Entities.
 
 ## Privacy and security
 

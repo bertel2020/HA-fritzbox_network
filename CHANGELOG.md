@@ -6,26 +6,23 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Option **Gerätetracker anlegen** (Standard an): ausgeschaltet gibt es keinen Gerätetracker je Gerät, vorhandene werden entfernt. Gegenstück zum „Gerätetracking“ der Core-Integration.
 - Panel, Geräteliste: Im Menü „Mehr“ gibt es den Filter **Lokal vergebene MAC** (zweites Zeichen der MAC 2, 6, A oder E; bei Handys meist eine zufällige, private Adresse). **Gast** steht jetzt immer im Menü, auch ohne Geräte; ist „Gäste ignorieren“ (oder „Private MACs ignorieren“) an, steht im Menü, dass solche Geräte ignoriert werden.
+- Panel, Umsteigen: **Einstellungen übernehmen** kopiert Name, Symbol, Bereich, Labels und Aliasse der Entitäten von „FRITZ!Box Tools“ (und Bereich, Name und Labels ihrer Geräte) auf die Gegenstücke hier, wo dort noch nichts gesetzt ist. Nichts wird gelöscht, verschoben oder ausgeschaltet; die IDs hier bleiben, und jede Zeile zeigt, in welchen Automationen die alte ID benutzt wird. **Rückgängig** nimmt das Kopierte wieder weg. Das Panel schickt die bestätigte Liste mit, der Server prüft sie noch einmal. Bisher gab es nur die Vorschau.
+- Sensoren **Leitungsrate (laut Box)** für Download und Upload (standardmäßig aus): der Höchstwert der Leitung, den die Box meldet (Layer 1), auch bei DSL. Er entspricht dem Core-Sensor „Max. Verbindungsdurchsatz“ und ist das Ziel der Übernahme. Bei DSL schwankt er zwischen Sync- und möglicher Rate, auch ohne neue Synchronisation (gemessen an einer FRITZ!Box 7590 AX).
+- Sensor **Internet verbunden seit** (standardmäßig aus): der Zeitpunkt, an dem die Verbindung aufgebaut wurde, wie die Verbindungszeit der Core-Integration. Er bleibt zwischen den Abfragen gleich. Damit lässt sich die Core-Entität übernehmen; die Vorschau führt sie nicht mehr als unverträglich.
+- Button **Lange offline Geräte aufräumen** (standardmäßig aus): blendet alle Geräte aus, die länger als in den Optionen eingestellt offline sind, wie „Alle“ in der Reparatur. Gedacht für Automationen und als Gegenstück zum Cleanup-Button der Core-Integration; ausgeblendete Geräte holst du im Panel zurück.
+
+### Geändert
+
+- Repeater: Die **WLAN-Schalter** (je Band und Gast-WLAN) sind standardmäßig **aus**. Ein Repeater im Mesh bekommt sein WLAN von der Box, und was am Repeater allein geschaltet wird, kann bei der nächsten Synchronisation zurückgesetzt werden. Bereits angelegte Schalter bleiben, wie sie sind; wer sie nicht braucht, schaltet sie unter Einstellungen › Geräte & Dienste › Entitäten aus.
+- „Als anwesend werten für“ steht jetzt standardmäßig auf **30 Sekunden** (vorher 180). Ein Gerät gilt nach dem Offline-Gehen also nach einer halben Minute als abwesend. Gespeicherte Werte bleiben; nur wer den Wert nie geändert hat, merkt es. Bei Geräten, die sich im WLAN kurz abmelden, kann der Tracker so öfter flackern: dann den Wert in den Optionen erhöhen.
 
 ### Behoben
 
 - Panel, Geräteliste: Das Menü „Mehr“ hängt jetzt direkt unter seinem Knopf. Es stand vorher am linken Ende der Filterzeile, also versetzt unter „Alle“. Wo es rechts überstehen würde, schließt es mit dem rechten Rand des Knopfs ab; auf dem Handy bleibt es ein Blatt von unten.
 - Panel, Gerät: Das Menü „⋯“ (In Home Assistant, Logbuch, Verlauf, Entfernen) zeigte nur schmale Symbole ohne Text, weil seine Breite auf die des 40-Pixel-Knopfs begrenzt war. Es ist jetzt 240 Pixel breit.
 - Gerätetracker neuer Geräte sind wieder **an**. Home Assistant 2026.11 schaltet Tracker von Routern standardmäßig aus, dadurch bekam jedes neu erkannte Gerät (oft Handys mit zufälliger MAC-Adresse) einen ausgeschalteten Tracker. Bereits ausgeschaltete bleiben aus; schalte sie unter Einstellungen › Geräte & Dienste › Entitäten ein.
-
-- Option **Gerätetracker anlegen** (Standard an): ausgeschaltet gibt es keinen Gerätetracker je Gerät, vorhandene werden entfernt. Gegenstück zum „Gerätetracking“ der Core-Integration.
-
-### Geändert
-
-- „Als anwesend werten für“ steht jetzt standardmäßig auf **30 Sekunden** (vorher 180). Ein Gerät gilt nach dem Offline-Gehen also nach einer halben Minute als abwesend. Gespeicherte Werte bleiben; nur wer den Wert nie geändert hat, merkt es. Bei Geräten, die sich im WLAN kurz abmelden, kann der Tracker so öfter flackern: dann den Wert in den Optionen erhöhen.
-
-### Neu
-
-- Panel, Umsteigen: **Einstellungen übernehmen** kopiert Name, Symbol, Bereich, Labels und Aliasse der Entitäten von „FRITZ!Box Tools“ (und Bereich, Name und Labels ihrer Geräte) auf die Gegenstücke hier, wo dort noch nichts gesetzt ist. Nichts wird gelöscht, verschoben oder ausgeschaltet; die IDs hier bleiben, und jede Zeile zeigt, in welchen Automationen die alte ID benutzt wird. **Rückgängig** nimmt das Kopierte wieder weg. Das Panel schickt die bestätigte Liste mit, der Server prüft sie noch einmal. Bisher gab es nur die Vorschau.
-- Sensoren **Leitungsrate (laut Box)** für Download und Upload (standardmäßig aus): der Höchstwert der Leitung, den die Box meldet (Layer 1), auch bei DSL. Er entspricht dem Core-Sensor „Max. Verbindungsdurchsatz“ und ist das Ziel der Übernahme. Bei DSL schwankt er zwischen Sync- und möglicher Rate, auch ohne neue Synchronisation (gemessen an einer FRITZ!Box 7590 AX).
-- Sensor **Internet verbunden seit** (standardmäßig aus): der Zeitpunkt, an dem die Verbindung aufgebaut wurde, wie die Verbindungszeit der Core-Integration. Er bleibt zwischen den Abfragen gleich. Damit lässt sich die Core-Entität übernehmen; die Vorschau führt sie nicht mehr als unverträglich.
-- Button **Lange offline Geräte aufräumen** (standardmäßig aus): blendet alle Geräte aus, die länger als in den Optionen eingestellt offline sind, wie „Alle“ in der Reparatur. Gedacht für Automationen und als Gegenstück zum Cleanup-Button der Core-Integration; ausgeblendete Geräte holst du im Panel zurück.
 
 ## 1.12.0 – 2026-11-17
 

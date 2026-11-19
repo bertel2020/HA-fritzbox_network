@@ -115,6 +115,15 @@ async def _setup(hass, entry, chosen=(REPEATER,)):
     return entry.runtime_data
 
 
+async def _enable(hass, entry, *entity_ids):
+    """Turn entities that are off by default on, and load the entry again, as the user would."""
+    registry = er.async_get(hass)
+    for entity_id in entity_ids:
+        registry.async_update_entity(entity_id, disabled_by=None)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done(wait_background_tasks=True)
+
+
 async def test_a_chosen_repeater_is_asked_with_the_login_of_the_box_at_its_own_address(
     hass, fake_client, entry
 ):
@@ -132,8 +141,11 @@ async def test_the_repeater_gets_its_entities_on_the_device_the_mesh_made(hass, 
 
     uptime = hass.states.get(f"sensor.fritz_{ID}_box_uptime")
     assert uptime is not None and uptime.state != "unknown"
+    # its Wi-Fi comes from the box in a mesh: the switches are there but off by default
     for band in ("2_4ghz", "5ghz"):
-        assert hass.states.get(f"switch.fritz_{ID}_wifi_{band}").state == "on"
+        wifi = registry.async_get(f"switch.fritz_{ID}_wifi_{band}")
+        assert wifi is not None and wifi.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+        assert hass.states.get(f"switch.fritz_{ID}_wifi_{band}") is None
     assert hass.states.get(f"update.fritz_{ID}_firmware").state == "off"
     reboot = registry.async_get(f"button.fritz_{ID}_reboot")
     assert reboot is not None and reboot.disabled_by == er.RegistryEntryDisabler.INTEGRATION
@@ -160,8 +172,9 @@ async def test_a_repeater_that_is_not_chosen_is_not_asked_and_has_no_controls(
 async def test_a_wifi_switch_of_the_repeater_switches_and_shows_at_once(hass, fake_client, entry):
     _with_repeater(fake_client)
     await _setup(hass, entry)
-    (client,) = FakeRepeater.instances
     entity_id = f"switch.fritz_{ID}_wifi_5ghz"
+    await _enable(hass, entry, entity_id)
+    (client,) = FakeRepeater.instances[-1:]
 
     await hass.services.async_call("switch", "turn_off", {"entity_id": entity_id}, blocking=True)
     await hass.async_block_till_done()
@@ -230,7 +243,9 @@ async def test_a_repeater_that_does_not_answer_makes_only_its_own_entities_unava
     hass, fake_client, entry
 ):
     _with_repeater(fake_client)
-    coordinator = await _setup(hass, entry)
+    await _setup(hass, entry)
+    await _enable(hass, entry, f"switch.fritz_{ID}_wifi_5ghz")
+    coordinator = entry.runtime_data
     repeater = coordinator.repeaters[REPEATER]
     repeater.client = None  # connect again, as after any failure
     with patch.object(FakeRepeater, "connect", side_effect=FritzConnectionException("down")):
@@ -282,8 +297,10 @@ async def test_a_repeater_with_a_guest_network_gets_its_switch_and_qr_code(
     _with_repeater(fake_client)
     with patch.object(FakeRepeater, "__init__", _guest_init):
         await _setup(hass, entry)
-    (client,) = FakeRepeater.instances
-    switch_id = f"switch.fritz_{ID}_guest_wifi"
+        switch_id = f"switch.fritz_{ID}_guest_wifi"
+        assert hass.states.get(switch_id) is None  # off by default, like the bands
+        await _enable(hass, entry, switch_id)
+    (client,) = FakeRepeater.instances[-1:]
     assert hass.states.get(switch_id).state == "on"
     assert hass.states.get(f"image.fritz_{ID}_guest_wifi_qr") is None  # off by default
 

@@ -424,9 +424,15 @@ class FritzNetworkWifi(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity)
 
 
 class FritzNetworkRepeaterWifi(FritzNetworkRepeaterEntity, SwitchEntity):
-    """The Wi-Fi network of one band of a repeater. Whether the box overrides it is not known."""
+    """The Wi-Fi network of one band of a repeater. Whether the box overrides it is not known.
+
+    Off by default: a repeater in the mesh gets its Wi-Fi settings from the box, and what is
+    switched at the repeater alone may be set back at the next synchronisation. The networks
+    are switched at the box.
+    """
 
     _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
 
     def __init__(self, coordinator: RepeaterCoordinator, band: str) -> None:
         key = f"{KEY_WIFI_PREFIX}{band}"
@@ -538,9 +544,10 @@ class FritzNetworkPort(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity)
 
 
 class FritzNetworkRepeaterGuestWifi(FritzNetworkRepeaterEntity, SwitchEntity):
-    """The guest Wi-Fi of a repeater that has one, on or off."""
+    """The guest Wi-Fi of a repeater that has one, on or off; off by default like its bands."""
 
     _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
     _attr_translation_key = KEY_GUEST_WIFI
 
     def __init__(self, coordinator: RepeaterCoordinator) -> None:

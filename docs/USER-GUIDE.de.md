@@ -437,12 +437,12 @@ In den Optionen der Box wählst du unter **Repeater steuern** die Repeater aus d
 
 - den Sensor **Letzter Neustart** (an),
 - den Button **Neu starten** (aus),
-- die **WLAN-Schalter** je Band (an) und, wenn der Repeater ein Gastnetz meldet, den Schalter **Gast-WLAN** (an),
+- die **WLAN-Schalter** je Band (**aus**, siehe unten) und, wenn der Repeater ein Gastnetz meldet, den Schalter **Gast-WLAN** (**aus**),
 - das Bild **Gast-WLAN-QR-Code** (aus, weil es das Passwort zeigt, wie das der Box),
 - den Sensor **CPU-Temperatur** (aus; nur bei Repeatern, die ihn zeigen, und nur gelesen, solange er an ist),
 - die **Update**-Entität „Firmware“ mit dem Knopf Installieren.
 
-Die Integration meldet sich dafür am Repeater selbst an, mit **Benutzer und Kennwort der Box**; das hat an einer FRITZ!Repeater 1200 AX funktioniert, ein Repeater, der die Anmeldung nicht annimmt, bleibt nicht verfügbar. Die Adresse nimmt sie aus der Geräteliste der Box, eine neue Adresse wird also übernommen. Ein Repeater wird alle 5 Minuten abgefragt, unabhängig von der Box; ist er nicht erreichbar, sind nur seine Entitäten nicht verfügbar. Es braucht das Recht „FRITZ!Box Einstellungen“. Ungeprüft ist, ob die Box ein WLAN, das du am Repeater schaltest, bei der nächsten Synchronisation wieder zurücksetzt; ein Repeater im Mesh übernimmt seine WLAN-Einstellungen von der Box.
+Die Integration meldet sich dafür am Repeater selbst an, mit **Benutzer und Kennwort der Box**; das hat an einer FRITZ!Repeater 1200 AX funktioniert, ein Repeater, der die Anmeldung nicht annimmt, bleibt nicht verfügbar. Die Adresse nimmt sie aus der Geräteliste der Box, eine neue Adresse wird also übernommen. Ein Repeater wird alle 5 Minuten abgefragt, unabhängig von der Box; ist er nicht erreichbar, sind nur seine Entitäten nicht verfügbar. Es braucht das Recht „FRITZ!Box Einstellungen“. Die WLAN-Schalter eines Repeaters sind deshalb **standardmäßig aus**: Ein Repeater im Mesh übernimmt seine WLAN-Einstellungen von der Box, und ungeprüft ist, ob die Box ein WLAN, das du am Repeater schaltest, bei der nächsten Synchronisation wieder zurücksetzt. Die Netze schaltest du an der Box (Schalter je Band und Gast-WLAN der Box). Brauchst du die Schalter am Repeater doch, etwa bei einem Repeater ohne Mesh, schaltest du sie unter Einstellungen › Geräte & Dienste › Entitäten ein.
 
 ## Datenschutz und Sicherheit
 
