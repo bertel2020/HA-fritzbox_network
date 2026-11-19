@@ -68,7 +68,9 @@ export function renderFilterMenu(state, t, now) {
   const menu = filterMenu(state.data, state.filter, now, state.threshold);
   const item = (filter, name, count, icon = "") =>
     `<button role="menuitemradio" aria-checked="${state.filter === filter}" data-filter="${escapeHtml(filter)}" tabindex="-1"><span class="ck">${state.filter === filter ? ic("check") : ""}</span>${icon}<span class="t">${escapeHtml(name)}</span><b>${count}</b></button>`;
-  const others = menu.others.map((o) => item(o.id, t.filters[o.id], o.count)).join("");
+  const others = menu.others
+    .map((o) => item(o.id, t.filters[o.id], o.count) + (o.ignored ? `<span class="fhint">${escapeHtml(t.filterIgnored[o.id] ?? "")}</span>` : ""))
+    .join("");
   const labels = menu.labels.map((l) => item(`label:${l.id}`, l.name, l.count, ic("tag"))).join("");
   return `<div class="sheet-scrim" data-act="menu-close"></div>
     <div class="fmenu" id="fmenu" role="menu" aria-label="${escapeHtml(fill(t.moreLabel, { n: menu.available }))}">

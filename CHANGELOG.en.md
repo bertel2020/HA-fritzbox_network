@@ -4,6 +4,10 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+### New
+
+- Panel, device list: the "More" menu has the filter **Locally assigned MAC** (second character of the MAC 2, 6, A or E; on phones mostly a random, private address). **Guest** is always in the menu now, also with no devices; when "Ignore guests" (or "Ignore private MACs") is on, the menu says that such devices are left out.
+
 ### Fixed
 
 - Panel, device: the "⋯" menu (In Home Assistant, logbook, history, remove) showed narrow icons without text, because its width was capped to the 40 px button. It is 240 px wide now.

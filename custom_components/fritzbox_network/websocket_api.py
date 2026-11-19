@@ -47,6 +47,8 @@ from .const import (
     CONF_IGNORE_GUESTS,
     CONF_IGNORE_PRIVATE_MACS,
     CONF_STALE_DAYS,
+    DEFAULT_IGNORE_GUESTS,
+    DEFAULT_IGNORE_PRIVATE_MACS,
     DEFAULT_STALE_DAYS,
     DOMAIN,
     FILTER_ALL,
@@ -408,6 +410,18 @@ def build_topology(hass: HomeAssistant, coordinator: FritzNetworkCoordinator) ->
         "firmware": _firmware(coordinator),
         "vpn": _vpn(coordinator),
         "nodes": nodes,
+        # which kinds of device the filter of the options leaves out: the panel says so where it
+        # would otherwise look as if there were none
+        "ignored": {
+            "guests": bool(
+                coordinator.config_entry.options.get(CONF_IGNORE_GUESTS, DEFAULT_IGNORE_GUESTS)
+            ),
+            "private": bool(
+                coordinator.config_entry.options.get(
+                    CONF_IGNORE_PRIVATE_MACS, DEFAULT_IGNORE_PRIVATE_MACS
+                )
+            ),
+        },
         # repeaters with a device here that the box does not list in its mesh now
         "lost_repeaters": [
             {"mac": mac, "name": name} for mac, name in coordinator.lost_repeaters()

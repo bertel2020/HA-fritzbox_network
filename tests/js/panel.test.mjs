@@ -68,7 +68,8 @@ test("the menu offers the other filters with something to show, and the chosen o
   const html = network.renderFilterMenu({ ...state, menu: true }, t, NOW);
   assert.match(html, /role="menu"/);
   assert.match(html, /role="menuitemradio" aria-checked="false" data-filter="blocked"[^>]*>.*Gesperrt<\/span><b>1<\/b>/);
-  assert.doesNotMatch(html, /data-filter="guest"/);
+  assert.match(html, /data-filter="guest"[^>]*>.*Gast<\/span><b>0<\/b>/);
+  assert.doesNotMatch(html, /data-filter="private"/);
   assert.doesNotMatch(html, /data-filter="online"/);
   const chosen = network.renderFilterMenu({ ...state, menu: true, filter: "guest" }, t, NOW);
   assert.match(chosen, /aria-checked="true" data-filter="guest"/);
@@ -83,7 +84,8 @@ test("a chosen other filter stands as a chip with ×, which goes back to all", (
 test("the menu logic counts what is on offer and keeps a chosen group without devices", () => {
   const menu = shared.filterMenu(groupData, "label:gone", NOW);
   assert.deepEqual(menu.primary.map((f) => f.id), ["all", "online", "offline"]);
-  assert.deepEqual(menu.others.map((f) => f.id), ["lan", "blocked", "unassigned"]);
+  // "guest" is always offered, with none to show too
+  assert.deepEqual(menu.others.map((f) => f.id), ["lan", "guest", "blocked", "unassigned"]);
   assert.equal(menu.active, "label:gone");
   assert.deepEqual(menu.labels.map((l) => [l.id, l.count]), [["kids", 1]]);
   assert.equal(menu.available, 4);
@@ -1827,4 +1829,25 @@ test("the list sorts by address, device, vendor, kind and status; online first, 
   assert.deepEqual(order({ key: "status", dir: 1 }), [10, 40, 20, 30, 50]);
   assert.deepEqual(order({ key: "name", dir: 1 }), [10, 20, 30, 40, 50]);
   assert.deepEqual(order({ key: "bogus" }), [10, 20, 30, 40, 50]);
+});
+
+test("a filter for devices with a locally assigned MAC shows them, and says when the options leave them out", () => {
+  const withPrivate = { ...data, clients: [...data.clients, { mac: "f2", id: "f2", name: "Handy", online: true, private_mac: true, actions: {} }] };
+  assert.equal(shared.panelCounts(withPrivate, NOW).private, 1);
+  assert.equal(shared.panelMatches({ private_mac: true }, "private"), true);
+  assert.equal(shared.panelMatches({ private_mac: false }, "private"), false);
+  const menu = shared.filterMenu(withPrivate, "all", NOW);
+  assert.deepEqual(menu.others.find((o) => o.id === "private"), { id: "private", count: 1, ignored: false });
+
+  // none to show and nothing left out: not offered; left out: offered, with the reason
+  assert.equal(shared.filterMenu(data, "all", NOW).others.some((o) => o.id === "private"), false);
+  const left = { ...data, ignored: { guests: true, private: true } };
+  assert.deepEqual(shared.filterMenu(left, "all", NOW).others.filter((o) => ["guest", "private"].includes(o.id)),
+    [{ id: "guest", count: 0, ignored: true }, { id: "private", count: 0, ignored: true }]);
+  const html = network.renderFilterMenu({ ...state, data: left, menu: true }, t, NOW);
+  assert.match(html, /Geräte im Gastnetz werden ignoriert \(Verwalten › Einbinden\)/);
+  assert.match(html, /Geräte mit lokal vergebener MAC werden ignoriert/);
+  assert.match(html, /data-filter="private"[^>]*>.*Lokal vergebene MAC<\/span><b>0<\/b>/);
+  // the numbers of the "More" button count only what has something to show
+  assert.equal(shared.filterMenu(left, "all", NOW).available, shared.filterMenu(data, "all", NOW).available);
 });

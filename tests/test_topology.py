@@ -470,3 +470,15 @@ async def test_the_panel_is_told_when_the_entry_is_reloaded_by_hand(
 
     message = await asyncio.wait_for(client.receive_json(), timeout=5)
     assert message["event"] == {"reload": True}
+
+
+async def test_topology_says_which_kinds_of_device_the_options_leave_out(
+    hass, hass_ws_client, fake_client, entry
+):
+    hass.config_entries.async_update_entry(
+        entry, options={"ignore_guests": True, "ignore_private_macs": False}
+    )
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+    topology = await _subscribe(client)
+    assert topology["ignored"] == {"guests": True, "private": False}

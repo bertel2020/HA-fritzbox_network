@@ -204,6 +204,7 @@ export const PANEL_CSS = `
   .swatch.forest { background: #0f7a6b; }
   .swatch.graphite { background: #2f3a48; }
   .fmenu .label { display: block; padding: 8px 10px 4px; }
+  .fmenu .fhint { display: block; padding: 0 10px 6px 40px; color: var(--muted); font-size: 12px; }
   .fmenu [role="menuitemradio"] { display: flex; width: 100%; align-items: center; gap: 10px; min-height: 40px; padding: 0 10px; border-radius: 8px; text-align: left; }
   .fmenu [role="menuitemradio"]:hover, .fmenu [role="menuitemradio"]:focus-visible { background: var(--soft); }
   .fmenu [role="menuitemradio"] .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

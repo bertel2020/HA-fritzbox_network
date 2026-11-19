@@ -269,7 +269,7 @@ test("days since a time, and none for an unknown one", () => {
 test("the panel filters count what they would show", () => {
   const counts = card.panelCounts(panelData, NOW);
   assert.deepEqual(counts, {
-    all: 6, online: 3, offline: 3, wlan: 2, lan: 3, guest: 1, blocked: 1, weak: 1, new: 2, stale: 1, unassigned: 1,
+    all: 6, online: 3, offline: 3, wlan: 2, lan: 3, guest: 1, private: 0, blocked: 1, weak: 1, new: 2, stale: 1, unassigned: 1,
   });
 });
 

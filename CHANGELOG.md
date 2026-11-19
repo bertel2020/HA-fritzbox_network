@@ -4,6 +4,10 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ## Unveröffentlicht
 
+### Neu
+
+- Panel, Geräteliste: Im Menü „Mehr“ gibt es den Filter **Lokal vergebene MAC** (zweites Zeichen der MAC 2, 6, A oder E; bei Handys meist eine zufällige, private Adresse). **Gast** steht jetzt immer im Menü, auch ohne Geräte; ist „Gäste ignorieren“ (oder „Private MACs ignorieren“) an, steht im Menü, dass solche Geräte ignoriert werden.
+
 ### Behoben
 
 - Panel, Gerät: Das Menü „⋯“ (In Home Assistant, Logbuch, Verlauf, Entfernen) zeigte nur schmale Symbole ohne Text, weil seine Breite auf die des 40-Pixel-Knopfs begrenzt war. Es ist jetzt 240 Pixel breit.

@@ -216,6 +216,7 @@ export const PANEL_FILTERS = [
   "wlan",
   "lan",
   "guest",
+  "private",
   "blocked",
   "weak",
   "new",
@@ -249,6 +250,8 @@ export function panelMatches(client, filter, now = Date.now(), threshold = WEAK_
       return client.link_type === "lan";
     case "guest":
       return Boolean(client.guest);
+    case "private":
+      return Boolean(client.private_mac);
     case "blocked":
       return isBlocked(client);
     case "weak":
@@ -458,9 +461,12 @@ export const PRIMARY_FILTERS = ["all", "online", "offline"];
  */
 export function filterMenu(data, filter, now = Date.now(), threshold = WEAK_SIGNAL_DBM) {
   const counts = panelCounts(data, now, threshold);
+  // "guest" is always offered: with none to show it would look as if the filter did not exist.
+  // When the options leave such devices out, that is what the entry says instead of a number.
+  const ignored = { guest: Boolean(data?.ignored?.guests), private: Boolean(data?.ignored?.private) };
   const others = PANEL_FILTERS.filter((f) => !PRIMARY_FILTERS.includes(f))
-    .filter((f) => counts[f] || f === filter)
-    .map((id) => ({ id, count: counts[id] }));
+    .filter((f) => counts[f] || f === filter || f === "guest" || (f === "private" && ignored.private))
+    .map((id) => ({ id, count: counts[id], ignored: !counts[id] && Boolean(ignored[id]) }));
   const labels = labelCounts(data);
   const chosenLabel = filter.startsWith("label:") ? filter.slice(6) : null;
   if (chosenLabel && !labels.some((l) => l.id === chosenLabel)) {
