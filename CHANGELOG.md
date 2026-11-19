@@ -4,6 +4,10 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ## Unveröffentlicht
 
+### Geändert
+
+- „Als anwesend werten für“ steht jetzt standardmäßig auf **30 Sekunden** (vorher 180). Ein Gerät gilt nach dem Offline-Gehen also nach einer halben Minute als abwesend. Gespeicherte Werte bleiben; nur wer den Wert nie geändert hat, merkt es. Bei Geräten, die sich im WLAN kurz abmelden, kann der Tracker so öfter flackern: dann den Wert in den Optionen erhöhen.
+
 ### Neu
 
 - Sensoren **Leitungsrate (laut Box)** für Download und Upload (standardmäßig aus): der Höchstwert der Leitung, den die Box meldet (Layer 1), auch bei DSL. Er entspricht dem Core-Sensor „Max. Verbindungsdurchsatz“ und ist das Ziel der Übernahme. Bei DSL schwankt er zwischen Sync- und möglicher Rate, auch ohne neue Synchronisation (gemessen an einer FRITZ!Box 7590 AX).

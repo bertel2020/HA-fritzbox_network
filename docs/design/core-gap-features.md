@@ -210,7 +210,7 @@ Unser `internet_uptime` (DURATION, Sekunden) ändert sich bei jedem Poll, der Re
 - Test: `tests/test_config_flow.py` um ssdp → confirm → create, already_configured, Host-Update und link-local ergänzen.
 
 ### 2.14 Optionen
-- `consider_home`: vorhanden (180 s, 0–900) [V].
+- `consider_home`: vorhanden (30 s, 0–900) [V].
 - `old_discovery`: weglassen (PLAN.md, Zeile 97: kein old_discovery). [V Live] Beim Maintainer ist es im Core an. Unser Weg ohne Mesh liest nur die Hostliste, das ist der alte Weg.
 - `feature_device_tracking`: Bei uns sind Tracker der Kern. Wer nur Router-Entities will, nimmt den Filter „nur Auswahl“ mit leerer Liste. Ob `select_hosts` das so behandelt, ist [A] → prüfen und dokumentieren statt einer neuen Option.
 

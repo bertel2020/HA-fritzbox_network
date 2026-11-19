@@ -4,6 +4,10 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+### Changed
+
+- "Consider home for" now defaults to **30 seconds** (it was 180). A device counts as away half a minute after it goes offline. Saved values stay; only those who never changed it notice. A device that briefly drops off the Wi-Fi can make the tracker flicker more often: raise the value in the options then.
+
 ### New
 
 - Sensors **Link rate (as reported by the box)** for download and upload (off by default): the maximum of the link the box reports (layer 1), on DSL too. It is the counterpart of the core sensor "Max connection throughput" and the target of the takeover. On DSL it moves between the sync rate and the attainable rate, even without a new sync (measured on a FRITZ!Box 7590 AX).

@@ -83,7 +83,7 @@ Host (Standard `192.168.178.1`), Benutzer und Kennwort eingeben, optional Port u
 | Option | Standard | Bedeutung |
 |--------|----------|-----------|
 | Abfrageintervall | 30 s (15–300) | Wie oft die Box gefragt wird. Pro Abfrage zwei Anfragen (Geräteliste, Mesh). Bei wiederholten Fehlern verdoppelt sich das Intervall bis höchstens 5 Minuten. |
-| Als anwesend werten für | 180 s (0–900) | Wie lange ein Gerät nach dem Offline-Gehen noch als anwesend gilt. |
+| Als anwesend werten für | 30 s (0–900) | Wie lange ein Gerät nach dem Offline-Gehen noch als anwesend gilt. |
 | Auf lange offline Geräte hinweisen | aus | Eine Reparatur listet die Geräte auf, die länger als die Tage unten offline sind, und bietet an, sie auszublenden. Ohne deine Auswahl wird nichts ausgeblendet. Geräte ohne Zeitangabe bleiben außen vor. Geprüft wird stündlich, das erste Mal eine Minute nach dem Start. Wischst du die Reparatur weg, bleibt sie still. |
 | Tage offline, bis ein Gerät als weg gilt | 30 (7–365) | Nur mit der Option darüber. |
 | Hersteller eines Geräts anzeigen | aus | Der Hersteller stammt aus der MAC-Adresse, aus einer Liste, die mit Home Assistant mitkommt; es wird nichts verschickt. Er erscheint als Hersteller des Geräts, im Ereignis für neue Geräte (`vendor`) und in der Topologie-Karte. Private (zufällige) Adressen haben keinen. Schaltest du das aus, bleibt ein bereits eingetragener Hersteller stehen. |
