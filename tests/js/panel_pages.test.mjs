@@ -505,7 +505,7 @@ test("the preview counts the results, groups the rows and names the reasons; tak
   const html = migratePage.renderMigrate(scan, { t, filter: "all" });
   assert.match(html, /Von FRITZ!Box Tools umsteigen/);
   assert.match(html, /Bis du bestätigst, wird nichts geändert/);
-  assert.match(html, /data-act="mig-run"[^>]*>Übernehmen …/);
+  assert.match(html, /data-act="mig-run"[^>]*>Einstellungen übernehmen …/);
   assert.doesNotMatch(html, /data-act="mig-undo"/);
   // nothing to take over: no button; once done: the way back instead
   assert.doesNotMatch(migratePage.renderMigrate({ ...scan, rows: scan.rows.filter((r) => r.status !== "migrate") }, { t, filter: "all" }), /data-act="mig-run"/);
@@ -517,7 +517,7 @@ test("the preview counts the results, groups the rows and names the reasons; tak
   assert.match(html, /<div class="tile bad"><span class="label">Konflikte<\/span><b>1<\/b>/);
   assert.match(html, /data-f="all"[^>]*aria-pressed="true">Alle<b>4<\/b>/);
   assert.match(html, /<span>Box<\/span><span>3<\/span>[\s\S]*<span>Netzwerkgeräte<\/span><span>1<\/span>/);
-  assert.match(html, /sensor\.fritz_network_cpu_temperature<\/b><span class="mono">bekommt die ID links/);
+  assert.match(html, /sensor\.fritz_network_cpu_temperature<\/b><span class="mono">ist die neue ID/);
   assert.match(html, /Ungefähres Gegenstück[\s\S]*In 1 Automationen benutzt: automation\.too_hot/);
   assert.match(html, /Zwei Entitäten von FRITZ!Box Tools passen/);
   assert.match(html, /Gast &lt;b&gt;/);

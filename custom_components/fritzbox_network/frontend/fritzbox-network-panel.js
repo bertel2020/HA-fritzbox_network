@@ -2410,7 +2410,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (!ok) return;
     try {
       const result = await this._ws("migrate/run", { token: scan.token });
-      showToast(this.shadowRoot, fill(m.toastDone, { n: result.moved }));
+      showToast(this.shadowRoot, fill(m.toastDone, { n: result.updated }));
       if (result.failed.length) showToast(this.shadowRoot, fill(m.toastFailed, { n: result.failed.length }));
     } catch (err) {
       showToast(this.shadowRoot, m.errors[err?.code] ?? fill(t.toastFailed, { error: err?.message ?? err }));

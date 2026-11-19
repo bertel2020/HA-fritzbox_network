@@ -10,11 +10,10 @@ The counterpart is only taken where it exists in the entity registry of this int
 entity that is not made here (no right, no hardware, off by default and never turned on) would
 leave the moved entity orphaned.
 
-``async_run`` does the move, ``async_undo`` takes it back from the journal it wrote. The move keeps
-the devices of this integration: the entity of the core integration is moved onto the device here
-(the registry has no way to merge two devices), and the area, name and labels of the core device
-are carried over where the device here has none. The core entities without a counterpart stay with
-the core integration, which is disabled, never deleted.
+``async_run`` carries over what the user set on the core entity (name, icon, area, labels, aliases)
+and on its device to the counterpart here, and ``async_undo`` puts it back from the journal. It
+deletes, moves and switches off nothing: the entities here keep their ids, the core integration
+keeps running, and the automations that name the core entities are the user's to change.
 """
 
 from __future__ import annotations
@@ -24,7 +23,6 @@ import hashlib
 import logging
 from typing import Any
 
-from homeassistant.config_entries import ConfigEntryDisabler
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.device_registry import format_mac
@@ -332,33 +330,71 @@ async def async_journal(
     return await _store(hass, entry).async_load()
 
 
-def _carry_device(hass: HomeAssistant, from_id: str | None, to_id: str | None) -> None:
-    """Area, name and labels of the core device to the one here, where this has none."""
+def _texts(values: Any) -> set[str]:
+    """The strings of a registry collection; aliases also hold a marker for the own name."""
+    return {v for v in values if isinstance(v, str)}
+
+
+def _entity_changes(core: er.RegistryEntry, target: er.RegistryEntry) -> dict[str, Any]:
+    """What of the core entity the one here lacks; what is set here stays."""
+    changes: dict[str, Any] = {}
+    if core.name and not target.name:
+        changes["name"] = core.name
+    if core.icon and not target.icon:
+        changes["icon"] = core.icon
+    if core.area_id and not target.area_id:
+        changes["area_id"] = core.area_id
+    if set(core.labels) - set(target.labels):
+        changes["labels"] = set(target.labels) | set(core.labels)
+    if _texts(core.aliases) - _texts(target.aliases):
+        # the target's own marker stays in the set
+        changes["aliases"] = set(target.aliases) | _texts(core.aliases)
+    return changes
+
+
+def _entity_record(core: er.RegistryEntry, target: er.RegistryEntry, changes: dict) -> dict:
+    """What was set on the entity here, to take back: the added labels and aliases by value."""
+    return {
+        "entity_id": target.entity_id,
+        "set": [key for key in ("name", "icon", "area_id") if key in changes],
+        "labels": sorted(set(changes.get("labels", ())) - set(target.labels)),
+        "aliases": sorted(_texts(changes.get("aliases", ())) - _texts(target.aliases)),
+    }
+
+
+def _device_changes(
+    hass: HomeAssistant, from_id: str | None, to_id: str | None
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """(changes, state before) of the device here when the core device's marks are carried over."""
     if not from_id or not to_id or from_id == to_id:
-        return
+        return {}, {}
     devices = dr.async_get(hass)
     source, target = devices.async_get(from_id), devices.async_get(to_id)
     if source is None or target is None:
-        return
+        return {}, {}
     changes: dict[str, Any] = {}
     if source.area_id and not target.area_id:
         changes["area_id"] = source.area_id
     if source.name_by_user and not target.name_by_user:
         changes["name_by_user"] = source.name_by_user
-    if source.labels - target.labels:
-        changes["labels"] = target.labels | source.labels
-    if changes:
-        devices.async_update_device(to_id, **changes)
+    if set(source.labels) - set(target.labels):
+        changes["labels"] = set(target.labels) | set(source.labels)
+    before = {
+        "area_id": target.area_id,
+        "name_by_user": target.name_by_user,
+        "labels": sorted(target.labels),
+    }
+    return changes, before
 
 
 async def async_run(
     hass: HomeAssistant, entry: FritzNetworkConfigEntry, token: str
 ) -> dict[str, Any]:
-    """Take over the entities of the core integration; the preview with this token is what runs.
+    """Carry over name, icon, area, labels and aliases; the preview with this token is what runs.
 
     Refused (``MigrationRefused``) when the preview has moved on since the token was made, when
-    there is nothing to take over, or when an earlier move has not been taken back. What goes wrong
-    for one entity is reported and the rest goes on.
+    there is nothing to take over, or when an earlier run has not been undone. Only what is not
+    set here is filled in, and nothing is deleted or switched off.
     """
     preview = scan(hass, entry)
     if preview["core"] is None:
@@ -372,19 +408,9 @@ async def async_run(
         raise MigrationRefused("already_done")
 
     registry = er.async_get(hass)
-    # the entities can only be moved while the core integration is not loaded; disabling it
-    # also keeps it from coming back with the duplicates after a restart
-    core_ids = sorted(
-        {
-            core.config_entry_id
-            for row in rows
-            if (core := registry.async_get(row["core_entity_id"])) and core.config_entry_id
-        }
-    )
-    for core_id in core_ids:
-        await hass.config_entries.async_set_disabled_by(core_id, ConfigEntryDisabler.USER)
-
-    moved: list[dict[str, Any]] = []
+    devices = dr.async_get(hass)
+    entities: list[dict[str, Any]] = []
+    device_records: dict[str, dict[str, Any]] = {}
     failed: list[dict[str, str]] = []
     for row in rows:
         core = registry.async_get(row["core_entity_id"])
@@ -392,82 +418,60 @@ async def async_run(
         if core is None or target is None or core.platform != CORE_DOMAIN:
             failed.append({"entity_id": row["core_entity_id"], "reason": "changed"})
             continue
-        record = {
-            "entity_id": core.entity_id,
-            "config_entry_id": core.config_entry_id,
-            "unique_id": core.unique_id,
-            "device_id": core.device_id,
-            "new_unique_id": target.unique_id,
-            "removed_entity_id": target.entity_id,
-        }
         try:
-            _carry_device(hass, core.device_id, target.device_id)
-            registry.async_update_entity(
-                core.entity_id,
-                labels=core.labels | target.labels,
-                aliases=set(core.aliases) | set(target.aliases),
-            )
-            # ours goes first: its unique id is the one the moved entity takes, and the registry
-            # does not look for a clash under the platform it comes from
-            registry.async_remove(target.entity_id)
-            registry.async_update_entity_platform(
-                core.entity_id,
-                DOMAIN,
-                new_config_entry_id=entry.entry_id,
-                new_unique_id=target.unique_id,
-                new_device_id=target.device_id,
-            )
+            device_changes, device_before = _device_changes(hass, core.device_id, target.device_id)
+            if device_changes and target.device_id not in device_records:
+                devices.async_update_device(target.device_id, **device_changes)
+                device_records[target.device_id] = device_before
+            if changes := _entity_changes(core, target):
+                record = _entity_record(core, target, changes)
+                registry.async_update_entity(target.entity_id, **changes)
+                entities.append(record)
         except (ValueError, KeyError) as err:
-            _LOGGER.warning("Could not take over %s: %s", core.entity_id, err)
-            failed.append({"entity_id": core.entity_id, "reason": "error"})
-            continue
-        moved.append(record)
-
+            _LOGGER.warning("Could not carry over to %s: %s", target.entity_id, err)
+            failed.append({"entity_id": target.entity_id, "reason": "error"})
     await _store(hass, entry).async_save(
         {
             "time": dt_util.utcnow().isoformat(),
-            "core_entries": core_ids,
-            "moved": moved,
+            "entities": entities,
+            "devices": [{"device_id": k, "before": v} for k, v in device_records.items()],
         }
     )
-    hass.config_entries.async_schedule_reload(entry.entry_id)
-    return {"moved": len(moved), "failed": failed, "core_entries": core_ids}
+    return {"updated": len(entities), "devices": len(device_records), "failed": failed}
 
 
 async def async_undo(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> dict[str, Any]:
-    """Give the moved entities back to the core integration and turn it on again.
-
-    The entities of this integration that were removed for the move are made again when the
-    entry reloads, with their usual IDs. Best effort: what has changed since is not touched.
-    """
+    """Put back what the carrying over changed, from the journal; best effort."""
     journal = await async_journal(hass, entry)
     if not journal:
         raise MigrationRefused("no_journal")
     registry = er.async_get(hass)
-    # the entities must not be loaded to be moved
-    await hass.config_entries.async_unload(entry.entry_id)
+    devices = dr.async_get(hass)
     back = 0
     failed: list[str] = []
-    for record in journal["moved"]:
+    for record in journal["entities"]:
         item = registry.async_get(record["entity_id"])
-        if item is None or item.platform != DOMAIN or item.unique_id != record["new_unique_id"]:
+        if item is None:
             failed.append(record["entity_id"])
             continue
-        try:
-            registry.async_update_entity_platform(
-                item.entity_id,
-                CORE_DOMAIN,
-                new_config_entry_id=record["config_entry_id"],
-                new_unique_id=record["unique_id"],
-                new_device_id=record["device_id"],
-            )
-        except (ValueError, KeyError) as err:
-            _LOGGER.warning("Could not give back %s: %s", item.entity_id, err)
-            failed.append(item.entity_id)
-            continue
+        # only what the carrying over set, and only while it is still what it set: a name changed
+        # since then is the user's
+        changes: dict[str, Any] = {key: None for key in record["set"]}
+        if record["labels"]:
+            changes["labels"] = set(item.labels) - set(record["labels"])
+        if record["aliases"]:
+            changes["aliases"] = set(item.aliases) - set(record["aliases"])
+        registry.async_update_entity(item.entity_id, **changes)
         back += 1
-    for core_id in journal["core_entries"]:
-        await hass.config_entries.async_set_disabled_by(core_id, None)
+    for record in journal["devices"]:
+        if devices.async_get(record["device_id"]) is None:
+            continue
+        before = record["before"]
+        devices.async_update_device(
+            record["device_id"],
+            area_id=before["area_id"],
+            name_by_user=before["name_by_user"],
+            labels=set(before["labels"]),
+        )
     await _store(hass, entry).async_remove()
-    hass.config_entries.async_schedule_reload(entry.entry_id)
     return {"back": back, "failed": failed}

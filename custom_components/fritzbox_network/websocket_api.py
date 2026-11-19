@@ -1419,7 +1419,9 @@ async def ws_migrate_scan(
         return
     result = migration.scan(hass, found[0])
     journal = await migration.async_journal(hass, found[0])
-    result["done"] = {"time": journal["time"], "count": len(journal["moved"])} if journal else None
+    result["done"] = (
+        {"time": journal["time"], "count": len(journal["entities"])} if journal else None
+    )
     connection.send_result(msg["id"], result)
 
 
