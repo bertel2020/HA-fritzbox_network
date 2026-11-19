@@ -452,6 +452,16 @@ export function filterChanged(current, draft) {
 
 /* The filter menu, the map and the paging of the device page of the panel. */
 
+/**
+ * Where the left edge of a menu under a button goes, in the coordinates of the row the menu hangs
+ * from: under the left edge of the button, or, where it would stick out on the right, with its
+ * right edge on the right edge of the button; never left of the row.
+ */
+export function menuLeft(rowWidth, buttonLeft, buttonRight, menuWidth) {
+  const left = buttonLeft + menuWidth <= rowWidth ? buttonLeft : buttonRight - menuWidth;
+  return Math.max(0, Math.round(left));
+}
+
 // always shown as chips; every other filter and the groups are in the "More" menu
 export const PRIMARY_FILTERS = ["all", "online", "offline"];
 

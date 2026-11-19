@@ -12,6 +12,7 @@ import {
   hashParams,
   nearestStep,
   PANEL_FILTERS,
+  menuLeft,
   pagerFor,
   isBlocked,
   pageHash,
@@ -426,6 +427,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => {
       this._syncCompact();
       this._drawLinks();
+      this._placeFilterMenu();
       this._phoneResized();
     });
     this.shadowRoot.addEventListener("click", (event) => this._onClick(event));
@@ -1382,6 +1384,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._set("hints", renderHints(state.data, t));
     this._set("chips", renderChips(state, t, now, shown.length));
     this._set("menuhost", renderFilterMenu(state, t, now));
+    this._placeFilterMenu();
     this._set("meta", renderMeta(state, t, shown.length));
     this._set("groupbar", renderGroupBar(state, t, this._hass));
     this._set("body", map ? renderMap(state, t, now, shown) : state.group === "flat" ? renderTable(state, t, now, shown) : renderGroups(state, t, now));
@@ -1389,6 +1392,23 @@ class FritzboxNetworkPanel extends HTMLElement {
   }
 
   /** The lines of the map follow the islands: after each drawing and when the width changes. */
+  /** The menu behind "More" hangs under that button, not at the left end of the row of filters. */
+  _placeFilterMenu() {
+    const root = this.shadowRoot;
+    const menu = root.querySelector("#fmenu");
+    const button = root.querySelector("#morebtn");
+    const row = root.querySelector(".chipwrap");
+    if (!menu || !button || !row || typeof getComputedStyle !== "function") return;
+    // in a narrow panel the menu is a sheet from the bottom and needs no place
+    if (getComputedStyle(menu).position !== "absolute") {
+      menu.style.left = "";
+      return;
+    }
+    const r = row.getBoundingClientRect();
+    const b = button.getBoundingClientRect();
+    menu.style.left = `${menuLeft(r.width, b.left - r.left, b.right - r.left, menu.offsetWidth)}px`;
+  }
+
   _drawLinks() {
     const state = this._state;
     if (state.view !== "map" || state.sel || state.tab !== "net") return;

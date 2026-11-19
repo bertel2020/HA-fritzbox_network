@@ -10,6 +10,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Behoben
 
+- Panel, Geräteliste: Das Menü „Mehr“ hängt jetzt direkt unter seinem Knopf. Es stand vorher am linken Ende der Filterzeile, also versetzt unter „Alle“. Wo es rechts überstehen würde, schließt es mit dem rechten Rand des Knopfs ab; auf dem Handy bleibt es ein Blatt von unten.
 - Panel, Gerät: Das Menü „⋯“ (In Home Assistant, Logbuch, Verlauf, Entfernen) zeigte nur schmale Symbole ohne Text, weil seine Breite auf die des 40-Pixel-Knopfs begrenzt war. Es ist jetzt 240 Pixel breit.
 - Gerätetracker neuer Geräte sind wieder **an**. Home Assistant 2026.11 schaltet Tracker von Routern standardmäßig aus, dadurch bekam jedes neu erkannte Gerät (oft Handys mit zufälliger MAC-Adresse) einen ausgeschalteten Tracker. Bereits ausgeschaltete bleiben aus; schalte sie unter Einstellungen › Geräte & Dienste › Entitäten ein.
 

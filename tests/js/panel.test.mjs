@@ -1851,3 +1851,12 @@ test("a filter for devices with a locally assigned MAC shows them, and says when
   // the numbers of the "More" button count only what has something to show
   assert.equal(shared.filterMenu(left, "all", NOW).available, shared.filterMenu(data, "all", NOW).available);
 });
+
+test("a menu hangs under its button, and under the right end of it where it would stick out", () => {
+  // room on the right: the left edges line up
+  assert.equal(shared.menuLeft(900, 120, 260, 300), 120);
+  // no room: the right edges line up
+  assert.equal(shared.menuLeft(830, 585, 805, 300), 505);
+  // never left of the row
+  assert.equal(shared.menuLeft(200, 10, 60, 300), 0);
+});
