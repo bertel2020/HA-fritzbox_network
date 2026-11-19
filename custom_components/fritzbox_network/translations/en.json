@@ -264,6 +264,15 @@
       "internet_line_rate_up": {
         "name": "Line rate upload"
       },
+      "internet_link_rate_down": {
+        "name": "Link rate download (as reported by the box)"
+      },
+      "internet_link_rate_up": {
+        "name": "Link rate upload (as reported by the box)"
+      },
+      "internet_connected_since": {
+        "name": "Internet connected since"
+      },
       "dsl_max_rate_down": {
         "name": "DSL attainable rate download"
       },

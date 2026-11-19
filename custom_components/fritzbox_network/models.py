@@ -244,6 +244,9 @@ class InternetInfo:
     # whether the cable of the line is plugged in and has a signal (the physical link)
     linked: bool | None = None
     dyndns: DynDnsInfo | None = None
+    # the layer 1 maximum of the link as the box reports it, whatever the connection (kbit/s)
+    link_rate_down: int | None = None
+    link_rate_up: int | None = None
 
 
 @dataclass(frozen=True)
@@ -905,6 +908,8 @@ def parse_internet(
         rate_down = bits // 1000
     if rate_up is None and (bits := _number(link.get("NewLayer1UpstreamMaxBitRate"))):
         rate_up = bits // 1000
+    layer1_down = _number(link.get("NewLayer1DownstreamMaxBitRate"))
+    layer1_up = _number(link.get("NewLayer1UpstreamMaxBitRate"))
     return InternetInfo(
         connected=None
         if status.get("NewConnectionStatus") is None
@@ -926,6 +931,8 @@ def parse_internet(
             link.get("NewPhysicalLinkStatus")
         ),
         dyndns=parse_dyndns(slow.get("GetDDNSInfo", {}), slow.get("GetInfo", {})),
+        link_rate_down=None if layer1_down is None else layer1_down // 1000,
+        link_rate_up=None if layer1_up is None else layer1_up // 1000,
     )
 
 

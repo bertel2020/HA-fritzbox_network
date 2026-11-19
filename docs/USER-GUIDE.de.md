@@ -148,6 +148,8 @@ Weitere Werte der Box, alle ohne zusätzliche Abfrage, wenn nichts anderes steht
 | Sensor **Letzter Neustart** | an | Zeitpunkt des letzten Starts; die Betriebszeit liest das Setup mit, danach stündlich und nach einem Ausfall |
 | Sensoren **Internet-Daten empfangen / gesendet** | aus | Byte-Zähler seit dem Start der Box |
 | Sensoren **Leitungsrate Download / Upload** | aus | nur bei Kabel, Glasfaser und Mobilfunk; bei DSL gibt es die DSL-Werte |
+| Sensoren **Leitungsrate (laut Box)** Download / Upload | aus | der Wert, den die Box als Höchstrate der Leitung meldet (Layer 1), auch bei DSL; er liegt dort zwischen Sync- und möglicher Rate und schwankt auch ohne neue Synchronisation. Entspricht dem Core-Sensor „Max. Verbindungsdurchsatz“ |
+| Sensor **Internet verbunden seit** | aus | der Zeitpunkt, an dem die Verbindung aufgebaut wurde; entspricht der Verbindungszeit der Core-Integration. Bleibt zwischen den Abfragen gleich und ändert sich nur bei einer neuen Verbindung |
 | Sensoren **DSL-Maximalrate Download / Upload** | aus | die erreichbare Rate der DSL-Leitung |
 | Binärsensor **Leitung** | aus | ob am WAN-Anschluss ein Signal anliegt; bricht die Verbindung ab, wird er sofort gelesen |
 | Sensor **CPU-Temperatur** | aus | aus der Weboberfläche der Box; ein Web-Aufruf alle 10 Abfragen, **nur solange die Entität eingeschaltet ist**; Boxen ohne den Sensor bekommen keine Entität |
@@ -410,6 +412,7 @@ Automationen, die auf Core-Entity-IDs verweisen, musst du auf die neuen IDs umst
 |---|---|
 | Gerätetracker | Gerätetracker nach MAC, mit „Als anwesend werten“ |
 | Internetverbindung, IP, Durchsatz, Bytes, DSL-Werte | Internet-Sensoren und -Karte; Durchsatz an, der Rest aus |
+| Verbindungszeit, Höchstrate der Leitung | „Internet verbunden seit“ und „Leitungsrate (laut Box)“ (aus) |
 | Leitung (`is_linked`) | Binärsensor „Leitung“ (aus) |
 | Neustart, Neu verbinden | Buttons (aus) und Panel mit Rückfrage |
 | Cleanup (Geräte aufräumen) | Button „Lange offline Geräte aufräumen“ (aus) und Panel |

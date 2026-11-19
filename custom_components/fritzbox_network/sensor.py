@@ -60,9 +60,12 @@ from .const import (
     KEY_FAILED_POLLS,
     KEY_INTERNET_BYTES_RECEIVED,
     KEY_INTERNET_BYTES_SENT,
+    KEY_INTERNET_CONNECTED_SINCE,
     KEY_INTERNET_DOWNLOAD,
     KEY_INTERNET_LINE_RATE_DOWN,
     KEY_INTERNET_LINE_RATE_UP,
+    KEY_INTERNET_LINK_RATE_DOWN,
+    KEY_INTERNET_LINK_RATE_UP,
     KEY_INTERNET_UPLOAD,
     KEY_INTERNET_UPTIME,
     KEY_IP_ADDRESS,
@@ -844,6 +847,15 @@ INTERNET_SENSORS = (
         ),
         value_fn=lambda c, i: i.uptime,
     ),
+    # the same as the uptime, as the time it began; what the core integration calls its uptime
+    InternetSensorDescription(
+        key=KEY_INTERNET_CONNECTED_SINCE,
+        translation_key=KEY_INTERNET_CONNECTED_SINCE,
+        device_class=SensorDeviceClass.TIMESTAMP,
+        entity_category=EntityCategory.DIAGNOSTIC,
+        entity_registry_enabled_default=False,
+        value_fn=lambda c, i: c.internet_connected_since(i),
+    ),
     InternetSensorDescription(
         key=KEY_EXTERNAL_IPV4,
         translation_key=KEY_EXTERNAL_IPV4,
@@ -916,6 +928,26 @@ INTERNET_SENSORS = (
         ),
         suitable=lambda i: _no_dsl(i) and i.rate_up is not None,
         value_fn=lambda c, i: _mbit(i.rate_up),
+    ),
+    # the layer 1 maximum as the box reports it, DSL or not: it follows the line, and on a DSL
+    # line it lies between the sync rate and the attainable rate (the core integration shows it)
+    InternetSensorDescription(
+        **_measurement(
+            KEY_INTERNET_LINK_RATE_DOWN,
+            device_class=SensorDeviceClass.DATA_RATE,
+            native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
+        ),
+        suitable=lambda i: i.link_rate_down is not None,
+        value_fn=lambda c, i: _mbit(i.link_rate_down),
+    ),
+    InternetSensorDescription(
+        **_measurement(
+            KEY_INTERNET_LINK_RATE_UP,
+            device_class=SensorDeviceClass.DATA_RATE,
+            native_unit_of_measurement=UnitOfDataRate.MEGABITS_PER_SECOND,
+        ),
+        suitable=lambda i: i.link_rate_up is not None,
+        value_fn=lambda c, i: _mbit(i.link_rate_up),
     ),
     InternetSensorDescription(
         **_measurement(

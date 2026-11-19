@@ -65,7 +65,11 @@ def test_a_core_unique_id_becomes_the_one_of_the_same_thing_here():
 def test_what_is_about_the_same_is_marked_and_what_has_no_counterpart_says_why():
     target, _, _, notes = counterpart(f"{SERIAL}-link_kb_s_sent", SERIAL)
     assert target == f"{SERIAL}_dsl_max_rate_up" and notes == ["approximate"]
-    assert counterpart(f"{SERIAL}-connection_uptime", SERIAL)[2] == "incompatible"
+    assert counterpart(f"{SERIAL}-connection_uptime", SERIAL)[0] == (
+        f"{SERIAL}_internet_connected_since"
+    )
+    target, _, _, notes = counterpart(f"{SERIAL}-max_kb_s_received", SERIAL)
+    assert target == f"{SERIAL}_internet_link_rate_down" and notes == []
     assert counterpart(f"{SERIAL}-cleanup", SERIAL)[2] == "not_covered"
     assert counterpart(f"{SERIAL}-port_forward_web", SERIAL)[2] == "unknown"
     assert counterpart(f"{SERIAL}-call_deflection_1", SERIAL)[2] == "not_covered"
@@ -82,7 +86,6 @@ async def test_the_preview_pairs_the_core_entities_with_those_that_exist_here(
         hass,
         ("binary_sensor", f"{SERIAL}-is_connected"),
         ("sensor", f"{SERIAL}-kb_s_sent"),
-        ("sensor", f"{SERIAL}-connection_uptime"),
         ("button", f"{SERIAL}-cleanup"),
         ("update", "OTHER-update"),
         ("sensor", f"{SERIAL}-brand_new"),
@@ -110,7 +113,6 @@ async def test_the_preview_pairs_the_core_entities_with_those_that_exist_here(
     assert tracker["status"] == "migrate" and tracker["group"] == "client"
     assert tracker["target_entity_id"] == (f"device_tracker.fritz_{LAN.replace(':', '').lower()}")
     for uid, status, reason in (
-        (f"{SERIAL}-connection_uptime", "skip", "incompatible"),
         (f"{SERIAL}-cleanup", "none", "not_covered"),
         ("OTHER-update", "skip", "other_box"),
         (f"{SERIAL}-brand_new", "none", "unknown"),

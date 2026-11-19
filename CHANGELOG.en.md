@@ -6,6 +6,8 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Sensors **Link rate (as reported by the box)** for download and upload (off by default): the maximum of the link the box reports (layer 1), on DSL too. It is the counterpart of the core sensor "Max connection throughput" and the target of the takeover. On DSL it moves between the sync rate and the attainable rate, even without a new sync (measured on a FRITZ!Box 7590 AX).
+- Sensor **Internet connected since** (off by default): the time the connection was set up, like the connection uptime of the core integration. It stays the same between polls. The core entity can be taken over now; the preview no longer lists it as incompatible.
 - Button **Clean up offline devices** (off by default): hides every device that has been offline longer than the limit in the options, like "All" in the repair. Meant for automations and as the counterpart of the core integration's cleanup button; bring hidden devices back in the panel.
 
 ## 1.12.0 – 2026-11-17

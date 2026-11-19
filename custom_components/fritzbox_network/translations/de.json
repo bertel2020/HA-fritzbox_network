@@ -264,6 +264,15 @@
       "internet_line_rate_up": {
         "name": "Leitungsrate Upload"
       },
+      "internet_link_rate_down": {
+        "name": "Leitungsrate Download (laut Box)"
+      },
+      "internet_link_rate_up": {
+        "name": "Leitungsrate Upload (laut Box)"
+      },
+      "internet_connected_since": {
+        "name": "Internet verbunden seit"
+      },
       "dsl_max_rate_down": {
         "name": "DSL-Maximalrate Download"
       },

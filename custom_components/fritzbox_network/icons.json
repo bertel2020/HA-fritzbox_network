@@ -142,6 +142,15 @@
       "internet_line_rate_up": {
         "default": "mdi:speedometer"
       },
+      "internet_link_rate_down": {
+        "default": "mdi:speedometer"
+      },
+      "internet_link_rate_up": {
+        "default": "mdi:speedometer"
+      },
+      "internet_connected_since": {
+        "default": "mdi:timer-outline"
+      },
       "dsl_max_rate_down": {
         "default": "mdi:speedometer"
       },

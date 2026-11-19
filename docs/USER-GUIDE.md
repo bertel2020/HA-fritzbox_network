@@ -148,6 +148,8 @@ More values of the box, all without an extra request unless noted:
 | Sensor **Last restart** | on | when the box last started; the setup reads the uptime along, then hourly and after an outage |
 | Sensors **Internet data received / sent** | off | byte counters since the box started |
 | Sensors **Line rate download / upload** | off | only on cable, fibre and mobile; DSL has its own values |
+| Sensors **Link rate (as reported by the box)** download / upload | off | the maximum rate of the link the box reports (layer 1), on DSL too; there it lies between the sync rate and the attainable rate and moves without a new sync. The counterpart of the core sensor "Max connection download throughput" |
+| Sensor **Internet connected since** | off | the time the connection was set up; the counterpart of the connection uptime of the core integration. It stays the same between polls and changes only with a new connection |
 | Sensors **DSL attainable rate download / upload** | off | the rate the DSL line could reach |
 | Binary sensor **Line** | off | whether the WAN port has a signal; a connection that drops makes it read at once |
 | Sensor **CPU temperature** | off | from the web interface of the box; one web request every 10 updates, **only while the entity is on**; boxes without the sensor get no entity |
@@ -410,6 +412,7 @@ Automations that refer to core entity ids have to be changed to the new ids; the
 |---|---|
 | Device trackers | Device trackers by MAC, with "Consider home" |
 | Internet connection, IP, throughput, bytes, DSL values | Internet sensors and card; throughput on, the rest off |
+| Connection time, maximum rate of the link | "Internet connected since" and "Link rate (as reported by the box)" (off) |
 | Line (`is_linked`) | Binary sensor "Line" (off) |
 | Restart, reconnect | Buttons (off) and the panel with a confirmation |
 | Cleanup | Button "Clean up offline devices" (off) and the panel |

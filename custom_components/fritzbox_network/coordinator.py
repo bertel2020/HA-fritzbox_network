@@ -97,6 +97,8 @@ _LOGGER = logging.getLogger(__name__)
 
 type FritzNetworkConfigEntry = ConfigEntry[FritzNetworkCoordinator]
 
+# seconds the time the connection was set up may differ between polls before it counts as new
+INTERNET_SINCE_TOLERANCE = 10
 _FETCH_ERRORS = (FritzConnectionException, OSError, ET.ParseError, ValueError, KeyError)
 
 # the byte counters of the box are 32 bit on some models and wrap around
@@ -155,6 +157,9 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         # when the box started, as far as known; moved only if it differs by more than a minute
         # (the uptime is read now and then, and each read is a little different)
         self.box_boot: datetime | None = None
+        # when the internet connection was set up, and the reading it was worked out from
+        self.internet_since: datetime | None = None
+        self._since_info: InternetInfo | None = None
         self._uptime_stale = False
         # the CPU temperature: whether the box has the sensor (None = not asked yet), the last
         # value, and how many entities want it; it is read only while one does
@@ -271,6 +276,27 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
         boot = (dt_util.utcnow() - timedelta(seconds=seconds)).replace(second=0, microsecond=0)
         if self.box_boot is None or abs((boot - self.box_boot).total_seconds()) > 60:
             self.box_boot = boot
+
+    def internet_connected_since(self, info: InternetInfo) -> datetime | None:
+        """When the internet connection was set up, from its uptime; None while it is down.
+
+        Kept still while the connection stays: each poll reads the uptime a little differently,
+        and a state that moves with every poll is no state. It moves when the value differs by
+        more than ten seconds, that is when the connection was set up anew.
+        """
+        if self._since_info is info:
+            return self.internet_since
+        self._since_info = info
+        if info.connected is not True or info.uptime is None:
+            self.internet_since = None
+            return None
+        since = (dt_util.utcnow() - timedelta(seconds=info.uptime)).replace(microsecond=0)
+        if (
+            self.internet_since is None
+            or abs((since - self.internet_since).total_seconds()) > INTERNET_SINCE_TOLERANCE
+        ):
+            self.internet_since = since
+        return self.internet_since
 
     def _fetch_uptime(self) -> None:
         """How long the box has run, now and then and after it was unreachable or restarted.

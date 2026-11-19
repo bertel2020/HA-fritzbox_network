@@ -1242,3 +1242,44 @@ async def test_a_box_that_tells_neither_cpu_load_nor_ram_is_not_asked_again(
     assert coordinator.util_supported is False
     assert fake_client.calls.count(("utilization",)) == 1
     assert er.async_get(hass).async_get("sensor.fritz_network_cpu_load") is None
+
+
+async def test_the_link_rate_and_the_connected_since_are_sensors_that_are_off(
+    hass, fake_client, entry
+):
+    await _setup(hass, entry)
+    registry = er.async_get(hass)
+
+    for key in ("internet_link_rate_down", "internet_link_rate_up", "internet_connected_since"):
+        reg = registry.async_get(f"sensor.fritz_network_{key}")
+        assert reg is not None, key
+        assert reg.disabled_by == er.RegistryEntryDisabler.INTEGRATION
+
+    registry.async_update_entity("sensor.fritz_network_internet_link_rate_down", disabled_by=None)
+    registry.async_update_entity("sensor.fritz_network_internet_connected_since", disabled_by=None)
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    # the layer 1 maximum of the link, in Mbit/s
+    assert hass.states.get("sensor.fritz_network_internet_link_rate_down").state == "55.02"
+    since = hass.states.get("sensor.fritz_network_internet_connected_since").state
+    assert dt_util.parse_datetime(since) is not None
+
+
+async def test_the_connected_since_stays_while_the_connection_does(hass, fake_client, entry):
+    await _setup(hass, entry)
+    coordinator = entry.runtime_data
+    info = coordinator.data.internet
+
+    first = coordinator.internet_connected_since(info)
+    assert first is not None
+    # the same reading again, later: no new time
+    assert coordinator.internet_connected_since(info) == first
+    # the next poll reads a few seconds more uptime and a little later: still the same time
+    later = replace(info, uptime=info.uptime + 3)
+    assert coordinator.internet_connected_since(later) == first
+    # a connection set up anew starts the time again
+    anew = replace(info, uptime=5)
+    assert coordinator.internet_connected_since(anew) > first + timedelta(minutes=10)
+    # no time while the connection is down
+    assert coordinator.internet_connected_since(replace(info, connected=False)) is None

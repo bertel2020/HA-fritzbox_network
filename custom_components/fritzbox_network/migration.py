@@ -41,16 +41,18 @@ BOX_KEYS: dict[str, str | None] = {
     "kb_s_received": "internet_download",
     "gb_sent": "internet_bytes_sent",
     "gb_received": "internet_bytes_received",
-    # the rate of the line as the box syncs it; here the DSL sensors say the same
-    "max_kb_s_sent": "dsl_rate_up",
-    "max_kb_s_received": "dsl_rate_down",
-    # the rate the line could reach
+    # the layer 1 maximum of the link as the box reports it, the very value
+    "max_kb_s_sent": "internet_link_rate_up",
+    "max_kb_s_received": "internet_link_rate_down",
+    # the core integration reads this from the same action as the one above; the closest here
+    # is the rate the line could reach
     "link_kb_s_sent": "dsl_max_rate_up",
     "link_kb_s_received": "dsl_max_rate_down",
     "link_noise_margin_sent": "dsl_noise_margin_up",
     "link_noise_margin_received": "dsl_noise_margin_down",
     "link_attenuation_sent": "dsl_attenuation_up",
     "link_attenuation_received": "dsl_attenuation_down",
+    "connection_uptime": "internet_connected_since",
     "device_uptime": "box_uptime",
     "cpu_temperature": "cpu_temperature",
     "update": "firmware",
@@ -62,8 +64,6 @@ BOX_KEYS: dict[str, str | None] = {
 }
 # the keys whose values are about the same, not the same: the user is told
 APPROXIMATE = {
-    "max_kb_s_sent",
-    "max_kb_s_received",
     "link_kb_s_sent",
     "link_kb_s_received",
 }
@@ -84,7 +84,7 @@ REPEATER_KEY_PREFIXES = {"wi_fi_main_": "wifi_"}
 REPEATER_NOT_COVERED = {"reconnect", "cleanup", "firmware_update"}
 PORT_FORWARD_PREFIX = "port_forward_"
 # a counterpart exists but the state means something else: moving it would break the history
-INCOMPATIBLE_KEYS = {"connection_uptime"}
+INCOMPATIBLE_KEYS: set[str] = set()
 # the entities of a device, by the key behind the MAC ("<mac>_<key>"); the tracker has no key
 CLIENT_KEYS = {"tracker": None, "internet_access": "internet_access", "wake_on_lan": "wake_on_lan"}
 
