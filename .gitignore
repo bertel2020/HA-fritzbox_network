@@ -51,3 +51,6 @@ tools/
 
 # Design mockups: local only
 mockups/
+
+# Local design notes and mockups
+docs/design/
