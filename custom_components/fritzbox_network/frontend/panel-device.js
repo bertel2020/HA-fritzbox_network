@@ -252,10 +252,10 @@ export function renderDevice(client, ctx) {
       <section class="card sec wide facts t-net"><div class="chead"><span class="label">${escapeHtml(t.connection)}</span></div>${pathHtml(client, data, t, ctx.threshold)}${tilesHtml(client, data, t)}</section>
       ${trendSection(client, ctx)}
       ${controlsCard(client, data, canWrite, t)}
-      ${entitiesCard(client, { t, hass, enabling, ents: ctx.ents })}
       <section class="card sec"><div class="chead"><span class="label">${escapeHtml(t.master)}</span></div><dl>${master}</dl>
         ${groupsSection(client, data, t)}
         ${notes.length ? noteHtml(t.hintLabel, ...notes) : ""}</section>
+      ${entitiesCard(client, { t, hass, enabling, ents: ctx.ents })}
     </div>`;
 }
 
