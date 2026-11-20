@@ -1025,8 +1025,11 @@ export const PANEL_CSS = `
     .coursectl .seg button { min-height: 44px; }
     details:not(.moremenu) > summary { padding-block: 12px; margin-block: -12px; }
     .chead > .btn { flex: none; white-space: nowrap; }
+    .ph-bar .ph-src { margin: 0; justify-content: flex-start; text-align: left; }
+    .stile .s { align-items: flex-start; } .stile .s > .dot { margin-top: 5px; flex: none; }
+    .stile .s > span:not(.dot) { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
     /* a row of pages that goes on beyond the edge shows it with a shade at that edge, which goes when it is scrolled to the end */
-    .seg.subtabs, .seg.logseg { background: linear-gradient(to right, var(--soft) 30%, transparent) 0 0 / 28px 100% no-repeat local, linear-gradient(to left, var(--soft) 30%, transparent) 100% 0 / 28px 100% no-repeat local, radial-gradient(farthest-side at 0 50%, var(--shadow-c), transparent) 0 0 / 10px 100% no-repeat scroll, radial-gradient(farthest-side at 100% 50%, var(--shadow-c), transparent) 100% 0 / 10px 100% no-repeat scroll, var(--soft); }
+    .seg.subtabs, .seg.logseg, .ph-seg { background: linear-gradient(to right, var(--soft) 30%, transparent) 0 0 / 28px 100% no-repeat local, linear-gradient(to left, var(--soft) 30%, transparent) 100% 0 / 28px 100% no-repeat local, radial-gradient(farthest-side at 0 50%, var(--shadow-c), transparent) 0 0 / 10px 100% no-repeat scroll, radial-gradient(farthest-side at 100% 50%, var(--shadow-c), transparent) 100% 0 / 10px 100% no-repeat scroll, var(--soft); }
   }
   .sec > .label { display: flex; align-items: center; min-height: 34px; }
   .trends { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px 24px; margin-top: 8px; }
