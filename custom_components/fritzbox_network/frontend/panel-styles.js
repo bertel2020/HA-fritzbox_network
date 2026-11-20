@@ -1004,8 +1004,11 @@ export const PANEL_CSS = `
   .tpager { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px 14px; padding: 10px 16px; color: var(--muted); font-size: 13px; }
   .tpager select { margin-left: 8px; min-height: 32px; border: 1px solid var(--input-line); border-radius: 8px; background: var(--surface); padding: 0 8px; }
   .tpager .btn { min-height: 32px; padding: 0 10px; }
+  /* the columns go from the right as the room shrinks: volume and last seen first, then address and link, then the sparkline */
+  @container app (max-width: 1000px) { .devtable .wide.num { display: none; } }
   @container app (max-width: 760px) { .devtable .wide { display: none; } }
-  @container app (max-width: 520px) { .devtable .hist, .devtable th:nth-child(4) { display: none; } .chips2 { display: none; } }
+  @container app (max-width: 520px) { .devtable .hist, .chips2 { display: none; }
+    .devtable { table-layout: fixed; } .devtable th:nth-child(4), .devtable td.num { width: 134px; } .devtable td { padding-left: 8px; padding-right: 8px; } .devtable td:first-child { overflow: hidden; } .devtable .who2 { min-width: 0; } .devtable .who { min-width: 0; } .devtable .who small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .devtable td.num { white-space: nowrap; font-size: 12px; } }
 
   /* the head of every card: the label left, what belongs to the whole card (range, chip, button) right */
   .chead { display: flex; align-items: center; justify-content: space-between; gap: 8px 12px; flex-wrap: wrap; min-height: 34px; margin-bottom: 10px; }
@@ -1019,6 +1022,11 @@ export const PANEL_CSS = `
     .switch::before { content: ""; position: absolute; inset: -6px -4px; }
     .hint a, .ahint a, dd a { display: inline-block; padding: 12px 0; margin: -12px 0; }
     .devtable th > button { padding-top: 14px; padding-bottom: 14px; }
+    .coursectl .seg button { min-height: 44px; }
+    details:not(.moremenu) > summary { padding-block: 12px; margin-block: -12px; }
+    .chead > .btn { flex: none; white-space: nowrap; }
+    /* a row of pages that goes on beyond the edge shows it with a shade at that edge, which goes when it is scrolled to the end */
+    .seg.subtabs, .seg.logseg { background: linear-gradient(to right, var(--soft) 30%, transparent) 0 0 / 28px 100% no-repeat local, linear-gradient(to left, var(--soft) 30%, transparent) 100% 0 / 28px 100% no-repeat local, radial-gradient(farthest-side at 0 50%, var(--shadow-c), transparent) 0 0 / 10px 100% no-repeat scroll, radial-gradient(farthest-side at 100% 50%, var(--shadow-c), transparent) 100% 0 / 10px 100% no-repeat scroll, var(--soft); }
   }
   .sec > .label { display: flex; align-items: center; min-height: 34px; }
   .trends { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px 24px; margin-top: 8px; }
@@ -1322,6 +1330,8 @@ export const PANEL_CSS = `
   .banner span.t { color: var(--text); font-size: 13px; }
   .banner .btn-row { margin: 0; justify-content: flex-start; }
   @container app (max-width: 700px) { .banner { grid-template-columns: auto minmax(0, 1fr); } .banner .btn-row { grid-column: 1 / -1; } }
+  /* on a phone the note is the title and the buttons: the explanation is on the page it leads to */
+  @container app (max-width: 520px) { .banner { padding: 10px 14px; gap: 6px 12px; } .banner span.t { display: none; } #migbanner .banner { margin-bottom: 12px; } }
   .filters { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 10px; }
   .mtable { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
   .mtable .grp { padding: 8px 14px; background: var(--soft); font-size: 11px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }

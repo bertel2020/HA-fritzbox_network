@@ -82,7 +82,7 @@ function row(client, state, t, now, volumes) {
 
 function head(column, state, t) {
   const label = escapeHtml(t.columns[column.id]);
-  const cls = [column.wide ? "wide" : "", ["rate", "last", "traffic"].includes(column.id) ? "num" : ""].filter(Boolean).join(" ");
+  const cls = [column.wide ? "wide" : "", column.id === "history" ? "hist" : "", ["rate", "last", "traffic"].includes(column.id) ? "num" : ""].filter(Boolean).join(" ");
   if (!column.sort) return `<th class="${cls}" scope="col">${label}</th>`;
   const sorted = state.sort === column.sort;
   const order = sorted ? (state.sortDesc ? "descending" : "ascending") : "none";
