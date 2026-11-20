@@ -44,12 +44,11 @@ test("font sizes follow the scale and the small ones keep a floor", () => {
   assert.match(css, /font-size: calc\(16px \* var\(--scale, 1\)\) }/);
 });
 
-test("the menu lists the three themes, modes and sizes in both languages", () => {
+test("the page lists the three themes, modes and sizes in both languages", () => {
   for (const lang of ["de", "en"]) {
     const t = texts.panelTexts(lang);
-    const html = theme.renderLookMenu({ theme: "forest", mode: "dark", size: "l" }, t, true);
+    const html = theme.renderLookPage({ theme: "forest", mode: "dark", size: "l" }, t);
     assert.equal((html.match(/data-look=/g) ?? []).length, 9);
     assert.match(html, /data-value="forest"[^>]*>|aria-checked="true" data-look="theme" data-value="forest"/);
-    assert.equal(theme.renderLookMenu({}, t, false), "");
   }
 });

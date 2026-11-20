@@ -1346,7 +1346,7 @@ test("the gear of Manage is the current page on all of its pages, and each page 
   assert.match(switchBar, /data-tab="filter" aria-selected="false">Einbinden/);
   assert.match(switchBar, /data-tab="cleanup" aria-selected="true">Aufräumen/);
   assert.doesNotMatch(switchBar, /aria-pressed/);
-  assert.deepEqual(panel.TAB_GROUPS.devices, ["filter", "cleanup", "migrate"]);
+  assert.deepEqual(panel.TAB_GROUPS.devices, ["filter", "cleanup", "migrate", "look"]);
 });
 
 const radioPage = await import(`${base}panel-radio.js`);

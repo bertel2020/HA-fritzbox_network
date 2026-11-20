@@ -863,7 +863,7 @@ const en = {
       toastLater: "Hidden for 30 days in this browser.",
     },
   },
-  tabs: { overview: "Overview", net: "Network", vpn: "VPN", internet: "Internet", addresses: "Addresses", routes: "Routes", devices: "Manage", cleanup: "Clean up", filter: "Include", box: "Box", wlan: "Wi-Fi", migrate: "Switch over", netDevices: "Devices", connection: "Connection", boxOverview: "Overview", phone: "Phone", volume: "Data volume", ports: "Port forwarding", boxStatus: "Status", check: "Connection test", log: "Event log", capture: "Capture" },
+  tabs: { overview: "Overview", net: "Network", vpn: "VPN", internet: "Internet", addresses: "Addresses", routes: "Routes", devices: "Manage", cleanup: "Clean up", filter: "Include", box: "Box", wlan: "Wi-Fi", migrate: "Switch over", netDevices: "Devices", connection: "Connection", boxOverview: "Overview", phone: "Phone", volume: "Data volume", ports: "Port forwarding", boxStatus: "Status", check: "Connection test", log: "Event log", capture: "Capture", look: "Appearance" },
   navLabel: "Pages",
   manageStale: "{n} offline for long",
   overview: {
@@ -2531,7 +2531,7 @@ const de = {
       toastLater: "Für 30 Tage in diesem Browser ausgeblendet.",
     },
   },
-  tabs: { overview: "Übersicht", net: "Netzwerk", vpn: "VPN", internet: "Internet", addresses: "Adressen", routes: "Routen", devices: "Verwalten", cleanup: "Aufräumen", filter: "Einbinden", box: "Box", wlan: "WLAN", migrate: "Umsteigen", netDevices: "Geräte", connection: "Verbindung", boxOverview: "Übersicht", phone: "Telefon", volume: "Datenvolumen", ports: "Portfreigaben", boxStatus: "Status", check: "Verbindungstest", log: "Protokoll", capture: "Mitschnitt" },
+  tabs: { overview: "Übersicht", net: "Netzwerk", vpn: "VPN", internet: "Internet", addresses: "Adressen", routes: "Routen", devices: "Verwalten", cleanup: "Aufräumen", filter: "Einbinden", box: "Box", wlan: "WLAN", migrate: "Umsteigen", netDevices: "Geräte", connection: "Verbindung", boxOverview: "Übersicht", phone: "Telefon", volume: "Datenvolumen", ports: "Portfreigaben", boxStatus: "Status", check: "Verbindungstest", log: "Protokoll", capture: "Mitschnitt", look: "Darstellung" },
   navLabel: "Seiten",
   manageStale: "{n} lange offline",
   overview: {

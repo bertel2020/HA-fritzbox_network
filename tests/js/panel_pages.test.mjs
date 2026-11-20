@@ -104,9 +104,9 @@ test("there are the overview and three tabs, and the phone one; Wi-Fi, addresses
   assert.deepEqual([...hidden.matchAll(/<button[^>]*data-tab="(\w+)"/g)].map((m) => m[1]), ["overview", "net", "internet", "box"]);
   // the bar at the bottom has the phone only where FRITZ!Box Telefon is found
   const bottom = (state) => [...panel.renderNav({ tab: "wlan", data: {}, ...state }, t, { icons: true, bottom: true }).matchAll(/data-tab="(\w+)"/g)].map((m) => m[1]);
-  assert.deepEqual(bottom({}), ["overview", "net", "internet", "box"]);
-  assert.deepEqual(bottom({ phoneFound: true }), ["overview", "net", "internet", "box", "phone"]);
-  assert.deepEqual(bottom({ phoneFound: true, phoneHidden: true }), ["overview", "net", "internet", "box", "phone"]);
+  assert.deepEqual(bottom({}), ["overview", "net", "internet", "box", "devices"]);
+  assert.deepEqual(bottom({ phoneFound: true }), ["overview", "net", "internet", "box", "phone", "devices"]);
+  assert.deepEqual(bottom({ phoneFound: true, phoneHidden: true }), ["overview", "net", "internet", "box", "phone", "devices"]);
   // on the phone page without FRITZ!Box Telefon, the bottom bar still has a tab in the tab order
   assert.match(panel.renderNav({ tab: "phone", data: {} }, t, { bottom: true }), /^<button role="tab" tabindex="0" data-tab="overview" aria-selected="false"/);
   assert.match(nav, /data-tab="net" aria-selected="true"/);
@@ -133,10 +133,10 @@ test("VPN is offered only with WireGuard, switching over only while FRITZ!Box To
   const sub = panel.renderSubTabs("internet", t, { data: {} });
   assert.deepEqual([...sub.matchAll(/>([^<]+)<\/button>/g)].map((m) => m[1]), ["Verbindung", "Datenvolumen", "Portfreigaben"]);
   assert.match(panel.renderSubTabs("internet", t, { data: { vpn: [] } }), /Portfreigaben<\/button><button[^>]*data-tab="vpn"/);
-  assert.deepEqual(panel.pagesOf("devices", { migrate: null }), ["filter", "cleanup"]);
-  assert.deepEqual(panel.pagesOf("devices", { migrate: "failed" }), ["filter", "cleanup"]);
-  assert.deepEqual(panel.pagesOf("devices", { migrate: { core: null, rows: [] } }), ["filter", "cleanup"]);
-  assert.deepEqual(panel.pagesOf("devices", { migrate: { core: { entry_id: "c" }, rows: [] } }), ["filter", "cleanup", "migrate"]);
+  assert.deepEqual(panel.pagesOf("devices", { migrate: null }), ["filter", "cleanup", "look"]);
+  assert.deepEqual(panel.pagesOf("devices", { migrate: "failed" }), ["filter", "cleanup", "look"]);
+  assert.deepEqual(panel.pagesOf("devices", { migrate: { core: null, rows: [] } }), ["filter", "cleanup", "look"]);
+  assert.deepEqual(panel.pagesOf("devices", { migrate: { core: { entry_id: "c" }, rows: [] } }), ["filter", "cleanup", "migrate", "look"]);
   assert.match(panel.renderSubTabs("filter", t, { migrate: { core: { entry_id: "c" } } }), /data-tab="migrate"[^>]*>Umsteigen/);
 });
 
@@ -565,7 +565,7 @@ test("the panel asks migrate/scan, shows the note, and Later takes it away", asy
   await p._loadMigrate({ quiet: true });
   assert.deepEqual(calls[0], { type: "fritzbox_network/migrate/scan", entry_id: "e1" });
   assert.match(p._html.migbanner, /FRITZ!Box Tools fragt dieselbe Box ab/);
-  assert.deepEqual(panel.pagesOf("devices", p._state), ["filter", "cleanup", "migrate"]);
+  assert.deepEqual(panel.pagesOf("devices", p._state), ["filter", "cleanup", "migrate", "look"]);
   p._onMigrateClick({ act: "mig-later" });
   assert.equal(p._state.migrateHidden, true);
   assert.equal(p._html.migbanner, "");
@@ -575,7 +575,7 @@ test("a failing scan leaves no note and no page to switch over", async () => {
   const { p } = makePanel({ "migrate/scan": Object.assign(new Error("Unknown command."), { code: "unknown_command" }) }, "filter");
   await p._loadMigrate({ quiet: true });
   assert.equal(p._state.migrate, null);
-  assert.deepEqual(panel.pagesOf("devices", p._state), ["filter", "cleanup"]);
+  assert.deepEqual(panel.pagesOf("devices", p._state), ["filter", "cleanup", "look"]);
   await p._loadMigrate();
   assert.equal(p._state.migrate, "failed");
 });

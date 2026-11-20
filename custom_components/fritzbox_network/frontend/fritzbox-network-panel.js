@@ -24,7 +24,7 @@ import {
 import { fill, panelTexts } from "./texts.js";
 import { PANEL_CSS } from "./panel-styles.js";
 import { ic } from "./icons.js";
-import { applyLook, lookButton, rememberLook, rememberedLook, renderLookMenu, scaleFonts } from "./theme.js";
+import { applyLook, rememberLook, rememberedLook, renderLookPage, scaleFonts } from "./theme.js";
 import {
   groupPlan,
   listOrder,
@@ -195,7 +195,7 @@ export const TAB_GROUPS = {
   internet: ["internet", "volume", "ports", "vpn"],
   box: ["box", "check", "log", "capture"],
   phone: ["phone"],
-  devices: ["filter", "cleanup", "migrate"],
+  devices: ["filter", "cleanup", "migrate", "look"],
 };
 export const TABS = Object.keys(TAB_GROUPS);
 
@@ -238,7 +238,7 @@ export function renderSubTabs(active, t, state = {}) {
 }
 
 /** The icons of the tabs, shown in the bar at the bottom of a narrow screen. */
-const NAV_ICONS = { overview: "home", net: "network", internet: "globe", box: "router", phone: "phone" };
+const NAV_ICONS = { overview: "home", net: "network", internet: "globe", box: "router", phone: "phone", devices: "settings" };
 
 /**
  * The tabs. Internet carries a dot for the state of the line, Box one while it restarts, Phone
@@ -247,11 +247,11 @@ const NAV_ICONS = { overview: "home", net: "network", internet: "globe", box: "r
  * top bar keeps a paler tab (until it is hidden in this browser) and the bar at the bottom has none.
  * When the open page has no tab here, the first tab is the one in the tab order.
  */
-export function renderNav(state, t, { icons = false, bottom = false } = {}) {
+export function renderNav(state, t, { icons = false, bottom = false, stale = 0 } = {}) {
   const line = state.data?.internet;
   const open = groupOf(state.tab);
   const phone = Boolean(state.phoneFound) || (!bottom && !state.phoneHidden);
-  const ids = ["overview", "net", "internet", "box", ...(phone ? ["phone"] : [])];
+  const ids = ["overview", "net", "internet", "box", ...(phone ? ["phone"] : []), ...(bottom ? ["devices"] : [])];
   const focusable = ids.includes(open) ? open : ids[0];
   const tab = (id, extra = "", label = "", quiet = false) =>
     `<button role="tab"${quiet ? ' class="quiet"' : ""} tabindex="${id === focusable ? 0 : -1}" data-tab="${id}" aria-selected="${id === open}"${label ? ` aria-label="${escapeHtml(label)}"` : ""}>${icons ? `<span class="ni">${ic(NAV_ICONS[id])}${extra}</span><span class="nl">${escapeHtml(t.tabs[id])}</span>` : `${escapeHtml(t.tabs[id])}${extra}`}</button>`;
@@ -269,6 +269,7 @@ export function renderNav(state, t, { icons = false, bottom = false } = {}) {
     tab("internet", dot, label),
     tab("box", restarting ? `<i class="dot warn" aria-hidden="true"></i>` : "", restarting ? `${t.tabs.box}, ${t.boxPage.restarting}` : ""),
     phone ? tab("phone", phoneExtra, phoneNote ? `${t.tabs.phone}, ${phoneNote}` : "", !state.phoneFound) : "",
+    bottom ? tab("devices", stale ? `<em aria-hidden="true">${stale}</em>` : "", stale ? `${t.tabs.devices}, ${fill(t.manageStale, { n: stale })}` : "") : "",
   ].join("");
 }
 
@@ -343,7 +344,6 @@ class FritzboxNetworkPanel extends HTMLElement {
       threshold: WEAK_SIGNAL_DBM,
       view: rememberedView(),
       menu: false,
-      look: false,
       names: true,
       // the device "In the network map" points at
       hl: null,
@@ -1174,13 +1174,11 @@ class FritzboxNetworkPanel extends HTMLElement {
           <nav role="tablist" id="nav" aria-label="${t.navLabel}"></nav>
           <div class="header-end">
             <select id="box" aria-label="${t.box}" hidden></select>
-            <span id="lookhost"></span>
             <button class="iconbtn" id="palbtn" data-act="palette" aria-haspopup="dialog" aria-keyshortcuts="Control+K Meta+K" title="${escapeHtml(t.palette.open)}" aria-label="${escapeHtml(t.palette.open)}" hidden>${ic("search")}</button>
             <span id="managehost"></span>
             <a class="iconbtn intlink" href="/config/integrations/integration/${DOMAIN}" data-act="integration" title="${escapeHtml(t.integrationTitle)}" aria-label="${escapeHtml(t.integrationTitle)}">${ic("external")}</a>
           </div>
         </header>
-        <div id="lookmenuhost"></div>
         <div id="callbar"></div>
         <main>
           <div id="migbanner"></div>
@@ -1220,6 +1218,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           <div id="phone-view" hidden></div>
           <div id="wlan-view" hidden></div>
           <div id="migrate-view" hidden></div>
+          <div class="col" id="look-view" hidden></div>
           <div class="col" id="cleanup-view" hidden>
             <div class="phead"><h1 class="sr">${t.cleanup.title}</h1></div>
             <section class="card pad">
@@ -1331,8 +1330,6 @@ class FritzboxNetworkPanel extends HTMLElement {
     const note = this._error ? errorCard(t, t[this._error], { retry: this._error === "noBox" ? "" : "retry" }) : "";
     const ready = Boolean(state.data) && !this._error;
     this._set("note", note || (state.data ? "" : loadingCard(t)));
-    this._set("lookhost", lookButton(t, state.look));
-    this._set("lookmenuhost", renderLookMenu(this._look, t, state.look));
     const netView = root.querySelector("#net-view");
     if (!netView) return;
     this._readPhone();
@@ -1342,7 +1339,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     const onDevice = tab === "net" && Boolean(state.sel);
     netView.hidden = !ready || tab !== "net" || onDevice;
     root.querySelector("#device-view").hidden = !ready || !onDevice;
-    for (const page of ["overview", "internet", "volume", "ports", "vpn", "box", "check", "log", "capture", "phone", "wlan", "addresses", "routes", "cleanup", "filter", "migrate"]) {
+    for (const page of ["overview", "internet", "volume", "ports", "vpn", "box", "check", "log", "capture", "phone", "wlan", "addresses", "routes", "cleanup", "filter", "migrate", "look"]) {
       root.querySelector(`#${page}-view`).hidden = !ready || tab !== page;
     }
     root.querySelector("#live-chip").hidden = !ready;
@@ -1350,7 +1347,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (!ready && this._pal) this._closePalette(false);
     const stale = ready ? panelCounts(state.data, Date.now(), state.threshold).stale : 0;
     this._set("nav", ready ? renderNav(state, t, { icons: true }) : "");
-    this._set("bnav", ready ? renderNav(state, t, { icons: true, bottom: true }) : "");
+    this._set("bnav", ready ? renderNav(state, t, { icons: true, bottom: true, stale }) : "");
     this._set("managehost", ready ? renderManage(state, t, stale) : "");
     this._set("subtabs", ready && !onDevice ? renderSubTabs(tab, t, state) : "");
     this._set("migbanner", ready ? renderBanner(state.migrate, { t, hidden: state.migrateHidden, tab }) : "");
@@ -1369,6 +1366,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     if (tab === "phone") return this._renderPhone();
     if (tab === "wlan") return this._renderWlan();
     if (tab === "migrate") return this._renderMigrate();
+    if (tab === "look") return this._set("look-view", renderLookPage(this._look, t));
     if (tab === "cleanup") return this._renderCleanup();
     if (tab === "filter") return this._renderFilter();
     if (onDevice) return this._renderDetail();
@@ -1710,22 +1708,6 @@ class FritzboxNetworkPanel extends HTMLElement {
         return;
       }
     }
-    const look = root.querySelector("#lookmenu");
-    if (state.look && look?.contains(target)) {
-      const items = [...look.querySelectorAll('[role="menuitemradio"]')];
-      const at = items.indexOf(target);
-      const to = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: items.length - 1 }[event.key];
-      if (to !== undefined && items.length) {
-        event.preventDefault();
-        items[(to + items.length) % items.length].focus();
-        return;
-      }
-      if (event.key === "Tab") {
-        state.look = false;
-        this._update();
-        return;
-      }
-    }
     if (event.key === "Escape") {
       if (state.tab === "phone") this._phoneTip(null);
       const more = root.querySelector("details.moremenu[open]");
@@ -1733,13 +1715,6 @@ class FritzboxNetworkPanel extends HTMLElement {
         event.preventDefault();
         more.open = false;
         more.querySelector("summary")?.focus();
-        return;
-      }
-      if (state.look) {
-        event.preventDefault();
-        state.look = false;
-        this._update();
-        root.querySelector("#lookbtn")?.focus();
         return;
       }
       if (state.menu) {
@@ -1941,17 +1916,12 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._setMenu(!state.menu);
     } else if (ds.act === "menu-close") {
       return this._setMenu(false);
-    } else if (ds.act === "look" || ds.act === "look-close") {
-      state.look = ds.act === "look" && !state.look;
-      this._update();
-      this.shadowRoot.querySelector(state.look ? "#lookmenu [aria-checked=true]" : "#lookbtn")?.focus();
-      return;
     } else if (ds.look) {
       this._look = { ...this._look, [ds.look]: ds.value };
       rememberLook(this._look);
       this._applyLook();
       this._update();
-      this.shadowRoot.querySelector(`#lookmenu [data-look="${ds.look}"][data-value="${ds.value}"]`)?.focus();
+      this.shadowRoot.querySelector(`#look-view [data-look="${ds.look}"][data-value="${ds.value}"]`)?.focus();
       return;
     } else if (ds.view) {
       state.view = ds.view;
@@ -2731,10 +2701,6 @@ class FritzboxNetworkPanel extends HTMLElement {
     const host = root.querySelector("#palscrim");
     if (!host || !this._state.data || this._error) return;
     if (this._state.menu) this._setMenu(false, false);
-    if (this._state.look) {
-      this._state.look = false;
-      this._update();
-    }
     this._pal = { query: "", sel: 0, groups: [], back: root.activeElement ?? null };
     host.innerHTML = renderPalette(this._t);
     host.hidden = false;
@@ -2833,12 +2799,6 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._closePalette();
     if (item.act === "check") return this._checkConnection();
     if (item.act === "reconnect" || item.act === "reboot") return this._interrupt(item.act);
-    if (item.act === "look") {
-      state.look = true;
-      this._update();
-      this.shadowRoot.querySelector("#lookmenu [aria-checked=true]")?.focus();
-      return;
-    }
     if (item.act?.startsWith("look-")) {
       this._look = { ...this._look, mode: item.act.slice(5) };
       rememberLook(this._look);

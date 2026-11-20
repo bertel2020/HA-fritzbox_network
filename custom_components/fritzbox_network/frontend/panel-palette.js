@@ -137,7 +137,6 @@ export function paletteEntries({ clients = [], pages = [], canWrite = false, int
   if (canWrite && internet) entries.push(action("reconnect", { act: "reconnect", sub: t.tabs.internet, icon: "globe" }));
   entries.push(action("capture", { hash: pageHash("capture"), sub: `${t.tabs.box} › ${t.tabs.capture}`, icon: "download" }));
   if (canWrite) entries.push(action("reboot", { act: "reboot", sub: t.tabs.box, icon: "restart" }));
-  entries.push(action("look", { act: "look", sub: t.lookTitle, icon: "palette" }));
   for (const mode of ["light", "dark", "ha"]) entries.push(action(mode, { act: `look-${mode}`, sub: t.lookTitle, icon: "palette", searchOnly: true }));
   return entries;
 }

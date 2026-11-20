@@ -6,6 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Panel, Handy: Der Kopf ist schlank (eine Zeile unter dem Titel, der Link zur Integrationsseite bleibt). **Verwalten** (Zahnrad) liegt als letzter Eintrag in der unteren Leiste. Das **Farbschema** (Farbe, Hell oder Dunkel, Schriftgröße) ist keine Palette im Kopf mehr, sondern die Seite **Darstellung** unter Verwalten; die Suche (`Strg`+`K`) findet sie weiter.
 - Panel, Geräteseite: Die neue Karte **In Home Assistant** ersetzt den schmalen Hinweis „Für Automationen stehen N Entitäten bereit“. Sie listet die Entitäten des Geräts mit Entity-ID zum Kopieren, Zustand und Schalter zum Ein- und Ausschalten, hat **Alle aktivieren**, zeigt Bereich und Labels und, **wo die Entitäten benutzt werden** (Automationen, Skripte, Szenen, Gruppen, Personen). Ausschalten fragt vorher nach. Bei einem Gerät mit lokal vergebener MAC und ausgeschaltetem Tracker steht ein Hinweis dabei.
 - Option **Gerätetracker anlegen** (Standard an): ausgeschaltet gibt es keinen Gerätetracker je Gerät, vorhandene werden entfernt. Gegenstück zum „Gerätetracking“ der Core-Integration.
 - Panel, Geräteliste: Im Menü „Mehr“ gibt es den Filter **Lokal vergebene MAC** (zweites Zeichen der MAC 2, 6, A oder E; bei Handys meist eine zufällige, private Adresse). **Gast** steht jetzt immer im Menü, auch ohne Geräte; ist „Gäste ignorieren“ (oder „Private MACs ignorieren“) an, steht im Menü, dass solche Geräte ignoriert werden.

@@ -392,7 +392,7 @@ export function hashParams(hash) {
 export const SUB_LABELS = { net: "netDevices", internet: "connection", box: "boxStatus" };
 
 /** The pages of the panel reached by "#/<page>"; the start page (the overview) is "#/". */
-const PAGES = ["overview", "net", "wlan", "addresses", "routes", "internet", "volume", "ports", "vpn", "box", "check", "log", "capture", "phone", "filter", "cleanup", "migrate"];
+const PAGES = ["overview", "net", "wlan", "addresses", "routes", "internet", "volume", "ports", "vpn", "box", "check", "log", "capture", "phone", "filter", "cleanup", "migrate", "look"];
 /** Older addresses of pages that have moved: the phone used to live under the box, the diagnosis is the box's connection test now. */
 const MOVED = { "box/phone": "phone", diagnose: "check" };
 

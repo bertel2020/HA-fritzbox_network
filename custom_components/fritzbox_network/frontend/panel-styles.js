@@ -91,7 +91,13 @@ export const PANEL_CSS = `
   /* six pages need about 1180 px next to the title and the link; below that they get a row of their own */
   @container app (max-width: 1180px) { nav { order: 3; flex: 1 1 100%; } nav button { min-height: 44px; } }
   @container app (max-width: 760px) { .menu { display: grid; } }
-  @container app (max-width: 520px) { .header-end { gap: 0; } .header { gap: 0 8px; flex-wrap: nowrap; } .brand { min-height: 56px; flex: 1 1 0; } .brand small.subline { white-space: nowrap; overflow: hidden; } .subline #sub { display: none; } .header-end .intlink { display: none; } .header-end .iconbtn { width: 40px; height: 44px; } }
+  @container app (max-width: 600px) { .header-end .managebtn { display: none; } }
+  .lookgroup [role="radiogroup"] { display: flex; flex-direction: column; gap: 2px; margin: 4px -10px 0; }
+  .lookgroup [role="radio"] { display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 0 10px; border-radius: 8px; text-align: left; width: 100%; }
+  .lookgroup .swatch { width: 16px; height: 16px; cursor: default; flex: none; }
+  .lookgroup [role="radio"]:hover { background: var(--soft); }
+  .lookgroup [role="radio"][aria-checked="true"] { color: var(--accent-hover); background: var(--accent-soft); font-weight: 500; }
+  @container app (max-width: 520px) { .header-end { gap: 0; } .header { gap: 0 8px; flex-wrap: nowrap; } .brand { min-height: 56px; flex: 1 1 0; } .brand small.subline { white-space: nowrap; overflow: hidden; } .subline #sub { display: none; } .header-end .iconbtn { width: 40px; height: 44px; } }
 
   .callbar { max-width: 1200px; margin: 0 auto; padding: 16px 24px 0; }
   @container app (max-width: 600px) { .callbar { padding: 12px 16px 0; } }
@@ -194,11 +200,6 @@ export const PANEL_CSS = `
   .managebtn { position: relative; }
   .managebtn em { position: absolute; top: 2px; right: 0; font-style: normal; font-size: 10px; font-weight: 600; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px; display: inline-grid; place-items: center; background: var(--warn-soft); color: var(--warn); box-shadow: 0 0 0 2px var(--surface); }
   /* outside the header, which holds fixed boxes inside itself because of its blur */
-  .fmenu.lookmenu { position: fixed; top: 76px; left: auto; right: max(16px, calc((100vw - 1200px) / 2 + 24px)); width: 320px; max-width: calc(100vw - 32px); padding: 8px; }
-  .lookmenu [role="group"] + .label { margin-top: 4px; border-top: 1px solid var(--line-2); padding-top: 12px; }
-  .lookmenu [aria-checked="true"] { font-weight: 500; }
-  .fmenu.lookmenu { max-height: calc(100vh - 92px); }
-  .fmenu.lookmenu [aria-checked="true"], .fmenu.lookmenu [aria-checked="true"]:focus-visible { background: var(--accent-soft); }
   .swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--muted); }
   .swatch.ocean { background: #0a6aa8; }
   .swatch.forest { background: #0f7a6b; }
@@ -215,7 +216,6 @@ export const PANEL_CSS = `
   @container app (max-width: 600px) {
     .sheet-scrim { background: rgb(0 0 0 / 35%); }
     .fmenu { position: fixed; left: 0; right: 0; bottom: 0; top: auto; width: auto; max-width: none; max-height: 75vh; border-radius: 20px 20px 0 0; padding: 8px 12px 20px; }
-    .fmenu.lookmenu { left: 0; right: 0; top: auto; bottom: 0; width: auto; max-width: none; max-height: 85vh; padding: 8px 12px 20px; }
     .fmenu::before { content: ""; display: block; width: 40px; height: 4px; border-radius: 2px; background: var(--input-line); margin: 4px auto 8px; }
     .fmenu [role="menuitemradio"] { min-height: 48px; }
   }
