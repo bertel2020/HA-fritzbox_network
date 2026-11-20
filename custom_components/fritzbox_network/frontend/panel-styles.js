@@ -61,7 +61,7 @@ export const PANEL_CSS = `
   /* header: logo and title on the left, the pages as pills and the link to the settings on the right */
   .header { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--line); display: flex; flex-wrap: wrap; align-items: center; gap: 0 24px;
-    padding: 0 max(24px, calc((100% - 1200px) / 2 + 24px)); }
+    padding: 0 24px; }
   .brand { display: flex; align-items: center; gap: 12px; padding: 10px 0; min-height: 60px; min-width: 0; flex: 1 1 auto; }
   .brand > div { min-width: 0; }
   /* HA's menu button is empty while the sidebar is docked; it must not leave its gap before the logo (the logo lines up with the content) */
@@ -99,7 +99,7 @@ export const PANEL_CSS = `
   .lookgroup [role="radio"][aria-checked="true"] { color: var(--accent-hover); background: var(--accent-soft); font-weight: 500; }
   @container app (max-width: 520px) { .header-end { gap: 0; } .header { gap: 0 8px; flex-wrap: nowrap; } .brand { min-height: 56px; flex: 1 1 0; } .brand small.subline { white-space: nowrap; overflow: hidden; } .subline #sub { display: none; } .header-end .iconbtn { width: 40px; height: 44px; } }
 
-  .callbar { max-width: 1200px; margin: 0 auto; padding: 16px 24px 0; }
+  .callbar { padding: 16px 24px 0; }
   @container app (max-width: 600px) { .callbar { padding: 12px 16px 0; } }
 
   /* on a phone the pages are a bar at the bottom of the screen; it sits outside .app, which contains fixed boxes */
@@ -117,7 +117,7 @@ export const PANEL_CSS = `
   :host([compact]) #bnav .nl { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   :host([compact]) main { padding-bottom: 96px !important; }
 
-  main { max-width: 1200px; margin: 0 auto; padding: 24px 24px 64px; }
+  main { padding: 24px 24px 64px; }
   @container app (max-width: 600px) { main { padding: 16px 16px 56px; } .header { padding-left: 16px; padding-right: 16px; } }
 
   /* shared bits */
