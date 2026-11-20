@@ -4,8 +4,14 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+## 1.13.0 – 2026-11-20
+
 ### New
 
+- Panel, phone: the header is slim (one line under the title, the link to the integration page stays) and **Manage** (the gear) is the last entry of the bottom bar. The **colour scheme** (colour, light or dark, type size) is no palette in the header any more but the page **Appearance** under Manage; the search (`Ctrl`+`K`) still finds it.
+- Panel, phone and tablet: the device list fits the screen (device and rate; the columns drop from the right instead of running over the edge; the column headings did not match the rows at narrow widths). The Switch over note is one line on a phone. Rows of pages show a shade at the edge where they go on; fold-out rows, the range choice of the box history and the "Call" button are easier to hit. Tiles wrap their line instead of ending in dots.
+- Panel, device page: on a phone, name and switch of an entity are on one line with the ID and copy button under it (the card is about half as high). Controls and master data share a row on a desktop, the entities come last. Values of the tiles on the Box page and the name of the box wrap.
+- Panel, desktop: the panel uses the whole width of the window (it was at most 1200 px, centred).
 - Panel, device page: the new card **In Home Assistant** replaces the narrow note "For automations, N entities are ready". It lists the entities of the device with the entity ID to copy, the state and a switch to turn it on or off, has **Enable all**, shows area and labels and **where the entities are used** (automations, scripts, scenes, groups, persons). Turning one off asks first. A device with a locally assigned MAC and its tracker off gets a note.
 - Option **Create device trackers** (on by default): when off there is no device tracker per device, and the existing ones are removed. The counterpart of "device tracking" of the core integration.
 - Panel, device list: the "More" menu has the filter **Locally assigned MAC** (second character of the MAC 2, 6, A or E; on phones mostly a random, private address). **Guest** is always in the menu now, also with no devices; when "Ignore guests" (or "Ignore private MACs") is on, the menu says that such devices are left out.

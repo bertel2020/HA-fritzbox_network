@@ -4,6 +4,8 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ## Unveröffentlicht
 
+## 1.13.0 – 2026-11-20
+
 ### Neu
 
 - Panel, Handy: Auf der Geräteseite stehen in der Karte „In Home Assistant“ Name und Schalter in einer Zeile, die Entity-ID mit Kopier-Knopf darunter (die Karte ist etwa halb so hoch). Das Kopier-Symbol und die Aufklapp-Zeile sind größer zu treffen. Werte der Kacheln (Box-Seite) und der Name der Box brechen um, statt mit „…“ zu enden.
