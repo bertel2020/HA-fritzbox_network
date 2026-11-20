@@ -6,6 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Panel, Handy: Auf der Geräteseite stehen in der Karte „In Home Assistant“ Name und Schalter in einer Zeile, die Entity-ID mit Kopier-Knopf darunter (die Karte ist etwa halb so hoch). Das Kopier-Symbol und die Aufklapp-Zeile sind größer zu treffen. Werte der Kacheln (Box-Seite) und der Name der Box brechen um, statt mit „…“ zu enden.
 - Panel, Desktop: Das Panel nutzt die ganze Breite des Fensters (bisher höchstens 1200 px, mittig).
 - Panel, Handy und Tablet: Die Geräteliste passt auf den Bildschirm (Gerät und Rate; die Spalten fallen von rechts weg, statt über den Rand zu laufen; die Kopfzeile der Spalten stimmte bei schmaler Breite nicht mit den Zeilen überein). Der Hinweis zum Umsteigen ist auf dem Handy einzeilig. Die Seitenreiter zeigen mit einem Schatten, dass es weitergeht; Zusammenklapp-Zeilen, die Bereichswahl im Box-Verlauf und der Button „Anrufen“ sind besser zu treffen.
 - Panel, Handy: Der Kopf ist schlank (eine Zeile unter dem Titel, der Link zur Integrationsseite bleibt). **Verwalten** (Zahnrad) liegt als letzter Eintrag in der unteren Leiste. Das **Farbschema** (Farbe, Hell oder Dunkel, Schriftgröße) ist keine Palette im Kopf mehr, sondern die Seite **Darstellung** unter Verwalten; die Suche (`Strg`+`K`) findet sie weiter.

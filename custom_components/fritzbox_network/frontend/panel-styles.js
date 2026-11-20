@@ -439,8 +439,11 @@ export const PANEL_CSS = `
   .entcard .note b { display: block; font-weight: 500; } .entcard .note p { margin: 2px 0 0; color: var(--muted); }
   .entcard .hint { margin: 10px 0 0; } .entcard .foot { display: flex; gap: 8px; margin-top: 10px; }
   @container app (max-width: 600px) {
-    .entcard .ent { grid-template-columns: minmax(0, 1fr) auto; }
-    .entcard .ent .id { grid-column: 1 / 3; } .entcard .ent .stat { display: none; }
+    /* name and switch on one line, the ID with its copy button under it */
+    .entcard .ent { grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "en sw" "id id"; gap: 2px 12px; padding: 10px 0; }
+    .entcard .ent .en { grid-area: en; } .entcard .ent .id { grid-area: id; } .entcard .ent .switch { grid-area: sw; } .entcard .ent .stat { display: none; }
+    .entcard .icon-btn.sm { width: 40px; height: 40px; margin: -6px -6px -6px 0; }
+    .entcard .entlist > summary { padding: 12px 0; }
     .entcard .entmore { grid-template-columns: 1fr; gap: 0; } .entcard .entmore dd { margin-bottom: 8px; }
   }
   .btn-row { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 12px; }
@@ -1025,6 +1028,9 @@ export const PANEL_CSS = `
     .coursectl .seg button { min-height: 44px; }
     details:not(.moremenu) > summary { padding-block: 12px; margin-block: -12px; }
     .chead > .btn { flex: none; white-space: nowrap; }
+    /* the values of the tiles and the name of the box may take a second line instead of ending in dots */
+    .tile b, .tile small, .boxhero .ihead .who b { white-space: normal; overflow-wrap: anywhere; }
+    .facts .tile b { font-size: 22px; }
     .ph-bar .ph-src { margin: 0; justify-content: flex-start; text-align: left; }
     .stile .s { align-items: flex-start; } .stile .s > .dot { margin-top: 5px; flex: none; }
     .stile .s > span:not(.dot) { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
