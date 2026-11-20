@@ -91,7 +91,7 @@ export const PANEL_CSS = `
   /* six pages need about 1180 px next to the title and the link; below that they get a row of their own */
   @container app (max-width: 1180px) { nav { order: 3; flex: 1 1 100%; } nav button { min-height: 44px; } }
   @container app (max-width: 760px) { .menu { display: grid; } }
-  @container app (max-width: 520px) { .header-end { gap: 0; } .header { gap: 0 8px; flex-wrap: nowrap; } .brand { min-height: 56px; flex: 1 1 0; } .brand small.subline { white-space: normal; overflow: visible; row-gap: 2px; } .header-end .iconbtn { width: 44px; height: 44px; } }
+  @container app (max-width: 520px) { .header-end { gap: 0; } .header { gap: 0 8px; flex-wrap: nowrap; } .brand { min-height: 56px; flex: 1 1 0; } .brand small.subline { white-space: nowrap; overflow: hidden; } .subline #sub { display: none; } .header-end .intlink { display: none; } .header-end .iconbtn { width: 40px; height: 44px; } }
 
   .callbar { max-width: 1200px; margin: 0 auto; padding: 16px 24px 0; }
   @container app (max-width: 600px) { .callbar { padding: 12px 16px 0; } }
