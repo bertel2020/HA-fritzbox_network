@@ -317,3 +317,14 @@ test("the card of the data volume lists the devices by what they moved, for a da
   assert.match(overview.renderOverview({ data: { clients } }, { t, now: now.getTime(), language: "de" }), /ov-consumers[\s\S]*Lädt/);
   assert.match(overview.renderOverview({ data: { clients }, traffic: {} }, { t, now: now.getTime(), language: "de" }), /Noch kein Datenverkehr vermerkt/);
 });
+
+test("the quick actions: reading again for everyone, the restart of the box only with the right to write and not while it restarts", () => {
+  const state = { data: { clients: [], internet: { connected: true } } };
+  const html = (over, ctx = {}) => overview.renderOverview({ ...state, ...over }, { t, now: NOW, language: "de", canWrite: true, ...ctx });
+  assert.match(html({}), /data-act="ov-rescan"[^>]*><span class="ic"[^>]*>[\s\S]*?Geräte neu einlesen/);
+  assert.match(html({}), /data-act="reboot" data-k="ov-reboot" aria-haspopup="dialog"[\s\S]*?Box neu starten/);
+  assert.doesNotMatch(html({}, { canWrite: false }), /data-act="reboot"/);
+  assert.doesNotMatch(html({ boxRestart: { phase: "down" } }), /data-act="reboot"/);
+  assert.match(html({}, { canWrite: false }), /data-act="ov-rescan"/);
+  assert.match(html({}, { rescanBusy: true }), /data-act="ov-rescan"[^>]* disabled/);
+});

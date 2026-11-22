@@ -83,6 +83,7 @@ CLEANUP_LIST_COMMAND = f"{DOMAIN}/cleanup/list"
 HIDE_COMMAND = f"{DOMAIN}/devices/hide"
 UNHIDE_COMMAND = f"{DOMAIN}/devices/unhide"
 RECONNECT_COMMAND = f"{DOMAIN}/internet/reconnect"
+REFRESH_COMMAND = f"{DOMAIN}/refresh"
 REBOOT_COMMAND = f"{DOMAIN}/box/reboot"
 MIGRATE_SCAN_COMMAND = f"{DOMAIN}/migrate/scan"
 MIGRATE_RUN_COMMAND = f"{DOMAIN}/migrate/run"
@@ -1067,6 +1068,21 @@ async def ws_reconnect(
 
 
 @websocket_api.websocket_command(
+    {vol.Required("type"): REFRESH_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_refresh(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Ask the box now instead of at the next poll; the answer comes through the subscription."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    await found[1].async_refresh()
+    connection.send_result(msg["id"], {"ok": found[1].last_update_success})
+
+
+@websocket_api.websocket_command(
     {
         vol.Required("type"): VPN_SWITCH_COMMAND,
         vol.Required("entry_id"): str,
@@ -1855,6 +1871,7 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_cleanup_list)
     websocket_api.async_register_command(hass, ws_hide_devices)
     websocket_api.async_register_command(hass, ws_unhide_devices)
+    websocket_api.async_register_command(hass, ws_refresh)
     websocket_api.async_register_command(hass, ws_ports)
     websocket_api.async_register_command(hass, ws_routes)
     websocket_api.async_register_command(hass, ws_route_switch)

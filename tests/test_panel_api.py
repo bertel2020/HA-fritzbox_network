@@ -299,3 +299,22 @@ async def test_a_box_that_cannot_be_reached_is_an_answer_not_a_trace_on_the_addr
         result = await _call(client, command, entry_id=entry.entry_id, **data)
         assert result["success"] is False, command
         assert result["error"]["code"] == "unknown_error", command
+
+
+async def test_refresh_asks_the_box_now_and_needs_an_administrator(
+    hass, hass_ws_client, fake_client, entry, hass_admin_user
+):
+    coordinator = await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    result = await _call(client, f"{DOMAIN}/refresh", entry_id=entry.entry_id)
+    assert result["result"] == {"ok": coordinator.last_update_success}
+    assert result["result"]["ok"] is True
+
+    missing = await _call(client, f"{DOMAIN}/refresh", entry_id="nope")
+    assert missing["error"]["code"] == "not_found"
+
+    hass_admin_user.groups = []
+    client = await hass_ws_client(hass)
+    denied = await _call(client, f"{DOMAIN}/refresh", entry_id=entry.entry_id)
+    assert denied["error"]["code"] == "unauthorized"

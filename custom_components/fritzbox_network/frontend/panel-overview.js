@@ -345,8 +345,11 @@ export function renderOverview(state, ctx) {
         <button class="switch${ctx.guestBusy ? " busy" : ""}" role="switch" aria-checked="${guest.enabled}" aria-label="${escapeHtml(o.quick.guest)}" data-act="wlan-switch" data-key="guest" data-on="${guest.enabled ? "0" : "1"}" data-k="ov-guest"${!ctx.canWrite || ctx.guestBusy ? " disabled" : ""}></button></li>`
     : "";
   const reconnect = ctx.canWrite && state?.data?.internet ? row("restart", "reconnect", "ov-reconnect", o.quick.reconnect, ' aria-haspopup="dialog"') : "";
+  const rescan = row("search", "ov-rescan", "ov-rescan", o.quick.rescan, ctx.rescanBusy ? " disabled aria-busy=\"true\"" : "");
+  // a box that restarts cannot be asked to do it again
+  const reboot = ctx.canWrite && state?.boxRestart?.phase !== "down" ? row("unplug", "reboot", "ov-reboot", o.quick.reboot, ' aria-haspopup="dialog"') : "";
   const quick = `<section class="card sec"><h2 class="label">${escapeHtml(o.quickTitle)}</h2>
-    <ul class="quick">${row("check", "ov-check", "ov-check", o.quick.check)}${reconnect}${guestRow}</ul></section>`;
+    <ul class="quick">${row("check", "ov-check", "ov-check", o.quick.check)}${rescan}${reconnect}${guestRow}${reboot}</ul></section>`;
   return `${head}
     <section class="tiles5" aria-label="${escapeHtml(o.tilesLabel)}">${tiles.map(tileHtml).join("")}</section>
     <div class="ovcols">

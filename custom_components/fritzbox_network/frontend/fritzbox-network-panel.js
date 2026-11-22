@@ -1098,7 +1098,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       vpnHistory: null, addr: addrState(), capture: null, captureSummary: null,
       check: null, latency: null, boxHistory: null, boxSpark: null, log: null, routesSel: null, routesFixed: {}, wlanError: "",
     });
-    for (const busy of ["_historyBusy", "_boxSparkBusy", "_trafficYearBusy", "_vpnHistoryBusy", "_trendBusy", "_ipBusy", "_fixedBusy"]) this[busy] = false;
+    for (const busy of ["_historyBusy", "_boxSparkBusy", "_rescanBusy", "_trafficYearBusy", "_vpnHistoryBusy", "_trendBusy", "_ipBusy", "_fixedBusy"]) this[busy] = false;
     this._historyAt = null;
     this._boxSparkAt = null;
     this._vpnHistoryAt = null;
@@ -1991,6 +1991,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._renderOverview();
       this.shadowRoot.querySelector(`[data-act="ov-traffic"][data-days="${ds.days}"]`)?.focus();
       return;
+    } else if (ds.act === "ov-rescan") {
+      return this._rescan();
     } else if (ds.act === "ov-check") {
       return this._checkConnection();
     } else if (ds.act === "integration") {
@@ -2705,8 +2707,26 @@ class FritzboxNetworkPanel extends HTMLElement {
     const state = this._state;
     this._set(
       "overview-view",
-      renderOverview(state, { t: this._t, language: this._hass?.language, now: Date.now(), canWrite: Boolean(state.data?.can_write), busy: this._overviewBusy, guestBusy: state.wlanBusy.has("guest") })
+      renderOverview(state, { t: this._t, language: this._hass?.language, now: Date.now(), canWrite: Boolean(state.data?.can_write), busy: this._overviewBusy, rescanBusy: this._rescanBusy, guestBusy: state.wlanBusy.has("guest") })
     );
+  }
+
+  /** "Read the devices again": the box is asked now, not at the next poll; the list comes through the subscription. */
+  async _rescan() {
+    if (this._rescanBusy) return;
+    this._rescanBusy = true;
+    this._renderOverview();
+    try {
+      await this._ws("refresh");
+      await this._loadOverview({ force: true });
+      showToast(this.shadowRoot, this._t.overview.quick.rescanned);
+    } catch (err) {
+      showToast(this.shadowRoot, fill(this._t.toastFailed, { error: err?.message ?? err }));
+    } finally {
+      this._rescanBusy = false;
+      this._renderOverview();
+      this.shadowRoot.querySelector('[data-k="ov-rescan"]')?.focus({ preventScroll: true });
+    }
   }
 
   /** "Check the connection" of the overview and the palette: the connection test opens and runs. */

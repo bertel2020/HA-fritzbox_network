@@ -899,7 +899,7 @@ const en = {
     issuesTitle: "What stands out",
     allGood: "All is well",
     quickTitle: "Quick actions",
-    quick: { check: "Check the connection", reconnect: "Reconnect", guest: "Guest Wi-Fi", guestOn: "on", guestOff: "off" },
+    quick: { check: "Check the connection", rescan: "Read the devices again", rescanned: "The box was asked again.", reconnect: "Reconnect", reboot: "Restart the box", guest: "Guest Wi-Fi", guestOn: "on", guestOff: "off" },
     issues: {
       down: "Internet is down",
       noiseVeryLow: "Very low noise margin",
@@ -2572,7 +2572,7 @@ const de = {
     issuesTitle: "Auffälligkeiten",
     allGood: "Alles in Ordnung",
     quickTitle: "Schnellaktionen",
-    quick: { check: "Verbindung prüfen", reconnect: "Neu verbinden", guest: "Gast-WLAN", guestOn: "an", guestOff: "aus" },
+    quick: { check: "Verbindung prüfen", rescan: "Geräte neu einlesen", rescanned: "Die Box wurde neu abgefragt.", reconnect: "Neu verbinden", reboot: "Box neu starten", guest: "Gast-WLAN", guestOn: "an", guestOff: "aus" },
     issues: {
       down: "Internet getrennt",
       noiseVeryLow: "Störabstand sehr niedrig",
