@@ -284,15 +284,16 @@ function eventClock(at, now, language) {
   return new Date(at).toLocaleString(language || undefined, same ? { hour: "2-digit", minute: "2-digit" } : { weekday: "short", hour: "2-digit", minute: "2-digit" });
 }
 
+/** The events of the last 24 hours as a timeline: the time, the mark of the kind, what happened; each leads to its page. */
 function todayHtml(events, t, now, language) {
   const o = t.overview.today;
   const list = events.length
-    ? `<ul class="todaylist">${events
-        .slice(0, 8)
-        .map((e) => `<li><a class="tev ${escapeHtml(e.kind)}" href="${escapeHtml(e.href)}"><span class="ic" aria-hidden="true">${ic(TODAY_ICONS[e.kind] ?? "info")}</span><time datetime="${new Date(e.at).toISOString()}">${escapeHtml(eventClock(e.at, now, language))}</time><span class="tx">${escapeHtml(e.text)}</span></a></li>`)
+    ? `<ul class="timeline">${events
+        .slice(0, 6)
+        .map((e) => `<li><a class="tev ${escapeHtml(e.kind)}" href="${escapeHtml(e.href)}"><time datetime="${new Date(e.at).toISOString()}">${escapeHtml(eventClock(e.at, now, language))}</time><span class="ic" aria-hidden="true">${ic(TODAY_ICONS[e.kind] ?? "info")}</span><span class="tx">${escapeHtml(e.text)}</span></a></li>`)
         .join("")}</ul>`
     : `<p class="hint">${escapeHtml(o.none)}</p>`;
-  return `<section class="card sec today" aria-labelledby="ov-today"><h2 class="label" id="ov-today">${escapeHtml(o.title)}</h2>${list}</section>`;
+  return `<div class="evsec" role="group" aria-labelledby="ov-today"><h3 class="label" id="ov-today">${escapeHtml(o.title)}</h3>${list}</div>`;
 }
 
 const TILE_ICONS = { internet: "globe", net: "network", box: "router", wlan: "wifi", phone: "phone" };
@@ -314,8 +315,9 @@ function sparkHtml(spark) {
 
 /** The parts of a whole as one bar in segments, each as wide as its share. */
 function segHtml(seg) {
-  const total = (seg ?? []).reduce((n, p) => n + p.n, 0);
-  if (!total) return `<span class="tseg empty" aria-hidden="true"><i></i></span>`;
+  if (!Array.isArray(seg)) return "";
+  const total = seg.reduce((n, p) => n + p.n, 0);
+  if (!total) return `<span class="tseg none" aria-hidden="true"><i></i></span>`;
   return `<span class="tseg" aria-hidden="true">${seg.filter((p) => p.n > 0).map((p) => `<i class="${escapeHtml(p.key)}" style="flex:${p.n}"></i>`).join("")}</span>`;
 }
 
@@ -363,11 +365,8 @@ export function renderOverview(state, ctx) {
   return `${head}
     <section class="tiles5" aria-label="${escapeHtml(o.tilesLabel)}">${tiles.map(tileHtml).join("")}</section>
     <div class="ovcols">
-      ${todayHtml(todayEvents(state, t, ctx.now ?? Date.now()), t, ctx.now ?? Date.now(), ctx.language)}
-      ${consumersHtml(state, t, ctx.language, ctx.now ?? Date.now())}
-    </div>
-    <div class="ovcols">
-      <section class="card sec" aria-labelledby="ov-issues"><h2 class="label" id="ov-issues">${escapeHtml(o.issuesTitle)}${issues.length ? ` <span class="chip">${issues.length}</span>` : ""}</h2>${list}</section>
-      ${quick}
+      <section class="card sec" aria-labelledby="ov-issues"><h2 class="label" id="ov-issues">${escapeHtml(o.issuesTitle)}${issues.length ? ` <span class="chip">${issues.length}</span>` : ""}</h2>${list}
+        ${todayHtml(todayEvents(state, t, ctx.now ?? Date.now()), t, ctx.now ?? Date.now(), ctx.language)}</section>
+      <div class="ovside">${consumersHtml(state, t, ctx.language, ctx.now ?? Date.now())}${quick}</div>
     </div>`;
 }

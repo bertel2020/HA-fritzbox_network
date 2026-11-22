@@ -1656,14 +1656,19 @@ export const PANEL_CSS = `
   .stile .tplot { display: block; cursor: crosshair; }
   .stile .tplot .tip { top: 0; left: 50% !important; transform: translate(-50%, -100%); font-size: 11px; padding: 2px 7px; }
   .stile .tplot .tspark { margin-top: 10px; }
-  .today .todaylist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 16px; }
-  .today .tev { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px 0; color: var(--text); text-decoration: none; }
-  .today .tev:hover .tx { color: var(--accent-hover); }
-  .today .tev .ic { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-hover); }
-  .today .tev.device .ic { background: color-mix(in srgb, var(--up) 16%, var(--surface)); color: var(--up); }
-  .today .tev .ic svg { width: 15px; height: 15px; }
-  .today .tev time { flex: none; min-width: 44px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
-  .today .tev .tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .evsec { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line-2); }
+  .evsec > .label { display: block; margin: 0 0 8px; }
+  .evsec .hint { margin: 4px 0 0; }
+  .timeline { list-style: none; margin: 0; padding: 0; }
+  .timeline .tev { display: grid; grid-template-columns: 64px 28px minmax(0, 1fr); gap: 12px; align-items: center; padding: 7px 0; color: var(--text); text-decoration: none; }
+  .timeline .tev:hover .tx { color: var(--accent-hover); }
+  .timeline .tev time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+  .timeline .tev .ic { position: relative; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-hover); }
+  .timeline .tev.device .ic { background: color-mix(in srgb, var(--up) 16%, var(--surface)); color: var(--up); }
+  .timeline .tev.box .ic { background: color-mix(in srgb, var(--ok) 16%, var(--surface)); color: var(--ok); }
+  .timeline .tev .ic svg { width: 14px; height: 14px; }
+  .timeline li:not(:last-child) .tev .ic::after { content: ""; position: absolute; top: 100%; left: 50%; width: 1px; height: 14px; background: var(--line); }
+  .timeline .tev .tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
   .sec > .chead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
   .consumers { list-style: none; margin: 0; padding: 0; }
   .consumer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 7px 0; }
@@ -1681,7 +1686,7 @@ export const PANEL_CSS = `
   .consumer .cbar .u { background: var(--up); }
   .stile .tseg { display: flex; gap: 2px; height: 8px; margin-top: 16px; margin-bottom: 14px; }
   .stile .tseg i { display: block; min-width: 4px; border-radius: 4px; background: var(--tone); }
-  .stile .tseg.empty i { flex: 1; background: color-mix(in srgb, var(--tone) 14%, var(--line)); }
+  .stile .tseg.none i { flex: 1; background: color-mix(in srgb, var(--tone) 14%, var(--line)); }
   .stile .tseg i.in { background: var(--up); }
   .stile .tseg i.out { background: var(--tone); opacity: .55; }
   .stile .tseg i.miss { background: var(--warn); }
@@ -1693,6 +1698,8 @@ export const PANEL_CSS = `
   .ovcols { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); align-items: stretch; }
   @container app (min-width: 900px) { .ovcols { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
   .ovcols > .card + .card { margin-top: 0; }
+  .ovside { display: grid; gap: var(--gap); align-content: start; min-width: 0; }
+  .ovside > .card { margin-top: 0; }
   .ovcols h2.label .chip { margin-left: 8px; text-transform: none; letter-spacing: 0; }
   .issues { list-style: none; margin: 0; padding: 0; }
   .issue { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line); }
