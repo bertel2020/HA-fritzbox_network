@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ## Unveröffentlicht
 
+## 1.14.0 – 2026-11-22
+
+### Neu
+
+- Panel, Übersicht: Die Kacheln **Internet**, **Geräte**, **WLAN** und **Box** zeigen den Verlauf ihres Werts als Sparkline (Download, Geräte online und WLAN-Geräte über 24 Stunden, CPU-Last der Box); fährt man darüber, nennt ein Tooltip Zeit und Wert. Die Kachel **Telefon** zählt die Anrufe von heute und zeigt eingehende, ausgehende und verpasste in einem Balken. Die Kacheln Geräte und WLAN stehen jetzt zusammen vor der Box.
+- Panel, Übersicht: Unter den Auffälligkeiten zeigt eine Zeitleiste, was in den **letzten 24 Stunden** passiert ist: Ereignisse der Internetverbindung, neue Geräte und ein Neustart der Box, jeweils mit Link zur Seite.
+- Panel, Übersicht: Die Karte **Datenverbrauch** listet die fünf Geräte mit dem größten Datenvolumen, für einen Tag oder eine Woche.
+- Panel, Übersicht: Neue Schnellaktionen **Geräte neu einlesen** (fragt die Box sofort ab, statt auf die nächste Abfrage zu warten) und **Box neu starten** (mit Rückfrage, nur mit Schreibrecht). Dafür gibt es den Befehl `fritzbox_network/refresh` für Administratoren.
+
+### Behoben
+
+- Panel, Übersicht: Die Pfeile der Schnellaktionen zeigten nach unten und sahen nach Aufklappen aus; sie zeigen jetzt nach rechts wie auf den Kacheln.
+
 ## 1.13.0 – 2026-11-20
 
 ### Neu

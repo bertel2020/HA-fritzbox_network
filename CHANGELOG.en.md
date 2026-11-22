@@ -4,6 +4,19 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+## 1.14.0 – 2026-11-22
+
+### New
+
+- Panel, overview: the tiles **Internet**, **Devices**, **Wi-Fi** and **Box** show the course of their value as a sparkline (download, devices online and Wi-Fi devices over 24 hours, CPU load of the box); hovering shows the time and value in a tip. The **Phone** tile counts the calls of today and shows incoming, outgoing and missed ones in one bar. The tiles Devices and Wi-Fi now stand together before the box.
+- Panel, overview: below the notes a timeline shows what happened in the **last 24 hours**: events of the internet connection, new devices and a restart of the box, each leading to its page.
+- Panel, overview: the card **Data volume** lists the five devices that moved the most data, for a day or a week.
+- Panel, overview: new quick actions **Read the devices again** (asks the box now instead of waiting for the next poll) and **Restart the box** (asks first, only with the right to write). The command `fritzbox_network/refresh` for administrators serves the first.
+
+### Fixed
+
+- Panel, overview: the arrows of the quick actions pointed down and looked like an expander; they point to the right now, like on the tiles.
+
 ## 1.13.0 – 2026-11-20
 
 ### New
