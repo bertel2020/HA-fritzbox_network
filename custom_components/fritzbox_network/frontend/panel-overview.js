@@ -155,6 +155,16 @@ export function todayEvents(state, t, now = Date.now()) {
   return items.sort((a, b) => b.at - a.at);
 }
 
+/** The span a course of counts is drawn in: a little wider than its own range, so a few devices more or less show, and not below 0. */
+function spread(values) {
+  const known = values.filter((v) => typeof v === "number");
+  if (!known.length) return { min: 0 };
+  const lo = Math.min(...known);
+  const hi = Math.max(...known);
+  const pad = Math.max(1, (hi - lo) * 0.25);
+  return { min: Math.max(0, lo - pad), max: hi + pad };
+}
+
 /**
  * The status tiles: [{ id, href, label, value, unit, sub, tone }] for Internet, Devices, Wi-Fi, Box
  * and, while FRITZ!Box Telefon is found, Phone; the two about the clients come together, the box
@@ -184,7 +194,7 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
   const extra = [counts.new ? fill(o.fresh, { n: counts.new }) : "", counts.blocked ? fill(o.blocked, { n: counts.blocked }) : ""].filter(Boolean);
   const clients = data.clients ?? [];
   const course = onlineCounts(state?.history, clients.map((c) => c.mac));
-  const hourly = (values) => ({ values, min: 0, pts: values.map((v, i) => [Math.round(now / 1000) - (values.length - 1 - i) * 3600, v === null ? null : Math.round(v)]), unit: o.clients });
+  const hourly = (values) => ({ values, ...spread(values), pts: values.map((v, i) => [Math.round(now / 1000) - (values.length - 1 - i) * 3600, v === null ? null : Math.round(v)]), unit: o.clients });
   tiles.push({ id: "net", href: pageHash("net"), label: t.tabs.netDevices, value: String(counts.online), unit: `/ ${counts.all}`, sub: [o.online, ...extra].join(" · "), tone: "", ...(course ? { spark: hourly(course) } : { bar: counts.all ? (counts.online / counts.all) * 100 : null }) });
   // Wi-Fi: devices on it, and the verdict of the radio check
   const wlan = clients.filter((c) => c.online && c.link_type === "wlan").length;
@@ -236,7 +246,7 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
         unit: o.callsToday,
         sub: [today.missed ? counted(o, "missedN", today.missed) : "", messages].filter(Boolean).join(" · "),
         tone: today.missed ? "warn" : "",
-        ...(today.n > 0 ? { seg: parts } : {}),
+        seg: parts,
       });
     } else {
       tiles.push({ id: "phone", href: pageHash("phone"), label: t.tabs.phone, value: missed === null ? "–" : String(missed), unit: o.missed, sub: messages, tone: "" });
@@ -250,7 +260,7 @@ const ISSUE_ICONS = { bad: "alert", warn: "alert", info: "info" };
 function consumersHtml(state, t, language, now) {
   const o = t.overview.consumers;
   const days = state?.ovTrafficDays === 7 ? 7 : 1;
-  const buttons = [1, 7].map((n) => `<button data-act="ov-traffic" data-days="${n}" aria-pressed="${n === days}">${escapeHtml(t.trafficSwitch[n])}</button>`).join("");
+  const buttons = [1, 7].map((n) => `<button data-act="ov-traffic" data-ovdays="${n}" aria-pressed="${n === days}">${escapeHtml(t.trafficSwitch[n])}</button>`).join("");
   const head = `<div class="chead"><h2 class="label" id="ov-consumers">${escapeHtml(o.title)}</h2><div class="seg" role="group" aria-label="${escapeHtml(o.range)}">${buttons}</div></div>`;
   if (!state?.traffic) return `<section class="card sec" aria-labelledby="ov-consumers">${head}<p class="hint">${escapeHtml(t.loading)}</p></section>`;
   const rows = topConsumers(state.traffic, state.data?.clients, days, new Date(now));
@@ -305,7 +315,7 @@ function sparkHtml(spark) {
 /** The parts of a whole as one bar in segments, each as wide as its share. */
 function segHtml(seg) {
   const total = (seg ?? []).reduce((n, p) => n + p.n, 0);
-  if (!total) return "";
+  if (!total) return `<span class="tseg empty" aria-hidden="true"><i></i></span>`;
   return `<span class="tseg" aria-hidden="true">${seg.filter((p) => p.n > 0).map((p) => `<i class="${escapeHtml(p.key)}" style="flex:${p.n}"></i>`).join("")}</span>`;
 }
 

@@ -311,9 +311,9 @@ test("the card of the data volume lists the devices by what they moved, for a da
   const state = { data: { clients }, traffic };
   const html = overview.renderOverview(state, { t, now: now.getTime(), language: "de" });
   assert.match(html, /Datenverbrauch/);
-  assert.match(html, /data-act="ov-traffic" data-days="1" aria-pressed="true"/);
+  assert.match(html, /data-act="ov-traffic" data-ovdays="1" aria-pressed="true"/);
   assert.match(html, /href="#\/device\/a1">NAS</);
-  assert.match(overview.renderOverview({ ...state, ovTrafficDays: 7 }, { t, now: now.getTime(), language: "de" }), /data-days="7" aria-pressed="true"/);
+  assert.match(overview.renderOverview({ ...state, ovTrafficDays: 7 }, { t, now: now.getTime(), language: "de" }), /data-ovdays="7" aria-pressed="true"/);
   assert.match(overview.renderOverview({ data: { clients } }, { t, now: now.getTime(), language: "de" }), /ov-consumers[\s\S]*Lädt/);
   assert.match(overview.renderOverview({ data: { clients }, traffic: {} }, { t, now: now.getTime(), language: "de" }), /Noch kein Datenverkehr vermerkt/);
 });

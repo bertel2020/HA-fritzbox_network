@@ -1681,6 +1681,7 @@ export const PANEL_CSS = `
   .consumer .cbar .u { background: var(--up); }
   .stile .tseg { display: flex; gap: 2px; height: 8px; margin-top: 16px; margin-bottom: 14px; }
   .stile .tseg i { display: block; min-width: 4px; border-radius: 4px; background: var(--tone); }
+  .stile .tseg.empty i { flex: 1; background: color-mix(in srgb, var(--tone) 14%, var(--line)); }
   .stile .tseg i.in { background: var(--up); }
   .stile .tseg i.out { background: var(--tone); opacity: .55; }
   .stile .tseg i.miss { background: var(--warn); }
@@ -1689,7 +1690,7 @@ export const PANEL_CSS = `
   .stile .v small { margin-left: 4px; font-size: 13px; font-weight: 400; letter-spacing: 0; color: var(--muted); }
   .stile .s { display: flex; align-items: center; gap: 6px; margin-top: 4px; min-width: 0; font-size: 12px; color: var(--muted); }
   .stile .s > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .ovcols { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); align-items: start; }
+  .ovcols { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--gap); align-items: stretch; }
   @container app (min-width: 900px) { .ovcols { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); } }
   .ovcols > .card + .card { margin-top: 0; }
   .ovcols h2.label .chip { margin-left: 8px; text-transform: none; letter-spacing: 0; }

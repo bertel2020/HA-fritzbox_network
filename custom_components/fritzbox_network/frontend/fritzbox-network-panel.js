@@ -1987,9 +1987,9 @@ class FritzboxNetworkPanel extends HTMLElement {
     } else if (ds.act === "ov-refresh") {
       return this._loadOverview({ force: true });
     } else if (ds.act === "ov-traffic") {
-      state.ovTrafficDays = Number(ds.days) === 7 ? 7 : 1;
+      state.ovTrafficDays = Number(ds.ovdays) === 7 ? 7 : 1;
       this._renderOverview();
-      this.shadowRoot.querySelector(`[data-act="ov-traffic"][data-days="${ds.days}"]`)?.focus();
+      this.shadowRoot.querySelector(`[data-act="ov-traffic"][data-ovdays="${ds.ovdays}"]`)?.focus();
       return;
     } else if (ds.act === "ov-rescan") {
       return this._rescan();
