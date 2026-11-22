@@ -249,7 +249,7 @@ test("the tiles show a course where there is one, and the phone the calls of tod
   const state = {
     data: { clients, nodes: [], internet: { connected: true, throughput: { down: 1, up: 1 }, samples } },
     history,
-    boxSpark: [10, 20, null, 30],
+    boxSpark: [[1, 10], [2, 20], [3, null], [4, 30]],
     box: { uptime_seconds: 1000, cpu_load: 30 },
     phoneFound: true,
     phoneUnread: 1,
@@ -257,11 +257,13 @@ test("the tiles show a course where there is one, and the phone the calls of tod
     phoneToday: { n: 4, in: 2, out: 1, missed: 1 },
   };
   const tiles = Object.fromEntries(overview.overviewTiles(state, t, { now: NOW, language: "de" }).map((x) => [x.id, x]));
-  assert.deepEqual(tiles.internet.spark, { values: [10000, 20000, 15000], min: 0 });
+  assert.deepEqual(tiles.internet.spark, { values: [10000, 20000, 15000], min: 0, pts: [[1, 10000], [2, 20000], [3, 15000]], fmt: "rate" });
   assert.deepEqual(tiles.net.spark.values, [2, 1, null, 0]);
   assert.equal("bar" in tiles.net, false);
   assert.deepEqual(tiles.wlan.spark.values, [1, 1, null, 0]);
-  assert.deepEqual(tiles.box.spark, { values: [10, 20, null, 30], min: 0, max: 100 });
+  assert.deepEqual(tiles.box.spark, { values: [10, 20, null, 30], min: 0, max: 100, pts: [[1, 10], [2, 20], [3, null], [4, 30]], unit: "%" });
+  assert.deepEqual(tiles.net.spark.pts.map((p) => p[1]), [2, 1, null, 0]);
+  assert.equal(tiles.net.spark.pts[3][0], Math.round(NOW / 1000));
   assert.deepEqual([tiles.phone.value, tiles.phone.unit, tiles.phone.sub, tiles.phone.tone], ["4", "Anrufe heute", "1 verpasst · 1 neue Nachricht", "warn"]);
   assert.deepEqual(tiles.phone.seg.map((p) => p.n), [2, 1, 1]);
   const html = overview.renderOverview(state, { t, now: NOW, language: "de" });
@@ -273,4 +275,24 @@ test("the tiles show a course where there is one, and the phone the calls of tod
   assert.equal(typeof bare.net.bar, "number");
   assert.equal(typeof bare.box.bar, "number");
   assert.deepEqual([bare.phone.value, bare.phone.unit], ["1", "verpasst"]);
+});
+
+test("the last 24 hours: connection events, new devices and a restart of the box, newest first", () => {
+  const hoursAgo = (h) => new Date(NOW - h * 3600000).toISOString();
+  const state = {
+    data: {
+      clients: [client({ name: "Alt", created_at: ago(30) }), client({ id: "n1", mac: "n1", name: "Pixel", created_at: hoursAgo(5) })],
+      internet: { events: [{ time: hoursAgo(2), kind: "reconnected", detail: null }, { time: hoursAgo(30), kind: "disconnected", detail: null }] },
+    },
+    box: { uptime_seconds: 3600 * 8 },
+  };
+  const events = overview.todayEvents(state, t, NOW);
+  assert.deepEqual(events.map((e) => [e.kind, e.text]), [["internet", "Verbindung neu aufgebaut"], ["device", "Neues Gerät: Pixel"], ["box", "Box neu gestartet"]]);
+  assert.deepEqual(events.map((e) => e.href), ["#/internet", "#/net?filter=new", "#/box"]);
+  // more than three new devices are summed up; nothing happened: the card says so
+  const many = { data: { clients: ["a", "b", "c", "d", "e"].map((n, i) => client({ id: n, mac: n, name: n, created_at: hoursAgo(1 + i) })) } };
+  assert.deepEqual(overview.todayEvents(many, t, NOW).map((e) => e.text), ["Neues Gerät: a", "Neues Gerät: b", "Neues Gerät: c", "2 weitere neue Geräte"]);
+  const html = overview.renderOverview({ data: { clients: [], internet: null } }, { t, now: NOW, language: "de" });
+  assert.match(html, /In den letzten 24 Stunden wurde nichts vermerkt/);
+  assert.match(overview.renderOverview(state, { t, now: NOW, language: "de" }), /class="tev internet" href="#\/internet"/);
 });

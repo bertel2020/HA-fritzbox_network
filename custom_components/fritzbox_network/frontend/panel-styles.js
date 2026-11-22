@@ -1653,6 +1653,17 @@ export const PANEL_CSS = `
   .stile .tspark { display: block; width: 100%; height: 38px; margin-top: 10px; overflow: visible; }
   .stile .tspark .ta { fill: color-mix(in srgb, var(--tone) 16%, transparent); stroke: none; }
   .stile .tspark .tl { fill: none; stroke: var(--tone); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+  .stile .tplot { display: block; cursor: crosshair; }
+  .stile .tplot .tip { top: 0; left: 50% !important; transform: translate(-50%, -100%); font-size: 11px; padding: 2px 7px; }
+  .stile .tplot .tspark { margin-top: 10px; }
+  .today .todaylist { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 4px 16px; }
+  .today .tev { display: flex; align-items: center; gap: 10px; min-width: 0; padding: 6px 0; color: var(--text); text-decoration: none; }
+  .today .tev:hover .tx { color: var(--accent-hover); }
+  .today .tev .ic { display: grid; place-items: center; flex: none; width: 26px; height: 26px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-hover); }
+  .today .tev.device .ic { background: color-mix(in srgb, var(--up) 16%, var(--surface)); color: var(--up); }
+  .today .tev .ic svg { width: 15px; height: 15px; }
+  .today .tev time { flex: none; min-width: 44px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .today .tev .tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
   .stile .tseg { display: flex; gap: 2px; height: 8px; margin-top: 16px; margin-bottom: 14px; }
   .stile .tseg i { display: block; min-width: 4px; border-radius: 4px; background: var(--tone); }
   .stile .tseg i.in { background: var(--up); }

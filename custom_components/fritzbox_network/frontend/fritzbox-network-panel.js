@@ -703,7 +703,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     this._boxSparkBusy = true;
     try {
       const history = await this._ws("box/history", { range: "day" });
-      this._state.boxSpark = (history.points ?? []).map((p) => p[1]);
+      this._state.boxSpark = (history.points ?? []).map((p) => [p[0], p[1]]);
       this._boxSparkAt = Date.now();
       if (this._state.tab === "overview") this._renderOverview();
     } catch {

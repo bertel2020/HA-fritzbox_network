@@ -112,6 +112,35 @@ export function onlineCounts(history, macs) {
   return sums.filter((v) => v !== null).length >= 2 ? sums : null;
 }
 
+const DAY_MS = 86400000;
+
+/**
+ * What happened in the last 24 hours, newest first: [{ at, kind, text, href }] with the kind
+ * "internet", "device" or "box". From what the pages know already: the events of the connection,
+ * the devices that came new, a restart of the box (from its uptime, once it is read).
+ */
+export function todayEvents(state, t, now = Date.now()) {
+  const o = t.overview.today;
+  const data = state?.data ?? null;
+  const since = now - DAY_MS;
+  const items = [];
+  for (const e of data?.internet?.events ?? []) {
+    const at = Date.parse(e.time);
+    if (Number.isNaN(at) || at < since || at > now + 60000) continue;
+    items.push({ at, kind: "internet", text: fill(t.inet.kinds[e.kind] ?? e.kind, { detail: e.detail ?? "" }), href: pageHash("internet") });
+  }
+  const fresh = (data?.clients ?? [])
+    .map((c) => ({ name: c.name, at: Date.parse(c.created_at ?? "") }))
+    .filter((c) => !Number.isNaN(c.at) && c.at >= since && c.at <= now + 60000)
+    .sort((a, b) => b.at - a.at);
+  for (const c of fresh.slice(0, 3)) items.push({ at: c.at, kind: "device", text: fill(o.newDevice, { name: c.name || "?" }), href: pageHash("net", { filter: "new" }) });
+  if (fresh.length > 3) items.push({ at: fresh[3].at, kind: "device", text: fill(o.newMore, { n: fresh.length - 3 }), href: pageHash("net", { filter: "new" }) });
+  const info = state?.box && typeof state.box === "object" ? state.box : null;
+  const up = info ? boxUptime(info, now) : null;
+  if (up !== null && up * 1000 < DAY_MS) items.push({ at: now - up * 1000, kind: "box", text: o.boxRestarted, href: pageHash("box") });
+  return items.sort((a, b) => b.at - a.at);
+}
+
 /**
  * The status tiles: [{ id, href, label, value, unit, sub, tone }] for Internet, Devices, Wi-Fi, Box
  * and, while FRITZ!Box Telefon is found, Phone; the two about the clients come together, the box
@@ -133,15 +162,16 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
     const up = line.connected !== false;
     const [value, unit] = split(formatRate(line.throughput?.down, language));
     const since = up && typeof line.uptime === "number" ? fill(o.upSince, { time: formatDuration(line.uptime, t.inet.units) }) : up ? o.up : o.down;
-    const samples = Array.isArray(line.samples) ? line.samples.map((p) => p[1]) : [];
-    tiles.push({ id: "internet", href: pageHash("internet"), label: t.tabs.internet, value, unit, sub: since, tone: up ? "ok" : "bad", ...(samples.length > 1 ? { spark: { values: samples, min: 0 } } : {}) });
+    const samples = Array.isArray(line.samples) ? line.samples.map((p) => [p[0], p[1]]) : [];
+    tiles.push({ id: "internet", href: pageHash("internet"), label: t.tabs.internet, value, unit, sub: since, tone: up ? "ok" : "bad", ...(samples.length > 1 ? { spark: { values: samples.map((p) => p[1]), min: 0, pts: samples, fmt: "rate" } } : {}) });
   } else tiles.push({ id: "internet", href: pageHash("internet"), label: t.tabs.internet, value: "–", unit: "", sub: o.noData, tone: "" });
   // devices: online of all, new and blocked ones
   const counts = panelCounts(data, now, state?.threshold);
   const extra = [counts.new ? fill(o.fresh, { n: counts.new }) : "", counts.blocked ? fill(o.blocked, { n: counts.blocked }) : ""].filter(Boolean);
   const clients = data.clients ?? [];
   const course = onlineCounts(state?.history, clients.map((c) => c.mac));
-  tiles.push({ id: "net", href: pageHash("net"), label: t.tabs.netDevices, value: String(counts.online), unit: `/ ${counts.all}`, sub: [o.online, ...extra].join(" · "), tone: "", ...(course ? { spark: { values: course, min: 0 } } : { bar: counts.all ? (counts.online / counts.all) * 100 : null }) });
+  const hourly = (values) => ({ values, min: 0, pts: values.map((v, i) => [Math.round(now / 1000) - (values.length - 1 - i) * 3600, v === null ? null : Math.round(v)]), unit: o.clients });
+  tiles.push({ id: "net", href: pageHash("net"), label: t.tabs.netDevices, value: String(counts.online), unit: `/ ${counts.all}`, sub: [o.online, ...extra].join(" · "), tone: "", ...(course ? { spark: hourly(course) } : { bar: counts.all ? (counts.online / counts.all) * 100 : null }) });
   // Wi-Fi: devices on it, and the verdict of the radio check
   const wlan = clients.filter((c) => c.online && c.link_type === "wlan").length;
   const check = radioCheck(data);
@@ -154,7 +184,7 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
     unit: o.clients,
     sub: check.nodes.length ? (check.issues ? counted(o, "radioIssues", check.issues) : o.radioOk) : "",
     tone: check.nodes.length ? (check.issues ? "warn" : "ok") : "",
-    ...(wlanCourse ? { spark: { values: wlanCourse, min: 0 } } : {}),
+    ...(wlanCourse ? { spark: hourly(wlanCourse) } : {}),
   });
   // the box: up for how long, its load and temperature where it tells them
   const info = state?.box && typeof state.box === "object" ? state.box : null;
@@ -170,7 +200,7 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
       : [];
     const model = (data.nodes ?? []).find((n) => n.role === "master")?.model ?? "";
     const [value, unit] = uptime === null ? ["–", ""] : split(formatDuration(uptime, t.inet.units).split(" ").slice(0, 2).join(" "));
-    tiles.push({ id: "box", href: pageHash("box"), label: t.tabs.box, value, unit, sub: loads.join(" · ") || model || o.notRead, tone: "", ...(Array.isArray(state?.boxSpark) && state.boxSpark.filter((v) => typeof v === "number").length > 1 ? { spark: { values: state.boxSpark, min: 0, max: 100 } } : { bar: typeof info?.cpu_load === "number" ? info.cpu_load : null }) });
+    tiles.push({ id: "box", href: pageHash("box"), label: t.tabs.box, value, unit, sub: loads.join(" · ") || model || o.notRead, tone: "", ...(Array.isArray(state?.boxSpark) && state.boxSpark.filter((p) => typeof p[1] === "number").length > 1 ? { spark: { values: state.boxSpark.map((p) => p[1]), min: 0, max: 100, pts: state.boxSpark, unit: "%" } } : { bar: typeof info?.cpu_load === "number" ? info.cpu_load : null }) });
   }
   // the phone: the calls of today by kind and the new messages; the missed ones where today is not known
   if (state?.phoneFound) {
@@ -203,15 +233,40 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
 
 const ISSUE_ICONS = { bad: "alert", warn: "alert", info: "info" };
 
+const TODAY_ICONS = { internet: "globe", device: "network", box: "router" };
+
+/** The time of an event: the clock for today, the weekday with it for the day before. */
+function eventClock(at, now, language) {
+  const same = new Date(at).toDateString() === new Date(now).toDateString();
+  return new Date(at).toLocaleString(language || undefined, same ? { hour: "2-digit", minute: "2-digit" } : { weekday: "short", hour: "2-digit", minute: "2-digit" });
+}
+
+function todayHtml(events, t, now, language) {
+  const o = t.overview.today;
+  const list = events.length
+    ? `<ul class="todaylist">${events
+        .slice(0, 8)
+        .map((e) => `<li><a class="tev ${escapeHtml(e.kind)}" href="${escapeHtml(e.href)}"><span class="ic" aria-hidden="true">${ic(TODAY_ICONS[e.kind] ?? "info")}</span><time datetime="${new Date(e.at).toISOString()}">${escapeHtml(eventClock(e.at, now, language))}</time><span class="tx">${escapeHtml(e.text)}</span></a></li>`)
+        .join("")}</ul>`
+    : `<p class="hint">${escapeHtml(o.none)}</p>`;
+  return `<section class="card sec today" aria-labelledby="ov-today"><h2 class="label" id="ov-today">${escapeHtml(o.title)}</h2>${list}</section>`;
+}
+
 const TILE_ICONS = { internet: "globe", net: "network", box: "router", wlan: "wifi", phone: "phone" };
 
 const SPARK = { width: 120, height: 34 };
 
-/** The course of a tile as a line over a faint area, drawn the size of the tile; nothing for fewer than two values. */
+/**
+ * The course of a tile as a line over a faint area, drawn the size of the tile, with the points the
+ * pointer reads like any chart of the panel (a tip with the time and the value); nothing for fewer
+ * than two values.
+ */
 function sparkHtml(spark) {
   const path = spark ? sparkLine(spark.values, SPARK.width, SPARK.height, { min: spark.min, max: spark.max }) : null;
   if (!path) return "";
-  return `<svg class="tspark" viewBox="0 0 ${SPARK.width} ${SPARK.height}" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="ta" d="${path.area}"/><path class="tl" d="${path.line}"/></svg>`;
+  const svg = `<svg class="tspark" viewBox="0 0 ${SPARK.width} ${SPARK.height}" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="ta" d="${path.area}"/><path class="tl" d="${path.line}"/></svg>`;
+  if (!spark.pts) return svg;
+  return `<span class="plot tplot" data-pts="${escapeHtml(JSON.stringify(spark.pts))}" data-unit="${escapeHtml(spark.unit ?? "")}" data-fmt="${escapeHtml(spark.fmt ?? "")}" data-range="day">${svg}<i class="cursor" hidden></i><b class="tip" hidden></b></span>`;
 }
 
 /** The parts of a whole as one bar in segments, each as wide as its share. */
@@ -261,6 +316,7 @@ export function renderOverview(state, ctx) {
     <ul class="quick">${row("check", "ov-check", "ov-check", o.quick.check)}${reconnect}${guestRow}</ul></section>`;
   return `${head}
     <section class="tiles5" aria-label="${escapeHtml(o.tilesLabel)}">${tiles.map(tileHtml).join("")}</section>
+    ${todayHtml(todayEvents(state, t, ctx.now ?? Date.now()), t, ctx.now ?? Date.now(), ctx.language)}
     <div class="ovcols">
       <section class="card sec" aria-labelledby="ov-issues"><h2 class="label" id="ov-issues">${escapeHtml(o.issuesTitle)}${issues.length ? ` <span class="chip">${issues.length}</span>` : ""}</h2>${list}</section>
       ${quick}
