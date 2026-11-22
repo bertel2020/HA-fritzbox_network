@@ -1,6 +1,6 @@
 /* The overview, the start page: a tile per area that leads to its page, what stands out on all pages in one list, and quick actions. */
 
-import { NEW_DAYS, STALE_DAYS, escapeHtml, formatDuration, formatRate, pageHash, panelCounts } from "./shared.js";
+import { NEW_DAYS, STALE_DAYS, escapeHtml, formatDuration, formatRate, pageHash, panelCounts, sparkLine } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { ON_WLAN, networkHints } from "./panel-hints.js";
@@ -96,9 +96,28 @@ export function collectIssues(state, t, now = Date.now()) {
 }
 
 /**
- * The status tiles: [{ id, href, label, value, unit, sub, tone }] for Internet, Devices, Box, Wi-Fi
- * and, while FRITZ!Box Telefon is found, Phone. tone is the dot before the line below the value:
- * "ok", "warn", "bad" or "" for none.
+ * How many devices were online, hour by hour over the last day, from the history of the devices:
+ * the sum of their share online. An hour without a value of any device stays a gap (null); in an
+ * hour with some, a device without a value counts as offline. null without a history.
+ */
+export function onlineCounts(history, macs) {
+  if (!history || typeof history !== "object") return null;
+  const series = [...macs].map((mac) => history[mac]?.online).filter(Array.isArray);
+  if (!series.length) return null;
+  const length = Math.max(...series.map((v) => v.length));
+  const sums = Array.from({ length }, (_, i) => {
+    const known = series.map((v) => v[i]).filter((v) => typeof v === "number");
+    return known.length ? known.reduce((a, b) => a + b, 0) : null;
+  });
+  return sums.filter((v) => v !== null).length >= 2 ? sums : null;
+}
+
+/**
+ * The status tiles: [{ id, href, label, value, unit, sub, tone }] for Internet, Devices, Wi-Fi, Box
+ * and, while FRITZ!Box Telefon is found, Phone; the two about the clients come together, the box
+ * with what it only reports comes after them. tone is the dot before the line below the value:
+ * "ok", "warn", "bad" or "" for none. spark is the course of the value ({ values, min }) for the
+ * line below it, seg the parts of a whole ([{ key, n }]) for the phone, bar a share in percent.
  */
 export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
   const o = t.overview.tiles;
@@ -114,12 +133,29 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
     const up = line.connected !== false;
     const [value, unit] = split(formatRate(line.throughput?.down, language));
     const since = up && typeof line.uptime === "number" ? fill(o.upSince, { time: formatDuration(line.uptime, t.inet.units) }) : up ? o.up : o.down;
-    tiles.push({ id: "internet", href: pageHash("internet"), label: t.tabs.internet, value, unit, sub: since, tone: up ? "ok" : "bad" });
+    const samples = Array.isArray(line.samples) ? line.samples.map((p) => p[1]) : [];
+    tiles.push({ id: "internet", href: pageHash("internet"), label: t.tabs.internet, value, unit, sub: since, tone: up ? "ok" : "bad", ...(samples.length > 1 ? { spark: { values: samples, min: 0 } } : {}) });
   } else tiles.push({ id: "internet", href: pageHash("internet"), label: t.tabs.internet, value: "–", unit: "", sub: o.noData, tone: "" });
   // devices: online of all, new and blocked ones
   const counts = panelCounts(data, now, state?.threshold);
   const extra = [counts.new ? fill(o.fresh, { n: counts.new }) : "", counts.blocked ? fill(o.blocked, { n: counts.blocked }) : ""].filter(Boolean);
-  tiles.push({ id: "net", href: pageHash("net"), label: t.tabs.netDevices, value: String(counts.online), unit: `/ ${counts.all}`, sub: [o.online, ...extra].join(" · "), tone: "", bar: counts.all ? (counts.online / counts.all) * 100 : null });
+  const clients = data.clients ?? [];
+  const course = onlineCounts(state?.history, clients.map((c) => c.mac));
+  tiles.push({ id: "net", href: pageHash("net"), label: t.tabs.netDevices, value: String(counts.online), unit: `/ ${counts.all}`, sub: [o.online, ...extra].join(" · "), tone: "", ...(course ? { spark: { values: course, min: 0 } } : { bar: counts.all ? (counts.online / counts.all) * 100 : null }) });
+  // Wi-Fi: devices on it, and the verdict of the radio check
+  const wlan = clients.filter((c) => c.online && c.link_type === "wlan").length;
+  const check = radioCheck(data);
+  const wlanCourse = onlineCounts(state?.history, clients.filter((c) => c.link_type === "wlan").map((c) => c.mac));
+  tiles.push({
+    id: "wlan",
+    href: pageHash("wlan"),
+    label: t.tabs.wlan,
+    value: String(wlan),
+    unit: o.clients,
+    sub: check.nodes.length ? (check.issues ? counted(o, "radioIssues", check.issues) : o.radioOk) : "",
+    tone: check.nodes.length ? (check.issues ? "warn" : "ok") : "",
+    ...(wlanCourse ? { spark: { values: wlanCourse, min: 0 } } : {}),
+  });
   // the box: up for how long, its load and temperature where it tells them
   const info = state?.box && typeof state.box === "object" ? state.box : null;
   const restarting = state?.boxRestart && state.boxRestart.phase !== "back";
@@ -134,33 +170,33 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
       : [];
     const model = (data.nodes ?? []).find((n) => n.role === "master")?.model ?? "";
     const [value, unit] = uptime === null ? ["–", ""] : split(formatDuration(uptime, t.inet.units).split(" ").slice(0, 2).join(" "));
-    tiles.push({ id: "box", href: pageHash("box"), label: t.tabs.box, value, unit, sub: loads.join(" · ") || model || o.notRead, tone: "", bar: typeof info?.cpu_load === "number" ? info.cpu_load : null });
+    tiles.push({ id: "box", href: pageHash("box"), label: t.tabs.box, value, unit, sub: loads.join(" · ") || model || o.notRead, tone: "", ...(Array.isArray(state?.boxSpark) && state.boxSpark.filter((v) => typeof v === "number").length > 1 ? { spark: { values: state.boxSpark, min: 0, max: 100 } } : { bar: typeof info?.cpu_load === "number" ? info.cpu_load : null }) });
   }
-  // Wi-Fi: devices on it, and the verdict of the radio check
-  const wlan = (data.clients ?? []).filter((c) => c.online && c.link_type === "wlan").length;
-  const check = radioCheck(data);
-  tiles.push({
-    id: "wlan",
-    href: pageHash("wlan"),
-    label: t.tabs.wlan,
-    value: String(wlan),
-    unit: o.clients,
-    sub: check.nodes.length ? (check.issues ? counted(o, "radioIssues", check.issues) : o.radioOk) : "",
-    tone: check.nodes.length ? (check.issues ? "warn" : "ok") : "",
-  });
-  // the phone: missed calls today and new messages
+  // the phone: the calls of today by kind and the new messages; the missed ones where today is not known
   if (state?.phoneFound) {
     const missed = typeof state.phoneMissed === "number" ? state.phoneMissed : null;
     const unread = Number(state.phoneUnread) || 0;
-    tiles.push({
-      id: "phone",
-      href: pageHash("phone"),
-      label: t.tabs.phone,
-      value: missed === null ? "–" : String(missed),
-      unit: o.missed,
-      sub: unread ? counted(o, "messages", unread) : o.noMessages,
-      tone: "",
-    });
+    const today = state.phoneToday;
+    const messages = unread ? counted(o, "messages", unread) : o.noMessages;
+    if (today && typeof today.n === "number") {
+      const parts = [
+        { key: "in", n: today.in ?? 0 },
+        { key: "out", n: today.out ?? 0 },
+        { key: "miss", n: today.missed ?? 0 },
+      ];
+      tiles.push({
+        id: "phone",
+        href: pageHash("phone"),
+        label: t.tabs.phone,
+        value: String(today.n),
+        unit: o.callsToday,
+        sub: [today.missed ? counted(o, "missedN", today.missed) : "", messages].filter(Boolean).join(" · "),
+        tone: today.missed ? "warn" : "",
+        ...(today.n > 0 ? { seg: parts } : {}),
+      });
+    } else {
+      tiles.push({ id: "phone", href: pageHash("phone"), label: t.tabs.phone, value: missed === null ? "–" : String(missed), unit: o.missed, sub: messages, tone: "" });
+    }
   }
   return tiles;
 }
@@ -169,11 +205,28 @@ const ISSUE_ICONS = { bad: "alert", warn: "alert", info: "info" };
 
 const TILE_ICONS = { internet: "globe", net: "network", box: "router", wlan: "wifi", phone: "phone" };
 
+const SPARK = { width: 120, height: 34 };
+
+/** The course of a tile as a line over a faint area, drawn the size of the tile; nothing for fewer than two values. */
+function sparkHtml(spark) {
+  const path = spark ? sparkLine(spark.values, SPARK.width, SPARK.height, { min: spark.min, max: spark.max }) : null;
+  if (!path) return "";
+  return `<svg class="tspark" viewBox="0 0 ${SPARK.width} ${SPARK.height}" preserveAspectRatio="none" aria-hidden="true" focusable="false"><path class="ta" d="${path.area}"/><path class="tl" d="${path.line}"/></svg>`;
+}
+
+/** The parts of a whole as one bar in segments, each as wide as its share. */
+function segHtml(seg) {
+  const total = (seg ?? []).reduce((n, p) => n + p.n, 0);
+  if (!total) return "";
+  return `<span class="tseg" aria-hidden="true">${seg.filter((p) => p.n > 0).map((p) => `<i class="${escapeHtml(p.key)}" style="flex:${p.n}"></i>`).join("")}</span>`;
+}
+
 function tileHtml(tile) {
   const dot = tile.tone ? `<i class="dot ${tile.tone === "ok" ? "on" : tile.tone}" aria-hidden="true"></i>` : "";
   const bar = typeof tile.bar === "number" ? `<span class="sbar" aria-hidden="true"><i style="width:${Math.max(0, Math.min(100, tile.bar))}%"></i></span>` : "";
+  const course = sparkHtml(tile.spark) || segHtml(tile.seg) || bar;
   return `<a class="stile t-${escapeHtml(tile.id)}" href="${escapeHtml(tile.href)}" data-k="ov-${tile.id}"><span class="sico" aria-hidden="true">${ic(TILE_ICONS[tile.id] ?? "info")}</span><span class="label">${escapeHtml(tile.label)}</span>
-    <span class="v">${escapeHtml(tile.value)}${tile.unit ? `<small>${escapeHtml(tile.unit)}</small>` : ""}</span>${bar}
+    <span class="v">${escapeHtml(tile.value)}${tile.unit ? `<small>${escapeHtml(tile.unit)}</small>` : ""}</span>${course}
     <span class="s">${dot}<span>${escapeHtml(tile.sub)}</span></span><span class="sgo" aria-hidden="true">${ic("chev")}</span></a>`;
 }
 

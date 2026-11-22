@@ -1650,6 +1650,14 @@ export const PANEL_CSS = `
   .stile:hover .sgo, .stile:focus-visible .sgo { opacity: 1; }
   .stile .sbar { display: block; height: 4px; margin-top: 8px; border-radius: 2px; background: color-mix(in srgb, var(--tone) 14%, var(--line)); overflow: hidden; }
   .stile .sbar i { display: block; height: 100%; border-radius: 2px; background: var(--tone); }
+  .stile .tspark { display: block; width: 100%; height: 38px; margin-top: 10px; overflow: visible; }
+  .stile .tspark .ta { fill: color-mix(in srgb, var(--tone) 16%, transparent); stroke: none; }
+  .stile .tspark .tl { fill: none; stroke: var(--tone); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+  .stile .tseg { display: flex; gap: 2px; height: 8px; margin-top: 16px; margin-bottom: 14px; }
+  .stile .tseg i { display: block; min-width: 4px; border-radius: 4px; background: var(--tone); }
+  .stile .tseg i.in { background: var(--up); }
+  .stile .tseg i.out { background: var(--tone); opacity: .55; }
+  .stile .tseg i.miss { background: var(--warn); }
   .stile .label { display: block; padding-right: 36px; }
   .stile .v { display: block; margin-top: 6px; font-size: 26px; font-weight: 300; letter-spacing: -.02em; line-height: 1.15; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .stile .v small { margin-left: 4px; font-size: 13px; font-weight: 400; letter-spacing: 0; color: var(--muted); }
@@ -1682,7 +1690,7 @@ export const PANEL_CSS = `
   .qrow .qt { flex: 1; min-width: 0; }
   .qrow .qt small { display: block; margin-top: 1px; font-size: 12px; color: var(--muted); }
   .qrow .qgo { color: var(--muted); }
-  .qrow .qgo svg { width: 16px; height: 16px; }
+  .qrow .qgo svg { width: 16px; height: 16px; transform: rotate(-90deg); }
   button.qrow:hover .qt { color: var(--accent-hover); }
 
   /* the command palette: a dialog over the page, a sheet over the whole screen on a phone */

@@ -56,14 +56,14 @@ test("nothing stands out: no notes, and the tiles say what is there", () => {
   };
   assert.deepEqual(overview.collectIssues(state, t, NOW), []);
   const tiles = overview.overviewTiles(state, t, { now: NOW, language: "de" });
-  assert.deepEqual(tiles.map((x) => x.id), ["internet", "net", "box", "wlan"]);
+  assert.deepEqual(tiles.map((x) => x.id), ["internet", "net", "wlan", "box"]);
   assert.deepEqual(tiles[0], { id: "internet", href: "#/internet", label: "Internet", value: "34,1", unit: "Mbit/s", sub: "Verbunden · 1 Std. 1 Min.", tone: "ok" });
   assert.equal(tiles[1].value, "1");
   assert.equal(tiles[1].unit, "/ 2");
   assert.equal(tiles[1].sub, "online");
   // the box before box/info answered: its model
-  assert.equal(tiles[2].value, "–");
-  assert.equal(tiles[2].sub, "FRITZ!Box 7590");
+  assert.equal(tiles[3].value, "–");
+  assert.equal(tiles[3].sub, "FRITZ!Box 7590");
   const html = overview.renderOverview(state, { t, now: NOW, language: "de", canWrite: true });
   assert.match(html, /<h1 id="dtitle" tabindex="-1" class="sr">Übersicht<\/h1>/);
   assert.match(html, /class="chip ok"><i class="dot on" aria-hidden="true"><\/i>Alles in Ordnung/);
@@ -235,4 +235,42 @@ test("the arrows go round the options, Tab to the first of the next group", () =
   assert.match(html, /role="option" id="pal-o-0" data-pal="0" aria-selected="true"/);
   assert.match(palette.renderPaletteList([], { t, query: "xy ", sel: 0 }), /Nichts gefunden für „xy“/);
   assert.match(palette.renderPalette(t), /role="dialog" aria-modal="true"[\s\S]*role="combobox" aria-expanded="true" aria-controls="pal-list"[\s\S]*role="listbox"/);
+});
+
+test("the tiles show a course where there is one, and the phone the calls of today by kind", () => {
+  const samples = [[1, 10000, 500], [2, 20000, 500], [3, 15000, 500]];
+  const history = { a: { online: [1, 1, null, 0] }, b: { online: [1, 0, null, 0] }, c: { online: [null, null, null, 1] } };
+  assert.deepEqual(overview.onlineCounts(history, ["a", "b"]), [2, 1, null, 0]);
+  assert.deepEqual(overview.onlineCounts(history, ["a", "b", "c"]), [2, 1, null, 1]);
+  assert.equal(overview.onlineCounts(history, ["zz"]), null);
+  assert.equal(overview.onlineCounts(null, ["a"]), null);
+  assert.equal(overview.onlineCounts({ a: { online: [1, null, null] } }, ["a"]), null);
+  const clients = [client({ mac: "a", link_type: "wlan" }), client({ id: "x2", mac: "b" })];
+  const state = {
+    data: { clients, nodes: [], internet: { connected: true, throughput: { down: 1, up: 1 }, samples } },
+    history,
+    boxSpark: [10, 20, null, 30],
+    box: { uptime_seconds: 1000, cpu_load: 30 },
+    phoneFound: true,
+    phoneUnread: 1,
+    phoneMissed: 1,
+    phoneToday: { n: 4, in: 2, out: 1, missed: 1 },
+  };
+  const tiles = Object.fromEntries(overview.overviewTiles(state, t, { now: NOW, language: "de" }).map((x) => [x.id, x]));
+  assert.deepEqual(tiles.internet.spark, { values: [10000, 20000, 15000], min: 0 });
+  assert.deepEqual(tiles.net.spark.values, [2, 1, null, 0]);
+  assert.equal("bar" in tiles.net, false);
+  assert.deepEqual(tiles.wlan.spark.values, [1, 1, null, 0]);
+  assert.deepEqual(tiles.box.spark, { values: [10, 20, null, 30], min: 0, max: 100 });
+  assert.deepEqual([tiles.phone.value, tiles.phone.unit, tiles.phone.sub, tiles.phone.tone], ["4", "Anrufe heute", "1 verpasst · 1 neue Nachricht", "warn"]);
+  assert.deepEqual(tiles.phone.seg.map((p) => p.n), [2, 1, 1]);
+  const html = overview.renderOverview(state, { t, now: NOW, language: "de" });
+  assert.equal((html.match(/class="tspark"/g) ?? []).length, 4);
+  assert.match(html, /<span class="tseg"/);
+  // without a course the tiles keep their bars
+  const bare = Object.fromEntries(overview.overviewTiles({ ...state, history: null, boxSpark: null, data: { ...state.data, internet: { connected: true, throughput: { down: 1, up: 1 } } }, phoneToday: null }, t, { now: NOW, language: "de" }).map((x) => [x.id, x]));
+  assert.equal(bare.internet.spark, undefined);
+  assert.equal(typeof bare.net.bar, "number");
+  assert.equal(typeof bare.box.bar, "number");
+  assert.deepEqual([bare.phone.value, bare.phone.unit], ["1", "verpasst"]);
 });

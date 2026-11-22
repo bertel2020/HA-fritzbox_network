@@ -373,6 +373,10 @@ class FritzboxNetworkPanel extends HTMLElement {
       phoneLive: "",
       phone: phoneUi(),
       phoneMissed: null,
+      // the calls of today by kind, for the tile of the overview
+      phoneToday: null,
+      // the CPU load over the last day, for the tile of the box
+      boxSpark: null,
     };
     this._applyParams(route.tab, hashParams(globalThis.location?.hash));
     // the command palette while it is open: { query, sel, groups, back }
@@ -583,6 +587,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           this._updatedAt = Date.now();
           this._update();
           this._maybeLoadHistory();
+          this._maybeLoadBoxSpark();
           if (this._state.tab === "vpn" && Date.now() - (this._vpnHistoryAt ?? 0) > VPN_HISTORY_REFRESH_MS) this._loadVpnHistory();
           if (this._state.tab === "cleanup") this._loadCleanup();
           if (this._state.tab === "addresses" && this._state.addr.status === "ready") this._loadFixed();
@@ -689,6 +694,23 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._historyAt = Date.now() - HISTORY_REFRESH_MS + 30000;
     } finally {
       this._historyBusy = false;
+    }
+  }
+
+  /** The course of the CPU load for the tile of the box: the last day from the box, read only while the overview shows it, now and then. */
+  async _maybeLoadBoxSpark() {
+    if (this._state.tab !== "overview" || this._boxSparkBusy || (this._boxSparkAt && Date.now() - this._boxSparkAt < HISTORY_REFRESH_MS)) return;
+    this._boxSparkBusy = true;
+    try {
+      const history = await this._ws("box/history", { range: "day" });
+      this._state.boxSpark = (history.points ?? []).map((p) => p[1]);
+      this._boxSparkAt = Date.now();
+      if (this._state.tab === "overview") this._renderOverview();
+    } catch {
+      // the tile keeps its bar; the next poll tries again after a while
+      this._boxSparkAt = Date.now() - HISTORY_REFRESH_MS + 60000;
+    } finally {
+      this._boxSparkBusy = false;
     }
   }
 
@@ -1072,10 +1094,11 @@ class FritzboxNetworkPanel extends HTMLElement {
     Object.assign(this._state, {
       history: null, traffic: null, trafficYear: null, trend: null, ip: null,
       vpnHistory: null, addr: addrState(), capture: null, captureSummary: null,
-      check: null, latency: null, boxHistory: null, log: null, routesSel: null, routesFixed: {}, wlanError: "",
+      check: null, latency: null, boxHistory: null, boxSpark: null, log: null, routesSel: null, routesFixed: {}, wlanError: "",
     });
-    for (const busy of ["_historyBusy", "_trafficYearBusy", "_vpnHistoryBusy", "_trendBusy", "_ipBusy", "_fixedBusy"]) this[busy] = false;
+    for (const busy of ["_historyBusy", "_boxSparkBusy", "_trafficYearBusy", "_vpnHistoryBusy", "_trendBusy", "_ipBusy", "_fixedBusy"]) this[busy] = false;
     this._historyAt = null;
+    this._boxSparkAt = null;
     this._vpnHistoryAt = null;
     this._overviewAt = null;
     this._state.enabling = new Set();

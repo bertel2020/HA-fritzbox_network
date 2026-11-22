@@ -25,7 +25,7 @@ export class PhoneMethods {
   /** What the tabs show of the phone: whether it is there, rings, has new messages. */
   _phoneSignature() {
     const state = this._state;
-    return `${state.phoneFound}|${state.phoneUnread}|${state.phoneMissed}|${state.phoneRinging}|${state.phoneLive}`;
+    return `${state.phoneFound}|${state.phoneUnread}|${state.phoneMissed}|${state.phoneToday?.n}|${state.phoneToday?.missed}|${state.phoneRinging}|${state.phoneLive}`;
   }
 
   /**
@@ -50,6 +50,7 @@ export class PhoneMethods {
     state.phoneUnread = model.found ? model.unread : 0;
     // the missed calls of today, for the tile and the notes of the overview
     state.phoneMissed = model.found ? (model.today?.calls?.missed ?? null) : null;
+    state.phoneToday = model.found ? (model.today?.calls ?? null) : null;
     state.phoneRinging = Boolean(model.found && model.ringing);
     const m = model.found ? model.monitor : null;
     state.phoneLive = m && m.state !== "idle" ? [m.state, m.from, m.fromName, m.with, m.withName, m.to, m.toName].join("~") : "";
