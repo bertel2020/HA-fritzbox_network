@@ -296,3 +296,24 @@ test("the last 24 hours: connection events, new devices and a restart of the box
   assert.match(html, /In den letzten 24 Stunden wurde nichts vermerkt/);
   assert.match(overview.renderOverview(state, { t, now: NOW, language: "de" }), /class="tev internet" href="#\/internet"/);
 });
+
+test("the card of the data volume lists the devices by what they moved, for a day or a week", () => {
+  const now = new Date(2026, 10, 7, 14);
+  const traffic = {
+    a: { "2026-11-07": [100, 50], "2026-11-03": [900, 0] },
+    b: { "2026-11-07": [10, 10] },
+    gone: { "2026-11-06": [5000, 0] },
+  };
+  const clients = [client({ id: "a1", mac: "a", name: "NAS" }), client({ id: "b1", mac: "b", name: "TV" })];
+  assert.deepEqual(overview.topConsumers(traffic, clients, 1, now).map((r) => [r.name, r.total]), [["NAS", 150], ["TV", 20]]);
+  assert.deepEqual(overview.topConsumers(traffic, clients, 7, now).map((r) => [r.name, r.id]), [["gone", null], ["NAS", "a1"], ["TV", "b1"]]);
+  assert.equal(overview.topConsumers(traffic, clients, 7, now, 1).length, 1);
+  const state = { data: { clients }, traffic };
+  const html = overview.renderOverview(state, { t, now: now.getTime(), language: "de" });
+  assert.match(html, /Datenverbrauch/);
+  assert.match(html, /data-act="ov-traffic" data-days="1" aria-pressed="true"/);
+  assert.match(html, /href="#\/device\/a1">NAS</);
+  assert.match(overview.renderOverview({ ...state, ovTrafficDays: 7 }, { t, now: now.getTime(), language: "de" }), /data-days="7" aria-pressed="true"/);
+  assert.match(overview.renderOverview({ data: { clients } }, { t, now: now.getTime(), language: "de" }), /ov-consumers[\s\S]*Lädt/);
+  assert.match(overview.renderOverview({ data: { clients }, traffic: {} }, { t, now: now.getTime(), language: "de" }), /Noch kein Datenverkehr vermerkt/);
+});

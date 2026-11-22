@@ -1,6 +1,6 @@
 /* The overview, the start page: a tile per area that leads to its page, what stands out on all pages in one list, and quick actions. */
 
-import { NEW_DAYS, STALE_DAYS, escapeHtml, formatDuration, formatRate, pageHash, panelCounts, sparkLine } from "./shared.js";
+import { NEW_DAYS, STALE_DAYS, escapeHtml, formatBytes, formatDuration, formatRate, pageHash, panelCounts, sparkLine, trafficByDevice } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
 import { ON_WLAN, networkHints } from "./panel-hints.js";
@@ -113,6 +113,20 @@ export function onlineCounts(history, macs) {
 }
 
 const DAY_MS = 86400000;
+const TOP_CONSUMERS = 5;
+
+/**
+ * The devices that moved the most data over the last day or the last 7 days, the most first:
+ * [{ mac, name, id, down, up, total }]. Names come from the clients; a device the box no longer
+ * lists keeps its MAC and has no page (id null).
+ */
+export function topConsumers(traffic, clients, days, now = new Date(), limit = TOP_CONSUMERS) {
+  const known = new Map((clients ?? []).map((c) => [c.mac, c]));
+  return Object.entries(trafficByDevice(traffic, days, now))
+    .map(([mac, [down, up]]) => ({ mac, name: known.get(mac)?.name || mac, id: known.get(mac)?.id ?? null, down, up, total: down + up }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, limit);
+}
 
 /**
  * What happened in the last 24 hours, newest first: [{ at, kind, text, href }] with the kind
@@ -233,6 +247,25 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
 
 const ISSUE_ICONS = { bad: "alert", warn: "alert", info: "info" };
 
+function consumersHtml(state, t, language, now) {
+  const o = t.overview.consumers;
+  const days = state?.ovTrafficDays === 7 ? 7 : 1;
+  const buttons = [1, 7].map((n) => `<button data-act="ov-traffic" data-days="${n}" aria-pressed="${n === days}">${escapeHtml(t.trafficSwitch[n])}</button>`).join("");
+  const head = `<div class="chead"><h2 class="label" id="ov-consumers">${escapeHtml(o.title)}</h2><div class="seg" role="group" aria-label="${escapeHtml(o.range)}">${buttons}</div></div>`;
+  if (!state?.traffic) return `<section class="card sec" aria-labelledby="ov-consumers">${head}<p class="hint">${escapeHtml(t.loading)}</p></section>`;
+  const rows = topConsumers(state.traffic, state.data?.clients, days, new Date(now));
+  const top = rows[0]?.total || 1;
+  const list = rows
+    .map((r) => {
+      const name = escapeHtml(r.name);
+      const who = r.id ? `<a class="tlink" href="#/device/${escapeHtml(r.id)}">${name}</a>` : `<span>${name}</span>`;
+      return `<li class="consumer"><span class="cn">${who}</span><span class="cv"><i class="vdn">↓</i> ${escapeHtml(formatBytes(r.down, language))} <i class="vup">↑</i> ${escapeHtml(formatBytes(r.up, language))}</span>
+        <span class="cbar" aria-hidden="true"><i class="d" style="width:${((r.down / top) * 100).toFixed(1)}%"></i><i class="u" style="width:${((r.up / top) * 100).toFixed(1)}%"></i></span></li>`;
+    })
+    .join("");
+  return `<section class="card sec" aria-labelledby="ov-consumers">${head}${list ? `<ul class="consumers">${list}</ul>` : `<p class="hint">${escapeHtml(o.none)}</p>`}</section>`;
+}
+
 const TODAY_ICONS = { internet: "globe", device: "network", box: "router" };
 
 /** The time of an event: the clock for today, the weekday with it for the day before. */
@@ -316,7 +349,10 @@ export function renderOverview(state, ctx) {
     <ul class="quick">${row("check", "ov-check", "ov-check", o.quick.check)}${reconnect}${guestRow}</ul></section>`;
   return `${head}
     <section class="tiles5" aria-label="${escapeHtml(o.tilesLabel)}">${tiles.map(tileHtml).join("")}</section>
-    ${todayHtml(todayEvents(state, t, ctx.now ?? Date.now()), t, ctx.now ?? Date.now(), ctx.language)}
+    <div class="ovcols">
+      ${todayHtml(todayEvents(state, t, ctx.now ?? Date.now()), t, ctx.now ?? Date.now(), ctx.language)}
+      ${consumersHtml(state, t, ctx.language, ctx.now ?? Date.now())}
+    </div>
     <div class="ovcols">
       <section class="card sec" aria-labelledby="ov-issues"><h2 class="label" id="ov-issues">${escapeHtml(o.issuesTitle)}${issues.length ? ` <span class="chip">${issues.length}</span>` : ""}</h2>${list}</section>
       ${quick}

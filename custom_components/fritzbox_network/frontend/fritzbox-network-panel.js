@@ -338,6 +338,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       addr: addrState(),
       traffic: null,
       trafficRange: 7,
+      // the span of the card of the overview that lists the devices by data volume: 1 or 7 days
+      ovTrafficDays: 1,
       trend: null,
       closed: new Set(),
       sel: route.device,
@@ -1984,6 +1986,11 @@ class FritzboxNetworkPanel extends HTMLElement {
       return this._openPalette();
     } else if (ds.act === "ov-refresh") {
       return this._loadOverview({ force: true });
+    } else if (ds.act === "ov-traffic") {
+      state.ovTrafficDays = Number(ds.days) === 7 ? 7 : 1;
+      this._renderOverview();
+      this.shadowRoot.querySelector(`[data-act="ov-traffic"][data-days="${ds.days}"]`)?.focus();
+      return;
     } else if (ds.act === "ov-check") {
       return this._checkConnection();
     } else if (ds.act === "integration") {

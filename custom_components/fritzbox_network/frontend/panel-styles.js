@@ -1664,6 +1664,21 @@ export const PANEL_CSS = `
   .today .tev .ic svg { width: 15px; height: 15px; }
   .today .tev time { flex: none; min-width: 44px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
   .today .tev .tx { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .sec > .chead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .consumers { list-style: none; margin: 0; padding: 0; }
+  .consumer { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 7px 0; }
+  .consumer + .consumer { border-top: 1px solid var(--line-2); }
+  .consumer .cn { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; }
+  .consumer .cn .tlink { color: var(--text); text-decoration: none; }
+  .consumer .cn .tlink:hover { color: var(--accent-hover); }
+  .consumer .cv { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .consumer .cv i { font-style: normal; }
+  .consumer .cv .vdn { color: var(--accent); }
+  .consumer .cv .vup { color: var(--up); }
+  .consumer .cbar { grid-column: 1 / -1; display: flex; gap: 2px; height: 4px; }
+  .consumer .cbar i { display: block; height: 100%; border-radius: 2px; min-width: 2px; }
+  .consumer .cbar .d { background: var(--accent); }
+  .consumer .cbar .u { background: var(--up); }
   .stile .tseg { display: flex; gap: 2px; height: 8px; margin-top: 16px; margin-bottom: 14px; }
   .stile .tseg i { display: block; min-width: 4px; border-radius: 4px; background: var(--tone); }
   .stile .tseg i.in { background: var(--up); }
