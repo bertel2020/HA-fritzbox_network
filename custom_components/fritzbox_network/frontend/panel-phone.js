@@ -245,7 +245,7 @@ function linesBar(model, ctx) {
     })
     .join("");
   const bad = lines.some((x) => x.registered === false);
-  return `<section class="card sec ph-lines" aria-label="${esc(l.label)}"><div class="chead"><span class="label">${esc(l.label)}</span></div><div class="ph-chips">${chips}</div>${bad ? `<p class="hint">${esc(l.downHint)}</p>` : ""}</section>`;
+  return `<section class="ph-lines${bad ? " bad" : ""}" aria-label="${esc(l.label)}"><div class="ph-chips"><span class="label">${esc(l.label)}</span>${chips}</div>${bad ? `<p class="hintline warn"><span aria-hidden="true">${ic("alert")}</span><span>${esc(l.downHint)}</span></p>` : ""}</section>`;
 }
 
 function staleNote(model, ctx) {

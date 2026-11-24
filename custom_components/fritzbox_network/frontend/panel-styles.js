@@ -1524,8 +1524,10 @@ export const PANEL_CSS = `
   .ph-chev { color: var(--muted); display: inline-grid; transition: transform .15s; }
   .ph-main[aria-expanded="true"] ~ .ph-act .ph-chev { transform: rotate(180deg); }
   .ph-norec { font-size: 12px; color: var(--muted); white-space: nowrap; }
-  .ph-chips { display: flex; flex-wrap: wrap; gap: 8px; }
-  .ph-lines .hint { margin-top: 10px; }
+  .ph-chips { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+  .ph-chips .label { margin-right: 4px; }
+  .ph-lines { min-width: 0; }
+  .ph-lines .hintline { margin: 8px 0 0; }
   .ph-check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; }
   .ph-timer-note { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 12px; color: var(--accent-hover); }
   .ph-timer-note svg { width: 14px; height: 14px; flex: none; }
