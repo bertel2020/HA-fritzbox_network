@@ -49,7 +49,7 @@ import { enablePlan, renderDevice } from "./panel-device.js";
 import { deviceEntities, offRows, usesOf } from "./panel-entities.js";
 import { openDialog, openFormDialog, openPasswordDialog, showToast } from "./panel-dialogs.js";
 import { sinceText } from "./panel-phone.js";
-import { WS_PARTS } from "./phone-model.js";
+import { WS_PARTS, localStore, readTimers } from "./phone-model.js";
 import { RESTART_POLL_MS, minSec, nextRestart, renderBoxPage, restarted } from "./panel-box.js";
 import { isLastNetwork, passwordRules, qrContent, randomPassword, renderWlan } from "./panel-wlan.js";
 import { bannerHidden, hasCore, hideBanner, renderBanner, renderMigrate } from "./panel-migrate.js";
@@ -163,6 +163,10 @@ function phoneUi() {
     busy: new Set(),
     rights: "",
     chosen: null,
+    // the own number the call list is narrowed to ("" = all), the phone dial rings (remembered), the timers started here
+    own: "",
+    dialPhone: "",
+    timers: readTimers(localStore()),
     // the last good state of each entity, shown while FRITZ!Box Telefon does not reach the box
     cache: new Map(),
   };
@@ -377,6 +381,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       phoneMissed: null,
       // the calls of today by kind, for the tile of the overview
       phoneToday: null,
+      // the telephone numbers of the box and which of them the provider has registered
+      phoneLines: null,
       // the CPU load over the last day, for the tile of the box
       boxSpark: null,
     };

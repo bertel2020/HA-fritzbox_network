@@ -328,3 +328,25 @@ test("the quick actions: reading again for everyone, the restart of the box only
   assert.match(html({}, { canWrite: false }), /data-act="ov-rescan"/);
   assert.match(html({}, { rescanBusy: true }), /data-act="ov-rescan"[^>]* disabled/);
 });
+
+// ---------- the telephone numbers ----------
+
+test("a number the provider has not registered turns the phone tile red, is a note and an event", () => {
+  const lines = { total: 2, known: 2, privacy: false, down: [{ number: "030 5550202", status: "Error", since: NOW - 3600000 }], changes: [{ number: "030 5550202", registered: false, at: NOW - 3600000 }, { number: "030 5550101", registered: true, at: NOW - 3 * 86400000 }] };
+  const state = { data: { clients: [], nodes: [] }, phoneFound: true, phoneUnread: 0, phoneMissed: 1, phoneToday: { n: 4, in: 2, out: 1, missed: 1 }, phoneLines: lines };
+  const tile = overview.overviewTiles(state, t, { now: NOW, language: "de" }).find((x) => x.id === "phone");
+  assert.deepEqual([tile.tone, tile.sub], ["bad", "030 5550202 nicht angemeldet · 1 verpasst · Keine neuen Nachrichten"]);
+  const issue = overview.collectIssues(state, t, NOW).find((i) => i.key === "phone-line");
+  assert.deepEqual([issue.level, issue.title, issue.detail, issue.href], ["bad", "Rufnummer 030 5550202 ist nicht angemeldet", "Der Anbieter nimmt sie nicht an (Status: Error). Anrufe kommen nicht an.", "#/phone"]);
+  const events = overview.todayEvents(state, t, NOW).filter((e) => e.kind === "phone");
+  assert.deepEqual(events.map((e) => [e.text, e.bad]), [["Rufnummer 030 5550202 abgemeldet", true]]);
+  assert.match(overview.renderOverview(state, { t, now: NOW, language: "de" }), /class="tev phone bad"/);
+  // two of them, privacy mode, and the English texts
+  const two = { ...state, phoneLines: { ...lines, privacy: true, down: [lines.down[0], { number: "030 5550303", status: "", since: null }] } };
+  assert.equal(overview.overviewTiles(two, en, { now: NOW }).find((x) => x.id === "phone").sub.startsWith("2 numbers not registered"), true);
+  assert.match(overview.collectIssues(two, en, NOW).find((i) => i.key === "phone-line").title, /•••/);
+  // all well, or no lines: nothing new
+  const fine = { ...state, phoneLines: { ...lines, down: [], changes: [] } };
+  assert.equal(overview.collectIssues(fine, t, NOW).some((i) => i.key === "phone-line"), false);
+  assert.equal(overview.overviewTiles({ ...state, phoneLines: null }, t, { now: NOW }).find((x) => x.id === "phone").tone, "warn");
+});

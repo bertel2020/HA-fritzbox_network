@@ -6,7 +6,7 @@
  */
 import { openDialog, openFormDialog, showToast } from "./panel-dialogs.js";
 import { dialSuggestions, liveBand, lookupBody, mmss, renderPhone } from "./panel-phone.js";
-import { HISTORY_PERIODS, PERIODS, PERIOD_DAYS, PHONE_DOMAIN, REVEAL_MS, SIGN_EXPIRES_S, SIGN_REUSE_MS, WS_PARTS, contactIssue, dialable, fetchPhoneWs, parseWsEntries, phoneLoaded, phoneTrigger, readPhoneModel, wsCode } from "./phone-model.js";
+import { HISTORY_PERIODS, PERIODS, PERIOD_DAYS, PHONE_DOMAIN, REVEAL_MS, SIGN_EXPIRES_S, SIGN_REUSE_MS, WS_PARTS, contactIssue, dialable, fetchPhoneWs, dialChoices, lineSummary, localStore, minutesUntilMorning, TIMER_CHOICES, TIMER_MAX, writeTimers, parseWsEntries, phoneLoaded, phoneTrigger, readPhoneModel, wsCode } from "./phone-model.js";
 import { ic } from "./icons.js";
 import { escapeHtml } from "./shared.js";
 import { fill } from "./texts.js";
@@ -25,7 +25,8 @@ export class PhoneMethods {
   /** What the tabs show of the phone: whether it is there, rings, has new messages. */
   _phoneSignature() {
     const state = this._state;
-    return `${state.phoneFound}|${state.phoneUnread}|${state.phoneMissed}|${state.phoneToday?.n}|${state.phoneToday?.missed}|${state.phoneRinging}|${state.phoneLive}`;
+    const l = state.phoneLines;
+    return `${state.phoneFound}|${state.phoneUnread}|${state.phoneMissed}|${state.phoneToday?.n}|${state.phoneToday?.missed}|${state.phoneRinging}|${state.phoneLive}|${l ? `${l.total}:${l.down.map((x) => x.number).join(",")}` : ""}`;
   }
 
   /**
@@ -52,6 +53,8 @@ export class PhoneMethods {
     state.phoneMissed = model.found ? (model.today?.calls?.missed ?? null) : null;
     state.phoneToday = model.found ? (model.today?.calls ?? null) : null;
     state.phoneRinging = Boolean(model.found && model.ringing);
+    // the telephone numbers and whether the provider has them registered, for the tile and the notes
+    state.phoneLines = model.found && model.lines?.length ? { ...lineSummary(model.lines), privacy: Boolean(model.privacy) } : null;
     const m = model.found ? model.monitor : null;
     state.phoneLive = m && m.state !== "idle" ? [m.state, m.from, m.fromName, m.with, m.withName, m.to, m.toName].join("~") : "";
     return true;
@@ -316,6 +319,10 @@ export class PhoneMethods {
       ui.filter = ds.phVal;
       return redraw(`ph-f-${ds.phVal}`);
     }
+    if (act === "ph-own") {
+      ui.own = ds.phVal ?? "";
+      return redraw(`ph-o-${ds.phVal || "all"}`);
+    }
     if (act === "ph-reset") {
       ui.filter = "all";
       ui.query = "";
@@ -354,7 +361,8 @@ export class PhoneMethods {
     if (act === "ph-download") return this._phoneDownload(ds.phEnt, ds.phIdx);
     if (act === "ph-mark") return this._phoneMark(ds.phEnt, ds.phIdx);
     if (act === "ph-delete") return this._phoneDelete(ds.phEnt, ds.phIdx);
-    if (act === "ph-tamsw") return this._phoneTamSwitch(ds.phEnt, ds.phVal === "1", ds.phName ?? "");
+    if (act === "ph-tamsw" || act === "ph-fwdsw") return this._phoneTamSwitch(ds.phEnt, ds.phVal === "1", ds.phName ?? "");
+    if (act === "ph-timer") return this._phoneTimer(ds.phEnt, ds.phName ?? "");
     if (act === "ph-jump") {
       const tam = model.tams.find((x) => x.tamIndex === Number(ds.phTam));
       if (!tam) return;
@@ -366,17 +374,34 @@ export class PhoneMethods {
     }
   }
 
-  /** The dial dialog: a number or a name from the phone books, checked like the service checks it. */
+  /**
+   * The dial dialog: a number or a name from the phone books, checked like the service checks it;
+   * with the phones of the box known also which phone rings (for this call, or remembered) and
+   * after how many seconds dialling stops if nobody picks up.
+   */
   async _phoneDial(number = "", name = "") {
     const t = this._t;
     const d = t.phone.dial;
     const model = this._phone;
+    const ui = this._state.phone;
+    const choices = dialChoices(model?.phones);
+    const remembered = choices.some((c) => c.name === ui.dialPhone) ? ui.dialPhone : "";
     let picked = name;
+    const kind = (c) => d.kinds[c.kind] ?? "";
+    const phoneField = choices.length
+      ? `<label class="field"><span class="label">${escapeHtml(d.phone)}</span><select id="ph-dial-phone">
+          <option value="">${escapeHtml(d.phoneBox)}</option>
+          ${choices.map((c) => `<option value="${escapeHtml(c.name)}"${c.name === remembered ? " selected" : ""}>${escapeHtml([c.name, kind(c), c.number].filter(Boolean).join(" · "))}</option>`).join("")}
+        </select></label>
+        <label class="field"><span class="label">${escapeHtml(d.ring)}</span><input id="ph-dial-ring" type="number" min="1" max="300" inputmode="numeric" placeholder="${escapeHtml(d.ringPlaceholder)}"></label>
+        <label class="ph-check"><input type="checkbox" id="ph-dial-keep"${remembered ? " checked" : ""}> ${escapeHtml(d.keep)}</label>`
+      : "";
     const value = await openFormDialog(this.shadowRoot, t, {
       title: d.title,
       html: `<label class="field"><span class="label">${escapeHtml(d.field)}</span><input id="ph-dial-in" type="text" value="${escapeHtml(number)}" inputmode="tel" autocomplete="off" aria-describedby="ph-dial-help" aria-controls="ph-dial-sugg"></label>
         <div id="ph-dial-sugg"></div>
-        <p class="hint" id="ph-dial-help">${escapeHtml(d.help)}</p>`,
+        ${phoneField}
+        <p class="hint" id="ph-dial-help">${escapeHtml(choices.length ? d.helpPick : d.help)}</p>`,
       ok: d.ok,
       focus: "#ph-dial-in",
       onOpen: (dialog) => {
@@ -396,20 +421,82 @@ export class PhoneMethods {
           input.focus();
         };
       },
-      validate: (dialog) => (dialable(dialog.querySelector("#ph-dial-in").value) ? null : d.invalid),
-      read: (dialog) => dialog.querySelector("#ph-dial-in").value.trim(),
+      validate: (dialog) => {
+        if (!dialable(dialog.querySelector("#ph-dial-in").value)) return d.invalid;
+        const ring = dialog.querySelector("#ph-dial-ring")?.value.trim();
+        return !ring || (Number.isInteger(Number(ring)) && Number(ring) >= 1 && Number(ring) <= 300) ? null : d.ringInvalid;
+      },
+      read: (dialog) => ({
+        number: dialog.querySelector("#ph-dial-in").value.trim(),
+        phone: dialog.querySelector("#ph-dial-phone")?.value ?? "",
+        ring: Number(dialog.querySelector("#ph-dial-ring")?.value) || 0,
+        keep: Boolean(dialog.querySelector("#ph-dial-keep")?.checked),
+      }),
     });
     if (value === null) return;
-    if ((await this._phoneService("dial", { number: value })) === undefined) return;
-    const ui = this._state.phone;
-    ui.dial = { number: value, name: picked, at: Date.now() };
+    const data = { number: value.number, ...(value.phone ? { phone: value.phone } : {}), ...(value.ring ? { max_ring_seconds: value.ring } : {}) };
+    if (choices.length) ui.dialPhone = value.keep ? value.phone : "";
+    if ((await this._phoneService("dial", data)) === undefined) return;
+    ui.dial = { number: value.number, name: picked, at: Date.now() };
     clearTimeout(this._phoneDialTimer);
     this._phoneDialTimer = setTimeout(() => {
       ui.dial = null;
       if (this._state.tab === "phone") this._renderPhone();
     }, 90000);
-    showToast(this.shadowRoot, d.started);
+    showToast(this.shadowRoot, value.phone ? fill(d.startedOn, { phone: value.phone }) : d.started);
     this._renderPhone();
+  }
+
+  /**
+   * "Switch on for a while" for an answering machine or a forwarding rule: asks for the time and
+   * calls turn_on_for. The switch does not tell when its timer ends, so the end is kept here (and
+   * in the browser's storage) for the note under the switch.
+   */
+  async _phoneTimer(switchId, name) {
+    const t = this._t;
+    const tm = t.phone.timer;
+    const ui = this._state.phone;
+    const morning = minutesUntilMorning();
+    const value = await openFormDialog(this.shadowRoot, t, {
+      title: fill(tm.dialogTitle, { name }),
+      html: `<label class="field"><span class="label">${escapeHtml(tm.field)}</span><select id="ph-tm-sel">
+          ${TIMER_CHOICES.map((m) => `<option value="${m}">${escapeHtml(fill(m >= 60 ? tm.hoursN : tm.minsN, { n: m >= 60 ? m / 60 : m }))}</option>`).join("")}
+          <option value="${morning}">${escapeHtml(tm.morning)}</option>
+          <option value="custom">${escapeHtml(tm.custom)}</option>
+        </select></label>
+        <label class="field" id="ph-tm-custom-wrap" hidden><span class="label">${escapeHtml(tm.customField)}</span><input id="ph-tm-custom" type="number" min="1" max="${TIMER_MAX}" value="90" inputmode="numeric"></label>
+        <p class="hint">${escapeHtml(tm.help)}</p>`,
+      ok: tm.ok,
+      focus: "#ph-tm-sel",
+      onOpen: (dialog) => {
+        const sel = dialog.querySelector("#ph-tm-sel");
+        sel.onchange = () => {
+          dialog.querySelector("#ph-tm-custom-wrap").hidden = sel.value !== "custom";
+        };
+      },
+      validate: (dialog) => {
+        if (dialog.querySelector("#ph-tm-sel").value !== "custom") return null;
+        const n = Number(dialog.querySelector("#ph-tm-custom").value);
+        return Number.isInteger(n) && n >= 1 && n <= TIMER_MAX ? null : fill(tm.invalid, { max: TIMER_MAX });
+      },
+      read: (dialog) => {
+        const sel = dialog.querySelector("#ph-tm-sel").value;
+        return sel === "custom" ? Number(dialog.querySelector("#ph-tm-custom").value) : Number(sel);
+      },
+    });
+    if (value === null) return;
+    ui.busy.add(switchId);
+    this._renderPhone();
+    const done = await this._phoneService("turn_on_for", { minutes: value }, { target: { entity_id: switchId } });
+    ui.busy.delete(switchId);
+    if (done !== undefined) {
+      ui.timers = { ...ui.timers, [switchId]: Date.now() + value * 60000 };
+      writeTimers(localStore(), ui.timers);
+      const left = value >= 60 ? fill(tm.hours, { h: Math.floor(value / 60), m: value % 60 }) : fill(tm.mins, { n: value });
+      showToast(this.shadowRoot, fill(tm.toast, { name, time: left }));
+    }
+    this._renderPhone();
+    this._phoneFocus(`ph-tm-${switchId}`);
   }
 
   /** hangup only cancels dialling started with dial, never a call in progress. */
@@ -836,6 +923,11 @@ export class PhoneMethods {
       this._renderPhone();
       try {
         await this._hass.callService("switch", value ? "turn_on" : "turn_off", { entity_id: switchId }, undefined, false);
+        // switched off by hand: the integration drops its timer, so does the note here
+        if (!value && ui.timers?.[switchId]) {
+          delete ui.timers[switchId];
+          writeTimers(localStore(), ui.timers);
+        }
         return true;
       } catch (err) {
         showToast(this.shadowRoot, fill(t.phone.failed, { error: err?.message ?? err }));

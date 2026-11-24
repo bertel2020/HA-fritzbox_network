@@ -1198,3 +1198,173 @@ test("without the action, or in privacy mode, the dialog only creates a new cont
   p._phoneContact("0401234567", "");
   assert.doesNotMatch(root.els["#dialog"].innerHTML, /ph-ct-mode/);
 });
+
+// ---------- lines, phones, forwardings, timers, own numbers ----------
+
+/** The extras of FRITZ!Box Telefon 2.4: lines, the phones sensor, a forwarding rule, tam details. */
+function withExtras(hass, { lineB = "off" } = {}) {
+  const add = (id, tk, state) => {
+    hass.entities[id] = { entity_id: id, platform: "fritzbox_phone", translation_key: tk, device_id: "dph1" };
+    hass.states[id] = state;
+  };
+  add("binary_sensor.fb_leitung_1", "line_registered", { ...st("on", { number: "030 5550101", status: "Registered", friendly_name: "Leitung 030 5550101" }), last_changed: "2026-11-07T08:00:00Z" });
+  add("binary_sensor.fb_leitung_2", "line_registered", { ...st(lineB, { number: "030 5550202", status: "Error", friendly_name: "Leitung 030 5550202" }), last_changed: "2026-11-07T13:00:00Z" });
+  add("sensor.fb_telefone", "phones", st(3, {
+    dial_phones: ["Fon 1", "Küche", "Flur"],
+    dial_phone: "Fon 1",
+    dect: [{ name: "Küche", model: "FRITZ!Fon C6", active: true }],
+    ip: [{ name: "Flur", number: "030 5550202", internal_number: "620", incoming_numbers: [] }],
+  }));
+  add("switch.fb_umleitung_1", "deflection_enabled", st("off", { friendly_name: "Umleitung Büro", number: "030 5550101", to_number: "0711 4400", mode: "all" }));
+  const tam = hass.states["sensor.fb_anrufbeantworter_1"];
+  tam.attributes = { ...tam.attributes, mode: "record", ring_seconds: 20, phone_numbers: ["030 5550101"], stick: "intern" };
+  return hass;
+}
+
+test("the lines tell which numbers the provider has registered", () => {
+  const hass = withExtras(makeHass());
+  const m = model.readPhone(hass, "e1", { cache: new Map() });
+  assert.deepEqual(m.lines.map((l) => [l.number, l.registered, l.status]), [["030 5550101", true, "Registered"], ["030 5550202", false, "Error"]]);
+  const sum = model.lineSummary(m.lines);
+  assert.deepEqual([sum.total, sum.down.map((d) => d.number)], [2, ["030 5550202"]]);
+  assert.deepEqual(sum.changes.map((c) => c.registered), [true, false]);
+  // unavailable: neither up nor down
+  hass.states["binary_sensor.fb_leitung_2"] = st("unavailable", {});
+  const gone = model.lineSummary(model.readPhone(hass, "e1", { cache: new Map() }).lines);
+  assert.deepEqual([gone.down.length, gone.known], [0, 1]);
+});
+
+test("the page names the numbers, only where there are several or one is down", () => {
+  const html = page.renderPhone(model.readPhone(withExtras(makeHass()), "e1", { cache: new Map() }), ctx());
+  assert.match(html, /ph-lines[\s\S]*030 5550101[\s\S]*030 5550202 · nicht angemeldet/);
+  const ok = page.renderPhone(model.readPhone(withExtras(makeHass(), { lineB: "on" }), "e1", { cache: new Map() }), ctx());
+  assert.match(ok, /ph-lines/);
+  assert.doesNotMatch(ok, /nicht angemeldet/);
+  const none = page.renderPhone(model.readPhone(makeHass(), "e1", { cache: new Map() }), ctx());
+  assert.doesNotMatch(none, /ph-lines/);
+  // privacy mode shortens the numbers
+  const shy = page.renderPhone(model.readPhone(withExtras(makeHass({ privacy: true })), "e1", { cache: new Map() }), ctx());
+  assert.doesNotMatch(shy, /030 5550202/);
+});
+
+test("the panel keeps the lines for the overview", () => {
+  const { p } = makePanel({ extra: {} });
+  p._hass = withExtras({ ...p._hass, entities: { ...p._hass.entities }, states: { ...p._hass.states } });
+  p._phoneKey = null;
+  p._readPhone();
+  assert.deepEqual(p._state.phoneLines.down.map((d) => d.number), ["030 5550202"]);
+  assert.match(p._phoneSignature(), /2:030 5550202/);
+});
+
+test("the phones of the box become the choices of the dial dialog", () => {
+  const m = model.readPhone(withExtras(makeHass()), "e1", { cache: new Map() });
+  assert.deepEqual(model.dialChoices(m.phones).map((c) => [c.name, c.kind, c.number, c.current]), [["Fon 1", "other", "", true], ["Küche", "dect", "", false], ["Flur", "ip", "030 5550202", false]]);
+  assert.deepEqual(model.dialChoices(model.parsePhones(makeHass(), { phones: "sensor.fehlt" })), []);
+});
+
+test("dial rings the chosen phone and stops after the seconds; the choice can be remembered", async () => {
+  const { p, calls: sent, root } = makePanel({}, { services: { dial: {} } });
+  p._hass = withExtras({ ...p._hass, entities: { ...p._hass.entities }, states: { ...p._hass.states } });
+  p._phoneKey = null;
+  p._readPhone();
+  const asked = p._phoneDial("030 123456", "");
+  const dialog = root.els["#dialog"];
+  assert.match(dialog.innerHTML, /id="ph-dial-phone"[\s\S]*Küche · DECT[\s\S]*Flur · IP-Telefon · 030 5550202/);
+  assert.match(dialog.innerHTML, /nur für diesen Anruf/);
+  dialog.querySelector("#ph-dial-in").value = "030 123456";
+  dialog.querySelector("#ph-dial-phone").value = "Küche";
+  dialog.querySelector("#ph-dial-ring").value = "400";
+  dialog.querySelector("#dlg-yes").onclick();
+  assert.match(dialog.querySelector("#dlg-msg").textContent, /1 bis 300/);
+  dialog.querySelector("#ph-dial-ring").value = "30";
+  dialog.querySelector("#ph-dial-keep").checked = true;
+  dialog.querySelector("#dlg-yes").onclick();
+  await asked;
+  assert.deepEqual(sent[0].data, { number: "030 123456", phone: "Küche", max_ring_seconds: 30 });
+  assert.equal(p._state.phone.dialPhone, "Küche");
+  assert.match(root.els["#toast"].textContent, /Küche klingelt gleich/);
+});
+
+test("the own numbers in the call list narrow it, and the rows name the number", () => {
+  const raw = [
+    { id: 1, type: "incoming", name: "Mama", caller_number: "01712345678", called_number: "030 5550101", date: "07.11.26 14:12", duration: "0:04" },
+    { id: 2, type: "missed", name: "", caller_number: "+4922198765432", called_number: "030 5550101", date: "07.11.26 13:40", duration: "0:00" },
+    { id: 3, type: "outgoing", name: "Dr. Weber", caller_number: "030 5550202", called_number: "0304567890", date: "07.11.26 12:05", duration: "0:02" },
+  ];
+  const list = model.parseCallList({ attributes: { calls: raw } }).calls;
+  assert.deepEqual(model.ownNumbers(list).map((x) => [x.number, x.n]), [["030 5550101", 2], ["030 5550202", 1]]);
+  assert.equal(model.callsOfNumber(list, "0305550202").length, 1);
+  assert.equal(model.callsOfNumber(list, "").length, 3);
+  const hass = makeHass();
+  hass.states["sensor.fb_anrufliste"].attributes.calls = raw;
+  const m = model.readPhone(hass, "e1", { cache: new Map() });
+  const html = page.renderPhone(m, ctx());
+  assert.match(html, /aria-label="Eigene Rufnummer"[\s\S]*Alle Nummern[\s\S]*030 5550101<span class="n">2<\/span>[\s\S]*030 5550202<span class="n">1<\/span>/);
+  assert.match(html, /von 030 5550202/);
+  const narrowed = page.renderPhone(m, ctx({ own: "0305550202" }));
+  assert.match(narrowed, /Dr\. Weber/);
+  assert.doesNotMatch(narrowed, /data-ph-key="c:1"/);
+  // one own number: no chips
+  const one = makeHass();
+  one.states["sensor.fb_anrufliste"].attributes.calls = raw.slice(0, 2);
+  assert.doesNotMatch(page.renderPhone(model.readPhone(one, "e1", { cache: new Map() }), ctx()), /Eigene Rufnummer/);
+});
+
+test("an answering machine shows what the box tells about it, and warns when it has no number", () => {
+  const hass = withExtras(makeHass());
+  const html = page.renderPhone(model.readPhone(hass, "e1", { cache: new Map() }), ctx());
+  assert.match(html, /Betriebsart<\/dt><dd>record[\s\S]*Geht ran nach<\/dt><dd>20 Sekunden[\s\S]*Nimmt an für<\/dt><dd>030 5550101[\s\S]*Speichert auf<\/dt><dd>intern/);
+  assert.doesNotMatch(html, /keine Rufnummer eingestellt/);
+  hass.states["sensor.fb_anrufbeantworter_1"].attributes.phone_numbers = [];
+  const idle = page.renderPhone(model.readPhone(hass, "e1", { cache: new Map() }), ctx());
+  assert.match(idle, /keine Rufnummer[\s\S]*Er nimmt keine Anrufe an/);
+  // an older version tells none of it
+  assert.equal(model.tamDetails({ enabled: true }), null);
+  assert.doesNotMatch(page.renderPhone(read(), ctx()), /Geht ran nach/);
+});
+
+test("forwarding rules are switches with a clock; a timer started here shows its end", async () => {
+  const { p, calls: sent, root } = makePanel({}, { services: { turn_on_for: {} } });
+  p._hass = withExtras({ ...p._hass, entities: { ...p._hass.entities }, states: { ...p._hass.states } });
+  p._phoneKey = null;
+  p._readPhone();
+  const html = p._phone && page.renderPhone(p._phone, { ...ctx(), ui: p._state.phone });
+  assert.match(html, /Rufumleitungen[\s\S]*Umleitung Büro[\s\S]*030 5550101 → 0711 4400[\s\S]*data-act="ph-timer" data-ph-ent="switch\.fb_umleitung_1"[\s\S]*data-act="ph-fwdsw"/);
+  const asked = p._phoneTimer("switch.fb_umleitung_1", "Umleitung Büro");
+  const dialog = root.els["#dialog"];
+  assert.match(dialog.innerHTML, /30 Minuten[\s\S]*1 Stunden[\s\S]*4 Stunden[\s\S]*8 Stunden[\s\S]*Bis morgen früh/);
+  dialog.querySelector("#ph-tm-sel").value = "custom";
+  dialog.querySelector("#ph-tm-custom").value = "2000";
+  dialog.querySelector("#dlg-yes").onclick();
+  assert.match(dialog.querySelector("#dlg-msg").textContent, /1 bis 1440/);
+  dialog.querySelector("#ph-tm-sel").value = "240";
+  dialog.querySelector("#dlg-yes").onclick();
+  await asked;
+  assert.deepEqual([sent[0].service, sent[0].data, sent[0].target], ["turn_on_for", { minutes: 240 }, { entity_id: "switch.fb_umleitung_1" }]);
+  const end = p._state.phone.timers["switch.fb_umleitung_1"];
+  assert.ok(Math.abs(end - Date.now() - 240 * 60000) < 5000);
+  assert.equal(page.timerLeft(p._state.phone, "switch.fb_umleitung_1", new Date()), 240);
+  assert.equal(page.timerLeft(p._state.phone, "switch.fb_umleitung_1", new Date(end + 1)), null);
+  assert.match(root.els["#toast"].textContent, /Umleitung Büro ist für 4 Std\. 0 Min\. an/);
+});
+
+test("the timers survive in the storage, ones that ran out are dropped, and a broken storage gives none", () => {
+  const store = new Map();
+  const storage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v) };
+  model.writeTimers(storage, { a: 5000, b: 1000 });
+  assert.deepEqual(model.readTimers(storage, 2000), { a: 5000 });
+  assert.deepEqual(model.readTimers({ getItem: () => "{kaputt" }), {});
+  assert.deepEqual(model.readTimers(null), {});
+  model.writeTimers({ setItem: () => { throw new Error("blocked"); } }, { a: 1 });
+  assert.equal(model.minutesUntilMorning(new Date(2026, 10, 7, 23, 0)), 480);
+  assert.equal(model.minutesUntilMorning(new Date(2026, 10, 7, 5, 0)), 120);
+  assert.equal(model.minutesUntilMorning(new Date(2026, 10, 7, 7, 0)), 1440);
+});
+
+test("switching a rule off by hand drops the note about its timer", async () => {
+  const { p } = makePanel({}, {});
+  p._hass.callService = async () => {};
+  p._state.phone.timers = { "switch.x": Date.now() + 60000 };
+  await p._phoneTamSwitch("switch.x", false, "Umleitung");
+  assert.equal("switch.x" in p._state.phone.timers, false);
+});

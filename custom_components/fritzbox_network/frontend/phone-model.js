@@ -8,8 +8,8 @@
 export const PHONE_DOMAIN = "fritzbox_phone";
 
 /** The translation keys of fritzbox_phone this page uses; several per entry where a list. */
-const SINGLE_KEYS = ["call_list", "missed_calls", "calls_today", "talk_time_today", "spam_calls_today", "spam_calls_total", "call_monitor", "ringing", "unread_messages"];
-const LIST_KEYS = ["phonebook", "answering_machine", "tam_enabled", "deflection_enabled"];
+const SINGLE_KEYS = ["call_list", "missed_calls", "calls_today", "talk_time_today", "spam_calls_today", "spam_calls_total", "call_monitor", "ringing", "unread_messages", "phones"];
+const LIST_KEYS = ["phonebook", "answering_machine", "tam_enabled", "deflection_enabled", "line_registered"];
 
 /** The call types of the box (CALL_TYPE_NAMES); any other value is shown as a call, not dropped. */
 export const CALL_TYPES = ["incoming", "missed", "outgoing", "active_incoming", "rejected_incoming", "active_outgoing"];
@@ -227,6 +227,22 @@ export function parseMessage(raw) {
   };
 }
 
+/**
+ * What the sensor of an answering machine tells besides the messages (read only): the mode, after
+ * how many seconds it picks up, for which own numbers it takes calls, where it stores. null when
+ * the sensor tells none of it (an older version of fritzbox_phone).
+ */
+export function tamDetails(a) {
+  const attrs = a && typeof a === "object" ? a : {};
+  const ring = num(attrs.ring_seconds);
+  const numbers = (Array.isArray(attrs.phone_numbers) ? attrs.phone_numbers : []).map(str).filter(Boolean);
+  const mode = str(attrs.mode);
+  const stick = str(attrs.stick);
+  const known = "mode" in attrs || "ring_seconds" in attrs || "phone_numbers" in attrs || "stick" in attrs;
+  if (!known) return null;
+  return { mode, ringSeconds: ring, numbers, stick, hasNumbers: Array.isArray(attrs.phone_numbers) };
+}
+
 /** One answering machine: { ok, entityId, name, tamIndex, enabled, running, capacity, total, privacy, messages }. */
 export function parseTam(entityId, stateObj, deviceTitle = "") {
   const a = stateObj?.attributes ?? {};
@@ -244,6 +260,7 @@ export function parseTam(entityId, stateObj, deviceTitle = "") {
     total: int(a.total_messages) ?? messages.length,
     privacy: a.privacy_mode === true,
     available: usable(stateObj),
+    details: tamDetails(a),
     messages,
   };
 }
@@ -423,6 +440,9 @@ function sensorParts(hass, ids, tams) {
     monitor,
     unread,
     ringing: monitor.state === "ringing",
+    lines: parseLines(hass, ids),
+    phones: parsePhones(hass, ids),
+    deflections: parseDeflections(hass, ids),
   };
 }
 
@@ -471,6 +491,104 @@ export function readPhone(hass, ownEntryId, { chosen = null, cache = null } = {}
     privacy: privacyOn(list, books, tams),
   };
 }
+
+// ---------- lines, phones, forwardings ----------
+
+/**
+ * The telephone numbers of the box and whether the provider has registered each: [{ entityId,
+ * number, status, registered, since }]. registered is null while the sensor is unavailable (then
+ * the number is neither up nor down); since is the time of its last change in ms.
+ */
+export function parseLines(hass, ids) {
+  return (ids?.line_registered ?? []).map((id) => {
+    const s = hass?.states?.[id];
+    const a = s?.attributes ?? {};
+    const since = Date.parse(s?.last_changed ?? "");
+    return {
+      entityId: id,
+      number: str(a.number) || str(a.friendly_name),
+      status: str(a.status),
+      registered: usable(s) ? s.state === "on" : null,
+      since: Number.isNaN(since) ? null : since,
+    };
+  });
+}
+
+/** The numbers that are registered, those that are not, and the last change of each (for the timeline). */
+export function lineSummary(lines) {
+  const down = lines.filter((l) => l.registered === false);
+  return {
+    total: lines.length,
+    known: lines.filter((l) => l.registered !== null).length,
+    down: down.map((l) => ({ number: l.number, status: l.status, since: l.since })),
+    changes: lines.filter((l) => l.registered !== null && l.since !== null).map((l) => ({ number: l.number, registered: l.registered, at: l.since })),
+  };
+}
+
+/**
+ * The sensor Phones: { ok, dialPhones (names), current, dect: [{ name, model, active }], ip: [{ name,
+ * number, internalNumber, incomingNumbers }] }. ok false without the sensor or while unavailable.
+ */
+export function parsePhones(hass, ids) {
+  const s = ids?.phones ? hass?.states?.[ids.phones] : null;
+  if (!usable(s)) return { ok: false, dialPhones: [], current: "", dect: [], ip: [] };
+  const a = s.attributes ?? {};
+  const named = (list) => arr(list).map(obj).filter((p) => str(p.name));
+  return {
+    ok: true,
+    dialPhones: arr(a.dial_phones).map(str).filter(Boolean),
+    current: str(a.dial_phone),
+    dect: named(a.dect).map((p) => ({ name: str(p.name), model: str(p.model), active: p.active !== false })),
+    ip: named(a.ip).map((p) => ({ name: str(p.name), number: str(p.number), internalNumber: str(p.internal_number), incomingNumbers: arr(p.incoming_numbers).map(str).filter(Boolean) })),
+  };
+}
+
+/** The phones dial can ring, each with what kind it is and a line about it; the box's own choice comes first on the page. */
+export function dialChoices(phones) {
+  if (!phones?.ok) return [];
+  const dect = new Map(phones.dect.map((p) => [p.name, p]));
+  const ip = new Map(phones.ip.map((p) => [p.name, p]));
+  return phones.dialPhones.map((name) => {
+    const d = dect.get(name);
+    const i = ip.get(name);
+    return { name, kind: d ? "dect" : i ? "ip" : "other", number: i?.number || i?.internalNumber || "", model: d?.model ?? "", current: name === phones.current };
+  });
+}
+
+/** The forwarding rules of the box as switches: [{ entityId, name, on, number, toNumber, mode }]. */
+export function parseDeflections(hass, ids) {
+  return (ids?.deflection_enabled ?? []).map((id) => {
+    const s = hass?.states?.[id];
+    const a = s?.attributes ?? {};
+    return {
+      entityId: id,
+      name: str(a.friendly_name) || id,
+      on: usable(s) ? s.state === "on" : null,
+      number: str(a.number),
+      toNumber: str(a.to_number),
+      mode: str(a.mode),
+    };
+  });
+}
+
+/** The own numbers that appear in a list of calls, the most used first: [{ number, n }]. */
+export function ownNumbers(calls) {
+  const counts = new Map();
+  for (const c of calls) {
+    const key = digits(c.own);
+    if (!key) continue;
+    const old = counts.get(key);
+    counts.set(key, { number: old?.number ?? c.own, n: (old?.n ?? 0) + 1 });
+  }
+  return [...counts.entries()].map(([key, v]) => ({ key, ...v })).sort((a, b) => b.n - a.n || a.number.localeCompare(b.number));
+}
+
+/** The calls that went over one of the own numbers; every call for an empty key. */
+export const callsOfNumber = (calls, key) => (key ? calls.filter((c) => digits(c.own) === key) : calls);
+
+/** The minutes the dialog offers for "switch on for a while", and the most the service takes (a day). */
+export const TIMER_CHOICES = [30, 60, 240, 480];
+export const TIMER_MAX = 1440;
 
 // ---------- stage 2: the websocket commands of fritzbox_phone ----------
 
@@ -592,6 +710,7 @@ export function parseWsTams(part, hass, ids) {
       total: int(raw.total) ?? messages.length,
       newCount: int(raw.new_count),
       privacy: r.privacy_mode === true,
+      details: entityId ? tamDetails(hass?.states?.[entityId]?.attributes) : null,
       available: true,
       staleAt: null,
       offline: false,
@@ -1034,4 +1153,46 @@ export function wsStats(part, { period = "7", now = new Date(), calls = [] } = {
     topIn: rank(r.top_callers),
     topOut: rank(r.top_called),
   };
+}
+
+// ---------- timers started here ----------
+
+const TIMER_KEY = "fritzbox_network.phoneTimers";
+
+/**
+ * The timers this browser started with turn_on_for: { switch entity id: end in ms }. The switch
+ * does not tell when its timer ends, so the panel remembers what it started; ones that ran out are
+ * dropped. A storage that is missing or throws gives none.
+ */
+export function readTimers(storage, now = Date.now()) {
+  try {
+    const raw = JSON.parse(storage?.getItem?.(TIMER_KEY) ?? "{}");
+    return Object.fromEntries(Object.entries(obj(raw)).filter(([id, end]) => typeof id === "string" && typeof end === "number" && end > now));
+  } catch {
+    return {};
+  }
+}
+
+/** The local storage of the browser, or null where reaching it throws (blocked site data). */
+export function localStore() {
+  try {
+    return globalThis.localStorage ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeTimers(storage, timers) {
+  try {
+    storage?.setItem?.(TIMER_KEY, JSON.stringify(timers));
+  } catch {
+    /* private window or blocked storage: the timer still runs, only the note is lost on reload */
+  }
+}
+
+/** The minutes from now until the next 07:00 local time (at least 1, at most a day). */
+export function minutesUntilMorning(now = new Date()) {
+  const next = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 7, 0, 0);
+  if (next.getTime() <= now.getTime() + 60000) next.setDate(next.getDate() + 1);
+  return Math.min(TIMER_MAX, Math.max(1, Math.ceil((next.getTime() - now.getTime()) / 60000)));
 }

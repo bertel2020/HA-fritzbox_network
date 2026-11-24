@@ -8,7 +8,7 @@
 import { escapeHtml, hintNote, noteHtml } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
-import { BOOK_ROWS, CALL_FILTERS, digits, HISTORY_PERIODS, PERIODS, PERIOD_DAYS, SERIES, callKind, dialable, displayName, filterCalls, filterCounts, foldHeat, heatGrid, isOutgoing, onBlocklist, phoneStats, searchBook, shortNumber, wsStats } from "./phone-model.js";
+import { BOOK_ROWS, CALL_FILTERS, digits, HISTORY_PERIODS, PERIODS, PERIOD_DAYS, SERIES, callKind, dialable, displayName, filterCalls, filterCounts, foldHeat, heatGrid, isOutgoing, onBlocklist, callsOfNumber, ownNumbers, phoneStats, searchBook, shortNumber, wsStats } from "./phone-model.js";
 
 const esc = escapeHtml;
 const KIND_ICON = { in: "callIn", out: "callOut", miss: "callMissed", spam: "shield", tam: "tam" };
@@ -226,6 +226,28 @@ function notices(model, ctx) {
   return `<section class="card sec ph-notes">${out.map(([l, icon, text]) => `<p class="hintline ${l}"><span aria-hidden="true">${ic(icon)}</span><span>${esc(text)}</span></p>`).join("")}</section>`;
 }
 
+/**
+ * The telephone numbers of the box with their state at the provider, as chips: only where there are
+ * several, or one is not registered (a single registered number would only be noise).
+ */
+function linesBar(model, ctx) {
+  const { t } = ctx;
+  const l = t.phone.lines;
+  const lines = model.lines ?? [];
+  if (!lines.length || (lines.length < 2 && lines.every((x) => x.registered !== false))) return "";
+  const chips = lines
+    .map((x) => {
+      const number = model.privacy ? shortNumber(x.number) : x.number || "–";
+      if (x.registered === null) return `<span class="chip"><i class="dot" aria-hidden="true"></i>${esc(fill(l.unknown, { number }))}</span>`;
+      return x.registered
+        ? `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${esc(number)}</span>`
+        : `<span class="chip bad" title="${esc(x.status)}"><i class="dot bad" aria-hidden="true"></i>${esc(fill(l.down, { number }))}</span>`;
+    })
+    .join("");
+  const bad = lines.some((x) => x.registered === false);
+  return `<section class="card sec ph-lines" aria-label="${esc(l.label)}"><div class="chead"><span class="label">${esc(l.label)}</span></div><div class="ph-chips">${chips}</div>${bad ? `<p class="hint">${esc(l.downHint)}</p>` : ""}</section>`;
+}
+
 function staleNote(model, ctx) {
   if (!model.offline) return "";
   const time = model.staleAt ? hhmm(new Date(model.staleAt), ctx.language) : "–";
@@ -276,6 +298,7 @@ function callRow(c, model, ctx) {
     c.date ? hhmm(c.date, language) : c.dateText,
     p.calls.type[c.type],
     hide ? "" : c.area,
+    ctx.showOwn && !hide && c.own ? fill(out ? p.calls.viaFrom : p.calls.viaTo, { number: model.privacy ? shortNumber(c.own) : c.own }) : "",
     c.device && !c.isTam ? c.device : "",
     c.minutes && c.type !== "missed" ? fmtMinutes(c.minutes, t) : "",
   ].filter(Boolean).join(" · ");
@@ -318,8 +341,14 @@ function callCard(model, ctx) {
     const why = model.api === "ws" ? p.part : fill(p.tooOld, { attr: "calls" });
     return `<section class="card sec" aria-labelledby="ph-calls-h">${head}<div class="empty"><span class="bad-ico">${ic("alert")}</span><b>${esc(why)}</b></div></section>`;
   }
-  const all = model.list.calls;
-  if (!all.length) {
+  const everything = model.list.calls;
+  // several own numbers in the list: a chip per number narrows it to the calls of that one
+  const numbers = ownNumbers(everything);
+  const own = numbers.length > 1 ? numbers : [];
+  const ownKey = own.some((x) => x.key === ui.own) ? ui.own : "";
+  const all = callsOfNumber(everything, ownKey);
+  ctx = { ...ctx, showOwn: own.length > 1 };
+  if (!everything.length) {
     return `<section class="card sec" aria-labelledby="ph-calls-h">${head}${staleNote(model, ctx)}<div class="empty">${ic("phone")}<b>${esc(p.calls.none)}</b><span>${esc(p.calls.noneBody)}</span></div></section>`;
   }
   // the chip "blocked" only where the box's block list is known
@@ -341,6 +370,7 @@ function callCard(model, ctx) {
   if (!list.length) rows = `<div class="empty"><b>${esc(p.calls.noMatch)}</b><button class="btn sm" data-act="ph-reset" data-k="ph-reset">${esc(p.calls.reset)}</button></div>`;
   const legend = ["in", "out", "miss", "tam", "spam"].map((k) => `<span><span class="ph-ico ${k} sm">${ic(KIND_ICON[k])}</span>${esc(p.calls.legend[k])}</span>`).join("");
   return `<section class="card sec" aria-labelledby="ph-calls-h">${head}${staleNote(model, ctx)}
+    ${own.length ? `<div class="ph-tools"><span class="seg ph-seg" role="group" aria-label="${esc(p.calls.ownLabel)}"><button data-act="ph-own" data-ph-val="" data-k="ph-o-all" aria-pressed="${!ownKey}">${esc(p.calls.ownAll)}<span class="n">${everything.length}</span></button>${own.map((x) => `<button data-act="ph-own" data-ph-val="${esc(x.key)}" data-k="ph-o-${esc(x.key)}" aria-pressed="${ownKey === x.key}">${esc(model.privacy ? shortNumber(x.number) : x.number)}<span class="n">${x.n}</span></button>`).join("")}</span></div>` : ""}
     <div class="ph-tools">
       <span class="seg ph-seg" role="group" aria-label="${esc(p.calls.filterLabel)}">${filters.map((f) => `<button data-act="ph-filter" data-ph-val="${f}" data-k="ph-f-${f}" aria-pressed="${filter === f}">${esc(p.calls.filters[f])}<span class="n">${counts[f]}</span></button>`).join("")}</span>
       <label class="search ph-search"><span class="sr">${esc(p.calls.searchLabel)}</span>${ic("search")}<input type="search" id="ph-q" value="${esc(ui.query)}" placeholder="${esc(p.calls.search)}" autocomplete="off"></label>
@@ -406,6 +436,43 @@ function messageRow(msg, tam, model, ctx) {
       <span class="ph-act">${hide ? "" : playBtn}</span></div>${btns}</div>`;
 }
 
+/** The minutes left of a timer started here for a switch (null without one); ui.timers holds when it runs out, in ms. */
+export function timerLeft(ui, switchId, now) {
+  const end = ui?.timers?.[switchId];
+  return typeof end === "number" && end > now.getTime() ? Math.ceil((end - now.getTime()) / 60000) : null;
+}
+
+/** Minutes as "45 min" or "3 h 5 min" for the note under a switch. */
+function leftText(min, t) {
+  return min >= 60 ? fill(t.phone.timer.hours, { h: Math.floor(min / 60), m: min % 60 }) : fill(t.phone.timer.mins, { n: min });
+}
+
+/** The clock button of a switch and, while a timer started here runs, the note about it. */
+function timerParts(switchId, name, model, ctx, busy) {
+  const { t, ui, now, language } = ctx;
+  const tm = t.phone.timer;
+  const min = timerLeft(ui, switchId, now);
+  const button = `<button class="icon-btn" data-act="ph-timer" data-ph-ent="${esc(switchId)}" data-ph-name="${esc(name)}" data-k="ph-tm-${esc(switchId)}" aria-haspopup="dialog" aria-label="${esc(fill(tm.label, { name }))}" title="${esc(tm.title)}"${off(model, busy || model.offline)}>${ic("clock")}</button>`;
+  const note = min !== null ? fill(tm.running, { left: leftText(min, t), time: hhmm(new Date(ui.timers[switchId]), language) }) : "";
+  return { button, note };
+}
+
+/** What the box tells about an answering machine besides its messages, in a few lines; "" without any. */
+function tamDetailRows(tam, model, ctx) {
+  const d = tam.details;
+  if (!d) return "";
+  const a = ctx.t.phone.tam.details;
+  const rows = [];
+  if (d.mode) rows.push([a.mode, d.mode]);
+  if (d.ringSeconds !== null) rows.push([a.ring, fill(a.seconds, { n: d.ringSeconds })]);
+  if (d.hasNumbers) rows.push([a.numbers, d.numbers.length ? d.numbers.map((n) => (model.privacy ? shortNumber(n) : n)).join(", ") : a.noNumber]);
+  if (d.stick) rows.push([a.stick, d.stick]);
+  if (!rows.length) return "";
+  const enabled = tam.switchOn ?? tam.enabled;
+  const idle = enabled === true && d.hasNumbers && !d.numbers.length;
+  return `<dl class="kv ph-kv ph-tamkv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>${idle ? `<p class="hintline warn"><span aria-hidden="true">${ic("alert")}</span><span>${esc(a.idle)}</span></p>` : ""}<p class="hint">${esc(a.readOnly)}</p>`;
+}
+
 function tamCard(tam, model, ctx) {
   const { t, ui } = ctx;
   const a = t.phone.tam;
@@ -417,13 +484,36 @@ function tamCard(tam, model, ctx) {
     ? `<button class="switch${busy ? " busy" : ""}" role="switch" aria-checked="${tam.switchOn}" aria-label="${esc(fill(a.switchLabel, { name: tam.name }))}" data-act="ph-tamsw" data-ph-ent="${esc(tam.switchId)}" data-ph-val="${tam.switchOn ? "0" : "1"}" data-ph-name="${esc(tam.name)}" data-k="ph-sw-${esc(tam.switchId)}"${off(model, busy || tam.offline)}></button>`
     : "";
   const enabled = tam.switchOn ?? tam.enabled;
+  const timer = tam.switchId && tam.switchOn !== null ? timerParts(tam.switchId, tam.name, model, ctx, busy) : { button: "", note: "" };
   const facts = [enabled === null ? "" : enabled ? a.on : a.off, tam.capacity !== null ? fill(a.capacity, { n: tam.capacity }) : "", a.playHint].filter(Boolean).join(" · ");
   const rows = tam.messages.length ? tam.messages.map((m) => messageRow(m, tam, model, ctx)).join("") : `<div class="empty ph-small">${ic("tam")}<b>${esc(a.noMessages)}</b></div>`;
   return `<section class="card sec" aria-labelledby="ph-tam-${esc(tam.entityId)}">
-    <div class="chead"><span class="label" id="ph-tam-${esc(tam.entityId)}">${esc(tam.name)}</span>${newCount ? `<span class="chip info">${esc(fill(a.nNew, { n: newCount }))}</span>` : `<span class="chip ok">${esc(a.allHeard)}</span>`}${sw}</div>
+    <div class="chead"><span class="label" id="ph-tam-${esc(tam.entityId)}">${esc(tam.name)}</span>${newCount ? `<span class="chip info">${esc(fill(a.nNew, { n: newCount }))}</span>` : `<span class="chip ok">${esc(a.allHeard)}</span>`}${timer.button}${sw}</div>
+    ${timer.note ? `<p class="ph-timer-note">${ic("clock")}<span>${esc(timer.note)}</span></p>` : ""}
     ${tam.offline ? staleNote({ offline: true, staleAt: tam.staleAt }, ctx) : ""}
+    ${tamDetailRows(tam, model, ctx)}
     ${rows}
     <p class="hint">${esc(facts)}</p></section>`;
+}
+
+/** The forwarding rules of the box as switches, each with the clock for "on for a while"; nothing without any. */
+function forwardCard(model, ctx) {
+  const { t, ui } = ctx;
+  const f = t.phone.forward;
+  const list = model.deflections ?? [];
+  if (!list.length) return "";
+  const rows = list
+    .map((d) => {
+      const busy = ui.busy?.has(d.entityId);
+      const sw = d.on !== null
+        ? `<button class="switch${busy ? " busy" : ""}" role="switch" aria-checked="${d.on}" aria-label="${esc(fill(f.switchLabel, { name: d.name }))}" data-act="ph-fwdsw" data-ph-ent="${esc(d.entityId)}" data-ph-val="${d.on ? "0" : "1"}" data-ph-name="${esc(d.name)}" data-k="ph-sw-${esc(d.entityId)}"${off(model, busy)}></button>`
+        : `<span class="ph-norec">${esc(f.unavailable)}</span>`;
+      const timer = d.on !== null ? timerParts(d.entityId, d.name, model, ctx, busy) : { button: "", note: "" };
+      const route = d.number || d.toNumber ? [d.number ? (model.privacy ? shortNumber(d.number) : d.number) : "", d.toNumber ? (model.privacy ? shortNumber(d.toNumber) : d.toNumber) : ""].filter(Boolean).join(" → ") : "";
+      return `<div class="ph-fwd"><span class="ph-ico tam">${ic("right")}</span><div class="ph-main"><b>${esc(d.name)}</b>${route ? `<small>${esc(route)}</small>` : ""}${timer.note ? `<small class="ph-timer-note">${ic("clock")}<span>${esc(timer.note)}</span></small>` : ""}</div>${timer.button}${sw}</div>`;
+    })
+    .join("");
+  return `<section class="card sec" aria-labelledby="ph-fwd-h"><div class="chead"><span class="label" id="ph-fwd-h">${esc(f.title)}</span></div>${rows}<p class="hint">${esc(f.hint)}</p></section>`;
 }
 
 function tamCards(model, ctx) {
@@ -846,8 +936,8 @@ export function renderPhone(model, ctx) {
   if (offline) return `${head}${bar()}${liveCard(model, ctx)}${offline}`;
   const body = ui.view === "stats"
     ? statsView(model, ctx)
-    : `${todayCard(model, ctx)}<div class="two ph-two">${callCard(model, ctx)}<div class="ph-col">${tamCards(model, ctx)}${bookCard(model, ctx)}${blockCard(model, ctx)}</div></div>`;
-  return `${head}${bar(view)}${liveCard(model, ctx)}${notices(model, ctx)}${body}`;
+    : `${todayCard(model, ctx)}<div class="two ph-two">${callCard(model, ctx)}<div class="ph-col">${tamCards(model, ctx)}${forwardCard(model, ctx)}${bookCard(model, ctx)}${blockCard(model, ctx)}</div></div>`;
+  return `${head}${bar(view)}${liveCard(model, ctx)}${notices(model, ctx)}${ui.view === "stats" ? "" : linesBar(model, ctx)}${body}`;
 }
 
 // ---------- dialog bodies ----------

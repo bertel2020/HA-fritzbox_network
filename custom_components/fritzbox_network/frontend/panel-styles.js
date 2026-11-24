@@ -1524,6 +1524,17 @@ export const PANEL_CSS = `
   .ph-chev { color: var(--muted); display: inline-grid; transition: transform .15s; }
   .ph-main[aria-expanded="true"] ~ .ph-act .ph-chev { transform: rotate(180deg); }
   .ph-norec { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  .ph-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .ph-lines .hint { margin-top: 10px; }
+  .ph-check { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 14px; }
+  .ph-timer-note { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 12px; color: var(--accent-hover); }
+  .ph-timer-note svg { width: 14px; height: 14px; flex: none; }
+  .ph-tamkv { margin-top: 4px; }
+  .ph-fwd { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; gap: 8px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .ph-fwd:first-of-type { border-top: 0; }
+  .ph-fwd .ph-main { display: grid; gap: 2px; min-width: 0; text-align: left; }
+  .ph-fwd .ph-main b { font-weight: 500; overflow-wrap: anywhere; }
+  .ph-fwd .ph-main small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
   .ph-new { background: var(--accent); }
   .ph-detail { padding: 0 0 12px 46px; min-width: 0; }
   .ph-detail dl.kv { display: grid; }
@@ -1665,6 +1676,8 @@ export const PANEL_CSS = `
   .timeline .tev time { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
   .timeline .tev .ic { position: relative; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent-hover); }
   .timeline .tev.device .ic { background: color-mix(in srgb, var(--up) 16%, var(--surface)); color: var(--up); }
+  .timeline .tev.phone .ic { background: color-mix(in srgb, var(--warn) 16%, var(--surface)); color: var(--warn); }
+  .timeline .tev.phone.bad .ic { background: var(--bad-soft); color: var(--bad); }
   .timeline .tev.box .ic { background: color-mix(in srgb, var(--ok) 16%, var(--surface)); color: var(--ok); }
   .timeline .tev .ic svg { width: 14px; height: 14px; }
   .timeline li:not(:last-child) .tev .ic::after { content: ""; position: absolute; top: 100%; left: 50%; width: 1px; height: 14px; background: var(--line); }

@@ -4,6 +4,17 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+### New
+
+The phone in the panel now uses what “FRITZ!Box Telefon” offers from 2.4. Where its entities are missing (an older version, a single number), nothing changes.
+
+- Panel, overview: When the provider **does not accept a telephone number** (the “Line …” sensor), the **Phone** tile turns red and names it, the notes list it with the status the box gives, and the **last 24 hours** show when it was unregistered or registered again (the last change of each number). In privacy mode the numbers are shortened.
+- Panel, Phone: With several telephone numbers (or one that is not registered) a card **Telephone numbers** at the top shows the state of each.
+- Panel, Phone: The **Call** dialog lets you choose the **phone** that rings (from the Phones sensor: DECT and IP phones) and after how many seconds dialling stops if nobody picks up. The choice can be kept for the next calls. Without the sensor the dialog stays as it was.
+- Panel, Phone: The card of an **answering machine** names its mode, after how many seconds it picks up, for which numbers it takes calls and where it stores, and warns when it is switched on but has no number. View only.
+- Panel, Phone: A new card **Call forwarding** with a switch per rule. Next to the switches of the forwardings and answering machines is a clock: **Switch on for a while** (30 minutes to 8 hours, until tomorrow morning, or your own time up to 24 hours, action `turn_on_for`). The switch does not tell when its timer ends; the panel remembers what it started itself (in the browser) and shows below when it goes off again.
+- Panel, Phone: When the call list holds calls on several own numbers, chips **per number** narrow the list, and the rows name the number. The panel reads them from the call list itself; the per-number “Call list …” sensor is not needed.
+
 ## 1.14.0 – 2026-11-22
 
 ### New

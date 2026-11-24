@@ -8,8 +8,12 @@ import { internetHints } from "./panel-internet.js";
 import { radioCheck, radioFindingText, utilizationLevel } from "./panel-radio.js";
 import { routesModel } from "./panel-routes.js";
 import { mergePortRules } from "./panel-ports.js";
+import { shortNumber } from "./phone-model.js";
 
 const LEVELS = { bad: 0, warn: 1, info: 2 };
+
+/** An own number as it is shown: shortened where privacy mode hides numbers. */
+const lineNumber = (number, lines) => (lines?.privacy ? shortNumber(number) : number);
 
 /** A text with a number: its "…One" form for one where the texts have it ("1 new device", "2 new devices"). */
 function counted(texts, key, n, values = {}) {
@@ -91,6 +95,11 @@ export function collectIssues(state, t, now = Date.now()) {
     const unread = Number(state.phoneUnread) || 0;
     if (missed) add("info", "phone-missed", counted(o, "missed", missed), o.missedDetail, "phone", t.tabs.phone);
     if (unread) add("info", "phone-messages", counted(o, "messages", unread), o.messagesDetail, "phone", t.tabs.phone);
+    // a number the provider has not registered: calls to it do not arrive
+    for (const l of state.phoneLines?.down ?? []) {
+      const number = lineNumber(l.number, state.phoneLines);
+      add("bad", "phone-line", fill(o.lineDown, { number }), l.status ? fill(o.lineDownStatus, { status: l.status }) : o.lineDownDetail, "phone", t.tabs.phone);
+    }
   }
   return issues.map((issue, i) => ({ issue, i })).sort((a, b) => LEVELS[a.issue.level] - LEVELS[b.issue.level] || a.i - b.i).map((x) => x.issue);
 }
@@ -149,6 +158,11 @@ export function todayEvents(state, t, now = Date.now()) {
     .sort((a, b) => b.at - a.at);
   for (const c of fresh.slice(0, 3)) items.push({ at: c.at, kind: "device", text: fill(o.newDevice, { name: c.name || "?" }), href: pageHash("net", { filter: "new" }) });
   if (fresh.length > 3) items.push({ at: fresh[3].at, kind: "device", text: fill(o.newMore, { n: fresh.length - 3 }), href: pageHash("net", { filter: "new" }) });
+  // the last change of each telephone number: registered by the provider, or not any more
+  for (const c of state?.phoneLines?.changes ?? []) {
+    if (c.at < since || c.at > now + 60000) continue;
+    items.push({ at: c.at, kind: "phone", bad: !c.registered, text: fill(c.registered ? o.lineUp : o.lineDown, { number: lineNumber(c.number, state.phoneLines) }), href: pageHash("phone") });
+  }
   const info = state?.box && typeof state.box === "object" ? state.box : null;
   const up = info ? boxUptime(info, now) : null;
   if (up !== null && up * 1000 < DAY_MS) items.push({ at: now - up * 1000, kind: "box", text: o.boxRestarted, href: pageHash("box") });
@@ -232,6 +246,10 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
     const unread = Number(state.phoneUnread) || 0;
     const today = state.phoneToday;
     const messages = unread ? counted(o, "messages", unread) : o.noMessages;
+    // numbers the provider has not registered come first in the line below the value, and turn the dot red
+    const lines = state.phoneLines;
+    const down = lines?.down ?? [];
+    const lineNote = down.length ? (down.length === 1 ? fill(o.lineDownOne, { number: lineNumber(down[0].number, lines) }) : fill(o.lineDownN, { n: down.length })) : "";
     if (today && typeof today.n === "number") {
       const parts = [
         { key: "in", n: today.in ?? 0 },
@@ -244,12 +262,12 @@ export function overviewTiles(state, t, { now = Date.now(), language } = {}) {
         label: t.tabs.phone,
         value: String(today.n),
         unit: o.callsToday,
-        sub: [today.missed ? counted(o, "missedN", today.missed) : "", messages].filter(Boolean).join(" · "),
-        tone: today.missed ? "warn" : "",
+        sub: [lineNote, today.missed ? counted(o, "missedN", today.missed) : "", messages].filter(Boolean).join(" · "),
+        tone: down.length ? "bad" : today.missed ? "warn" : "",
         seg: parts,
       });
     } else {
-      tiles.push({ id: "phone", href: pageHash("phone"), label: t.tabs.phone, value: missed === null ? "–" : String(missed), unit: o.missed, sub: messages, tone: "" });
+      tiles.push({ id: "phone", href: pageHash("phone"), label: t.tabs.phone, value: missed === null ? "–" : String(missed), unit: o.missed, sub: [lineNote, messages].filter(Boolean).join(" · "), tone: down.length ? "bad" : "" });
     }
   }
   return tiles;
@@ -276,7 +294,7 @@ function consumersHtml(state, t, language, now) {
   return `<section class="card sec" aria-labelledby="ov-consumers">${head}${list ? `<ul class="consumers">${list}</ul>` : `<p class="hint">${escapeHtml(o.none)}</p>`}</section>`;
 }
 
-const TODAY_ICONS = { internet: "globe", device: "network", box: "router" };
+const TODAY_ICONS = { internet: "globe", device: "network", box: "router", phone: "phone" };
 
 /** The time of an event: the clock for today, the weekday with it for the day before. */
 function eventClock(at, now, language) {
@@ -290,7 +308,7 @@ function todayHtml(events, t, now, language) {
   const list = events.length
     ? `<ul class="timeline">${events
         .slice(0, 6)
-        .map((e) => `<li><a class="tev ${escapeHtml(e.kind)}" href="${escapeHtml(e.href)}"><time datetime="${new Date(e.at).toISOString()}">${escapeHtml(eventClock(e.at, now, language))}</time><span class="ic" aria-hidden="true">${ic(TODAY_ICONS[e.kind] ?? "info")}</span><span class="tx">${escapeHtml(e.text)}</span></a></li>`)
+        .map((e) => `<li><a class="tev ${escapeHtml(e.kind)}${e.bad ? " bad" : ""}" href="${escapeHtml(e.href)}"><time datetime="${new Date(e.at).toISOString()}">${escapeHtml(eventClock(e.at, now, language))}</time><span class="ic" aria-hidden="true">${ic(TODAY_ICONS[e.kind] ?? "info")}</span><span class="tx">${escapeHtml(e.text)}</span></a></li>`)
         .join("")}</ul>`
     : `<p class="hint">${escapeHtml(o.none)}</p>`;
   return `<div class="evsec" role="group" aria-labelledby="ov-today"><h3 class="label" id="ov-today">${escapeHtml(o.title)}</h3>${list}</div>`;

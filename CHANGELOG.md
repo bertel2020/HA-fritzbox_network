@@ -4,6 +4,17 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ## Unveröffentlicht
 
+### Neu
+
+Das Telefon im Panel nutzt jetzt, was „FRITZ!Box Telefon“ ab 2.4 liefert. Wo die Entitäten dazu fehlen (ältere Version, einzelne Nummer), ändert sich nichts.
+
+- Panel, Übersicht: Nimmt der Anbieter eine **Rufnummer nicht an** (Sensor „Leitung …“), wird die Kachel **Telefon** rot und nennt sie, die Auffälligkeiten führen sie mit dem Status der Box, und die **letzten 24 Stunden** zeigen, wann sie abgemeldet oder wieder angemeldet wurde (der letzte Wechsel je Nummer). Im Datenschutzmodus sind die Nummern gekürzt.
+- Panel, Telefon: Bei mehreren Rufnummern (oder einer, die nicht angemeldet ist) steht oben eine Karte **Rufnummern** mit dem Zustand jeder Nummer.
+- Panel, Telefon: Im Dialog **Anrufen** wählst du das **Telefon**, das klingeln soll (aus dem Sensor „Telefone“: DECT und IP-Telefone), und nach wie vielen Sekunden das Wählen abbricht, wenn niemand abhebt. Die Wahl lässt sich für die nächsten Anrufe merken. Ohne den Sensor bleibt der Dialog wie bisher.
+- Panel, Telefon: Die Karte eines **Anrufbeantworters** nennt Betriebsart, nach wie vielen Sekunden er rangeht, für welche Rufnummern er annimmt und wo er speichert, und warnt, wenn er eingeschaltet ist, aber keine Rufnummer hat. Nur zur Ansicht.
+- Panel, Telefon: Neue Karte **Rufumleitungen** mit einem Schalter je Regel. Neben den Schaltern der Rufumleitungen und Anrufbeantworter steht eine Uhr: **Für eine Weile einschalten** (30 Minuten bis 8 Stunden, bis morgen früh oder eine eigene Dauer bis 24 Stunden, Aktion `turn_on_for`). Der Schalter nennt sein Ende nicht; das Panel merkt sich, was es selbst gestartet hat (im Browser), und zeigt darunter, wann es wieder ausgeht.
+- Panel, Telefon: Hat die Anrufliste Anrufe an mehreren eigenen Rufnummern, schränken Chips **je Rufnummer** die Liste ein, und die Zeilen nennen die Nummer. Das Panel liest sie aus der Anrufliste selbst, der Sensor „Anrufliste …“ je Nummer ist dafür nicht nötig.
+
 ## 1.14.0 – 2026-11-22
 
 ### Neu
