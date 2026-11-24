@@ -565,17 +565,18 @@ export function dialChoices(phones) {
  */
 export function phoneRows(phones) {
   if (!phones?.ok) return [];
-  const rows = [];
-  const seen = new Set();
-  const add = (row) => {
-    if (seen.has(row.name)) return;
-    seen.add(row.name);
-    rows.push({ ...row, current: row.name === phones.current });
-  };
-  for (const p of phones.dect) add({ name: p.name, kind: "dect", model: p.model, number: "", active: p.active });
-  for (const p of phones.ip) add({ name: p.name, kind: "ip", model: "", number: p.number || p.internalNumber, active: null });
-  for (const name of phones.dialPhones) add({ name, kind: "other", model: "", number: "", active: null });
-  return rows;
+  const base = (n) => n.replace(/^[^:]{1,12}:\s*/, "").trim().toLowerCase();
+  const rows = [
+    ...phones.dect.map((p) => ({ name: p.name, kind: "dect", model: p.model, number: "", active: p.active, dialName: "" })),
+    ...phones.ip.map((p) => ({ name: p.name, kind: "ip", model: "", number: p.number || p.internalNumber, active: null, dialName: "" })),
+  ];
+  // the box lists a handset again as "DECT: Mobilteil 1" among the dial phones: one row, with that name for dial
+  for (const name of phones.dialPhones) {
+    const row = rows.find((r) => !r.dialName && (r.name === name || (r.kind === "dect" && /^dect:/i.test(name) && base(name) === r.name.toLowerCase()) || (r.kind === "ip" && base(name) === r.name.toLowerCase())));
+    if (row) row.dialName = name;
+    else rows.push({ name, kind: "other", model: "", number: "", active: null, dialName: name });
+  }
+  return rows.map((r) => ({ ...r, current: Boolean(phones.current) && (r.dialName === phones.current || r.name === phones.current), target: r.dialName || r.name }));
 }
 
 /** The forwarding rules of the box as switches: [{ entityId, name, on, number, toNumber, mode }]. */

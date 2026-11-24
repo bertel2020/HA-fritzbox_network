@@ -1411,6 +1411,9 @@ test("the phones card lists every phone with its state, and the dial helper phon
   hass.states["sensor.fb_telefone"].attributes.dect = [{ name: "Küche", model: "FRITZ!Fon C6", active: true }, { name: "Bad", model: "FRITZ!Fon M2", active: false }];
   const m = model.readPhone(hass, "e1", { cache: new Map() });
   assert.deepEqual(model.phoneRows(m.phones).map((r) => [r.name, r.kind, r.active]), [["Küche", "dect", true], ["Bad", "dect", false], ["Flur", "ip", null], ["Fon 1", "other", null]]);
+  // the box lists a handset again as "DECT: Küche" among the dial phones: still one row, with that name as the target
+  const twice = model.phoneRows({ ...m.phones, dialPhones: ["Fon 1", "DECT: Küche", "ISDN: Rundruf"], current: "DECT: Küche" });
+  assert.deepEqual(twice.map((r) => [r.name, r.target, r.current]), [["Küche", "DECT: Küche", true], ["Bad", "Bad", false], ["Flur", "Flur", false], ["Fon 1", "Fon 1", false], ["ISDN: Rundruf", "ISDN: Rundruf", false]]);
   const html = page.renderPhone(m, ctx());
   assert.match(html, /ph-phones-h[\s\S]*4 Telefone/);
   assert.match(html, /id="ph-dialsel"[\s\S]*<option value="Fon 1" selected>/);

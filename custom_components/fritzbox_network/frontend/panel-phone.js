@@ -545,7 +545,7 @@ function phonesCard(model, ctx) {
       const line = [kind, r.model, r.number ? (model.privacy ? shortNumber(r.number) : r.number) : ""].filter(Boolean).join(" · ");
       // active: a radio link right now; a resting handset (DECT Eco) reports inactive, so that is no fault
       const state = r.active ? `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${esc(f.linked)}</span>` : "";
-      const ring = `<button class="icon-btn" data-act="ph-ringphone" data-ph-name="${esc(r.name)}" data-k="ph-ring-${esc(r.name)}" aria-haspopup="dialog" aria-label="${esc(fill(f.ring, { name: r.name }))}"${off(model)}>${ic("phone")}</button>`;
+      const ring = `<button class="icon-btn" data-act="ph-ringphone" data-ph-name="${esc(r.target)}" data-ph-label="${esc(r.name)}" data-k="ph-ring-${esc(r.name)}" aria-haspopup="dialog" aria-label="${esc(fill(f.ring, { name: r.name }))}"${off(model)}>${ic("phone")}</button>`;
       return `<div class="ph-phone"><span class="ph-ico">${ic("phone")}</span><div class="ph-main"><b>${esc(r.name)}</b>${line ? `<small>${esc(line)}</small>` : ""}</div>${r.current ? `<span class="chip info">${esc(f.dialMark)}</span>` : ""}${state}${ring}</div>`;
     })
     .join("");

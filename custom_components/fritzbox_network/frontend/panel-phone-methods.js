@@ -351,7 +351,7 @@ export class PhoneMethods {
     }
     if (!model?.found) return;
     if (act === "ph-dial") return this._phoneDial(ds.phNum ?? "", ds.phName ?? "");
-    if (act === "ph-ringphone") return this._phoneRing(ds.phName ?? "");
+    if (act === "ph-ringphone") return this._phoneRing(ds.phName ?? "", ds.phLabel ?? "");
     if (act === "ph-hangup") return this._phoneHangup();
     if (act === "ph-block") return this._phoneBlock(ds.phNum, ds.phName ?? "");
     if (act === "ph-unblock") return this._phoneUnblock(ds.phNum);
@@ -471,12 +471,12 @@ export class PhoneMethods {
    * Lets one phone of the box ring (call_phone): the phone of the dial help rings first (or the one
    * chosen here), after picking up the target phone. The box cannot ring a single phone alone.
    */
-  async _phoneRing(name) {
+  async _phoneRing(name, label = name) {
     const t = this._t;
     const f = t.phone.phones;
     const choices = dialChoices(this._phone?.phones).filter((c) => c.name !== name);
     const value = await openFormDialog(this.shadowRoot, t, {
-      title: fill(f.ringTitle, { name }),
+      title: fill(f.ringTitle, { name: label || name }),
       html: `<label class="field"><span class="label">${escapeHtml(f.ringFirst)}</span><select id="ph-ring-phone">
           <option value="">${escapeHtml(f.ringBox)}</option>
           ${choices.map((c) => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join("")}
@@ -494,7 +494,7 @@ export class PhoneMethods {
     if (value === null) return;
     const data = { target_phone: name, ...(value.phone ? { phone: value.phone } : {}), ...(value.ring ? { max_ring_seconds: value.ring } : {}) };
     if ((await this._phoneService("call_phone", data)) === undefined) return;
-    showToast(this.shadowRoot, fill(f.rung, { name }));
+    showToast(this.shadowRoot, fill(f.rung, { name: label || name }));
   }
 
   /**
