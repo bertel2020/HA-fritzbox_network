@@ -1810,6 +1810,7 @@ class FritzboxNetworkPanel extends HTMLElement {
   _onChange(event) {
     const el = event.target;
     if (el.dataset?.aown) return this._onAddressOwn(el);
+    if (el.dataset?.act === "ph-dialsel") return this._phoneDialSelect(el.dataset.phEnt, el.value);
     if (el.name === "color" && el.closest("#a-blockform")) return this._onGroupInput(el);
     if (el.name === "kind" && el.closest("#a-entryform")) return this._onEntryInput(el);
     if (el.dataset?.aopt) {

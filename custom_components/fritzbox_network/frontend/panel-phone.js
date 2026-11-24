@@ -8,7 +8,7 @@
 import { escapeHtml, hintNote, noteHtml } from "./shared.js";
 import { ic } from "./icons.js";
 import { fill } from "./texts.js";
-import { BOOK_ROWS, CALL_FILTERS, digits, HISTORY_PERIODS, PERIODS, PERIOD_DAYS, SERIES, callKind, dialable, displayName, filterCalls, filterCounts, foldHeat, heatGrid, isOutgoing, onBlocklist, callsOfNumber, ownNumbers, phoneStats, searchBook, shortNumber, wsStats } from "./phone-model.js";
+import { BOOK_ROWS, CALL_FILTERS, digits, HISTORY_PERIODS, PERIODS, PERIOD_DAYS, SERIES, callKind, dialable, displayName, filterCalls, filterCounts, foldHeat, heatGrid, isOutgoing, onBlocklist, callsOfNumber, ownNumbers, phoneRows, phoneStats, searchBook, shortNumber, wsStats } from "./phone-model.js";
 
 const esc = escapeHtml;
 const KIND_ICON = { in: "callIn", out: "callOut", miss: "callMissed", spam: "shield", tam: "tam" };
@@ -115,7 +115,8 @@ export function liveCard(model, ctx) {
     head = l.headTalk;
     tone = "talk";
     icon = "phone";
-    if (m.device) info.push([l.device, m.device]);
+    if (m.phone) info.push([l.phone, m.phone]);
+    else if (m.device) info.push([l.device, m.device]);
     if (m.to) info.push([l.called, m.to]);
     if (m.initiated && m.accepted) {
       const wait = Math.max(0, Math.round((new Date(m.accepted).getTime() - new Date(m.initiated).getTime()) / 1000));
@@ -132,7 +133,7 @@ export function liveCard(model, ctx) {
     head = ownDial ? l.headHelper : l.headOut;
     tone = "ring";
     icon = "callOut";
-    info.push(ownDial ? [l.process, fill(l.helperBody, { number: number0 })] : [l.device, m.device].filter(Boolean));
+    info.push(ownDial ? [l.process, fill(l.helperBody, { number: number0 })] : m.phone ? [l.phone, m.phone] : [l.device, m.device].filter(Boolean));
     if (ownDial) acts.push(`<button class="btn sm" data-act="ph-hangup" data-k="ph-hangup">${esc(l.cancelDial)}</button>`);
   }
   const steps = [dialing ? l.stepPick : l.stepRing, l.stepTalk, l.stepEnd]
@@ -157,6 +158,12 @@ export function liveCard(model, ctx) {
     ${acts.length ? `<div class="ph-now-act">${acts.join("")}</div>` : ""}</section>`;
 }
 
+/** "an Mobilteil 1" / "von FON1": the phone the monitor names for a call; empty while the box does not tell. */
+function livePhone(m, l) {
+  if (!m.phone) return "";
+  return fill(m.state === "dialing" || m.direction === "outgoing" ? l.phoneOut : l.phoneIn, { phone: m.phone });
+}
+
 /** The row for the running call at the top of the call list. */
 function liveRow(model, ctx) {
   const { t, now } = ctx;
@@ -166,7 +173,7 @@ function liveRow(model, ctx) {
   if (!talking && m.state !== "ringing" && m.state !== "dialing") return "";
   const dial = m.state === "dialing";
   const name = (talking ? m.withName || m.with : dial ? m.toName || m.to : m.fromName || m.from) || t.phone.calls.unknown;
-  const sub = [talking ? l.talkingShort : dial ? l.dialingShort : l.ringingShort, talking ? m.device : m.area].filter(Boolean).join(" · ");
+  const sub = [talking ? l.talkingShort : dial ? l.dialingShort : l.ringingShort, talking || dial ? livePhone(m, l) || (talking ? m.device : "") : m.area].filter(Boolean).join(" · ");
   const since = talking ? m.accepted || m.initiated : m.initiated;
   return `<div class="ph-row ph-livrow${talking ? " talk" : ""}"><div class="ph-line"><span class="ph-ico ${talking ? "in" : "tam"}">${ic(dial ? "callOut" : "phone")}</span><div class="ph-main"><b>${esc(name)}</b><small>${esc(sub)}</small></div><span class="ph-livtime" data-ph-since="${esc(since ?? "")}">${esc(sinceText(since, now) || "–")}</span></div></div>`;
 }
@@ -197,7 +204,7 @@ export function liveBand(model, ctx) {
   }
   if (m.state === "talking") {
     const name = m.withName || m.with || t.phone.calls.unknown;
-    const parts = [m.withName && m.with ? m.with : "", m.device, m.accepted ? fill(l.since, { time: time(m.accepted) }) : ""].filter(Boolean);
+    const parts = [m.withName && m.with ? m.with : "", livePhone(m, l) || m.device, m.accepted ? fill(l.since, { time: time(m.accepted) }) : ""].filter(Boolean);
     return `<section class="ph-live talk" role="status" aria-live="polite" aria-label="${esc(l.label)}">
       <span class="ico">${ic("phone")}</span>
       <div><b>${esc(fill(l.talking, { name }))}${m.vip ? ` ${ic("star")}<span class="sr">${esc(t.phone.calls.vip)}</span>` : ""}</b><small>${esc(parts.join(" · "))}</small></div>
@@ -209,7 +216,7 @@ export function liveBand(model, ctx) {
     const cancel = ownDial ? `<button class="btn sm" data-act="ph-hangup" data-k="ph-hangup">${esc(l.cancelDial)}</button>` : "";
     return `<section class="ph-live" role="status" aria-live="polite" aria-label="${esc(l.label)}">
       <span class="ico ring">${ic("callOut")}</span>
-      <div><b>${esc(fill(ownDial ? l.helper : l.dialing, { name }))}</b><small>${esc(ownDial ? fill(l.helperBody, { number }) : [m.device].filter(Boolean).join(" · "))}</small></div>${cancel}</section>`;
+      <div><b>${esc(fill(ownDial ? l.helper : l.dialing, { name }))}</b><small>${esc(ownDial ? fill(l.helperBody, { number }) : [livePhone(m, l) || m.device].filter(Boolean).join(" · "))}</small></div>${cancel}</section>`;
   }
   return "";
 }
@@ -512,6 +519,41 @@ function forwardCard(model, ctx) {
     })
     .join("");
   return `<section class="card sec" aria-labelledby="ph-fwd-h"><div class="chead"><span class="label" id="ph-fwd-h">${esc(f.title)}</span></div>${rows}<p class="hint">${esc(f.hint)}</p></section>`;
+}
+
+/**
+ * The phones of the box: the phone the dial help rings first (a choice, switched at once), and
+ * per phone its kind, number and, for DECT handsets, whether it is switched on and in range;
+ * a button lets it ring (call_phone). Nothing while the sensor Phones reports no phone.
+ */
+function phonesCard(model, ctx) {
+  const { t, ui } = ctx;
+  const f = t.phone.phones;
+  const rows = phoneRows(model.phones);
+  if (!rows.length) return "";
+  const unreachable = rows.filter((r) => r.active === false).length;
+  const sub = [fill(rows.length === 1 ? f.countOne : f.countN, { n: rows.length }), unreachable ? fill(f.unreachableN, { n: unreachable }) : ""].filter(Boolean).join(" · ");
+  const dial = model.phones.dialPhones;
+  const select = model.phones.selectId && dial.length
+    ? `<label class="field ph-dialsel"><span class="label">${esc(f.dialPhone)}</span><select id="ph-dialsel" data-act="ph-dialsel" data-ph-ent="${esc(model.phones.selectId)}" data-k="ph-dialsel"${off(model, ui.busy?.has(model.phones.selectId))}>
+        ${model.phones.current && dial.includes(model.phones.current) ? "" : `<option value="" selected>${esc(f.dialUnset)}</option>`}
+        ${dial.map((n) => `<option value="${esc(n)}"${n === model.phones.current ? " selected" : ""}>${esc(n)}</option>`).join("")}
+      </select></label>`
+    : "";
+  const list = rows
+    .map((r) => {
+      const kind = f.kinds[r.kind] ?? "";
+      const line = [kind, r.model, r.number ? (model.privacy ? shortNumber(r.number) : r.number) : ""].filter(Boolean).join(" · ");
+      const state = r.active === null
+        ? ""
+        : r.active
+          ? `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${esc(f.reachable)}</span>`
+          : `<span class="chip bad"><i class="dot bad" aria-hidden="true"></i>${esc(f.unreachable)}</span>`;
+      const ring = `<button class="icon-btn" data-act="ph-ringphone" data-ph-name="${esc(r.name)}" data-k="ph-ring-${esc(r.name)}" aria-haspopup="dialog" aria-label="${esc(fill(r.active === false ? f.ringOff : f.ring, { name: r.name }))}"${off(model, r.active === false)}>${ic("phone")}</button>`;
+      return `<div class="ph-phone${r.active === false ? " off" : ""}"><span class="ph-ico${r.active === false ? " bad" : ""}">${ic(r.active === false ? "unplug" : "phone")}</span><div class="ph-main"><b>${esc(r.name)}</b>${line ? `<small>${esc(line)}</small>` : ""}</div>${r.current ? `<span class="chip info">${esc(f.dialMark)}</span>` : ""}${state}${ring}</div>`;
+    })
+    .join("");
+  return `<section class="card sec" aria-labelledby="ph-phones-h"><div class="chead"><span class="label" id="ph-phones-h">${esc(f.title)}</span><span class="muted">${esc(sub)}</span></div>${select}${list}<p class="hint">${esc(f.hint)}</p></section>`;
 }
 
 function tamCards(model, ctx) {
@@ -934,7 +976,7 @@ export function renderPhone(model, ctx) {
   if (offline) return `${head}${bar()}${liveCard(model, ctx)}${offline}`;
   const body = ui.view === "stats"
     ? statsView(model, ctx)
-    : `${todayCard(model, ctx)}<div class="two ph-two">${callCard(model, ctx)}<div class="ph-col">${tamCards(model, ctx)}${forwardCard(model, ctx)}${bookCard(model, ctx)}${blockCard(model, ctx)}</div></div>`;
+    : `${todayCard(model, ctx)}<div class="two ph-two">${callCard(model, ctx)}<div class="ph-col">${tamCards(model, ctx)}${forwardCard(model, ctx)}${phonesCard(model, ctx)}${bookCard(model, ctx)}${blockCard(model, ctx)}</div></div>`;
   return `${head}${bar(view)}${liveCard(model, ctx)}${notices(model, ctx)}${ui.view === "stats" ? "" : linesBar(model, ctx)}${body}`;
 }
 

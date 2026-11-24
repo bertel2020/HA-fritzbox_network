@@ -351,6 +351,7 @@ export class PhoneMethods {
     }
     if (!model?.found) return;
     if (act === "ph-dial") return this._phoneDial(ds.phNum ?? "", ds.phName ?? "");
+    if (act === "ph-ringphone") return this._phoneRing(ds.phName ?? "");
     if (act === "ph-hangup") return this._phoneHangup();
     if (act === "ph-block") return this._phoneBlock(ds.phNum, ds.phName ?? "");
     if (act === "ph-unblock") return this._phoneUnblock(ds.phNum);
@@ -445,6 +446,55 @@ export class PhoneMethods {
     }, 90000);
     showToast(this.shadowRoot, value.phone ? fill(d.startedOn, { phone: value.phone }) : d.started);
     this._renderPhone();
+  }
+
+  /** The phone the dial help rings first, switched at once like under Telephony › Telephony devices on the box. */
+  async _phoneDialSelect(entityId, option) {
+    const f = this._t.phone.phones;
+    const ui = this._state.phone;
+    if (!entityId || !option) return;
+    ui.busy.add(entityId);
+    this._renderPhone();
+    try {
+      await this._hass.callService("select", "select_option", { option }, { entity_id: entityId }, false);
+      showToast(this.shadowRoot, fill(f.dialSet, { name: option }));
+    } catch (err) {
+      showToast(this.shadowRoot, fill(this._t.phone.failed, { error: err?.message ?? err }));
+    } finally {
+      ui.busy.delete(entityId);
+      this._renderPhone();
+      this._phoneFocus("ph-dialsel");
+    }
+  }
+
+  /**
+   * Lets one phone of the box ring (call_phone): the phone of the dial help rings first (or the one
+   * chosen here), after picking up the target phone. The box cannot ring a single phone alone.
+   */
+  async _phoneRing(name) {
+    const t = this._t;
+    const f = t.phone.phones;
+    const choices = dialChoices(this._phone?.phones).filter((c) => c.name !== name);
+    const value = await openFormDialog(this.shadowRoot, t, {
+      title: fill(f.ringTitle, { name }),
+      html: `<label class="field"><span class="label">${escapeHtml(f.ringFirst)}</span><select id="ph-ring-phone">
+          <option value="">${escapeHtml(f.ringBox)}</option>
+          ${choices.map((c) => `<option value="${escapeHtml(c.name)}">${escapeHtml(c.name)}</option>`).join("")}
+        </select></label>
+        <label class="field"><span class="label">${escapeHtml(t.phone.dial.ring)}</span><input id="ph-ring-sec" type="number" min="1" max="300" inputmode="numeric" placeholder="${escapeHtml(t.phone.dial.ringPlaceholder)}"></label>
+        <p class="hint">${escapeHtml(f.ringHelp)}</p>`,
+      ok: f.ringOk,
+      focus: "#ph-ring-phone",
+      validate: (dialog) => {
+        const ring = dialog.querySelector("#ph-ring-sec").value.trim();
+        return !ring || (Number.isInteger(Number(ring)) && Number(ring) >= 1 && Number(ring) <= 300) ? null : t.phone.dial.ringInvalid;
+      },
+      read: (dialog) => ({ phone: dialog.querySelector("#ph-ring-phone").value, ring: Number(dialog.querySelector("#ph-ring-sec").value) || 0 }),
+    });
+    if (value === null) return;
+    const data = { target_phone: name, ...(value.phone ? { phone: value.phone } : {}), ...(value.ring ? { max_ring_seconds: value.ring } : {}) };
+    if ((await this._phoneService("call_phone", data)) === undefined) return;
+    showToast(this.shadowRoot, fill(f.rung, { name }));
   }
 
   /**

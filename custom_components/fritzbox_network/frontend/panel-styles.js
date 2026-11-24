@@ -1503,6 +1503,7 @@ export const PANEL_CSS = `
   .ph-ico.sm { width: 20px; height: 20px; }
   .ph-ico.sm svg.i { width: 12px; height: 12px; }
   .ph-ico.in { color: var(--ok); background: var(--ok-soft); }
+  .ph-ico.bad { color: var(--bad); background: var(--bad-soft); }
   .ph-ico.out { color: var(--accent-hover); background: var(--accent-soft); }
   .ph-ico.miss, .ph-ico.spam { color: var(--bad); background: var(--bad-soft); }
   .ph-ico.tam { color: var(--up); background: color-mix(in srgb, var(--up) 14%, transparent); }
@@ -1532,6 +1533,13 @@ export const PANEL_CSS = `
   .ph-timer-note { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 12px; color: var(--accent-hover); }
   .ph-timer-note svg { width: 14px; height: 14px; flex: none; }
   .ph-tamkv { margin-top: 4px; }
+  .ph-phone { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto auto; gap: 8px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .ph-phone .ph-main { display: grid; gap: 2px; min-width: 0; text-align: left; }
+  .ph-phone .ph-main b { font-weight: 500; overflow-wrap: anywhere; }
+  .ph-phone .ph-main small { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+  .ph-phone.off .ph-main b { color: var(--muted); }
+  .ph-dialsel { margin-bottom: 8px; }
+  @media (max-width: 520px) { .ph-phone { grid-template-columns: 40px minmax(0, 1fr) auto; } .ph-phone .chip { grid-column: 2; justify-self: start; } }
   .ph-fwd { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto auto; gap: 8px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
   .ph-fwd:first-of-type { border-top: 0; }
   .ph-fwd .ph-main { display: grid; gap: 2px; min-width: 0; text-align: left; }

@@ -8,7 +8,7 @@
 export const PHONE_DOMAIN = "fritzbox_phone";
 
 /** The translation keys of fritzbox_phone this page uses; several per entry where a list. */
-const SINGLE_KEYS = ["call_list", "missed_calls", "calls_today", "talk_time_today", "spam_calls_today", "spam_calls_total", "call_monitor", "ringing", "unread_messages", "phones"];
+const SINGLE_KEYS = ["call_list", "missed_calls", "calls_today", "talk_time_today", "spam_calls_today", "spam_calls_total", "call_monitor", "ringing", "unread_messages", "phones", "dial_phone"];
 const LIST_KEYS = ["phonebook", "answering_machine", "tam_enabled", "deflection_enabled", "line_registered"];
 
 /** The call types of the box (CALL_TYPE_NAMES); any other value is shown as a call, not dropped. */
@@ -338,6 +338,8 @@ export function parseMonitor(stateObj) {
     vip: a.vip === true,
     area: str(a.area_name),
     device: str(a.device),
+    phone: str(a.phone),
+    direction: str(a.type),
     initiated: str(a.initiated),
     accepted: str(a.accepted),
     isSpam: a.is_spam === true,
@@ -441,7 +443,7 @@ function sensorParts(hass, ids, tams) {
     unread,
     ringing: monitor.state === "ringing",
     lines: parseLines(hass, ids),
-    phones: parsePhones(hass, ids),
+    phones: { ...parsePhones(hass, ids), selectId: ids?.dial_phone ?? "" },
     deflections: parseDeflections(hass, ids),
   };
 }
@@ -553,6 +555,26 @@ export function dialChoices(phones) {
     const i = ip.get(name);
     return { name, kind: d ? "dect" : i ? "ip" : "other", number: i?.number || i?.internalNumber || "", model: d?.model ?? "", current: name === phones.current };
   });
+}
+
+/**
+ * Every phone of the box for the card Phones: DECT handsets (active says whether it is switched
+ * on and in range), IP phones and the other names dial offers (FON ports). [{ name, kind, model,
+ * number, active (null where the box tells nothing), current (the phone of the dial help) }].
+ */
+export function phoneRows(phones) {
+  if (!phones?.ok) return [];
+  const rows = [];
+  const seen = new Set();
+  const add = (row) => {
+    if (seen.has(row.name)) return;
+    seen.add(row.name);
+    rows.push({ ...row, current: row.name === phones.current });
+  };
+  for (const p of phones.dect) add({ name: p.name, kind: "dect", model: p.model, number: "", active: p.active });
+  for (const p of phones.ip) add({ name: p.name, kind: "ip", model: "", number: p.number || p.internalNumber, active: null });
+  for (const name of phones.dialPhones) add({ name, kind: "other", model: "", number: "", active: null });
+  return rows;
 }
 
 /** The forwarding rules of the box as switches: [{ entityId, name, on, number, toNumber, mode }]. */

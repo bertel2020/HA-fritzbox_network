@@ -1384,3 +1384,65 @@ test("a switch that is on offers an automatic switch-off, one that is off a swit
   assert.match(root.els["#toast"].textContent, /schaltet sich in 30 Min\. aus/);
   assert.equal(sent[0].service, "turn_on_for");
 });
+
+// ---------- the phone of a call, the phones card, call_phone ----------
+
+test("the monitor names the phone of a call, from or on, in the row, the band and the card", () => {
+  const hass = withExtras(makeHass());
+  hass.states["sensor.fb_anrufmonitor"] = st("talking", { with: "0301", with_name: "Anna", device: "12", phone: "Küche", type: "incoming", accepted: "2026-11-07T10:00:00Z", initiated: "2026-11-07T09:59:50Z" });
+  const m = model.readPhone(hass, "e1", { cache: new Map() });
+  assert.equal(m.monitor.phone, "Küche");
+  const html = page.renderPhone(m, ctx());
+  assert.match(html, /Gespräch läuft · an Küche/);
+  assert.match(html, /<dt>Telefon<\/dt><dd>Küche<\/dd>/);
+  assert.match(page.liveBand(m, ctx()), /an Küche/);
+  hass.states["sensor.fb_anrufmonitor"] = st("dialing", { to: "0301", device: "12", phone: "Fon 1", type: "outgoing", initiated: "2026-11-07T10:00:00Z" });
+  assert.match(page.liveBand(model.readPhone(hass, "e1", { cache: new Map() }), ctx()), /von Fon 1/);
+  // an older version names no phone: as before
+  hass.states["sensor.fb_anrufmonitor"] = st("talking", { with: "0301", device: "12", accepted: "2026-11-07T10:00:00Z" });
+  const old = model.readPhone(hass, "e1", { cache: new Map() });
+  assert.doesNotMatch(page.liveBand(old, ctx()), /an Küche|von /);
+});
+
+test("the phones card lists every phone with its state, and the dial helper phone can be switched", async () => {
+  const hass = withExtras(makeHass());
+  hass.entities["select.fb_waehlhilfe"] = { entity_id: "select.fb_waehlhilfe", platform: "fritzbox_phone", translation_key: "dial_phone", device_id: "dph1" };
+  hass.states["select.fb_waehlhilfe"] = st("Fon 1", {});
+  hass.states["sensor.fb_telefone"].attributes.dect = [{ name: "Küche", model: "FRITZ!Fon C6", active: true }, { name: "Bad", model: "FRITZ!Fon M2", active: false }];
+  const m = model.readPhone(hass, "e1", { cache: new Map() });
+  assert.deepEqual(model.phoneRows(m.phones).map((r) => [r.name, r.kind, r.active]), [["Küche", "dect", true], ["Bad", "dect", false], ["Flur", "ip", null], ["Fon 1", "other", null]]);
+  const html = page.renderPhone(m, ctx());
+  assert.match(html, /ph-phones-h[\s\S]*4 Telefone · 1 nicht erreichbar/);
+  assert.match(html, /id="ph-dialsel"[\s\S]*<option value="Fon 1" selected>/);
+  assert.match(html, /Küche[\s\S]*DECT · FRITZ!Fon C6[\s\S]*erreichbar/);
+  assert.match(html, /Bad[\s\S]*nicht erreichbar[\s\S]*Bad ist nicht erreichbar" disabled/);
+  assert.match(html, /Flur[\s\S]*IP-Telefon · 030 5550202/);
+  // no sensor, no card
+  assert.doesNotMatch(page.renderPhone(model.readPhone(makeHass(), "e1", { cache: new Map() }), ctx()), /ph-phones-h/);
+  // switched at once through the select entity
+  const { p, calls: sent, root } = makePanel({}, { services: { select_option: {} } });
+  p._hass = { ...p._hass, entities: { ...p._hass.entities, ...hass.entities }, states: { ...p._hass.states, ...hass.states } };
+  p._phoneKey = null;
+  p._readPhone();
+  await p._phoneDialSelect("select.fb_waehlhilfe", "Küche");
+  assert.deepEqual(sent[0], { domain: "select", service: "select_option", data: { option: "Küche" }, target: { entity_id: "select.fb_waehlhilfe" }, notify: false, response: undefined });
+  assert.match(root.els["#toast"].textContent, /Küche klingelt jetzt zuerst/);
+});
+
+test("a phone can be let ring with call_phone, with the phone that rings first and the seconds", async () => {
+  const { p, calls: sent, root } = makePanel({}, { services: { call_phone: {} } });
+  p._hass = withExtras({ ...p._hass, entities: { ...p._hass.entities }, states: { ...p._hass.states } });
+  p._phoneKey = null;
+  p._readPhone();
+  const asked = p._onPhoneClick({ act: "ph-ringphone", phName: "Küche" });
+  const dialog = root.els["#dialog"];
+  assert.match(dialog.innerHTML, /Küche klingeln lassen/);
+  assert.doesNotMatch(dialog.querySelector("#ph-ring-phone").innerHTML, /value="Küche"/);
+  dialog.querySelector("#ph-ring-phone").value = "Fon 1";
+  dialog.querySelector("#ph-ring-sec").value = "20";
+  dialog.querySelector("#dlg-yes").onclick();
+  await asked;
+  assert.deepEqual(sent[0].data, { target_phone: "Küche", phone: "Fon 1", max_ring_seconds: 20 });
+  assert.equal(sent[0].service, "call_phone");
+  assert.match(root.els["#toast"].textContent, /danach klingelt Küche/);
+});
