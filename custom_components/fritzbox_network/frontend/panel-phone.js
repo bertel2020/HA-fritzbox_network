@@ -531,8 +531,7 @@ function phonesCard(model, ctx) {
   const f = t.phone.phones;
   const rows = phoneRows(model.phones);
   if (!rows.length) return "";
-  const unreachable = rows.filter((r) => r.active === false).length;
-  const sub = [fill(rows.length === 1 ? f.countOne : f.countN, { n: rows.length }), unreachable ? fill(f.unreachableN, { n: unreachable }) : ""].filter(Boolean).join(" · ");
+  const sub = fill(rows.length === 1 ? f.countOne : f.countN, { n: rows.length });
   const dial = model.phones.dialPhones;
   const select = model.phones.selectId && dial.length
     ? `<label class="field ph-dialsel"><span class="label">${esc(f.dialPhone)}</span><select id="ph-dialsel" data-act="ph-dialsel" data-ph-ent="${esc(model.phones.selectId)}" data-k="ph-dialsel"${off(model, ui.busy?.has(model.phones.selectId))}>
@@ -544,13 +543,10 @@ function phonesCard(model, ctx) {
     .map((r) => {
       const kind = f.kinds[r.kind] ?? "";
       const line = [kind, r.model, r.number ? (model.privacy ? shortNumber(r.number) : r.number) : ""].filter(Boolean).join(" · ");
-      const state = r.active === null
-        ? ""
-        : r.active
-          ? `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${esc(f.reachable)}</span>`
-          : `<span class="chip bad"><i class="dot bad" aria-hidden="true"></i>${esc(f.unreachable)}</span>`;
-      const ring = `<button class="icon-btn" data-act="ph-ringphone" data-ph-name="${esc(r.name)}" data-k="ph-ring-${esc(r.name)}" aria-haspopup="dialog" aria-label="${esc(fill(r.active === false ? f.ringOff : f.ring, { name: r.name }))}"${off(model, r.active === false)}>${ic("phone")}</button>`;
-      return `<div class="ph-phone${r.active === false ? " off" : ""}"><span class="ph-ico${r.active === false ? " bad" : ""}">${ic(r.active === false ? "unplug" : "phone")}</span><div class="ph-main"><b>${esc(r.name)}</b>${line ? `<small>${esc(line)}</small>` : ""}</div>${r.current ? `<span class="chip info">${esc(f.dialMark)}</span>` : ""}${state}${ring}</div>`;
+      // active: a radio link right now; a resting handset (DECT Eco) reports inactive, so that is no fault
+      const state = r.active ? `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${esc(f.linked)}</span>` : "";
+      const ring = `<button class="icon-btn" data-act="ph-ringphone" data-ph-name="${esc(r.name)}" data-k="ph-ring-${esc(r.name)}" aria-haspopup="dialog" aria-label="${esc(fill(f.ring, { name: r.name }))}"${off(model)}>${ic("phone")}</button>`;
+      return `<div class="ph-phone"><span class="ph-ico">${ic("phone")}</span><div class="ph-main"><b>${esc(r.name)}</b>${line ? `<small>${esc(line)}</small>` : ""}</div>${r.current ? `<span class="chip info">${esc(f.dialMark)}</span>` : ""}${state}${ring}</div>`;
     })
     .join("");
   return `<section class="card sec" aria-labelledby="ph-phones-h"><div class="chead"><span class="label" id="ph-phones-h">${esc(f.title)}</span><span class="muted">${esc(sub)}</span></div>${select}${list}<p class="hint">${esc(f.hint)}</p></section>`;

@@ -1412,10 +1412,11 @@ test("the phones card lists every phone with its state, and the dial helper phon
   const m = model.readPhone(hass, "e1", { cache: new Map() });
   assert.deepEqual(model.phoneRows(m.phones).map((r) => [r.name, r.kind, r.active]), [["Küche", "dect", true], ["Bad", "dect", false], ["Flur", "ip", null], ["Fon 1", "other", null]]);
   const html = page.renderPhone(m, ctx());
-  assert.match(html, /ph-phones-h[\s\S]*4 Telefone · 1 nicht erreichbar/);
+  assert.match(html, /ph-phones-h[\s\S]*4 Telefone/);
   assert.match(html, /id="ph-dialsel"[\s\S]*<option value="Fon 1" selected>/);
-  assert.match(html, /Küche[\s\S]*DECT · FRITZ!Fon C6[\s\S]*erreichbar/);
-  assert.match(html, /Bad[\s\S]*nicht erreichbar[\s\S]*Bad ist nicht erreichbar" disabled/);
+  assert.match(html, /Küche[\s\S]*DECT · FRITZ!Fon C6[\s\S]*Funkverbindung/);
+  assert.equal((html.match(/Funkverbindung/g) ?? []).length, 1);
+  assert.doesNotMatch(html, /nicht erreichbar/);
   assert.match(html, /Flur[\s\S]*IP-Telefon · 030 5550202/);
   // no sensor, no card
   assert.doesNotMatch(page.renderPhone(model.readPhone(makeHass(), "e1", { cache: new Map() }), ctx()), /ph-phones-h/);
