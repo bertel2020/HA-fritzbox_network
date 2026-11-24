@@ -1194,7 +1194,7 @@ const en = {
       call: "Call {name}, {type}",
       hidden: "Show hidden contact",
     },
-    lines: { label: "Telephone numbers", down: "{number} · not registered", unknown: "{number} · unknown", downHint: "The provider does not accept a number: calls to it do not arrive. Check the line in the box under Telephony › Own Numbers." },
+    lines: { label: "Telephone numbers", inUse: "{number} · in a call", down: "{number} · not registered", unknown: "{number} · unknown", downHint: "The provider does not accept a number: calls to it do not arrive. Check the line in the box under Telephony › Own Numbers." },
     phones: {
       title: "Phones",
       countOne: "1 phone",
@@ -2936,7 +2936,7 @@ const de = {
       call: "{name} anrufen, {type}",
       hidden: "Verdeckten Kontakt anzeigen",
     },
-    lines: { label: "Rufnummern", down: "{number} · nicht angemeldet", unknown: "{number} · unbekannt", downHint: "Der Anbieter nimmt eine Nummer nicht an: Anrufe an sie kommen nicht an. Prüfe die Leitung in der Box unter Telefonie › Eigene Rufnummern." },
+    lines: { label: "Rufnummern", inUse: "{number} · im Gespräch", down: "{number} · nicht angemeldet", unknown: "{number} · unbekannt", downHint: "Der Anbieter nimmt eine Nummer nicht an: Anrufe an sie kommen nicht an. Prüfe die Leitung in der Box unter Telefonie › Eigene Rufnummern." },
     phones: {
       title: "Telefone",
       countOne: "1 Telefon",

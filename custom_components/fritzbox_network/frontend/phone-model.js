@@ -510,6 +510,7 @@ export function parseLines(hass, ids) {
       entityId: id,
       number: str(a.number) || str(a.friendly_name),
       status: str(a.status),
+      inUse: a.in_use === true,
       registered: usable(s) ? s.state === "on" : null,
       since: Number.isNaN(since) ? null : since,
     };

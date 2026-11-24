@@ -1447,3 +1447,13 @@ test("a phone can be let ring with call_phone, with the phone that rings first a
   assert.equal(sent[0].service, "call_phone");
   assert.match(root.els["#toast"].textContent, /danach klingelt Küche/);
 });
+
+test("a number with a call running on it says so in the numbers row", () => {
+  const hass = withExtras(makeHass(), { lineB: "on" });
+  hass.states["binary_sensor.fb_leitung_1"].attributes.in_use = true;
+  const m = model.readPhone(hass, "e1", { cache: new Map() });
+  assert.deepEqual(m.lines.map((l) => l.inUse), [true, false]);
+  const html = page.renderPhone(m, ctx());
+  assert.match(html, /030 5550101 · im Gespräch/);
+  assert.doesNotMatch(html, /030 5550202 · im Gespräch/);
+});

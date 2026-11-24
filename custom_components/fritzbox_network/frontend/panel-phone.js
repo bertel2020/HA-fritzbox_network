@@ -247,7 +247,7 @@ function linesBar(model, ctx) {
       const number = model.privacy ? shortNumber(x.number) : x.number || "–";
       if (x.registered === null) return `<span class="chip"><i class="dot" aria-hidden="true"></i>${esc(fill(l.unknown, { number }))}</span>`;
       return x.registered
-        ? `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${esc(number)}</span>`
+        ? `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${esc(x.inUse ? fill(l.inUse, { number }) : number)}</span>`
         : `<span class="chip bad" title="${esc(x.status)}"><i class="dot bad" aria-hidden="true"></i>${esc(fill(l.down, { number }))}</span>`;
     })
     .join("");
