@@ -1217,7 +1217,7 @@ function withExtras(hass, { lineB = "off" } = {}) {
   }));
   add("switch.fb_umleitung_1", "deflection_enabled", st("off", { friendly_name: "Umleitung Büro", number: "030 5550101", to_number: "0711 4400", mode: "all" }));
   const tam = hass.states["sensor.fb_anrufbeantworter_1"];
-  tam.attributes = { ...tam.attributes, mode: "record", ring_seconds: 20, phone_numbers: ["030 5550101"], stick: "intern" };
+  tam.attributes = { ...tam.attributes, mode: "record_message", ring_seconds: 20, phone_numbers: ["030 5550101"], stick: "intern" };
   return hass;
 }
 
@@ -1310,14 +1310,15 @@ test("the own numbers in the call list narrow it, and the rows name the number",
   assert.doesNotMatch(page.renderPhone(model.readPhone(one, "e1", { cache: new Map() }), ctx()), /Eigene Rufnummer/);
 });
 
-test("an answering machine shows what the box tells about it, and warns when it has no number", () => {
+test("an answering machine shows what the box tells about it, and takes no number as all of them", () => {
   const hass = withExtras(makeHass());
   const html = page.renderPhone(model.readPhone(hass, "e1", { cache: new Map() }), ctx());
-  assert.match(html, /Betriebsart<\/dt><dd>record[\s\S]*Geht ran nach<\/dt><dd>20 Sekunden[\s\S]*Nimmt an für<\/dt><dd>030 5550101[\s\S]*Speichert auf<\/dt><dd>intern/);
-  assert.doesNotMatch(html, /keine Rufnummer eingestellt/);
+  assert.match(html, /Betriebsart<\/dt><dd>Nimmt Nachrichten auf[\s\S]*Geht ran nach<\/dt><dd>20 Sekunden[\s\S]*Nimmt an für<\/dt><dd>030 5550101[\s\S]*Speichert auf<\/dt><dd>intern/);
+  // no number listed: it takes calls for all of them, nothing to warn about
   hass.states["sensor.fb_anrufbeantworter_1"].attributes.phone_numbers = [];
-  const idle = page.renderPhone(model.readPhone(hass, "e1", { cache: new Map() }), ctx());
-  assert.match(idle, /keine Rufnummer[\s\S]*Er nimmt keine Anrufe an/);
+  const all = page.renderPhone(model.readPhone(hass, "e1", { cache: new Map() }), ctx());
+  assert.match(all, /Nimmt an für<\/dt><dd>alle Rufnummern/);
+  assert.doesNotMatch(all, /nimmt keine Anrufe/);
   // an older version tells none of it
   assert.equal(model.tamDetails({ enabled: true }), null);
   assert.doesNotMatch(page.renderPhone(read(), ctx()), /Geht ran nach/);
@@ -1330,7 +1331,7 @@ test("forwarding rules are switches with a clock; a timer started here shows its
   p._readPhone();
   const html = p._phone && page.renderPhone(p._phone, { ...ctx(), ui: p._state.phone });
   assert.match(html, /Rufumleitungen[\s\S]*Umleitung Büro[\s\S]*030 5550101 → 0711 4400[\s\S]*data-act="ph-timer" data-ph-ent="switch\.fb_umleitung_1"[\s\S]*data-act="ph-fwdsw"/);
-  const asked = p._phoneTimer("switch.fb_umleitung_1", "Umleitung Büro");
+  const asked = p._phoneTimer("switch.fb_umleitung_1", "Umleitung Büro", false);
   const dialog = root.els["#dialog"];
   assert.match(dialog.innerHTML, /30 Minuten[\s\S]*1 Stunden[\s\S]*4 Stunden[\s\S]*8 Stunden[\s\S]*Bis morgen früh/);
   dialog.querySelector("#ph-tm-sel").value = "custom";
@@ -1367,4 +1368,19 @@ test("switching a rule off by hand drops the note about its timer", async () => 
   p._state.phone.timers = { "switch.x": Date.now() + 60000 };
   await p._phoneTamSwitch("switch.x", false, "Umleitung");
   assert.equal("switch.x" in p._state.phone.timers, false);
+});
+
+test("a switch that is on offers an automatic switch-off, one that is off a switch-on for a while", async () => {
+  const { p, calls: sent, root } = makePanel({}, { services: { turn_on_for: {} } });
+  const html = (await p._renderPhone(), p._html["phone-view"]);
+  assert.match(html, /data-ph-val="1"[^>]*aria-label="Anrufbeantworter 1: automatisch ausschalten" title="Automatisch ausschalten"/);
+  const asked = p._phoneTimer("switch.fb_anrufbeantworter_1_aktiv", "Anrufbeantworter 1", true);
+  const dialog = root.els["#dialog"];
+  assert.match(dialog.innerHTML, /Ausschalten nach/);
+  assert.doesNotMatch(dialog.innerHTML, /einschalten für/i);
+  dialog.querySelector("#ph-tm-sel").value = "30";
+  dialog.querySelector("#dlg-yes").onclick();
+  await asked;
+  assert.match(root.els["#toast"].textContent, /schaltet sich in 30 Min\. aus/);
+  assert.equal(sent[0].service, "turn_on_for");
 });

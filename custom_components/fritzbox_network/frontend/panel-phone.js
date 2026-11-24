@@ -448,11 +448,11 @@ function leftText(min, t) {
 }
 
 /** The clock button of a switch and, while a timer started here runs, the note about it. */
-function timerParts(switchId, name, model, ctx, busy) {
+function timerParts(switchId, name, on, model, ctx, busy) {
   const { t, ui, now, language } = ctx;
   const tm = t.phone.timer;
   const min = timerLeft(ui, switchId, now);
-  const button = `<button class="icon-btn" data-act="ph-timer" data-ph-ent="${esc(switchId)}" data-ph-name="${esc(name)}" data-k="ph-tm-${esc(switchId)}" aria-haspopup="dialog" aria-label="${esc(fill(tm.label, { name }))}" title="${esc(tm.title)}"${off(model, busy || model.offline)}>${ic("clock")}</button>`;
+  const button = `<button class="icon-btn" data-act="ph-timer" data-ph-ent="${esc(switchId)}" data-ph-name="${esc(name)}" data-ph-val="${on ? "1" : "0"}" data-k="ph-tm-${esc(switchId)}" aria-haspopup="dialog" aria-label="${esc(fill(on ? tm.labelOn : tm.label, { name }))}" title="${esc(on ? tm.titleOn : tm.title)}"${off(model, busy || model.offline)}>${ic("clock")}</button>`;
   const note = min !== null ? fill(tm.running, { left: leftText(min, t), time: hhmm(new Date(ui.timers[switchId]), language) }) : "";
   return { button, note };
 }
@@ -463,14 +463,12 @@ function tamDetailRows(tam, model, ctx) {
   if (!d) return "";
   const a = ctx.t.phone.tam.details;
   const rows = [];
-  if (d.mode) rows.push([a.mode, d.mode]);
+  if (d.mode) rows.push([a.mode, a.modes[d.mode] ?? d.mode]);
   if (d.ringSeconds !== null) rows.push([a.ring, fill(a.seconds, { n: d.ringSeconds })]);
-  if (d.hasNumbers) rows.push([a.numbers, d.numbers.length ? d.numbers.map((n) => (model.privacy ? shortNumber(n) : n)).join(", ") : a.noNumber]);
+  if (d.hasNumbers) rows.push([a.numbers, d.numbers.length ? d.numbers.map((n) => (model.privacy ? shortNumber(n) : n)).join(", ") : a.allNumbers]);
   if (d.stick) rows.push([a.stick, d.stick]);
   if (!rows.length) return "";
-  const enabled = tam.switchOn ?? tam.enabled;
-  const idle = enabled === true && d.hasNumbers && !d.numbers.length;
-  return `<dl class="kv ph-kv ph-tamkv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>${idle ? `<p class="hintline warn"><span aria-hidden="true">${ic("alert")}</span><span>${esc(a.idle)}</span></p>` : ""}<p class="hint">${esc(a.readOnly)}</p>`;
+  return `<dl class="kv ph-kv ph-tamkv">${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl><p class="hint">${esc(a.readOnly)}</p>`;
 }
 
 function tamCard(tam, model, ctx) {
@@ -484,7 +482,7 @@ function tamCard(tam, model, ctx) {
     ? `<button class="switch${busy ? " busy" : ""}" role="switch" aria-checked="${tam.switchOn}" aria-label="${esc(fill(a.switchLabel, { name: tam.name }))}" data-act="ph-tamsw" data-ph-ent="${esc(tam.switchId)}" data-ph-val="${tam.switchOn ? "0" : "1"}" data-ph-name="${esc(tam.name)}" data-k="ph-sw-${esc(tam.switchId)}"${off(model, busy || tam.offline)}></button>`
     : "";
   const enabled = tam.switchOn ?? tam.enabled;
-  const timer = tam.switchId && tam.switchOn !== null ? timerParts(tam.switchId, tam.name, model, ctx, busy) : { button: "", note: "" };
+  const timer = tam.switchId && tam.switchOn !== null ? timerParts(tam.switchId, tam.name, enabled === true, model, ctx, busy) : { button: "", note: "" };
   const facts = [enabled === null ? "" : enabled ? a.on : a.off, tam.capacity !== null ? fill(a.capacity, { n: tam.capacity }) : "", a.playHint].filter(Boolean).join(" · ");
   const rows = tam.messages.length ? tam.messages.map((m) => messageRow(m, tam, model, ctx)).join("") : `<div class="empty ph-small">${ic("tam")}<b>${esc(a.noMessages)}</b></div>`;
   return `<section class="card sec" aria-labelledby="ph-tam-${esc(tam.entityId)}">
@@ -508,7 +506,7 @@ function forwardCard(model, ctx) {
       const sw = d.on !== null
         ? `<button class="switch${busy ? " busy" : ""}" role="switch" aria-checked="${d.on}" aria-label="${esc(fill(f.switchLabel, { name: d.name }))}" data-act="ph-fwdsw" data-ph-ent="${esc(d.entityId)}" data-ph-val="${d.on ? "0" : "1"}" data-ph-name="${esc(d.name)}" data-k="ph-sw-${esc(d.entityId)}"${off(model, busy)}></button>`
         : `<span class="ph-norec">${esc(f.unavailable)}</span>`;
-      const timer = d.on !== null ? timerParts(d.entityId, d.name, model, ctx, busy) : { button: "", note: "" };
+      const timer = d.on !== null ? timerParts(d.entityId, d.name, d.on === true, model, ctx, busy) : { button: "", note: "" };
       const route = d.number || d.toNumber ? [d.number ? (model.privacy ? shortNumber(d.number) : d.number) : "", d.toNumber ? (model.privacy ? shortNumber(d.toNumber) : d.toNumber) : ""].filter(Boolean).join(" → ") : "";
       return `<div class="ph-fwd"><span class="ph-ico tam">${ic("right")}</span><div class="ph-main"><b>${esc(d.name)}</b>${route ? `<small>${esc(route)}</small>` : ""}${timer.note ? `<small class="ph-timer-note">${ic("clock")}<span>${esc(timer.note)}</span></small>` : ""}</div>${timer.button}${sw}</div>`;
     })

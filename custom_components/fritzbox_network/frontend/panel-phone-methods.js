@@ -362,7 +362,7 @@ export class PhoneMethods {
     if (act === "ph-mark") return this._phoneMark(ds.phEnt, ds.phIdx);
     if (act === "ph-delete") return this._phoneDelete(ds.phEnt, ds.phIdx);
     if (act === "ph-tamsw" || act === "ph-fwdsw") return this._phoneTamSwitch(ds.phEnt, ds.phVal === "1", ds.phName ?? "");
-    if (act === "ph-timer") return this._phoneTimer(ds.phEnt, ds.phName ?? "");
+    if (act === "ph-timer") return this._phoneTimer(ds.phEnt, ds.phName ?? "", ds.phVal === "1");
     if (act === "ph-jump") {
       const tam = model.tams.find((x) => x.tamIndex === Number(ds.phTam));
       if (!tam) return;
@@ -452,21 +452,21 @@ export class PhoneMethods {
    * calls turn_on_for. The switch does not tell when its timer ends, so the end is kept here (and
    * in the browser's storage) for the note under the switch.
    */
-  async _phoneTimer(switchId, name) {
+  async _phoneTimer(switchId, name, on = false) {
     const t = this._t;
     const tm = t.phone.timer;
     const ui = this._state.phone;
     const morning = minutesUntilMorning();
     const value = await openFormDialog(this.shadowRoot, t, {
-      title: fill(tm.dialogTitle, { name }),
-      html: `<label class="field"><span class="label">${escapeHtml(tm.field)}</span><select id="ph-tm-sel">
+      title: fill(on ? tm.dialogTitleOn : tm.dialogTitle, { name }),
+      html: `<label class="field"><span class="label">${escapeHtml(on ? tm.fieldOn : tm.field)}</span><select id="ph-tm-sel">
           ${TIMER_CHOICES.map((m) => `<option value="${m}">${escapeHtml(fill(m >= 60 ? tm.hoursN : tm.minsN, { n: m >= 60 ? m / 60 : m }))}</option>`).join("")}
           <option value="${morning}">${escapeHtml(tm.morning)}</option>
           <option value="custom">${escapeHtml(tm.custom)}</option>
         </select></label>
         <label class="field" id="ph-tm-custom-wrap" hidden><span class="label">${escapeHtml(tm.customField)}</span><input id="ph-tm-custom" type="number" min="1" max="${TIMER_MAX}" value="90" inputmode="numeric"></label>
-        <p class="hint">${escapeHtml(tm.help)}</p>`,
-      ok: tm.ok,
+        <p class="hint">${escapeHtml(on ? tm.helpOn : tm.help)}</p>`,
+      ok: on ? tm.okOn : tm.ok,
       focus: "#ph-tm-sel",
       onOpen: (dialog) => {
         const sel = dialog.querySelector("#ph-tm-sel");
@@ -493,7 +493,7 @@ export class PhoneMethods {
       ui.timers = { ...ui.timers, [switchId]: Date.now() + value * 60000 };
       writeTimers(localStore(), ui.timers);
       const left = value >= 60 ? fill(tm.hours, { h: Math.floor(value / 60), m: value % 60 }) : fill(tm.mins, { n: value });
-      showToast(this.shadowRoot, fill(tm.toast, { name, time: left }));
+      showToast(this.shadowRoot, fill(on ? tm.toastOn : tm.toast, { name, time: left }));
     }
     this._renderPhone();
     this._phoneFocus(`ph-tm-${switchId}`);
