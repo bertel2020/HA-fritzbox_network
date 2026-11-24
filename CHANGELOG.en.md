@@ -4,6 +4,8 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+## 1.15.0 – 2026-11-24
+
 ### New
 
 The phone in the panel now uses what “FRITZ!Box Telefon” offers from 2.4. Where its entities are missing (an older version, a single number), nothing changes.

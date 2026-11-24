@@ -4,6 +4,8 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ## Unveröffentlicht
 
+## 1.15.0 – 2026-11-24
+
 ### Neu
 
 Das Telefon im Panel nutzt jetzt, was „FRITZ!Box Telefon“ ab 2.4 liefert. Wo die Entitäten dazu fehlen (ältere Version, einzelne Nummer), ändert sich nichts.
