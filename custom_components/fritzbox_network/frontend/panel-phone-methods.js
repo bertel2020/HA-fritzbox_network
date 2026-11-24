@@ -395,7 +395,7 @@ export class PhoneMethods {
         </select></label>
         <label class="field"><span class="label">${escapeHtml(d.ring)}</span><input id="ph-dial-ring" type="number" min="1" max="300" inputmode="numeric" placeholder="${escapeHtml(d.ringPlaceholder)}"></label>
         <label class="ph-check"><input type="checkbox" id="ph-dial-keep"${remembered ? " checked" : ""}> ${escapeHtml(d.keep)}</label>`
-      : "";
+      : `<p class="hint" id="ph-dial-nophones">${escapeHtml(d.noPhones)}</p>`;
     const value = await openFormDialog(this.shadowRoot, t, {
       title: d.title,
       html: `<label class="field"><span class="label">${escapeHtml(d.field)}</span><input id="ph-dial-in" type="text" value="${escapeHtml(number)}" inputmode="tel" autocomplete="off" aria-describedby="ph-dial-help" aria-controls="ph-dial-sugg"></label>
