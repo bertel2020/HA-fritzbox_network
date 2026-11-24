@@ -1234,14 +1234,19 @@ test("the lines tell which numbers the provider has registered", () => {
   assert.deepEqual([gone.down.length, gone.known], [0, 1]);
 });
 
-test("the page names the numbers, only where there are several or one is down", () => {
+test("the numbers card names every number with its state, also a single one", () => {
   const html = page.renderPhone(model.readPhone(withExtras(makeHass()), "e1", { cache: new Map() }), ctx());
-  assert.match(html, /ph-lines[\s\S]*030 5550101[\s\S]*030 5550202 · nicht angemeldet/);
+  assert.match(html, /ph-lines-h[\s\S]*2 Rufnummern · 1 nicht angemeldet[\s\S]*030 5550101[\s\S]*angemeldet[\s\S]*030 5550202[\s\S]*seit [\s\S]*Status „Error“[\s\S]*nicht angemeldet/);
+  assert.match(html, /Der Anbieter nimmt eine Nummer nicht an/);
   const ok = page.renderPhone(model.readPhone(withExtras(makeHass(), { lineB: "on" }), "e1", { cache: new Map() }), ctx());
-  assert.match(ok, /ph-lines/);
-  assert.doesNotMatch(ok, /nicht angemeldet/);
+  assert.match(ok, /ph-lines-h/);
+  assert.doesNotMatch(ok, /nicht angemeldet|Der Anbieter nimmt/);
+  // a single number is shown too: it tells that the number is fine
+  const hass = withExtras(makeHass(), { lineB: "on" });
+  delete hass.entities["binary_sensor.fb_leitung_2"];
+  assert.match(page.renderPhone(model.readPhone(hass, "e1", { cache: new Map() }), ctx()), /1 Rufnummer[\s\S]*030 5550101/);
   const none = page.renderPhone(model.readPhone(makeHass(), "e1", { cache: new Map() }), ctx());
-  assert.doesNotMatch(none, /ph-lines/);
+  assert.doesNotMatch(none, /ph-lines-h/);
   // privacy mode shortens the numbers
   const shy = page.renderPhone(model.readPhone(withExtras(makeHass({ privacy: true })), "e1", { cache: new Map() }), ctx());
   assert.doesNotMatch(shy, /030 5550202/);
@@ -1457,6 +1462,6 @@ test("a number with a call running on it says so in the numbers row", () => {
   const m = model.readPhone(hass, "e1", { cache: new Map() });
   assert.deepEqual(m.lines.map((l) => l.inUse), [true, false]);
   const html = page.renderPhone(m, ctx());
-  assert.match(html, /030 5550101 · im Gespräch/);
-  assert.doesNotMatch(html, /030 5550202 · im Gespräch/);
+  assert.match(html, /030 5550101<\/b><\/div>[\s\S]{0,200}im Gespräch/);
+  assert.equal((html.match(/im Gespräch/g) ?? []).length, 1);
 });

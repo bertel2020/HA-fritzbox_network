@@ -234,25 +234,33 @@ function notices(model, ctx) {
 }
 
 /**
- * The telephone numbers of the box with their state at the provider, as chips: only where there are
- * several, or one is not registered (a single registered number would only be noise).
+ * The telephone numbers of the box with their state at the provider, one row each: registered,
+ * in a call, not registered (with the time and the status the box names) or unknown. Always there
+ * where the box reports numbers; a single registered number says that it is fine.
  */
-function linesBar(model, ctx) {
-  const { t } = ctx;
+function linesCard(model, ctx) {
+  const { t, language } = ctx;
   const l = t.phone.lines;
   const lines = model.lines ?? [];
-  if (!lines.length || (lines.length < 2 && lines.every((x) => x.registered !== false))) return "";
-  const chips = lines
+  if (!lines.length) return "";
+  const down = lines.filter((x) => x.registered === false).length;
+  const sub = [fill(lines.length === 1 ? l.countOne : l.countN, { n: lines.length }), down ? fill(l.downN, { n: down }) : ""].filter(Boolean).join(" · ");
+  const rows = lines
     .map((x) => {
       const number = model.privacy ? shortNumber(x.number) : x.number || "–";
-      if (x.registered === null) return `<span class="chip"><i class="dot" aria-hidden="true"></i>${esc(fill(l.unknown, { number }))}</span>`;
-      return x.registered
-        ? `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${esc(x.inUse ? fill(l.inUse, { number }) : number)}</span>`
-        : `<span class="chip bad" title="${esc(x.status)}"><i class="dot bad" aria-hidden="true"></i>${esc(fill(l.down, { number }))}</span>`;
+      let chip;
+      let note = "";
+      if (x.registered === null) chip = `<span class="chip"><i class="dot" aria-hidden="true"></i>${esc(l.unknown)}</span>`;
+      else if (x.registered === false) {
+        chip = `<span class="chip bad"><i class="dot bad" aria-hidden="true"></i>${esc(l.notRegistered)}</span>`;
+        const at = x.since ? hhmm(new Date(x.since), language) : "";
+        note = [at ? fill(l.since, { time: at }) : "", x.status ? fill(l.status, { status: x.status }) : ""].filter(Boolean).join(" · ");
+      } else chip = x.inUse ? `<span class="chip info"><i class="dot on" aria-hidden="true"></i>${esc(l.inUse)}</span>` : `<span class="chip ok"><i class="dot on" aria-hidden="true"></i>${esc(l.registered)}</span>`;
+      const bad = x.registered === false;
+      return `<div class="ph-num-row${bad ? " bad" : ""}"><span class="ph-ico${bad ? " bad" : ""}">${ic(bad ? "alert" : "phone")}</span><div class="ph-main"><b class="mono">${esc(number)}</b>${note ? `<small>${esc(note)}</small>` : ""}</div>${chip}</div>`;
     })
     .join("");
-  const bad = lines.some((x) => x.registered === false);
-  return `<section class="ph-lines${bad ? " bad" : ""}" aria-label="${esc(l.label)}"><div class="ph-chips"><span class="label">${esc(l.label)}</span>${chips}</div>${bad ? `<p class="hintline warn"><span aria-hidden="true">${ic("alert")}</span><span>${esc(l.downHint)}</span></p>` : ""}</section>`;
+  return `<section class="card sec" aria-labelledby="ph-lines-h"><div class="chead"><span class="label" id="ph-lines-h">${esc(l.label)}</span><span class="muted">${esc(sub)}</span></div>${rows}${down ? `<p class="hintline warn"><span aria-hidden="true">${ic("alert")}</span><span>${esc(l.downHint)}</span></p>` : ""}</section>`;
 }
 
 function staleNote(model, ctx) {
@@ -972,8 +980,8 @@ export function renderPhone(model, ctx) {
   if (offline) return `${head}${bar()}${liveCard(model, ctx)}${offline}`;
   const body = ui.view === "stats"
     ? statsView(model, ctx)
-    : `${todayCard(model, ctx)}<div class="two ph-two">${callCard(model, ctx)}<div class="ph-col">${tamCards(model, ctx)}${forwardCard(model, ctx)}${phonesCard(model, ctx)}${bookCard(model, ctx)}${blockCard(model, ctx)}</div></div>`;
-  return `${head}${bar(view)}${liveCard(model, ctx)}${notices(model, ctx)}${ui.view === "stats" ? "" : linesBar(model, ctx)}${body}`;
+    : `${todayCard(model, ctx)}<div class="two ph-two">${callCard(model, ctx)}<div class="ph-col">${tamCards(model, ctx)}${forwardCard(model, ctx)}${linesCard(model, ctx)}${phonesCard(model, ctx)}${bookCard(model, ctx)}${blockCard(model, ctx)}</div></div>`;
+  return `${head}${bar(view)}${liveCard(model, ctx)}${notices(model, ctx)}${body}`;
 }
 
 // ---------- dialog bodies ----------

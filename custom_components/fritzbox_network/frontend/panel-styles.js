@@ -1533,6 +1533,12 @@ export const PANEL_CSS = `
   .ph-timer-note { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; font-size: 12px; color: var(--accent-hover); }
   .ph-timer-note svg { width: 14px; height: 14px; flex: none; }
   .ph-tamkv { margin-top: 4px; }
+  .ph-num-row { display: flex; gap: 8px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
+  .ph-num-row .ph-main { display: grid; gap: 2px; min-width: 0; flex: 1; text-align: left; padding: 0; }
+  .ph-num-row .ph-main:hover { background: none; }
+  .ph-num-row .ph-main small { color: var(--muted); font-size: 12px; }
+  .ph-num-row.bad .ph-main b { color: var(--bad); }
+  .ph-num-row .ph-ico { flex: none; }
   .ph-phone { display: flex; gap: 8px 12px; align-items: center; padding: 10px 0; border-top: 1px solid var(--line); }
   .ph-phone .ph-main { display: grid; gap: 2px; min-width: 0; flex: 1; text-align: left; padding: 0; }
   .ph-phone .ph-main:hover { background: none; }
