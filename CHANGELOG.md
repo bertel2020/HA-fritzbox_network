@@ -6,6 +6,10 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Panel, Übersicht: Die Karte **Datenverbrauch** hat zusätzlich den Zeitraum **Monat** (die letzten 30 Tage) und einen Link **Alle Geräte und Verlauf** zur Seite Internet.
+
+### Neu
+
 Der Störabstand, ab dem der Hinweis auf eine schwache Leitung erscheint, ist jetzt eine Option (Standard 10 dB); 0 schaltet den Hinweis ab.
 
 ## 1.15.0 – 2026-11-24

@@ -450,8 +450,12 @@ class FritzNetworkClient:
         max_bytes: int,
         stop: threading.Event,
         progress: Any,
+        sink: Any = None,
     ) -> str:
         """Record the traffic on an interface of the box into a pcap file; returns why it ended.
+
+        With ``sink`` the bytes go to that callable instead of the file (the ring buffer cuts
+        them into segments itself); ``path`` is then not used.
 
         The box streams the capture while the connection is open. Only the login holds the lock:
         a capture runs for minutes and must not keep the polling waiting.
@@ -488,7 +492,7 @@ class FritzNetworkClient:
                 raise ValueError(f"the box answered {response.status} {response.reason}")
             sock.settimeout(CAPTURE_READ_TIMEOUT)
             threading.Thread(target=watch, daemon=True).start()
-            with open(path, "wb") as target:
+            with open(path, "wb") if sink is None else contextlib.nullcontext() as target:
                 while True:
                     try:
                         # read1 returns as soon as something has arrived
@@ -514,7 +518,10 @@ class FritzNetworkClient:
                             f"the box did not send a capture: {chunk[:32].hex(' ')} "
                             f"({chunk[:60].decode('utf-8', 'replace').strip()})"
                         )
-                    target.write(chunk)
+                    if sink is None:
+                        target.write(chunk)
+                    else:
+                        sink(chunk)
                     written += len(chunk)
                     progress(written)
                     if written >= max_bytes:

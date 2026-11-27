@@ -1994,7 +1994,7 @@ class FritzboxNetworkPanel extends HTMLElement {
     } else if (ds.act === "ov-refresh") {
       return this._loadOverview({ force: true });
     } else if (ds.act === "ov-traffic") {
-      state.ovTrafficDays = Number(ds.ovdays) === 7 ? 7 : 1;
+      state.ovTrafficDays = [7, 30].includes(Number(ds.ovdays)) ? Number(ds.ovdays) : 1;
       this._renderOverview();
       this.shadowRoot.querySelector(`[data-act="ov-traffic"][data-ovdays="${ds.ovdays}"]`)?.focus();
       return;

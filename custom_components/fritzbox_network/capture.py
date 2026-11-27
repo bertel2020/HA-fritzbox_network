@@ -13,13 +13,16 @@ import http.client
 import logging
 from pathlib import Path
 import re
+import shutil
+import struct
 import threading
 import time
+from collections.abc import Callable
 from typing import Any
 
 from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
@@ -51,7 +54,17 @@ DEFAULT_BYTES = 50 * 1024 * 1024
 KEEP_FILES = 20
 DIR_NAME = "fritzbox_captures"
 KEY_CAPTURES = f"{DOMAIN}_captures"
-FILE_RE = re.compile(r"^[a-z0-9]+_\d{8}-\d{6}(-[0-9a-f]{12})?\.pcap$")
+FILE_RE = re.compile(r"^[a-z0-9]+_\d{8}-\d{6}(-[0-9a-f]{12})?(-ring)?\.pcap$")
+FILE_PARTS_RE = re.compile(r"^([a-z0-9]+)_\d{8}-\d{6}(?:-([0-9a-f]{12}))?(-ring)?\.pcap$")
+# the ring buffer: segments of this length, kept for the window, never more than the size limit
+RING_DIR = "ring"
+RING_SEGMENT_SECONDS = 30
+RING_MIN_MINUTES = 1
+RING_MAX_MINUTES = 30
+DEFAULT_RING_MINUTES = 5
+RING_MAX_MB = 500
+DEFAULT_RING_MB = 100
+RING_RETRY_SECONDS = (5, 15, 60)
 VIEW_URL = f"/api/{DOMAIN}/capture/{{entry_id}}/{{name}}"
 
 
@@ -175,6 +188,159 @@ def detect_wifi_bands(
     return result, votes
 
 
+class SegmentWriter:
+    """Cuts the pcap stream of a capture into segment files and keeps only the newest.
+
+    Segments end at a packet boundary and each carries the pcap header, so any run of them is
+    a capture of its own. What is older than the window, or beyond the size limit, is deleted.
+    Thread-safe: the stream is fed from one thread, a save may come from another.
+    """
+
+    def __init__(
+        self,
+        directory: Path,
+        window_seconds: float,
+        max_bytes: int,
+        segment_seconds: float = RING_SEGMENT_SECONDS,
+        clock: Any = time.monotonic,
+    ) -> None:
+        self.directory = directory
+        self.window_seconds = window_seconds
+        self.max_bytes = max_bytes
+        self.segment_seconds = segment_seconds
+        self._clock = clock
+        self._lock = threading.Lock()
+        self._buffer = b""
+        self._record_size = 16
+        self._header: bytes | None = None
+        self._segments: list[dict[str, Any]] = []  # path, start, end, bytes
+        self._handle: Any = None
+        self._count = 0
+
+    def new_stream(self) -> None:
+        """A new capture of the box begins: its header comes first again."""
+        with self._lock:
+            self._buffer = b""
+            self._header = None
+            self._close_current()
+
+    def feed(self, chunk: bytes) -> None:
+        with self._lock:
+            self._buffer += chunk
+            if self._header is None:
+                if len(self._buffer) < 24:
+                    return
+                head = self._buffer[:24]
+                if head[:4] not in pcap.MAGICS:
+                    raise ValueError("not a pcap stream")
+                order, _nano, extended = pcap.MAGICS[head[:4]]
+                self._order = order
+                self._record_size = 24 if extended else 16
+                self._header = head
+                self._buffer = self._buffer[24:]
+            record = struct.Struct(f"{self._order}IIII")
+            position = 0
+            while len(self._buffer) - position >= self._record_size:
+                captured = record.unpack_from(self._buffer, position)[2]
+                end = position + self._record_size + captured
+                if len(self._buffer) < end:
+                    break
+                self._write(self._buffer[position:end])
+                position = end
+            self._buffer = self._buffer[position:]
+
+    def _write(self, data: bytes) -> None:
+        now = self._clock()
+        current = self._segments[-1] if self._handle else None
+        if current and (
+            now - current["start"] >= self.segment_seconds
+            or current["bytes"] >= max(1024 * 1024, self.max_bytes // 10)
+        ):
+            self._close_current()
+            current = None
+        if current is None:
+            self._count += 1
+            self.directory.mkdir(parents=True, exist_ok=True)
+            path = self.directory / f"seg-{self._count:08d}.pcap"
+            self._handle = path.open("wb")
+            self._handle.write(self._header)
+            current = {"path": path, "start": now, "end": now, "bytes": 24}
+            self._segments.append(current)
+        self._handle.write(data)
+        current["bytes"] += len(data)
+        current["end"] = now
+        self._prune(now)
+
+    def _close_current(self) -> None:
+        if self._handle:
+            self._handle.close()
+            self._handle = None
+
+    def _prune(self, now: float) -> None:
+        # the segment being written always stays; the others go when too old or too many bytes
+        while len(self._segments) > 1:
+            total = sum(seg["bytes"] for seg in self._segments)
+            oldest = self._segments[0]
+            if now - oldest["end"] <= self.window_seconds and total <= self.max_bytes:
+                break
+            self._segments.pop(0)["path"].unlink(missing_ok=True)
+
+    def status(self) -> dict[str, Any]:
+        """How much is held: seconds of traffic and bytes."""
+        with self._lock:
+            if not self._segments:
+                return {"seconds": 0.0, "bytes": 0}
+            span = self._clock() - self._segments[0]["start"]
+            return {
+                "seconds": round(min(span, self.window_seconds + self.segment_seconds), 1),
+                "bytes": sum(seg["bytes"] for seg in self._segments),
+            }
+
+    def save(self, target: Path) -> int:
+        """Join what is held into one pcap file; the number of bytes written.
+
+        Raises ValueError when nothing has arrived yet.
+        """
+        with self._lock:
+            if self._handle:
+                self._handle.flush()
+            segments = list(self._segments)
+            if not segments:
+                raise ValueError("the ring buffer holds nothing yet")
+            written = 0
+            with target.open("wb") as out:
+                for index, seg in enumerate(segments):
+                    with seg["path"].open("rb") as source:
+                        data = source.read()
+                    if index:
+                        data = data[24:]  # one header is enough
+                    out.write(data)
+                    written += len(data)
+            return written
+
+    def close(self, *, delete: bool = True) -> None:
+        with self._lock:
+            self._close_current()
+            if delete:
+                for seg in self._segments:
+                    seg["path"].unlink(missing_ok=True)
+                self._segments = []
+
+
+@dataclass
+class Ring:
+    """The ring buffer that runs now: what it records and how long it holds."""
+
+    interface: str
+    minutes: int
+    max_bytes: int
+    writer: SegmentWriter
+    device: str | None = None
+    ips: tuple[str, ...] = ()
+    error: str | None = None
+    stop: Any = field(default_factory=threading.Event, repr=False)
+
+
 @dataclass
 class Job:
     """The capture that runs now or ran last."""
@@ -221,6 +387,20 @@ class CaptureManager:
         self._interfaces: list[dict[str, str]] | None = None
         self._interfaces_at = 0.0
         self._task: asyncio.Task[None] | None = None
+        self.ring: Ring | None = None
+        self._ring_task: asyncio.Task[None] | None = None
+        self._listeners: list[Callable[[], None]] = []
+
+    @callback
+    def async_add_listener(self, listener: Callable[[], None]) -> Callable[[], None]:
+        """Be told when the ring buffer starts, stops or saves; returns the way to stop."""
+        self._listeners.append(listener)
+        return lambda: self._listeners.remove(listener) if listener in self._listeners else None
+
+    @callback
+    def _notify(self) -> None:
+        for listener in list(self._listeners):
+            listener()
 
     @classmethod
     async def async_load(cls, hass: HomeAssistant, entry_id: str, client: Any) -> CaptureManager:
@@ -247,7 +427,7 @@ class CaptureManager:
         Refused while a capture runs or another detection does. The flag is set here, in the same
         step as the check, so no capture can be started in between.
         """
-        if self.running or self.detecting:
+        if self.busy:
             raise ValueError("busy")
         self.detecting = True
 
@@ -286,6 +466,15 @@ class CaptureManager:
     def running(self) -> bool:
         return self.job is not None and self.job.state == "running"
 
+    @property
+    def ring_active(self) -> bool:
+        return self.ring is not None
+
+    @property
+    def busy(self) -> bool:
+        """The box records one thing at a time: a capture, the detection or the ring buffer."""
+        return self.running or self.detecting or self.ring_active
+
     def interfaces(self) -> list[dict[str, str]]:
         """What the box lets a capture listen on; blocking, so call it from an executor thread.
 
@@ -313,7 +502,7 @@ class CaptureManager:
         """Begin a capture; raises ValueError for a bad request or when one is running."""
         if not INTERFACE_RE.match(interface):
             raise ValueError("unknown interface")
-        if self.running or self.detecting:
+        if self.busy:
             raise ValueError("busy")
         seconds = max(MIN_SECONDS, min(MAX_SECONDS, seconds))
         max_bytes = max(1024 * 1024, min(MAX_BYTES, max_bytes))
@@ -339,6 +528,115 @@ class CaptureManager:
     def stop(self) -> None:
         if self.running and self.job is not None:
             self.job.stop.set()
+
+    def ring_start(
+        self,
+        interface: str,
+        minutes: int,
+        max_bytes: int,
+        device: str | None = None,
+        ips: tuple[str, ...] = (),
+    ) -> Ring:
+        """Begin the ring buffer; raises ValueError for a bad request or when the box is busy."""
+        if not INTERFACE_RE.match(interface):
+            raise ValueError("unknown interface")
+        if self.busy:
+            raise ValueError("busy")
+        minutes = max(RING_MIN_MINUTES, min(RING_MAX_MINUTES, minutes))
+        max_bytes = max(1024 * 1024, min(RING_MAX_MB * 1048576, max_bytes))
+        if device and not re.fullmatch(r"([0-9a-f]{2}:){5}[0-9a-f]{2}", device):
+            raise ValueError("invalid device")
+        writer = SegmentWriter(self.directory / RING_DIR, minutes * 60, max_bytes)
+        ring = Ring(interface, minutes, max_bytes, writer, device, ips)
+        self.ring = ring
+        self._ring_task = self._hass.async_create_task(self._ring_run(ring))
+        self._notify()
+        return ring
+
+    def ring_stop(self) -> None:
+        """End the ring buffer; what it holds is dropped, so save before."""
+        if self.ring is not None:
+            self.ring.stop.set()
+
+    async def _ring_run(self, ring: Ring) -> None:
+        def work() -> None:
+            shutil.rmtree(ring.writer.directory, ignore_errors=True)  # leftovers of a crash
+            failures = 0
+            while not ring.stop.is_set():
+                ring.writer.new_stream()
+                try:
+                    self._client.capture(
+                        ring.interface,
+                        None,
+                        10**9,
+                        10**12,
+                        ring.stop,
+                        lambda _: None,
+                        ring.writer.feed,
+                    )
+                except (OSError, ValueError, PermissionError, http.client.HTTPException) as err:
+                    ring.error = str(err)
+                    delay = RING_RETRY_SECONDS[min(failures, len(RING_RETRY_SECONDS) - 1)]
+                    failures += 1
+                    ring.stop.wait(delay)
+                else:
+                    ring.error = None
+                    failures = 0
+                    ring.stop.wait(2)  # the box ends one recording before it starts the next
+
+        try:
+            await self._hass.async_add_executor_job(work)
+        except Exception:  # noqa: BLE001 - the thread must not take the loop with it
+            _LOGGER.exception("The ring buffer on %s stopped", ring.interface)
+        finally:
+            await self._hass.async_add_executor_job(ring.writer.close)
+            if self.ring is ring:
+                self.ring = None
+            self._notify()
+
+    def ring_state(self) -> dict[str, Any]:
+        ring = self.ring
+        if ring is None:
+            return {"active": False}
+        return {
+            "active": True,
+            "interface": ring.interface,
+            "device": ring.device.replace(":", "") if ring.device else None,
+            "minutes": ring.minutes,
+            "max_mb": ring.max_bytes // 1048576,
+            "error": ring.error,
+            **ring.writer.status(),
+        }
+
+    def _save_ring(self) -> str:
+        ring = self.ring
+        if ring is None:
+            raise ValueError("not running")
+        stamp = dt_util.now().strftime("%Y%m%d-%H%M%S")
+        suffix = f"-{ring.device.replace(':', '')}" if ring.device else ""
+        name = f"{interface_slug(ring.interface)}_{stamp}{suffix}-ring.pcap"
+        path = self.directory / name
+        self.directory.mkdir(parents=True, exist_ok=True)
+        if ring.device:
+            joined = path.with_suffix(".tmp")
+            try:
+                ring.writer.save(joined)
+                kept = pcap.filter_device(joined, path, ring.device, set(ring.ips))
+            finally:
+                joined.unlink(missing_ok=True)
+            if kept == 0:
+                path.unlink(missing_ok=True)
+                raise ValueError("the device sent or received nothing in that time")
+        else:
+            ring.writer.save(path)
+        self._prune()
+        return name
+
+    async def async_ring_save(self) -> str:
+        """Keep what the ring buffer holds as a capture file; the ring goes on recording."""
+        name = await self._hass.async_add_executor_job(self._save_ring)
+        self._notify()
+        return name
 
     async def _run(self, job: Job) -> None:
         directory = self.directory
@@ -393,7 +691,8 @@ class CaptureManager:
                 **f,
                 "time": datetime.fromtimestamp(f["time"], dt_util.UTC).isoformat(),
                 "interface": f["name"].split("_", 1)[0],
-                "device": f["name"][:-5].split("-")[2] if f["name"].count("-") == 2 else None,
+                "device": (m := FILE_PARTS_RE.match(f["name"])) and m.group(2),
+                "ring": bool((m := FILE_PARTS_RE.match(f["name"])) and m.group(3)),
             }
             for f in found
         ]

@@ -6,6 +6,10 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Panel, overview: The **Data usage** card has the range **Month** (the last 30 days) as well as a link **All devices and the course** to the Internet page.
+
+### New
+
 The noise margin below which the weak-line repair appears is now an option (default 10 dB); 0 turns the repair off.
 
 ## 1.15.0 – 2026-11-24

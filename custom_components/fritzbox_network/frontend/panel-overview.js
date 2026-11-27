@@ -277,8 +277,8 @@ const ISSUE_ICONS = { bad: "alert", warn: "alert", info: "info" };
 
 function consumersHtml(state, t, language, now) {
   const o = t.overview.consumers;
-  const days = state?.ovTrafficDays === 7 ? 7 : 1;
-  const buttons = [1, 7].map((n) => `<button data-act="ov-traffic" data-ovdays="${n}" aria-pressed="${n === days}">${escapeHtml(t.trafficSwitch[n])}</button>`).join("");
+  const days = [7, 30].includes(state?.ovTrafficDays) ? state.ovTrafficDays : 1;
+  const buttons = [1, 7, 30].map((n) => `<button data-act="ov-traffic" data-ovdays="${n}" aria-pressed="${n === days}">${escapeHtml(t.trafficSwitch[n])}</button>`).join("");
   const head = `<div class="chead"><h2 class="label" id="ov-consumers">${escapeHtml(o.title)}</h2><div class="seg" role="group" aria-label="${escapeHtml(o.range)}">${buttons}</div></div>`;
   if (!state?.traffic) return `<section class="card sec" aria-labelledby="ov-consumers">${head}<p class="hint">${escapeHtml(t.loading)}</p></section>`;
   const rows = topConsumers(state.traffic, state.data?.clients, days, new Date(now));
@@ -291,7 +291,7 @@ function consumersHtml(state, t, language, now) {
         <span class="cbar" aria-hidden="true"><i class="d" style="width:${((r.down / top) * 100).toFixed(1)}%"></i><i class="u" style="width:${((r.up / top) * 100).toFixed(1)}%"></i></span></li>`;
     })
     .join("");
-  return `<section class="card sec" aria-labelledby="ov-consumers">${head}${list ? `<ul class="consumers">${list}</ul>` : `<p class="hint">${escapeHtml(o.none)}</p>`}</section>`;
+  return `<section class="card sec" aria-labelledby="ov-consumers">${head}${list ? `<ul class="consumers">${list}</ul>` : `<p class="hint">${escapeHtml(o.none)}</p>`}<p class="more"><a class="tlink" href="${escapeHtml(pageHash("internet"))}">${escapeHtml(o.more)} ›</a></p></section>`;
 }
 
 const TODAY_ICONS = { internet: "globe", device: "network", box: "router", phone: "phone" };
