@@ -23,6 +23,7 @@ CONF_SHOW_VENDOR = "show_vendor"
 CONF_WAKE_ON_LAN_WIFI = "wake_on_lan_wifi"
 CONF_STALE_REPAIR = "stale_repair"
 CONF_STALE_DAYS = "stale_days"
+CONF_NOISE_WARN_DB = "noise_warn_db"
 
 FILTER_ALL = "all"
 FILTER_INCLUDE = "include"
@@ -46,6 +47,8 @@ DEFAULT_SHOW_VENDOR = False
 DEFAULT_WAKE_ON_LAN_WIFI = False
 DEFAULT_STALE_REPAIR = False
 DEFAULT_STALE_DAYS = 30
+# 0 turns the weak-line repair off
+DEFAULT_NOISE_WARN_DB = 10
 
 # After repeated failures the poll interval doubles, never beyond this.
 MAX_BACKOFF_SECONDS = 300
@@ -83,9 +86,8 @@ INTERNET_EVENTS = 20
 # what the history keeps of the connection: events, and the addresses per kind
 INTERNET_EVENTS_KEPT = 200
 INTERNET_ADDRESSES_KEPT = 20
-# What counts as a problem worth a repair: a noise margin below this many dB for this many seconds,
+# What counts as a problem worth a repair: a noise margin below the limit set in the options for this many seconds,
 # or this many new connections within a day.
-INTERNET_NOISE_WARN_DB = 10
 INTERNET_LOW_MARGIN_SECONDS = 3600
 INTERNET_RECONNECTS_WARN = 5
 # a repeater the box does not list for this long is a repair: a restart or an update is shorter

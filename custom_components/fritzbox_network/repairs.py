@@ -18,7 +18,9 @@ import voluptuous as vol
 
 from .const import (
     CONF_HIDDEN_MACS,
+    CONF_NOISE_WARN_DB,
     CONF_STALE_DAYS,
+    DEFAULT_NOISE_WARN_DB,
     DEFAULT_STALE_DAYS,
     DOMAIN,
     INTERNET_LOW_MARGIN_SECONDS,
@@ -183,7 +185,10 @@ def async_update_internet_issues(hass: HomeAssistant, entry: FritzNetworkConfigE
         margins = [
             m for m in (info.dsl.noise_margin_down, info.dsl.noise_margin_up) if m is not None
         ]
-        issues[ISSUE_INTERNET_LINE] = {"margin": f"{min(margins):g}"}
+        issues[ISSUE_INTERNET_LINE] = {
+            "margin": f"{min(margins):g}",
+            "limit": str(entry.options.get(CONF_NOISE_WARN_DB, DEFAULT_NOISE_WARN_DB)),
+        }
     recent = [
         e
         for e in coordinator.internet_events

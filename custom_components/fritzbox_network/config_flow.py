@@ -40,6 +40,7 @@ from .const import (
     CONF_SCAN_INTERVAL,
     CONF_SHOW_VENDOR,
     CONF_SKIP_OFFLINE,
+    CONF_NOISE_WARN_DB,
     CONF_STALE_DAYS,
     CONF_STALE_REPAIR,
     CONF_SWITCH_AREAS,
@@ -54,6 +55,7 @@ from .const import (
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SHOW_VENDOR,
     DEFAULT_SKIP_OFFLINE,
+    DEFAULT_NOISE_WARN_DB,
     DEFAULT_STALE_DAYS,
     DEFAULT_STALE_REPAIR,
     DEFAULT_WAKE_ON_LAN_WIFI,
@@ -396,6 +398,10 @@ class FritzNetworkOptionsFlow(OptionsFlow):
                     CONF_STALE_DAYS,
                     default=options.get(CONF_STALE_DAYS, DEFAULT_STALE_DAYS),
                 ): vol.All(int, vol.Range(min=7, max=365)),
+                vol.Optional(
+                    CONF_NOISE_WARN_DB,
+                    default=options.get(CONF_NOISE_WARN_DB, DEFAULT_NOISE_WARN_DB),
+                ): vol.All(int, vol.Range(min=0, max=60)),
                 vol.Optional(
                     CONF_IGNORE_GUESTS,
                     default=options.get(CONF_IGNORE_GUESTS, DEFAULT_IGNORE_GUESTS),

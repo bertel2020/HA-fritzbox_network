@@ -79,6 +79,7 @@
           "skip_offline": "Für Offline-Geräte keine Geräte anlegen",
           "stale_repair": "Auf lange offline Geräte hinweisen",
           "stale_days": "Tage offline, bis ein Gerät als weg gilt",
+          "noise_warn_db": "Warnen, wenn der DSL-Störabstand darunter bleibt (dB, 0 = nie)",
           "repeaters": "Repeater steuern",
           "switch_areas": "Schalter anlegen für"
         },
@@ -474,7 +475,7 @@
     },
     "internet_line": {
       "title": "Die DSL-Leitung ist schwach",
-      "description": "Der Störabstand der DSL-Leitung liegt seit über einer Stunde unter 10 dB (jetzt {margin} dB). Die Verbindung kann abbrechen oder langsam werden. Prüfe Kabel und Dose und frage beim Anbieter nach, wenn es so bleibt. Die Internet-Seite im Panel „FRITZ!Box Cockpit“ zeigt die Leitung."
+      "description": "Der Störabstand der DSL-Leitung liegt seit über einer Stunde unter {limit} dB (jetzt {margin} dB). Die Verbindung kann abbrechen oder langsam werden. Prüfe Kabel und Dose und frage beim Anbieter nach, wenn es so bleibt. Die Internet-Seite im Panel „FRITZ!Box Cockpit“ zeigt die Leitung."
     },
     "mesh_repeater_lost": {
       "title": "Ein Repeater fehlt im Mesh",

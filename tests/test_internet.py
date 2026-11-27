@@ -471,13 +471,28 @@ async def test_a_weak_line_for_an_hour_is_a_repair_that_goes_away(hass, fake_cli
     coordinator.internet_low_margin_since = dt_util.utcnow() - timedelta(hours=2)
     await _poll(hass, coordinator)
     created = registry.async_get_issue("fritzbox_network", issue)
-    assert created is not None and created.translation_placeholders == {"margin": "8"}
+    assert created is not None and created.translation_placeholders == {
+        "margin": "8",
+        "limit": "10",
+    }
     assert not created.is_fixable
 
     fake_client.internet_slow["X_AVM-DE_GetDSLInfo"]["NewDownstreamNoiseMargin"] = 170
     coordinator._polls = 0  # the line is read again at this poll
     await _poll(hass, coordinator)
     assert registry.async_get_issue("fritzbox_network", issue) is None
+    assert coordinator.internet_low_margin_since is None
+
+
+async def test_the_noise_limit_is_an_option_and_zero_turns_it_off(hass, fake_client, entry):
+    fake_client.internet_slow["X_AVM-DE_GetDSLInfo"]["NewDownstreamNoiseMargin"] = 80
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "noise_warn_db": 6})
+    coordinator = await _setup(hass, entry)
+    # 8 dB is above a limit of 6
+    assert coordinator.internet_low_margin_since is None
+
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "noise_warn_db": 0})
+    await _poll(hass, coordinator)
     assert coordinator.internet_low_margin_since is None
 
 

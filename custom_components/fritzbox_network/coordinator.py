@@ -36,12 +36,14 @@ from .const import (
     BACKOFF_AFTER_FAILURES,
     CONF_ADOPT_NAMES,
     CONF_CONSIDER_HOME,
+    CONF_NOISE_WARN_DB,
     CONF_SCAN_INTERVAL,
     CONF_SHOW_VENDOR,
     CONF_SKIP_OFFLINE,
     CONF_WAKE_ON_LAN_WIFI,
     DEFAULT_ADOPT_NAMES,
     DEFAULT_CONSIDER_HOME,
+    DEFAULT_NOISE_WARN_DB,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_SHOW_VENDOR,
     DEFAULT_SKIP_OFFLINE,
@@ -58,7 +60,6 @@ from .const import (
     INTERNET_DETAIL_POLLS,
     INTERNET_EVENTS,
     INTERNET_HISTORY,
-    INTERNET_NOISE_WARN_DB,
     MAX_BACKOFF_SECONDS,
     RESERVATION_PER_POLL,
     RESERVATION_REFRESH_SECONDS,
@@ -795,7 +796,8 @@ class FritzNetworkCoordinator(DataUpdateCoordinator[NetworkData]):
             if info.dsl
             else []
         )
-        if margins and min(margins) < INTERNET_NOISE_WARN_DB:
+        limit = self.config_entry.options.get(CONF_NOISE_WARN_DB, DEFAULT_NOISE_WARN_DB)
+        if limit and margins and min(margins) < limit:
             self.internet_low_margin_since = self.internet_low_margin_since or dt_util.utcnow()
         else:
             self.internet_low_margin_since = None

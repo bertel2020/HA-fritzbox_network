@@ -79,6 +79,7 @@
           "skip_offline": "Do not create devices for offline hosts",
           "stale_repair": "Notify about devices offline for long",
           "stale_days": "Days offline before a device counts as gone",
+          "noise_warn_db": "Warn when the DSL noise margin stays below (dB, 0 = never)",
           "repeaters": "Repeaters to control",
           "switch_areas": "Create switches for"
         },
@@ -474,7 +475,7 @@
     },
     "internet_line": {
       "title": "The DSL line is weak",
-      "description": "The noise margin of the DSL line has been below 10 dB for over an hour (now {margin} dB). The connection may drop or slow down. Check the cable and the socket, and ask the provider if it stays. The internet page of the FRITZ!Box Cockpit panel shows the line."
+      "description": "The noise margin of the DSL line has been below {limit} dB for over an hour (now {margin} dB). The connection may drop or slow down. Check the cable and the socket, and ask the provider if it stays. The internet page of the FRITZ!Box Cockpit panel shows the line."
     },
     "mesh_repeater_lost": {
       "title": "A repeater is missing in the mesh",

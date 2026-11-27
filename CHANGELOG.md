@@ -4,6 +4,10 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ## Unveröffentlicht
 
+### Neu
+
+Der Störabstand, ab dem der Hinweis auf eine schwache Leitung erscheint, ist jetzt eine Option (Standard 10 dB); 0 schaltet den Hinweis ab.
+
 ## 1.15.0 – 2026-11-24
 
 ### Neu
