@@ -6,6 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
+- Panel, Telefon: Der Hinweis „schaltet sich in … aus“ unter einem Schalter mit Zeitschaltung kommt jetzt vom Schalter selbst (Attribut `turn_off_at`, „FRITZ!Box Telefon“ nach 2.6.0) und erscheint in jedem Browser und auch für Timer aus Automatisierungen. Mit älteren Versionen merkt sich das Panel die Zeit wie bisher nur im eigenen Browser.
 - Panel, Übersicht: Die Karte **Datenverbrauch** hat zusätzlich den Zeitraum **Monat** (die letzten 30 Tage) und einen Link **Alle Geräte und Verlauf** zur Seite Internet. Tragen zwei Geräte denselben Namen (z. B. ein Notebook im WLAN und am LAN), nennt die Zeile WLAN/LAN und das Ende der MAC-Adresse.
 
 - Reparaturen: Der Störabstand, ab dem der Hinweis auf eine schwache Leitung erscheint, ist jetzt eine Option (Standard 10 dB); 0 schaltet den Hinweis ab.

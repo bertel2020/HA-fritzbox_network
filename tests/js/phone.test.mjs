@@ -1465,3 +1465,16 @@ test("a number with a call running on it says so in the numbers row", () => {
   assert.match(html, /030 5550101<\/b><\/div>[\s\S]{0,200}im Gespräch/);
   assert.equal((html.match(/im Gespräch/g) ?? []).length, 1);
 });
+
+test("the switch tells when its timer ends (turn_off_at): shown in any browser, only while the switch is on", () => {
+  const hass = withExtras(makeHass());
+  const end = new Date(NOW.getTime() + 95 * 60000).toISOString();
+  hass.states["switch.fb_umleitung_1"] = st("on", { ...hass.states["switch.fb_umleitung_1"].attributes, turn_off_at: end });
+  const m = model.readPhone(hass, "e1", { cache: new Map() });
+  assert.deepEqual(m.timerEnds, { "switch.fb_umleitung_1": Date.parse(end) });
+  const html = page.renderPhone(m, { ...ctx(), ui: { ...ctx().ui, timers: {} } });
+  assert.match(html, /ph-timer-note[\s\S]*1 Std\. 35 Min\./);
+  // off: no note; without the attribute (older version) and nothing started here: none
+  hass.states["switch.fb_umleitung_1"] = st("off", { ...hass.states["switch.fb_umleitung_1"].attributes });
+  assert.doesNotMatch(page.renderPhone(model.readPhone(hass, "e1", { cache: new Map() }), { ...ctx(), ui: { ...ctx().ui, timers: {} } }), /ph-timer-note/);
+});

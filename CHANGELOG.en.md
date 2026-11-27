@@ -6,6 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### New
 
+- Panel, Phone: The note “switches off in …” under a switch with a timer now comes from the switch itself (attribute `turn_off_at`, “FRITZ!Box Telefon” after 2.6.0), shows in every browser and also for timers started by automations. With older versions the panel remembers the time in its own browser only, as before.
 - Panel, overview: The **Data usage** card has the range **Month** (the last 30 days) as well as a link **All devices and the course** to the Internet page. When two devices have the same name (say a notebook on WLAN and on a LAN), the row names WLAN/LAN and the end of the MAC address.
 
 - Repairs: The noise margin below which the weak-line repair appears is now an option (default 10 dB); 0 turns the repair off.

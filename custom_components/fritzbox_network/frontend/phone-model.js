@@ -445,6 +445,7 @@ function sensorParts(hass, ids, tams) {
     lines: parseLines(hass, ids),
     phones: { ...parsePhones(hass, ids), selectId: ids?.dial_phone ?? "" },
     deflections: parseDeflections(hass, ids),
+    timerEnds: parseTimerEnds(hass, ids),
   };
 }
 
@@ -577,6 +578,19 @@ export function phoneRows(phones) {
     else rows.push({ name, kind: "other", model: "", number: "", active: null, dialName: name });
   }
   return rows.map((r) => ({ ...r, current: Boolean(phones.current) && (r.dialName === phones.current || r.name === phones.current), target: r.dialName || r.name }));
+}
+
+/**
+ * When the timer of turn_on_for ends, as the switches tell it (attribute turn_off_at, from
+ * FRITZ!Box Telefon after 2.6.0): { entityId: ms }. Empty for older versions and for switches without a timer.
+ */
+export function parseTimerEnds(hass, ids) {
+  const ends = {};
+  for (const id of [...(ids?.tam_enabled ?? []), ...(ids?.deflection_enabled ?? [])]) {
+    const end = Date.parse(str(hass?.states?.[id]?.attributes?.turn_off_at));
+    if (!Number.isNaN(end)) ends[id] = end;
+  }
+  return ends;
 }
 
 /** The forwarding rules of the box as switches: [{ entityId, name, on, number, toNumber, mode }]. */

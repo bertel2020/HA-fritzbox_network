@@ -451,10 +451,20 @@ function messageRow(msg, tam, model, ctx) {
       <span class="ph-act">${hide ? "" : playBtn}</span></div>${btns}</div>`;
 }
 
-/** The minutes left of a timer started here for a switch (null without one); ui.timers holds when it runs out, in ms. */
-export function timerLeft(ui, switchId, now) {
-  const end = ui?.timers?.[switchId];
-  return typeof end === "number" && end > now.getTime() ? Math.ceil((end - now.getTime()) / 60000) : null;
+/**
+ * When the timer of a switch ends (ms), null without one: the switch tells it (turn_off_at, newer
+ * FRITZ!Box Telefon), else the end remembered here for timers started in this browser (ui.timers).
+ */
+export function timerEnd(model, ui, switchId, now) {
+  const own = model?.timerEnds?.[switchId];
+  const end = typeof own === "number" ? own : ui?.timers?.[switchId];
+  return typeof end === "number" && end > now.getTime() ? end : null;
+}
+
+/** The minutes left of a timer for a switch (null without one). */
+export function timerLeft(ui, switchId, now, model = null) {
+  const end = timerEnd(model, ui, switchId, now);
+  return end === null ? null : Math.ceil((end - now.getTime()) / 60000);
 }
 
 /** Minutes as "45 min" or "3 h 5 min" for the note under a switch. */
@@ -466,9 +476,10 @@ function leftText(min, t) {
 function timerParts(switchId, name, on, model, ctx, busy) {
   const { t, ui, now, language } = ctx;
   const tm = t.phone.timer;
-  const min = timerLeft(ui, switchId, now);
+  const end = on ? timerEnd(model, ui, switchId, now) : null;
+  const min = end === null ? null : Math.ceil((end - now.getTime()) / 60000);
   const button = `<button class="icon-btn" data-act="ph-timer" data-ph-ent="${esc(switchId)}" data-ph-name="${esc(name)}" data-ph-val="${on ? "1" : "0"}" data-k="ph-tm-${esc(switchId)}" aria-haspopup="dialog" aria-label="${esc(fill(on ? tm.labelOn : tm.label, { name }))}" title="${esc(on ? tm.titleOn : tm.title)}"${off(model, busy || model.offline)}>${ic("clock")}</button>`;
-  const note = min !== null ? fill(tm.running, { left: leftText(min, t), time: hhmm(new Date(ui.timers[switchId]), language) }) : "";
+  const note = min !== null ? fill(tm.running, { left: leftText(min, t), time: hhmm(new Date(end), language) }) : "";
   return { button, note };
 }
 
