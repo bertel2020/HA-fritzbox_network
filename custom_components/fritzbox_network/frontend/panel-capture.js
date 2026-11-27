@@ -157,8 +157,8 @@ function renderRing(capture, ctx) {
     : `<div class="capform">
       <label class="field"><span class="label">${escapeHtml(r.interface)}</span><select id="rg-if">${interfaceOptions(capture.interfaces, form.interface, c, t)}</select></label>
       <label class="field"><span class="label">${escapeHtml(r.device)}</span><select id="rg-dev">${option("", c.allDevices, form.mac)}${clients.map((d) => option(d.mac, d.name, form.mac)).join("")}</select></label>
-      <label class="field"><span class="label">${escapeHtml(r.minutes)}</span><input type="number" id="rg-min" min="${lim.ring_min_minutes}" max="${lim.ring_max_minutes}" value="${escapeHtml(form.minutes)}" /></label>
-      <label class="field"><span class="label">${escapeHtml(r.size)}</span><input type="number" id="rg-mb" min="1" max="${lim.ring_max_mb}" value="${escapeHtml(form.mb)}" /></label>
+      <label class="field"><span class="label">${escapeHtml(r.minutes)}</span><input type="number" id="rg-min" min="${lim.ring_min_minutes ?? 1}" max="${lim.ring_max_minutes ?? 30}" value="${escapeHtml(form.minutes)}" /></label>
+      <label class="field"><span class="label">${escapeHtml(r.size)}</span><input type="number" id="rg-mb" min="1" max="${lim.ring_max_mb ?? 500}" value="${escapeHtml(form.mb)}" /></label>
       <button class="btn p" data-act="cap-ring-start"${other ? " disabled" : ""}>${escapeHtml(r.start)}</button></div>
       ${other ? `<p class="hint">${escapeHtml(r.busyHint)}</p>` : ""}`;
   return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(r.title)}</span>${status}</div>
@@ -200,5 +200,5 @@ export function renderCapture(capture, ctx) {
     ${files}
     ${ctx.summary ? summaryBlock(ctx.summary, t, language) : ""}
     ${noteHtml(t.diag.note, c.hint)}${form.mac ? `${hintNote(c.deviceHint, t)}` : ""}</section>
-    ${renderRing(capture, { ...ctx, form: ctx.ringForm })}`;
+    ${renderRing(capture, { ...ctx, form: ctx.ringForm ?? ringDefaults(capture) })}`;
 }

@@ -1641,9 +1641,7 @@ def _capture_state(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
             "minutes": entry.options.get(CONF_RING_MINUTES, DEFAULT_RING_MINUTES)
             if entry
             else DEFAULT_RING_MINUTES,
-            "mb": entry.options.get(CONF_RING_MB, DEFAULT_RING_MB)
-            if entry
-            else DEFAULT_RING_MB,
+            "mb": entry.options.get(CONF_RING_MB, DEFAULT_RING_MB) if entry else DEFAULT_RING_MB,
             "trigger": entry.options.get(CONF_RING_TRIGGER) if entry else None,
             "trigger_state": entry.options.get(CONF_RING_TRIGGER_STATE) if entry else None,
             "after": entry.options.get(CONF_RING_AFTER, DEFAULT_RING_AFTER)
@@ -1707,7 +1705,9 @@ async def ws_capture_start(
         vol.Required("type"): RING_START_COMMAND,
         vol.Required("entry_id"): str,
         vol.Required("interface"): vol.Match(INTERFACE_RE),
-        vol.Required("minutes"): vol.All(int, vol.Range(min=RING_MIN_MINUTES, max=RING_MAX_MINUTES)),
+        vol.Required("minutes"): vol.All(
+            int, vol.Range(min=RING_MIN_MINUTES, max=RING_MAX_MINUTES)
+        ),
         vol.Required("mb"): vol.All(int, vol.Range(min=1, max=RING_MAX_MB)),
         vol.Optional("mac"): vol.Match(r"^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$"),
     }

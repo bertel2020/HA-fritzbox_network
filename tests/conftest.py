@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import struct
 from unittest.mock import patch
 
 from fritzconnection.core.exceptions import FritzActionError
@@ -175,10 +176,20 @@ class FakeClient:
     def get_ip_reservations(self, macs: list[str], max_age: float = 600) -> dict:
         return {mac: {"fixed": mac == BOX, "editable": True} for mac in macs}
 
-    def capture(self, interface, path, seconds, max_bytes, stop, progress) -> str:
+    def capture(self, interface, path, seconds, max_bytes, stop, progress, sink=None) -> str:
         self.calls.append(("capture", interface, seconds))
         if self.fail_actions:
             raise ValueError("the box sent no data")
+        if sink is not None:
+            # a stream that goes on until it is stopped: the header, then packets in odd pieces
+            stream = b"\xd4\xc3\xb2\xa1\x02\x00\x04\x00" + b"\0" * 8 + b"\xff\xff\0\0\x01\0\0\0"
+            for n in range(3):
+                frame = bytes([n]) * 60
+                stream += struct.pack("<IIII", 100 + n, 0, 60, 60) + frame
+            sink(stream[:30])
+            sink(stream[30:])
+            stop.wait(10)
+            return "stopped"
         path.write_bytes(
             b"\xd4\xc3\xb2\xa1\x02\x00\x04\x00" + b"\0" * 8 + b"\xff\xff\0\0\x01\0\0\0"
         )

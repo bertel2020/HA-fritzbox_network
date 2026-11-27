@@ -1500,6 +1500,29 @@ test("the capture list names the Wi-Fi access points after their band and offers
   assert.doesNotMatch(capture.renderCapture(noPoints, ctx), /cap-detect/); // nothing to detect on a box without them
 });
 
+test("the ring buffer card starts it, shows what it holds and blocks the other recording", () => {
+  const status = {
+    job: null,
+    files: [{ name: "1lan_20261104-101500-ring.pcap", bytes: 5000, time: "2026-11-04T10:15:00Z", interface: "1lan", device: null, ring: true }],
+    interfaces: [{ id: "1-lan", label: "lan", group: "lan", slug: "1lan", band: null }],
+    url: "/x/",
+    limits: { min_seconds: 5, max_seconds: 600, seconds: 60, max_mb: 200, mb: 50, ring_min_minutes: 1, ring_max_minutes: 30, ring_minutes: 5, ring_max_mb: 500, ring_mb: 100 },
+    ring: { active: false },
+    ring_options: { interface: "1-lan", minutes: 5, mb: 100, trigger: "binary_sensor.nas", trigger_state: "off", after: 30 },
+  };
+  const ctx = { t, language: "de", canWrite: true, clients: [], form: capture.captureDefaults(status.limits), ringForm: capture.ringDefaults(status) };
+  const idle = capture.renderCapture(status, ctx);
+  assert.match(idle, /data-act="cap-ring-start">Ringpuffer starten/);
+  assert.match(idle, /binary_sensor\.nas/);
+  assert.match(idle, /<span class="chip">Ringpuffer<\/span>/); // the saved file says where it came from
+  const on = { ...status, ring: { active: true, interface: "1-lan", minutes: 5, max_mb: 100, seconds: 150, bytes: 4096, error: null } };
+  const running = capture.renderCapture(on, ctx);
+  assert.match(running, /data-act="cap-ring-save">Jetzt sichern/);
+  assert.match(running, /data-act="cap-ring-stop"/);
+  assert.match(running, /data-act="cap-start" disabled/); // the box records one thing at a time
+  assert.match(capture.renderCapture({ ...status, job: { state: "running", interface: "1-lan", seconds: 60, elapsed: 3, bytes: 1, max_bytes: 5 } }, ctx), /data-act="cap-ring-start" disabled/);
+});
+
 const vpnPage = await import(`${base}panel-vpn.js`);
 const routesPage = await import(`${base}panel-routes.js`);
 

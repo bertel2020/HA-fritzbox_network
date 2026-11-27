@@ -12,7 +12,6 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .const import (
-    KEY_RING_SAVE,
     AREA_CLIENTS,
     DOMAIN,
     KEY_CLEANUP,
@@ -20,6 +19,7 @@ from .const import (
     KEY_RECONNECT,
     KEY_REFRESH,
     KEY_REPEATER_REBOOT,
+    KEY_RING_SAVE,
     KEY_WAKE_ON_LAN,
 )
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator

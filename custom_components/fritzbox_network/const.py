@@ -97,8 +97,8 @@ INTERNET_EVENTS = 20
 # what the history keeps of the connection: events, and the addresses per kind
 INTERNET_EVENTS_KEPT = 200
 INTERNET_ADDRESSES_KEPT = 20
-# What counts as a problem worth a repair: a noise margin below the limit set in the options for this many seconds,
-# or this many new connections within a day.
+# What counts as a problem worth a repair: a noise margin below the limit of the options for this
+# many seconds, or this many new connections within a day.
 INTERNET_LOW_MARGIN_SECONDS = 3600
 INTERNET_RECONNECTS_WARN = 5
 # a repeater the box does not list for this long is a repair: a restart or an update is shorter

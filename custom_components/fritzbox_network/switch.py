@@ -17,17 +17,17 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, UpdateFailed
 
 from .const import (
+    AREA_CLIENTS,
+    AREA_PORTS,
+    AREA_ROUTES,
+    AREA_VPN,
+    AREA_WIFI,
     CONF_RING_INTERFACE,
     CONF_RING_MB,
     CONF_RING_MINUTES,
     DEFAULT_RING_INTERFACE,
     DEFAULT_RING_MB,
     DEFAULT_RING_MINUTES,
-    AREA_CLIENTS,
-    AREA_PORTS,
-    AREA_ROUTES,
-    AREA_VPN,
-    AREA_WIFI,
     DOMAIN,
     KEY_AUTO_WOL,
     KEY_GUEST_WIFI,

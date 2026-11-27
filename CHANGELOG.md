@@ -8,9 +8,8 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 - Panel, Übersicht: Die Karte **Datenverbrauch** hat zusätzlich den Zeitraum **Monat** (die letzten 30 Tage) und einen Link **Alle Geräte und Verlauf** zur Seite Internet. Tragen zwei Geräte denselben Namen (z. B. ein Notebook im WLAN und am LAN), nennt die Zeile WLAN/LAN und das Ende der MAC-Adresse.
 
-### Neu
-
-Der Störabstand, ab dem der Hinweis auf eine schwache Leitung erscheint, ist jetzt eine Option (Standard 10 dB); 0 schaltet den Hinweis ab.
+- Reparaturen: Der Störabstand, ab dem der Hinweis auf eine schwache Leitung erscheint, ist jetzt eine Option (Standard 10 dB); 0 schaltet den Hinweis ab.
+- Mitschnitt: Ein **Ringpuffer** zeichnet dauernd auf und hält nur die letzten Minuten (1 bis 30, mit Größenlimit). Sichere ihn, wenn etwas schiefging: im Panel (Seite Mitschnitt), mit dem Knopf **Ringpuffer sichern** oder automatisch, wenn sich eine gewählte Entität ändert (auf Wunsch auf einen bestimmten Zustand, nach einer Wartezeit). Die gesicherte Datei ist ein normaler Mitschnitt, der sich auswerten und herunterladen lässt. Standardmäßig aus; einzurichten in den Optionen der Integration. Auch der Schalter **Ringpuffer** und der Knopf sind standardmäßig aus. Die Box zeichnet nur eins zur Zeit auf, solange läuft also kein anderer Mitschnitt.
 
 ## 1.15.0 – 2026-11-24
 

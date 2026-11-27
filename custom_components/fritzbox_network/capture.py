@@ -7,6 +7,8 @@ a time per box; it ends after the chosen time, at the size limit, or when the us
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
+import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime
 import http.client
@@ -17,7 +19,6 @@ import shutil
 import struct
 import threading
 import time
-from collections.abc import Callable
 from typing import Any
 
 from aiohttp import web
@@ -79,6 +80,7 @@ RING_MIN_MINUTES = 1
 RING_MAX_MINUTES = 30
 RING_MAX_MB = 500
 RING_RETRY_SECONDS = (5, 15, 60)
+RING_STOP_WAIT = 10
 VIEW_URL = f"/api/{DOMAIN}/capture/{{entry_id}}/{{name}}"
 
 
@@ -434,6 +436,10 @@ class CaptureManager:
     async def async_flush(self) -> None:
         if self._store is not None:
             await self._store.async_save({"bands": self.bands})
+        # an ended ring buffer drops its segments before the box is gone
+        if self._ring_task is not None and not self._ring_task.done():
+            with contextlib.suppress(TimeoutError, asyncio.CancelledError):
+                await asyncio.wait_for(asyncio.shield(self._ring_task), RING_STOP_WAIT)
 
     def begin_detection(self) -> None:
         """Claim the box for the detection; call it in the event loop, before the executor job.
@@ -563,7 +569,10 @@ class CaptureManager:
         writer = SegmentWriter(self.directory / RING_DIR, minutes * 60, max_bytes)
         ring = Ring(interface, minutes, max_bytes, writer, device, ips)
         self.ring = ring
-        self._ring_task = self._hass.async_create_task(self._ring_run(ring))
+        # a background task: it runs for as long as the ring buffer does, and nothing waits for it
+        self._ring_task = self._hass.async_create_background_task(
+            self._ring_run(ring), f"{DOMAIN}_ring_buffer"
+        )
         self._notify()
         return ring
 
