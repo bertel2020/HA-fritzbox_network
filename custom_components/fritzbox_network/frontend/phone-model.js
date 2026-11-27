@@ -582,7 +582,7 @@ export function phoneRows(phones) {
 
 /**
  * When the timer of turn_on_for ends, as the switches tell it (attribute turn_off_at, from
- * FRITZ!Box Telefon after 2.6.0): { entityId: ms }. Empty for older versions and for switches without a timer.
+ * FRITZ!Box Telefon from 2.7.0): { entityId: ms }. Empty for older versions and for switches without a timer.
  */
 export function parseTimerEnds(hass, ids) {
   const ends = {};

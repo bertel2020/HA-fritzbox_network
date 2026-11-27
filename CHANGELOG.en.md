@@ -4,11 +4,12 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+## 1.16.0 – 2026-11-27
+
 ### New
 
-- Panel, Phone: The note “switches off in …” under a switch with a timer now comes from the switch itself (attribute `turn_off_at`, “FRITZ!Box Telefon” after 2.6.0), shows in every browser and also for timers started by automations. With older versions the panel remembers the time in its own browser only, as before.
+- Panel, Phone: The note “switches off in …” under a switch with a timer now comes from the switch itself (attribute `turn_off_at`, “FRITZ!Box Telefon” from 2.7.0), shows in every browser and also for timers started by automations. With older versions the panel remembers the time in its own browser only, as before.
 - Panel, overview: The **Data usage** card has the range **Month** (the last 30 days) as well as a link **All devices and the course** to the Internet page. When two devices have the same name (say a notebook on WLAN and on a LAN), the row names WLAN/LAN and the end of the MAC address.
-
 - Repairs: The noise margin below which the weak-line repair appears is now an option (default 10 dB); 0 turns the repair off.
 - Capture: A **ring buffer** records all the time and holds only the last minutes (1 to 30, with a size limit). Save it when something went wrong, from the panel (page Capture), with the button **Save ring buffer**, or automatically when a chosen entity changes (optionally to a given state, after a wait). The saved file is a normal capture that can be analysed and downloaded. Off by default; set up in the options of the integration. The switch **Ring buffer** and the button are off by default too. The box records one thing at a time, so no other capture runs meanwhile.
 
