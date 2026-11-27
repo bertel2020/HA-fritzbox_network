@@ -27,6 +27,7 @@ from homeassistant.helpers.service_info.ssdp import (
 import voluptuous as vol
 
 from .api import FritzNetworkClient
+from .capture import INTERFACE_RE, RING_MAX_MB, RING_MAX_MINUTES, RING_MIN_MINUTES
 from .const import (
     CONF_ADOPT_NAMES,
     CONF_CONSIDER_HOME,
@@ -41,6 +42,13 @@ from .const import (
     CONF_SHOW_VENDOR,
     CONF_SKIP_OFFLINE,
     CONF_NOISE_WARN_DB,
+    CONF_RING_AFTER,
+    CONF_RING_AUTOSTART,
+    CONF_RING_INTERFACE,
+    CONF_RING_MB,
+    CONF_RING_MINUTES,
+    CONF_RING_TRIGGER,
+    CONF_RING_TRIGGER_STATE,
     CONF_STALE_DAYS,
     CONF_STALE_REPAIR,
     CONF_SWITCH_AREAS,
@@ -56,6 +64,10 @@ from .const import (
     DEFAULT_SHOW_VENDOR,
     DEFAULT_SKIP_OFFLINE,
     DEFAULT_NOISE_WARN_DB,
+    DEFAULT_RING_AFTER,
+    DEFAULT_RING_INTERFACE,
+    DEFAULT_RING_MB,
+    DEFAULT_RING_MINUTES,
     DEFAULT_STALE_DAYS,
     DEFAULT_STALE_REPAIR,
     DEFAULT_WAKE_ON_LAN_WIFI,
@@ -402,6 +414,31 @@ class FritzNetworkOptionsFlow(OptionsFlow):
                     CONF_NOISE_WARN_DB,
                     default=options.get(CONF_NOISE_WARN_DB, DEFAULT_NOISE_WARN_DB),
                 ): vol.All(int, vol.Range(min=0, max=60)),
+                vol.Optional(
+                    CONF_RING_AUTOSTART, default=options.get(CONF_RING_AUTOSTART, False)
+                ): bool,
+                vol.Optional(
+                    CONF_RING_INTERFACE,
+                    default=options.get(CONF_RING_INTERFACE, DEFAULT_RING_INTERFACE),
+                ): vol.All(str, vol.Match(INTERFACE_RE)),
+                vol.Optional(
+                    CONF_RING_MINUTES,
+                    default=options.get(CONF_RING_MINUTES, DEFAULT_RING_MINUTES),
+                ): vol.All(int, vol.Range(min=RING_MIN_MINUTES, max=RING_MAX_MINUTES)),
+                vol.Optional(
+                    CONF_RING_MB, default=options.get(CONF_RING_MB, DEFAULT_RING_MB)
+                ): vol.All(int, vol.Range(min=1, max=RING_MAX_MB)),
+                vol.Optional(
+                    CONF_RING_TRIGGER,
+                    description={"suggested_value": options.get(CONF_RING_TRIGGER)},
+                ): selector.EntitySelector(),
+                vol.Optional(
+                    CONF_RING_TRIGGER_STATE,
+                    description={"suggested_value": options.get(CONF_RING_TRIGGER_STATE)},
+                ): selector.TextSelector(),
+                vol.Optional(
+                    CONF_RING_AFTER, default=options.get(CONF_RING_AFTER, DEFAULT_RING_AFTER)
+                ): vol.All(int, vol.Range(min=0, max=300)),
                 vol.Optional(
                     CONF_IGNORE_GUESTS,
                     default=options.get(CONF_IGNORE_GUESTS, DEFAULT_IGNORE_GUESTS),

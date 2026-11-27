@@ -3,6 +3,13 @@
 import { errorCard, escapeHtml, loadingCard, formatBytes, hintNote, noteHtml } from "./shared.js";
 import { fill } from "./texts.js";
 
+/** The form of the ring buffer, from what the options say. */
+export function ringDefaults(capture) {
+  const o = capture?.ring_options ?? {};
+  const l = capture?.limits ?? {};
+  return { interface: o.interface ?? "1-lan", minutes: o.minutes ?? l.ring_minutes ?? 5, mb: o.mb ?? l.ring_mb ?? 100, mac: "" };
+}
+
 /** The form values to start with. */
 export function captureDefaults(limits) {
   return { interface: "", seconds: limits?.seconds ?? 60, mb: limits?.mb ?? 50, mac: "" };
@@ -114,11 +121,51 @@ function fileLine(file, t, language, clients, interfaces) {
   const when = new Date(file.time).toLocaleString(language || "en", { dateStyle: "medium", timeStyle: "short" });
   const name = escapeHtml(file.name);
   const meta = [when, formatBytes(file.bytes, language)].map((x) => `<span>${escapeHtml(x)}</span>`).join("");
+  const origin = file.ring ? `<span class="chip">${escapeHtml(c.ring.saved)}</span>` : "";
   const only = file.device ? `<span class="chip">${escapeHtml(device?.name ?? file.device)}</span>` : "";
-  return `<li class="capfile"><div class="capmain"><b>${escapeHtml(known ? interfaceName(known, t) : file.interface)}</b>${known ? `<code>${escapeHtml(known.id)}</code>` : ""}${only}
+  return `<li class="capfile"><div class="capmain"><b>${escapeHtml(known ? interfaceName(known, t) : file.interface)}</b>${known ? `<code>${escapeHtml(known.id)}</code>` : ""}${origin}${only}
       <div class="capmeta">${meta}</div></div>
     <span class="capbtns"><button class="btn sm" data-act="cap-sum" data-name="${name}">${escapeHtml(c.analyse)}</button><button class="btn sm" data-act="cap-dl" data-name="${name}">${escapeHtml(c.download)}</button>
     <button class="btn sm d" data-act="cap-del" data-name="${name}" aria-label="${escapeHtml(fill(c.deleteLabel, { name: file.name }))}">${escapeHtml(c.delete)}</button></span></li>`;
+}
+
+/** The card of the ring buffer: what it holds, the way to start, stop and save it, and what saves it by itself. */
+function renderRing(capture, ctx) {
+  const { t, language, form } = ctx;
+  const clients = ctx.clients ?? [];
+  const c = t.inet.capture;
+  const r = c.ring;
+  const ring = capture.ring ?? { active: false };
+  const lim = capture.limits;
+  const other = capture.job?.state === "running" || Boolean(ctx.detecting || capture.detecting);
+  const off = ring.active ? " disabled" : "";
+  const percent = ring.active ? Math.min(100, Math.round((ring.seconds / (ring.minutes * 60)) * 100)) : 0;
+  const o = capture.ring_options ?? {};
+  let trigger = escapeHtml(r.noTrigger);
+  if (o.trigger) {
+    const state = o.trigger_state ? fill(r.triggerTo, { state: o.trigger_state }) : r.triggerAny;
+    trigger = escapeHtml(fill(r.trigger, { entity: o.trigger, state, after: o.after }));
+  }
+  const status = ring.active
+    ? `<span class="chip ok">${escapeHtml(r.on)}</span>`
+    : `<span class="chip">${escapeHtml(r.off)}</span>`;
+  const running = ring.active
+    ? `<span class="meter" role="progressbar" aria-label="${escapeHtml(r.title)}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}"><i style="width:${percent}%"></i></span>
+      <small>${escapeHtml(fill(r.held, { seconds: Math.round(ring.seconds), minutes: ring.minutes, size: formatBytes(ring.bytes, language) }))}</small>
+      ${ring.error ? `<p class="hint">${escapeHtml(fill(r.error, { error: ring.error }))}</p>` : ""}
+      <div class="capbtns"><button class="btn p" data-act="cap-ring-save">${escapeHtml(r.save)}</button><button class="btn" data-act="cap-ring-stop">${escapeHtml(r.stop)}</button></div>`
+    : `<div class="capform">
+      <label class="field"><span class="label">${escapeHtml(r.interface)}</span><select id="rg-if">${interfaceOptions(capture.interfaces, form.interface, c, t)}</select></label>
+      <label class="field"><span class="label">${escapeHtml(r.device)}</span><select id="rg-dev">${option("", c.allDevices, form.mac)}${clients.map((d) => option(d.mac, d.name, form.mac)).join("")}</select></label>
+      <label class="field"><span class="label">${escapeHtml(r.minutes)}</span><input type="number" id="rg-min" min="${lim.ring_min_minutes}" max="${lim.ring_max_minutes}" value="${escapeHtml(form.minutes)}" /></label>
+      <label class="field"><span class="label">${escapeHtml(r.size)}</span><input type="number" id="rg-mb" min="1" max="${lim.ring_max_mb}" value="${escapeHtml(form.mb)}" /></label>
+      <button class="btn p" data-act="cap-ring-start"${other ? " disabled" : ""}>${escapeHtml(r.start)}</button></div>
+      ${other ? `<p class="hint">${escapeHtml(r.busyHint)}</p>` : ""}`;
+  return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(r.title)}</span>${status}</div>
+    <p class="hint">${escapeHtml(r.lead)}</p>
+    ${running}
+    <p class="hint">${trigger}</p>
+    ${noteHtml(t.diag.note, r.hint)}</section>`;
 }
 
 /** The card: the form, or the running capture, and the kept files. `capture` is null while loading. */
@@ -129,18 +176,20 @@ export function renderCapture(capture, ctx) {
   if (capture === "failed") return errorCard(t, c.unavailable, { retry: "cap-retry" });
   if (!capture) return loadingCard(t);
   const job = capture.job;
+  const ringOn = Boolean(capture.ring?.active);
   const busy = job?.state === "running";
+  const blocked = busy || ringOn;
   const detecting = Boolean(ctx.detecting || capture.detecting);
   const hasAccessPoints = capture.interfaces.some((i) => /^1-vap\d+$/.test(i.id));
   const lim = capture.limits;
-  const off = busy ? " disabled" : "";
+  const off = blocked ? " disabled" : "";
   const controls = `<div class="capstart"><div class="capform">
       <label class="field"><span class="label">${escapeHtml(c.interface)}</span><select id="cap-if"${off}>${interfaceOptions(capture.interfaces, form.interface, c, t)}</select></label>
       <label class="field"><span class="label">${escapeHtml(c.device)}</span><select id="cap-dev"${off}>${option("", c.allDevices, form.mac)}${clients.map((d) => option(d.mac, d.name, form.mac)).join("")}</select></label>
       <label class="field"><span class="label">${escapeHtml(c.seconds)}</span><input type="number" id="cap-sec" min="${lim.min_seconds}" max="${lim.max_seconds}" value="${escapeHtml(form.seconds)}"${off} /></label>
       <label class="field"><span class="label">${escapeHtml(c.size)}</span><input type="number" id="cap-mb" min="1" max="${lim.max_mb}" value="${escapeHtml(form.mb)}"${off} /></label>
-      <button class="btn p" data-act="cap-start"${busy || detecting ? " disabled" : ""}>${escapeHtml(c.start)}</button></div></div>
-    ${hasAccessPoints ? `<div class="detectrow"><button class="btn sm" data-act="cap-detect"${busy || detecting ? " disabled" : ""}>${escapeHtml(detecting ? c.detecting : c.detect)}</button><small>${escapeHtml(c.detectHint)}</small></div>` : ""}`;
+      <button class="btn p" data-act="cap-start"${blocked || detecting ? " disabled" : ""}>${escapeHtml(c.start)}</button></div></div>
+    ${hasAccessPoints ? `<div class="detectrow"><button class="btn sm" data-act="cap-detect"${blocked || detecting ? " disabled" : ""}>${escapeHtml(detecting ? c.detecting : c.detect)}</button><small>${escapeHtml(c.detectHint)}</small></div>` : ""}`;
   const list = capture.files.length
     ? `<ul class="capfiles">${capture.files.map((f) => fileLine(f, t, language, clients, capture.interfaces)).join("")}</ul>`
     : `<p class="hint">${escapeHtml(c.none)}</p>`;
@@ -150,5 +199,6 @@ export function renderCapture(capture, ctx) {
     ${busy ? running(job, t, language) : result(job, t, language)}
     ${files}
     ${ctx.summary ? summaryBlock(ctx.summary, t, language) : ""}
-    ${noteHtml(t.diag.note, c.hint)}${form.mac ? `${hintNote(c.deviceHint, t)}` : ""}</section>`;
+    ${noteHtml(t.diag.note, c.hint)}${form.mac ? `${hintNote(c.deviceHint, t)}` : ""}</section>
+    ${renderRing(capture, { ...ctx, form: ctx.ringForm })}`;
 }

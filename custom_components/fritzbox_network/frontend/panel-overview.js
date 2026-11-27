@@ -132,7 +132,7 @@ const TOP_CONSUMERS = 5;
 export function topConsumers(traffic, clients, days, now = new Date(), limit = TOP_CONSUMERS) {
   const known = new Map((clients ?? []).map((c) => [c.mac, c]));
   return Object.entries(trafficByDevice(traffic, days, now))
-    .map(([mac, [down, up]]) => ({ mac, name: known.get(mac)?.name || mac, id: known.get(mac)?.id ?? null, down, up, total: down + up }))
+    .map(([mac, [down, up]]) => ({ mac, name: known.get(mac)?.name || mac, id: known.get(mac)?.id ?? null, link: known.get(mac)?.link_type ?? "", privateMac: Boolean(known.get(mac)?.private_mac), down, up, total: down + up }))
     .sort((a, b) => b.total - a.total)
     .slice(0, limit);
 }
@@ -283,9 +283,13 @@ function consumersHtml(state, t, language, now) {
   if (!state?.traffic) return `<section class="card sec" aria-labelledby="ov-consumers">${head}<p class="hint">${escapeHtml(t.loading)}</p></section>`;
   const rows = topConsumers(state.traffic, state.data?.clients, days, new Date(now));
   const top = rows[0]?.total || 1;
+  // two devices of one name (a notebook on WLAN and on a dock, a private address): tell them apart
+  const seen = new Map();
+  for (const r of rows) seen.set(r.name, (seen.get(r.name) ?? 0) + 1);
+  const tag = (r) => (seen.get(r.name) > 1 ? [r.link === "wlan" ? "WLAN" : r.link === "lan" ? "LAN" : "", r.privateMac ? t.privateMac : "", r.mac.slice(-5)].filter(Boolean).join(" · ") : "");
   const list = rows
     .map((r) => {
-      const name = escapeHtml(r.name);
+      const name = escapeHtml(r.name) + (tag(r) ? ` <small class="muted">${escapeHtml(tag(r))}</small>` : "");
       const who = r.id ? `<a class="tlink" href="#/device/${escapeHtml(r.id)}">${name}</a>` : `<span>${name}</span>`;
       return `<li class="consumer"><span class="cn">${who}</span><span class="cv"><i class="vdn">↓</i> ${escapeHtml(formatBytes(r.down, language))} <i class="vup">↑</i> ${escapeHtml(formatBytes(r.up, language))}</span>
         <span class="cbar" aria-hidden="true"><i class="d" style="width:${((r.down / top) * 100).toFixed(1)}%"></i><i class="u" style="width:${((r.up / top) * 100).toFixed(1)}%"></i></span></li>`;

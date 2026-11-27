@@ -6,7 +6,7 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ### Neu
 
-- Panel, Übersicht: Die Karte **Datenverbrauch** hat zusätzlich den Zeitraum **Monat** (die letzten 30 Tage) und einen Link **Alle Geräte und Verlauf** zur Seite Internet.
+- Panel, Übersicht: Die Karte **Datenverbrauch** hat zusätzlich den Zeitraum **Monat** (die letzten 30 Tage) und einen Link **Alle Geräte und Verlauf** zur Seite Internet. Tragen zwei Geräte denselben Namen (z. B. ein Notebook im WLAN und am LAN), nennt die Zeile WLAN/LAN und das Ende der MAC-Adresse.
 
 ### Neu
 

@@ -17,6 +17,12 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity, UpdateFailed
 
 from .const import (
+    CONF_RING_INTERFACE,
+    CONF_RING_MB,
+    CONF_RING_MINUTES,
+    DEFAULT_RING_INTERFACE,
+    DEFAULT_RING_MB,
+    DEFAULT_RING_MINUTES,
     AREA_CLIENTS,
     AREA_PORTS,
     AREA_ROUTES,
@@ -28,6 +34,7 @@ from .const import (
     KEY_INTERNET_ACCESS,
     KEY_PORT_PREFIX,
     KEY_PRIORITY,
+    KEY_RING_BUFFER,
     KEY_ROUTE_SWITCH,
     KEY_VPN_SWITCH,
     KEY_WIFI_PREFIX,
@@ -36,6 +43,7 @@ from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import (
     FritzNetworkClientEntity,
     FritzNetworkRepeaterEntity,
+    FritzNetworkRingEntity,
     async_remove_entities,
     async_remove_node_client_entities,
     async_setup_client_entities,
@@ -59,6 +67,7 @@ async def async_setup_entry(
     entry: FritzNetworkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
+    async_add_entities([FritzNetworkRingBuffer(hass, entry)])
     if not entry.runtime_data.can_write:
         return
     areas = switch_areas(entry)
@@ -576,6 +585,39 @@ class FritzNetworkRepeaterGuestWifi(FritzNetworkRepeaterEntity, SwitchEntity):
 
     async def async_turn_off(self, **kwargs: Any) -> None:
         await self._set(False)
+
+
+class FritzNetworkRingBuffer(FritzNetworkRingEntity, SwitchEntity):
+    """The ring buffer of the box: a capture that always holds the last minutes.
+
+    On starts it with the interface, minutes and size of the options. The box records one thing
+    at a time, so it is refused while a capture runs.
+    """
+
+    def __init__(self, hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
+        super().__init__(hass, entry, "switch", KEY_RING_BUFFER)
+
+    @property
+    def is_on(self) -> bool:
+        return self._manager.ring_active
+
+    async def async_turn_on(self, **kwargs: Any) -> None:
+        options = self._entry.options
+        try:
+            self._manager.ring_start(
+                options.get(CONF_RING_INTERFACE, DEFAULT_RING_INTERFACE),
+                options.get(CONF_RING_MINUTES, DEFAULT_RING_MINUTES),
+                options.get(CONF_RING_MB, DEFAULT_RING_MB) * 1048576,
+            )
+        except ValueError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
+
+    async def async_turn_off(self, **kwargs: Any) -> None:
+        self._manager.ring_stop()
 
 
 class FritzNetworkGuestWifi(CoordinatorEntity[FritzNetworkCoordinator], SwitchEntity):

@@ -35,6 +35,9 @@ from .capture import (
     MAX_BYTES,
     MAX_SECONDS,
     MIN_SECONDS,
+    RING_MAX_MB,
+    RING_MAX_MINUTES,
+    RING_MIN_MINUTES,
     VIEW_URL,
     interface_slug,
     wifi_bands,
@@ -46,9 +49,19 @@ from .const import (
     CONF_HIDDEN_MACS,
     CONF_IGNORE_GUESTS,
     CONF_IGNORE_PRIVATE_MACS,
+    CONF_RING_AFTER,
+    CONF_RING_INTERFACE,
+    CONF_RING_MB,
+    CONF_RING_MINUTES,
+    CONF_RING_TRIGGER,
+    CONF_RING_TRIGGER_STATE,
     CONF_STALE_DAYS,
     DEFAULT_IGNORE_GUESTS,
     DEFAULT_IGNORE_PRIVATE_MACS,
+    DEFAULT_RING_AFTER,
+    DEFAULT_RING_INTERFACE,
+    DEFAULT_RING_MB,
+    DEFAULT_RING_MINUTES,
     DEFAULT_STALE_DAYS,
     DOMAIN,
     FILTER_ALL,
@@ -123,6 +136,9 @@ CAPTURE_BANDS_COMMAND = f"{DOMAIN}/capture/bands"
 CAPTURE_SUMMARY_COMMAND = f"{DOMAIN}/capture/summary"
 CAPTURE_STOP_COMMAND = f"{DOMAIN}/capture/stop"
 CAPTURE_DELETE_COMMAND = f"{DOMAIN}/capture/delete"
+RING_START_COMMAND = f"{DOMAIN}/capture/ring_start"
+RING_STOP_COMMAND = f"{DOMAIN}/capture/ring_stop"
+RING_SAVE_COMMAND = f"{DOMAIN}/capture/ring_save"
 FILTER_PREVIEW_COMMAND = f"{DOMAIN}/filter/preview"
 FILTER_APPLY_COMMAND = f"{DOMAIN}/filter/apply"
 ERR_CHANGED = "changed"
@@ -1595,6 +1611,7 @@ def ws_latency_switch(
 
 def _capture_state(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
     manager = hass.data[KEY_CAPTURES][entry_id]
+    entry = hass.config_entries.async_get_entry(entry_id)
     return {
         "job": manager.job.as_dict() if manager.job else None,
         "files": manager.files(),
@@ -1603,6 +1620,7 @@ def _capture_state(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
             for i in manager.interfaces()
         ],
         "detecting": manager.detecting,
+        "ring": manager.ring_state(),
         "url": VIEW_URL.replace("{entry_id}", entry_id).replace("{name}", ""),
         "limits": {
             "min_seconds": MIN_SECONDS,
@@ -1610,6 +1628,27 @@ def _capture_state(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
             "seconds": DEFAULT_SECONDS,
             "max_mb": MAX_BYTES // 1048576,
             "mb": DEFAULT_BYTES // 1048576,
+            "ring_min_minutes": RING_MIN_MINUTES,
+            "ring_max_minutes": RING_MAX_MINUTES,
+            "ring_minutes": DEFAULT_RING_MINUTES,
+            "ring_max_mb": RING_MAX_MB,
+            "ring_mb": DEFAULT_RING_MB,
+        },
+        "ring_options": {
+            "interface": entry.options.get(CONF_RING_INTERFACE, DEFAULT_RING_INTERFACE)
+            if entry
+            else DEFAULT_RING_INTERFACE,
+            "minutes": entry.options.get(CONF_RING_MINUTES, DEFAULT_RING_MINUTES)
+            if entry
+            else DEFAULT_RING_MINUTES,
+            "mb": entry.options.get(CONF_RING_MB, DEFAULT_RING_MB)
+            if entry
+            else DEFAULT_RING_MB,
+            "trigger": entry.options.get(CONF_RING_TRIGGER) if entry else None,
+            "trigger_state": entry.options.get(CONF_RING_TRIGGER_STATE) if entry else None,
+            "after": entry.options.get(CONF_RING_AFTER, DEFAULT_RING_AFTER)
+            if entry
+            else DEFAULT_RING_AFTER,
         },
     }
 
@@ -1657,6 +1696,76 @@ async def ws_capture_start(
         manager.start(msg["interface"], msg["seconds"], msg["mb"] * 1048576, mac, ips or ())
     except ValueError as err:
         connection.send_error(msg["id"], ERR_BUSY if str(err) == "busy" else ERR_INVALID, str(err))
+        return
+    connection.send_result(
+        msg["id"], await hass.async_add_executor_job(_capture_state, hass, msg["entry_id"])
+    )
+
+
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): RING_START_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("interface"): vol.Match(INTERFACE_RE),
+        vol.Required("minutes"): vol.All(int, vol.Range(min=RING_MIN_MINUTES, max=RING_MAX_MINUTES)),
+        vol.Required("mb"): vol.All(int, vol.Range(min=1, max=RING_MAX_MB)),
+        vol.Optional("mac"): vol.Match(r"^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$"),
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_ring_start(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Start the ring buffer: a capture that holds the last minutes."""
+    if (found := _loaded_coordinator(hass, connection, msg)) is None:
+        return
+    manager = hass.data[KEY_CAPTURES][msg["entry_id"]]
+    mac = ips = None
+    if msg.get("mac"):
+        mac = format_mac(msg["mac"])
+        host = found[1].all_hosts.get(mac)
+        ips = (host.ip,) if host and host.ip else ()
+    try:
+        manager.ring_start(msg["interface"], msg["minutes"], msg["mb"] * 1048576, mac, ips or ())
+    except ValueError as err:
+        connection.send_error(msg["id"], ERR_BUSY if str(err) == "busy" else ERR_INVALID, str(err))
+        return
+    connection.send_result(
+        msg["id"], await hass.async_add_executor_job(_capture_state, hass, msg["entry_id"])
+    )
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): RING_STOP_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_ring_stop(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """End the ring buffer; what it holds is dropped."""
+    if _loaded_coordinator(hass, connection, msg) is None:
+        return
+    hass.data[KEY_CAPTURES][msg["entry_id"]].ring_stop()
+    connection.send_result(msg["id"], {})
+
+
+@websocket_api.websocket_command(
+    {vol.Required("type"): RING_SAVE_COMMAND, vol.Required("entry_id"): str}
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_ring_save(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Keep what the ring buffer holds as a capture file."""
+    if _loaded_coordinator(hass, connection, msg) is None:
+        return
+    try:
+        await hass.data[KEY_CAPTURES][msg["entry_id"]].async_ring_save()
+    except ValueError as err:
+        connection.send_error(msg["id"], ERR_INVALID, str(err))
         return
     connection.send_result(
         msg["id"], await hass.async_add_executor_job(_capture_state, hass, msg["entry_id"])
@@ -1907,6 +2016,9 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_capture_status)
     websocket_api.async_register_command(hass, ws_capture_start)
     websocket_api.async_register_command(hass, ws_capture_bands)
+    websocket_api.async_register_command(hass, ws_ring_start)
+    websocket_api.async_register_command(hass, ws_ring_stop)
+    websocket_api.async_register_command(hass, ws_ring_save)
     websocket_api.async_register_command(hass, ws_capture_summary)
     websocket_api.async_register_command(hass, ws_capture_stop)
     websocket_api.async_register_command(hass, ws_capture_delete)

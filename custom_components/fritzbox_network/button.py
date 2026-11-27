@@ -12,6 +12,7 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
 from .const import (
+    KEY_RING_SAVE,
     AREA_CLIENTS,
     DOMAIN,
     KEY_CLEANUP,
@@ -25,6 +26,7 @@ from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .entity import (
     FritzNetworkClientEntity,
     FritzNetworkRepeaterEntity,
+    FritzNetworkRingEntity,
     async_remove_entities,
     async_remove_node_client_entities,
     async_setup_client_entities,
@@ -42,7 +44,13 @@ async def async_setup_entry(
     entry: FritzNetworkConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    async_add_entities([FritzNetworkRefresh(entry.runtime_data), FritzNetworkCleanup(hass, entry)])
+    async_add_entities(
+        [
+            FritzNetworkRefresh(entry.runtime_data),
+            FritzNetworkCleanup(hass, entry),
+            FritzNetworkRingSave(hass, entry),
+        ]
+    )
     if not entry.runtime_data.can_write:
         return
     async_add_entities(
@@ -111,6 +119,27 @@ class FritzNetworkCleanup(ButtonEntity):
 
     async def async_press(self) -> None:
         await async_hide_stale(self._hass, self._entry)
+
+
+class FritzNetworkRingSave(FritzNetworkRingEntity, ButtonEntity):
+    """Keep what the ring buffer holds as a capture file (it goes on recording)."""
+
+    def __init__(self, hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
+        super().__init__(hass, entry, "button", KEY_RING_SAVE)
+
+    @property
+    def available(self) -> bool:
+        return self._manager.ring_active
+
+    async def async_press(self) -> None:
+        try:
+            await self._manager.async_ring_save()
+        except ValueError as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="action_failed",
+                translation_placeholders={"error": str(err)},
+            ) from err
 
 
 class FritzNetworkBoxButton(ButtonEntity):

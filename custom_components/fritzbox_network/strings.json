@@ -80,6 +80,13 @@
           "stale_repair": "Notify about devices offline for long",
           "stale_days": "Days offline before a device counts as gone",
           "noise_warn_db": "Warn when the DSL noise margin stays below (dB, 0 = never)",
+          "ring_autostart": "Start the ring buffer with Home Assistant (a packet capture that always holds the last minutes)",
+          "ring_interface": "Ring buffer: interface (id of the box, e.g. 1-lan)",
+          "ring_minutes": "Ring buffer: minutes to hold",
+          "ring_mb": "Ring buffer: size limit (MB)",
+          "ring_trigger": "Ring buffer: entity that saves it when it changes",
+          "ring_trigger_state": "Ring buffer: save only when the entity changes to this state (empty = any change)",
+          "ring_after": "Ring buffer: seconds to keep recording after the trigger",
           "repeaters": "Repeaters to control",
           "switch_areas": "Create switches for"
         },
@@ -301,6 +308,9 @@
       }
     },
     "switch": {
+      "ring_buffer": {
+        "name": "Ring buffer"
+      },
       "internet_access": {
         "name": "Internet access"
       },
@@ -333,6 +343,9 @@
       }
     },
     "button": {
+      "ring_save": {
+        "name": "Save ring buffer"
+      },
       "refresh": {
         "name": "Refresh"
       },

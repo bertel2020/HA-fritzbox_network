@@ -80,6 +80,13 @@
           "stale_repair": "Auf lange offline Geräte hinweisen",
           "stale_days": "Tage offline, bis ein Gerät als weg gilt",
           "noise_warn_db": "Warnen, wenn der DSL-Störabstand darunter bleibt (dB, 0 = nie)",
+          "ring_autostart": "Ringpuffer mit Home Assistant starten (ein Mitschnitt, der immer die letzten Minuten hält)",
+          "ring_interface": "Ringpuffer: Schnittstelle (Kennung der Box, z. B. 1-lan)",
+          "ring_minutes": "Ringpuffer: Minuten, die er hält",
+          "ring_mb": "Ringpuffer: Größenlimit (MB)",
+          "ring_trigger": "Ringpuffer: Entität, bei deren Änderung er gesichert wird",
+          "ring_trigger_state": "Ringpuffer: nur sichern, wenn die Entität auf diesen Zustand wechselt (leer = jede Änderung)",
+          "ring_after": "Ringpuffer: Sekunden, die nach dem Auslöser weiter aufgezeichnet wird",
           "repeaters": "Repeater steuern",
           "switch_areas": "Schalter anlegen für"
         },
@@ -301,6 +308,9 @@
       }
     },
     "switch": {
+      "ring_buffer": {
+        "name": "Ringpuffer"
+      },
       "internet_access": {
         "name": "Internetzugang"
       },
@@ -333,6 +343,9 @@
       }
     },
     "button": {
+      "ring_save": {
+        "name": "Ringpuffer sichern"
+      },
       "refresh": {
         "name": "Aktualisieren"
       },

@@ -39,7 +39,7 @@ import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet, renderPortsPage, renderVolume } from "./panel-internet.js";
 import { renderVpn } from "./panel-vpn.js";
 import { renderRoutes } from "./panel-routes.js";
-import { captureDefaults, captureForDevice, defaultInterface, renderCapture } from "./panel-capture.js";
+import { captureDefaults, captureForDevice, defaultInterface, renderCapture, ringDefaults } from "./panel-capture.js";
 import { diagHead, renderConnection } from "./panel-check.js";
 import { renderLog } from "./panel-log.js";
 import { renderRadio, renderRadioVerdict } from "./panel-radio.js";
@@ -319,6 +319,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       routesFixed: {},
       capture: null,
       captureForm: captureDefaults(null),
+      ringForm: ringDefaults(null),
       captureSummary: null,
       captureDetecting: false,
       check: null,
@@ -908,6 +909,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       state.capture = await this._ws("capture/status");
       // a device chosen before the page was read (from its page, the palette or a link) stays chosen
       if (first) state.captureForm = { ...captureDefaults(state.capture.limits), mac: state.captureForm.mac };
+      if (first) state.ringForm = ringDefaults(state.capture);
+      if (!state.capture.interfaces.some((i) => i.id === state.ringForm.interface)) state.ringForm.interface = defaultInterface(state.capture.interfaces);
       // the box may offer other interfaces than last time: keep the choice only if it is still there
       if (!state.capture.interfaces.some((i) => i.id === state.captureForm.interface)) {
         state.captureForm.interface = defaultInterface(state.capture.interfaces);
@@ -917,8 +920,8 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._state.capture = "failed";
     }
     this._update();
-    if (this._state.tab === "capture" && this._state.capture?.job?.state === "running") {
-      this._captureTimer = setTimeout(() => this._loadCapture(), 1000);
+    if (this._state.tab === "capture" && (this._state.capture?.job?.state === "running" || this._state.capture?.ring?.active)) {
+      this._captureTimer = setTimeout(() => this._loadCapture(), this._state.capture?.job?.state === "running" ? 1000 : 3000);
     }
   }
 
@@ -1002,6 +1005,19 @@ class FritzboxNetworkPanel extends HTMLElement {
       } else if (ds.act === "cap-sum") {
         state.captureSummary = { name: ds.name, data: await this._ws("capture/summary", { name: ds.name }) };
         this._update();
+      } else if (ds.act === "cap-ring-start") {
+        const form = state.ringForm;
+        state.capture = await this._ws("capture/ring_start", { interface: form.interface, minutes: form.minutes, mb: form.mb, ...(form.mac ? { mac: form.mac } : {}) });
+        showToast(this.shadowRoot, c.ring.toastStarted);
+        this._update();
+        this._captureTimer = setTimeout(() => this._loadCapture(), 3000);
+      } else if (ds.act === "cap-ring-stop") {
+        await this._ws("capture/ring_stop");
+        await this._loadCapture();
+      } else if (ds.act === "cap-ring-save") {
+        state.capture = await this._ws("capture/ring_save");
+        showToast(this.shadowRoot, c.ring.toastSaved);
+        this._update();
       } else if (ds.act === "cap-stop") {
         await this._ws("capture/stop");
         await this._loadCapture();
@@ -1022,7 +1038,7 @@ class FritzboxNetworkPanel extends HTMLElement {
       }
     } catch (err) {
       const busy = err?.code === "busy";
-      showToast(this.shadowRoot, busy ? c.toastBusy : fill(t.toastFailed, { error: err?.message ?? err }));
+      showToast(this.shadowRoot, busy ? (ds.act === "cap-ring-start" ? c.ring.toastBusy : c.toastBusy) : fill(t.toastFailed, { error: err?.message ?? err }));
     }
   }
 
@@ -1512,6 +1528,7 @@ class FritzboxNetworkPanel extends HTMLElement {
           language,
           canWrite: Boolean(state.data?.can_write),
           form: state.captureForm,
+          ringForm: state.ringForm,
           detecting: state.captureDetecting,
           clients: state.data?.clients ?? [],
           summary: state.captureSummary,
@@ -1825,6 +1842,13 @@ class FritzboxNetworkPanel extends HTMLElement {
         return this._update();
       }
       else form[el.id === "cap-sec" ? "seconds" : "mb"] = Number(el.value);
+      return;
+    }
+    if (el.id === "rg-if" || el.id === "rg-min" || el.id === "rg-mb" || el.id === "rg-dev") {
+      const form = this._state.ringForm;
+      if (el.id === "rg-if") form.interface = el.value;
+      else if (el.id === "rg-dev") form.mac = el.value;
+      else form[el.id === "rg-min" ? "minutes" : "mb"] = Number(el.value);
       return;
     }
     if (el.id === "sort") {

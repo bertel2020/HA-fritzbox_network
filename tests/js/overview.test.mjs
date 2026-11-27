@@ -297,6 +297,20 @@ test("the last 24 hours: connection events, new devices and a restart of the box
   assert.match(overview.renderOverview(state, { t, now: NOW, language: "de" }), /class="tev internet" href="#\/internet"/);
 });
 
+test("two devices of one name in the data volume are told apart by connection and address", () => {
+  const now = new Date(2026, 10, 7, 14);
+  const traffic = { "aa:bb:cc:dd:ee:01": { "2026-11-07": [900, 10] }, "aa:bb:cc:dd:ee:02": { "2026-11-07": [100, 10] }, "aa:bb:cc:dd:ee:03": { "2026-11-07": [50, 10] } };
+  const clients = [
+    client({ id: "m1", mac: "aa:bb:cc:dd:ee:01", name: "MacBook", link_type: "wlan" }),
+    client({ id: "m2", mac: "aa:bb:cc:dd:ee:02", name: "MacBook", link_type: "lan" }),
+    client({ id: "t1", mac: "aa:bb:cc:dd:ee:03", name: "TV" }),
+  ];
+  const html = overview.renderOverview({ data: { clients }, traffic }, { t, now: now.getTime(), language: "de" });
+  assert.match(html, /MacBook <small class="muted">WLAN · ee:01<\/small>/);
+  assert.match(html, /MacBook <small class="muted">LAN · ee:02<\/small>/);
+  assert.doesNotMatch(html, />TV <small/);
+});
+
 test("the card of the data volume lists the devices by what they moved, for a day or a week", () => {
   const now = new Date(2026, 10, 7, 14);
   const traffic = {

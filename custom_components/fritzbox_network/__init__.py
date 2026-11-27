@@ -29,7 +29,13 @@ from homeassistant.helpers.typing import ConfigType
 
 from .addresses import AddressNotes
 from .api import FritzNetworkClient
-from .capture import DIR_NAME, KEY_CAPTURES, CaptureDownloadView, CaptureManager
+from .capture import (
+    DIR_NAME,
+    KEY_CAPTURES,
+    CaptureDownloadView,
+    CaptureManager,
+    async_setup_ring,
+)
 from .connection_check import box_port
 from .const import (
     CONF_HIDDEN_MACS,
@@ -150,6 +156,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: FritzNetworkConfigEntry)
     entry.async_on_unload(captures.async_flush)
     entry.async_on_unload(lambda: _drop_capture(hass, entry))
 
+    async_setup_ring(hass, entry, captures)
     entry.async_on_unload(history.async_flush)
     entry.async_on_unload(coordinator.addresses.async_flush)
     entry.async_on_unload(coordinator.latency.async_flush)
@@ -210,6 +217,7 @@ def _drop_capture(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:
     """End a capture that still runs when the box is unloaded."""
     if manager := hass.data.get(KEY_CAPTURES, {}).pop(entry.entry_id, None):
         manager.stop()
+        manager.ring_stop()
 
 
 def _setup_stale_check(hass: HomeAssistant, entry: FritzNetworkConfigEntry) -> None:

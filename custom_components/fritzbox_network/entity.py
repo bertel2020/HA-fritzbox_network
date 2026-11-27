@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import CONNECTION_NETWORK_MAC, DeviceInfo
@@ -11,6 +12,7 @@ from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
+from .capture import KEY_CAPTURES, CaptureManager
 from .const import CONF_SWITCH_AREAS, DOMAIN, KEY_TRACKER, SWITCH_AREAS, vpn_identifier
 from .coordinator import FritzNetworkConfigEntry, FritzNetworkCoordinator
 from .models import Host, MeshNode, client_uid, mac_id
@@ -244,3 +246,29 @@ class FritzNetworkRepeaterEntity(CoordinatorEntity[RepeaterCoordinator]):
     @property
     def available(self) -> bool:
         return super().available and self.coordinator.data is not None
+
+
+class FritzNetworkRingEntity(Entity):
+    """Base of the ring buffer entities: they follow the capture manager of the box.
+
+    Off by default: the ring buffer is for automations that save the last minutes of traffic.
+    """
+
+    _attr_has_entity_name = True
+    _attr_should_poll = False
+    _attr_entity_category = EntityCategory.CONFIG
+    _attr_entity_registry_enabled_default = False
+
+    def __init__(
+        self, hass: HomeAssistant, entry: FritzNetworkConfigEntry, platform: str, key: str
+    ) -> None:
+        self._entry = entry
+        self._manager: CaptureManager = hass.data[KEY_CAPTURES][entry.entry_id]
+        serial = entry.runtime_data.serial
+        self._attr_translation_key = key
+        self._attr_unique_id = f"{serial}_{key}"
+        self.entity_id = f"{platform}.fritz_network_{key}"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, serial)})
+
+    async def async_added_to_hass(self) -> None:
+        self.async_on_remove(self._manager.async_add_listener(self.async_write_ha_state))

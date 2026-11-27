@@ -22,12 +22,28 @@ from typing import Any
 
 from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import Event, HomeAssistant, callback
+from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 from homeassistant.helpers.storage import Store
 from homeassistant.util import dt as dt_util
 
 from . import pcap
-from .const import DOMAIN, HISTORY_SAVE_DELAY
+from .const import (
+    CONF_RING_AFTER,
+    CONF_RING_AUTOSTART,
+    CONF_RING_INTERFACE,
+    CONF_RING_MB,
+    CONF_RING_MINUTES,
+    CONF_RING_TRIGGER,
+    CONF_RING_TRIGGER_STATE,
+    DEFAULT_RING_AFTER,
+    DEFAULT_RING_INTERFACE,
+    DEFAULT_RING_MB,
+    DEFAULT_RING_MINUTES,
+    DOMAIN,
+    HISTORY_SAVE_DELAY,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -61,9 +77,7 @@ RING_DIR = "ring"
 RING_SEGMENT_SECONDS = 30
 RING_MIN_MINUTES = 1
 RING_MAX_MINUTES = 30
-DEFAULT_RING_MINUTES = 5
 RING_MAX_MB = 500
-DEFAULT_RING_MB = 100
 RING_RETRY_SECONDS = (5, 15, 60)
 VIEW_URL = f"/api/{DOMAIN}/capture/{{entry_id}}/{{name}}"
 
@@ -747,3 +761,54 @@ class CaptureDownloadView(HomeAssistantView):
                 "Content-Disposition": f'attachment; filename="{name}"',
             },
         )
+
+
+@callback
+def async_setup_ring(hass: HomeAssistant, entry: ConfigEntry, manager: CaptureManager) -> None:
+    """Start the ring buffer if the options say so, and watch the entity that triggers a save.
+
+    A change of the trigger entity (to the chosen state, or any) saves what the ring buffer
+    holds after the wait set in the options; a second change in the meantime does not add one.
+    """
+    options = entry.options
+    if options.get(CONF_RING_AUTOSTART):
+        try:
+            manager.ring_start(
+                options.get(CONF_RING_INTERFACE, DEFAULT_RING_INTERFACE),
+                options.get(CONF_RING_MINUTES, DEFAULT_RING_MINUTES),
+                options.get(CONF_RING_MB, DEFAULT_RING_MB) * 1048576,
+            )
+        except ValueError as err:
+            _LOGGER.warning("The ring buffer did not start: %s", err)
+    entity = options.get(CONF_RING_TRIGGER)
+    if not entity:
+        return
+    wanted = options.get(CONF_RING_TRIGGER_STATE) or None
+    after = options.get(CONF_RING_AFTER, DEFAULT_RING_AFTER)
+    pending: list[Callable[[], None]] = []
+
+    async def save(_now: Any) -> None:
+        pending.clear()
+        try:
+            await manager.async_ring_save()
+        except ValueError as err:
+            _LOGGER.debug("The ring buffer was not saved: %s", err)
+
+    @callback
+    def changed(event: Event) -> None:
+        old, new = event.data.get("old_state"), event.data.get("new_state")
+        if old is None or new is None or old.state == new.state:
+            return  # only a change of the state counts, not of an attribute
+        if wanted and new.state != wanted:
+            return
+        if manager.ring_active and not pending:
+            pending.append(async_call_later(hass, after, save))
+
+    @callback
+    def cancel() -> None:
+        for undo in pending:
+            undo()
+        pending.clear()
+
+    entry.async_on_unload(async_track_state_change_event(hass, [entity], changed))
+    entry.async_on_unload(cancel)

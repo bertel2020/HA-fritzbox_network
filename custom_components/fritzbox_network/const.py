@@ -24,6 +24,13 @@ CONF_WAKE_ON_LAN_WIFI = "wake_on_lan_wifi"
 CONF_STALE_REPAIR = "stale_repair"
 CONF_STALE_DAYS = "stale_days"
 CONF_NOISE_WARN_DB = "noise_warn_db"
+CONF_RING_AUTOSTART = "ring_autostart"
+CONF_RING_INTERFACE = "ring_interface"
+CONF_RING_MINUTES = "ring_minutes"
+CONF_RING_MB = "ring_mb"
+CONF_RING_TRIGGER = "ring_trigger"
+CONF_RING_TRIGGER_STATE = "ring_trigger_state"
+CONF_RING_AFTER = "ring_after"
 
 FILTER_ALL = "all"
 FILTER_INCLUDE = "include"
@@ -47,6 +54,10 @@ DEFAULT_SHOW_VENDOR = False
 DEFAULT_WAKE_ON_LAN_WIFI = False
 DEFAULT_STALE_REPAIR = False
 DEFAULT_STALE_DAYS = 30
+DEFAULT_RING_INTERFACE = "1-lan"
+DEFAULT_RING_MINUTES = 5
+DEFAULT_RING_MB = 100
+DEFAULT_RING_AFTER = 30
 # 0 turns the weak-line repair off
 DEFAULT_NOISE_WARN_DB = 10
 
@@ -191,6 +202,8 @@ def vpn_identifier(serial: str) -> str:
 
 KEY_ADDRESS_ASSIGNMENT = "address_assignment"
 KEY_REFRESH = "refresh"
+KEY_RING_BUFFER = "ring_buffer"
+KEY_RING_SAVE = "ring_save"
 KEY_REBOOT = "reboot"
 KEY_REPEATER_REBOOT = "repeater_reboot"
 KEY_RECONNECT = "reconnect"

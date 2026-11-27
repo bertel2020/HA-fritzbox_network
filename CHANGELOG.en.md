@@ -6,7 +6,7 @@ All notable changes to this integration are recorded here.
 
 ### New
 
-- Panel, overview: The **Data usage** card has the range **Month** (the last 30 days) as well as a link **All devices and the course** to the Internet page.
+- Panel, overview: The **Data usage** card has the range **Month** (the last 30 days) as well as a link **All devices and the course** to the Internet page. When two devices have the same name (say a notebook on WLAN and on a LAN), the row names WLAN/LAN and the end of the MAC address.
 
 ### New
 
