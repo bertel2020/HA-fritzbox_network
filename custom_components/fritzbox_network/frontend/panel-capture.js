@@ -10,6 +10,13 @@ export function ringDefaults(capture) {
   return { interface: o.interface ?? "1-lan", minutes: o.minutes ?? l.ring_minutes ?? 5, mb: o.mb ?? l.ring_mb ?? 100, mac: "" };
 }
 
+/** How soon the capture page reads again: every second while one records, every 3 s with the ring buffer, else every 15 s. */
+export function captureRefreshMs(capture) {
+  if (capture?.job?.state === "running") return 1000;
+  if (capture?.ring?.active) return 3000;
+  return 15000;
+}
+
 /** The form values to start with. */
 export function captureDefaults(limits) {
   return { interface: "", seconds: limits?.seconds ?? 60, mb: limits?.mb ?? 50, mac: "" };
@@ -114,19 +121,70 @@ function summaryBlock(summary, t, language) {
     <p class="hint">${escapeHtml(c.hint)}</p></div>`;
 }
 
+/** A span of a capture: "12 s", "2 min 5 s". */
+export function captureSpan(seconds, c) {
+  if (typeof seconds !== "number" || seconds < 0) return "";
+  const whole = Math.round(seconds);
+  return whole < 60 ? fill(c.span.s, { s: whole }) : fill(c.span.ms, { m: Math.floor(whole / 60), s: whole % 60 });
+}
+
+/** The interface of a kept capture: by the id of the box where the file tells it, else by the part of its name. */
+function fileInterface(file, interfaces) {
+  return (file.interface_id && interfaces.find((i) => i.id === file.interface_id)) || interfaces.find((i) => i.slug === file.interface) || null;
+}
+
+/** The chips of a capture: where it came from (ring buffer, trigger) and the device it is narrowed to. */
+function originChips(item, c, clients) {
+  const device = item.device ? clients.find((d) => d.id === item.device) : null;
+  const ring = item.ring ? `<span class="chip">${escapeHtml(item.trigger ? fill(c.ring.savedBy, { entity: item.trigger }) : c.ring.saved)}</span>` : "";
+  const only = item.device ? `<span class="chip">${escapeHtml(device?.name ?? item.device_name ?? item.device)}</span>` : "";
+  return ring + only;
+}
+
+function when(time, language) {
+  return new Date(time).toLocaleString(language || "en", { dateStyle: "medium", timeStyle: "short" });
+}
+
 function fileLine(file, t, language, clients, interfaces) {
   const c = t.inet.capture;
-  const device = file.device ? clients.find((d) => d.id === file.device) : null;
-  const known = interfaces.find((i) => i.slug === file.interface);
-  const when = new Date(file.time).toLocaleString(language || "en", { dateStyle: "medium", timeStyle: "short" });
+  const known = fileInterface(file, interfaces);
   const name = escapeHtml(file.name);
-  const meta = [when, formatBytes(file.bytes, language)].map((x) => `<span>${escapeHtml(x)}</span>`).join("");
-  const origin = file.ring ? `<span class="chip">${escapeHtml(c.ring.saved)}</span>` : "";
-  const only = file.device ? `<span class="chip">${escapeHtml(device?.name ?? file.device)}</span>` : "";
-  return `<li class="capfile"><div class="capmain"><b>${escapeHtml(known ? interfaceName(known, t) : file.interface)}</b>${known ? `<code>${escapeHtml(known.id)}</code>` : ""}${origin}${only}
+  const facts = [when(file.time, language), formatBytes(file.bytes, language)];
+  if (typeof file.packets === "number") facts.push(fill(c.packets, { n: file.packets.toLocaleString(language || "en") }));
+  const span = captureSpan(file.seconds, c);
+  if (span && file.packets > 1) facts.push(span);
+  const ended = file.reason ? c.ended[file.reason] : "";
+  if (ended) facts.push(ended);
+  const meta = facts.map((x) => `<span>${escapeHtml(x)}</span>`).join("");
+  const title = known ? interfaceName(known, t) : (file.interface_id ?? file.interface);
+  const id = known?.id ?? file.interface_id;
+  const live = file.recording ? `<span class="chip info">${escapeHtml(c.recording)}</span>` : "";
+  const warn = file.reason === "error" ? `<span class="chip warn">${escapeHtml(c.ended.error)}</span>` : "";
+  const buttons = file.recording
+    ? ""
+    : `<span class="capbtns"><button class="btn sm" data-act="cap-sum" data-name="${name}">${escapeHtml(c.analyse)}</button><button class="btn sm" data-act="cap-dl" data-name="${name}">${escapeHtml(c.download)}</button>
+    <button class="btn sm d" data-act="cap-del" data-name="${name}" aria-label="${escapeHtml(fill(c.deleteLabel, { name: file.name }))}">${escapeHtml(c.delete)}</button></span>`;
+  return `<li class="capfile"><div class="capmain"><b>${escapeHtml(title)}</b>${id ? `<code>${escapeHtml(id)}</code>` : ""}${live}${warn}${originChips(file, c, clients)}
       <div class="capmeta">${meta}</div></div>
-    <span class="capbtns"><button class="btn sm" data-act="cap-sum" data-name="${name}">${escapeHtml(c.analyse)}</button><button class="btn sm" data-act="cap-dl" data-name="${name}">${escapeHtml(c.download)}</button>
-    <button class="btn sm d" data-act="cap-del" data-name="${name}" aria-label="${escapeHtml(fill(c.deleteLabel, { name: file.name }))}">${escapeHtml(c.delete)}</button></span></li>`;
+    ${buttons}</li>`;
+}
+
+/** A capture that failed or kept nothing: it stays in the list with the reason until it is dismissed. */
+function failureLine(failure, t, language, clients, interfaces) {
+  const c = t.inet.capture;
+  const known = interfaces.find((i) => i.id === failure.interface);
+  const title = known ? interfaceName(known, t) : failure.interface;
+  const meta = [when(failure.time, language), failure.error].map((x) => `<span>${escapeHtml(x)}</span>`).join("");
+  return `<li class="capfile"><div class="capmain"><b>${escapeHtml(title)}</b><code>${escapeHtml(failure.interface)}</code><span class="chip bad">${escapeHtml(c.failedChip)}</span>${originChips(failure, c, clients)}
+      <div class="capmeta">${meta}</div></div>
+    <span class="capbtns"><button class="btn sm" data-act="cap-dismiss" data-id="${escapeHtml(failure.id)}">${escapeHtml(c.dismiss)}</button></span></li>`;
+}
+
+/** The kept captures and the failed ones, newest first. */
+export function captureItems(capture) {
+  const files = (capture.files ?? []).map((f) => ({ kind: "file", time: f.time, item: f }));
+  const failures = (capture.failures ?? []).map((f) => ({ kind: "failure", time: f.time, item: f }));
+  return [...files, ...failures].sort((a, b) => (Date.parse(b.time) || 0) - (Date.parse(a.time) || 0));
 }
 
 /** The card of the ring buffer: what it holds, the way to start, stop and save it, and what saves it by itself. */
@@ -190,8 +248,11 @@ export function renderCapture(capture, ctx) {
       <label class="field"><span class="label">${escapeHtml(c.size)}</span><input type="number" id="cap-mb" min="1" max="${lim.max_mb}" value="${escapeHtml(form.mb)}"${off} /></label>
       <button class="btn p" data-act="cap-start"${blocked || detecting ? " disabled" : ""}>${escapeHtml(c.start)}</button></div></div>
     ${hasAccessPoints ? `<div class="detectrow"><button class="btn sm" data-act="cap-detect"${blocked || detecting ? " disabled" : ""}>${escapeHtml(detecting ? c.detecting : c.detect)}</button><small>${escapeHtml(c.detectHint)}</small></div>` : ""}`;
-  const list = capture.files.length
-    ? `<ul class="capfiles">${capture.files.map((f) => fileLine(f, t, language, clients, capture.interfaces)).join("")}</ul>`
+  const items = captureItems(capture);
+  const list = items.length
+    ? `<ul class="capfiles">${items
+        .map(({ kind, item }) => (kind === "file" ? fileLine(item, t, language, clients, capture.interfaces) : failureLine(item, t, language, clients, capture.interfaces)))
+        .join("")}</ul>`
     : `<p class="hint">${escapeHtml(c.none)}</p>`;
   const files = `<div class="capexisting"><span class="label">${escapeHtml(fill(c.existing, { n: capture.files.length }))}</span>${list}</div>`;
   return `<section class="card sec"><div class="chead"><span class="label">${escapeHtml(c.title)}</span></div>

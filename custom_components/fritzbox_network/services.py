@@ -224,6 +224,7 @@ async def _async_capture(call: ServiceCall) -> None:
             call.data["size"] * 1048576,
             host.mac if host else None,
             (host.ip,) if host and host.ip else (),
+            host.name if host else None,
         )
     except ValueError as err:
         raise ServiceValidationError(

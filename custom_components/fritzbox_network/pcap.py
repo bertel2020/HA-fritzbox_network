@@ -189,6 +189,31 @@ def dns_query(payload: bytes) -> str | None:
     return ".".join(labels).lower() or None
 
 
+def stats(path: Path) -> tuple[int, float | None, float | None]:
+    """How many packets a capture holds and the times of the first and the last one.
+
+    Cheap even for a big file: only the record headers are read, the packets are skipped.
+    """
+    reader = Reader(path)
+    record = struct.Struct(f"{reader.order}IIII")
+    size = 24 if reader.extended else 16
+    total = path.stat().st_size
+    count = 0
+    first = last = None
+    with path.open("rb") as handle:
+        position = 24
+        while position + size <= total:
+            handle.seek(position)
+            seconds, fraction, captured, _length = record.unpack(handle.read(16))
+            if position + size + captured > total:
+                break  # cut off in the middle of a packet
+            last = seconds + fraction / (1e9 if reader.nano else 1e6)
+            first = last if first is None else first
+            count += 1
+            position += size + captured
+    return count, first, last
+
+
 def filter_device(source: Path, target: Path, mac: str, ips: set[str]) -> int:
     """Write the packets of one device (by its MAC or one of its IP addresses); returns how many."""
     reader = Reader(source)

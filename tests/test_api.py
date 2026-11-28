@@ -806,6 +806,7 @@ def _capture(host, tmp_path, seconds, max_bytes=10_000_000, stop=None):
 
     client = FritzNetworkClient(host, None, "user", "secret")
     client._web_sid = "0123456789abcdef"  # noqa: SLF001
+    client._web_login = lambda: "0123456789abcdef"  # noqa: SLF001
     path = tmp_path / "x.pcap"
     reason = client.capture(
         "1-lan", path, seconds, max_bytes, stop or threading.Event(), lambda n: None
@@ -894,8 +895,75 @@ def test_the_modified_tcpdump_header_of_the_box_is_accepted(tmp_path):
     with _box(modified) as host:
         reason, path = _capture(host, tmp_path, 5)
 
-    assert reason in ("time", "stopped")
+    assert reason == "ended"  # the box closed the stream itself, long before the time was up
     assert path.read_bytes() == head
+
+
+@pytest.mark.usefixtures("socket_enabled")
+def test_a_capture_the_box_cuts_off_keeps_what_came(tmp_path):
+    import socket
+    import struct
+
+    def cut(handler):
+        handler.send_response(200)
+        handler.end_headers()
+        handler.wfile.write(PCAP_HEAD + b"x" * 500)
+        handler.wfile.flush()
+        time.sleep(0.3)
+        # a reset instead of an orderly end: the read on our side fails with an error
+        handler.connection.setsockopt(socket.SOL_SOCKET, socket.SO_LINGER, struct.pack("ii", 1, 0))
+        handler.connection.close()
+
+    with _box(cut) as host:
+        reason, path = _capture(host, tmp_path, 30)
+
+    assert reason == "error"
+    assert path.read_bytes().startswith(PCAP_HEAD + b"x" * 500)
+
+
+@pytest.mark.usefixtures("socket_enabled")
+def test_a_capture_with_a_session_the_box_dropped_logs_in_again(tmp_path):
+    sids = []
+
+    def answer(handler):
+        sids.append("old" if "sid=0123456789abcdef" in handler.path else "new")
+        if sids[-1] == "old":
+            handler.send_response(403)
+            handler.end_headers()
+            return
+        handler.send_response(200)
+        handler.end_headers()
+        handler.wfile.write(PCAP_HEAD)
+
+    from custom_components.fritzbox_network.api import FritzNetworkClient
+
+    with _box(answer) as host:
+        client = FritzNetworkClient(host, None, "user", "secret")
+        client._web_sid = "0123456789abcdef"  # noqa: SLF001
+        client._web_login = lambda: "fedcba9876543210"  # noqa: SLF001
+        path = tmp_path / "x.pcap"
+        reason = client.capture("1-lan", path, 5, 10_000, threading.Event(), lambda n: None)
+
+    assert sids == ["old", "new"]
+    assert reason == "ended"
+    assert path.read_bytes() == PCAP_HEAD
+
+
+@pytest.mark.usefixtures("socket_enabled")
+def test_a_refused_capture_drops_the_session_only_once(tmp_path):
+    def refuse(handler):
+        handler.send_response(403)
+        handler.end_headers()
+
+    with _box(refuse) as host, pytest.raises(ValueError, match="403"):
+        client = FritzNetworkClient(host, None, "user", "secret")
+        client._web_sid = "0123456789abcdef"  # noqa: SLF001
+        logins = []
+        client._web_login = lambda: logins.append(1) or "fedcba9876543210"  # noqa: SLF001
+        try:
+            client.capture("1-lan", tmp_path / "x.pcap", 5, 10_000, threading.Event(), print)
+        finally:
+            assert logins == [1]
 
 
 def test_the_certificate_of_the_box_is_checked_only_when_asked_and_with_tls():

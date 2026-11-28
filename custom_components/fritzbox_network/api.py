@@ -107,6 +107,14 @@ REQUEST_TIMEOUT = 10
 CAPTURE_READ_TIMEOUT = 20
 
 
+# the answers of the box to a capture asked with a session it has dropped
+SESSION_REFUSED = (301, 302, 303, 307, 401, 403)
+
+
+class _SessionRefused(ValueError):
+    """The box refused the capture before it began; a new session may help."""
+
+
 VPN_UID_RE = re.compile(r"[A-Za-z0-9_]{1,64}")
 
 WEB_LOGIN_MIN_ROUNDS = 10000
@@ -458,15 +466,40 @@ class FritzNetworkClient:
         them into segments itself); ``path`` is then not used.
 
         The box streams the capture while the connection is open. Only the login holds the lock:
-        a capture runs for minutes and must not keep the polling waiting.
+        a capture runs for minutes and must not keep the polling waiting. A session the box has
+        dropped is renewed once: it answers with a refusal before the first byte of the capture.
+        Why it ended: time, size, stopped, quiet (nothing came for a while), ended (the box
+        closed the stream itself) or error (the connection broke; what came is kept).
         """
-        with self._lock:
-            sid = self._web_sid or self._web_login()
+        deadline = time.monotonic() + seconds
+        for attempt in (0, 1):
+            with self._lock:
+                sid = self._web_sid or self._web_login()
+            try:
+                return self._capture_once(
+                    interface, path, deadline, max_bytes, stop, progress, sink, sid
+                )
+            except _SessionRefused:
+                self._web_sid = None
+                if attempt or stop.is_set() or time.monotonic() >= deadline:
+                    raise
+        raise AssertionError("unreachable")  # pragma: no cover
+
+    def _capture_once(
+        self,
+        interface: str,
+        path: Any,
+        deadline: float,
+        max_bytes: int,
+        stop: threading.Event,
+        progress: Any,
+        sink: Any,
+        sid: str,
+    ) -> str:
         query = urlencode(
             {"ifaceorminor": interface, "snaplen": "1600", "capture": "Start", "sid": sid}
         )
         connection = self._new_connection()
-        deadline = time.monotonic() + seconds
         written = 0
         reason = "time"
         finished = threading.Event()
@@ -488,6 +521,8 @@ class FritzNetworkClient:
             # the connection forgets its socket for an answer that ends by closing; keep it
             sock = connection.sock
             response = connection.getresponse()
+            if response.status in SESSION_REFUSED:
+                raise _SessionRefused(f"the box answered {response.status} {response.reason}")
             if response.status != 200:
                 raise ValueError(f"the box answered {response.status} {response.reason}")
             sock.settimeout(CAPTURE_READ_TIMEOUT)
@@ -508,13 +543,24 @@ class FritzNetworkClient:
                                 f"the box sent nothing for {CAPTURE_READ_TIMEOUT} s "
                                 "(a quiet interface?)"
                             ) from None
+                        if written:
+                            # what came is a capture all the same: keep it and say why it ended
+                            _LOGGER.warning(
+                                "The capture on %s broke off after %s bytes: %s",
+                                interface,
+                                written,
+                                err,
+                            )
+                            reason = "error"
+                            break
                         raise
                     if not chunk:
+                        if not cut and time.monotonic() < deadline - 1:
+                            reason = "ended"  # the box closed the stream before the time was up
                         break
                     if written == 0 and chunk[:4] not in pcap.MAGICS:
                         # a refusal comes as text; anything else is shown as bytes
-                        self._web_sid = None
-                        raise ValueError(
+                        raise _SessionRefused(
                             f"the box did not send a capture: {chunk[:32].hex(' ')} "
                             f"({chunk[:60].decode('utf-8', 'replace').strip()})"
                         )

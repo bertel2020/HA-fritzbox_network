@@ -4,6 +4,19 @@ Alle nennenswerten Änderungen an dieser Integration werden hier festgehalten.
 
 ## Unveröffentlicht
 
+### Neu
+
+- Mitschnitt: Die Liste **Vorhandene Mitschnitte** nennt je Datei die Zahl der Pakete, die Dauer vom ersten bis zum letzten Paket, warum die Aufzeichnung endete (Zeit abgelaufen, Größenlimit, beendet, von der Box beendet, abgebrochen), die Schnittstelle mit der Kennung der Box (auch bei Routing-Schnittstellen wie `3-0`), das Gerät mit dem Namen, den es beim Mitschnitt hatte, und beim Ringpuffer die Entität, die das Sichern ausgelöst hat. Die Angaben stehen in einer kleinen Datei neben dem Mitschnitt; ältere Mitschnitte werden dafür einmal gezählt. Ein Mitschnitt, der gerade aufgezeichnet wird, steht als „läuft“ in der Liste.
+- Mitschnitt: Ein Mitschnitt, der fehlschlug oder nichts behielt (etwa „nur dieses Gerät“, das in der Zeit nichts gesendet hat, oder ein automatisches Sichern des Ringpuffers), verschwindet nicht mehr spurlos: Er steht mit dem Grund als „fehlgeschlagen“ in der Liste, bis du ihn ausblendest, auch nach einem Neustart.
+
+### Behoben
+
+- Mitschnitt: Brach die Verbindung zur Box mitten in einer Aufzeichnung ab, wurde die ganze Datei gelöscht. Jetzt bleibt, was bis dahin ankam, und die Liste nennt die Aufzeichnung „abgebrochen“.
+- Mitschnitt: Hatte die Box die Anmeldung der Weboberfläche verworfen, schlug der nächste Mitschnitt fehl (und mit einer Antwort 403 auch jeder weitere). Die Integration meldet sich jetzt einmal neu an und versucht es noch einmal.
+- Mitschnitt: Schlug das automatische Sichern des Ringpuffers durch die Auslöser-Entität fehl, stand das nur im Debug-Log; jetzt ist es eine Warnung und steht in der Liste. Zwei Sicherungen in derselben Sekunde überschreiben sich nicht mehr.
+- Mitschnitt: Die Seite liest die Liste auch ohne laufende Aufzeichnung alle 15 Sekunden neu, so erscheinen Mitschnitte aus einer Aktion, einer Automatisierung oder vom Knopf **Ringpuffer sichern**, ohne die Seite neu zu öffnen.
+- Mitschnitt: Endete der Datenstrom der Box vor der gewählten Zeit, hieß es „Zeit abgelaufen“; jetzt „von der Box beendet“.
+
 ## 1.16.0 – 2026-11-27
 
 ### Neu

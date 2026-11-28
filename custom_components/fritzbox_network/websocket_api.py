@@ -136,6 +136,7 @@ CAPTURE_BANDS_COMMAND = f"{DOMAIN}/capture/bands"
 CAPTURE_SUMMARY_COMMAND = f"{DOMAIN}/capture/summary"
 CAPTURE_STOP_COMMAND = f"{DOMAIN}/capture/stop"
 CAPTURE_DELETE_COMMAND = f"{DOMAIN}/capture/delete"
+CAPTURE_DISMISS_COMMAND = f"{DOMAIN}/capture/dismiss"
 RING_START_COMMAND = f"{DOMAIN}/capture/ring_start"
 RING_STOP_COMMAND = f"{DOMAIN}/capture/ring_stop"
 RING_SAVE_COMMAND = f"{DOMAIN}/capture/ring_save"
@@ -1615,6 +1616,7 @@ def _capture_state(hass: HomeAssistant, entry_id: str) -> dict[str, Any]:
     return {
         "job": manager.job.as_dict() if manager.job else None,
         "files": manager.files(),
+        "failures": list(manager.failures),
         "interfaces": [
             {**i, "slug": interface_slug(i["id"]), "band": manager.bands.get(i["id"])}
             for i in manager.interfaces()
@@ -1685,13 +1687,14 @@ async def ws_capture_start(
     if (found := _loaded_coordinator(hass, connection, msg)) is None:
         return
     manager = hass.data[KEY_CAPTURES][msg["entry_id"]]
-    mac = ips = None
+    mac = ips = name = None
     if msg.get("mac"):
         mac = format_mac(msg["mac"])
         host = found[1].all_hosts.get(mac)
         ips = (host.ip,) if host and host.ip else ()
+        name = host.name if host else None
     try:
-        manager.start(msg["interface"], msg["seconds"], msg["mb"] * 1048576, mac, ips or ())
+        manager.start(msg["interface"], msg["seconds"], msg["mb"] * 1048576, mac, ips or (), name)
     except ValueError as err:
         connection.send_error(msg["id"], ERR_BUSY if str(err) == "busy" else ERR_INVALID, str(err))
         return
@@ -1721,13 +1724,16 @@ async def ws_ring_start(
     if (found := _loaded_coordinator(hass, connection, msg)) is None:
         return
     manager = hass.data[KEY_CAPTURES][msg["entry_id"]]
-    mac = ips = None
+    mac = ips = name = None
     if msg.get("mac"):
         mac = format_mac(msg["mac"])
         host = found[1].all_hosts.get(mac)
         ips = (host.ip,) if host and host.ip else ()
+        name = host.name if host else None
     try:
-        manager.ring_start(msg["interface"], msg["minutes"], msg["mb"] * 1048576, mac, ips or ())
+        manager.ring_start(
+            msg["interface"], msg["minutes"], msg["mb"] * 1048576, mac, ips or (), name
+        )
     except ValueError as err:
         connection.send_error(msg["id"], ERR_BUSY if str(err) == "busy" else ERR_INVALID, str(err))
         return
@@ -1890,6 +1896,27 @@ async def ws_capture_delete(
     connection.send_result(msg["id"], {})
 
 
+@websocket_api.websocket_command(
+    {
+        vol.Required("type"): CAPTURE_DISMISS_COMMAND,
+        vol.Required("entry_id"): str,
+        vol.Required("failure"): str,
+    }
+)
+@websocket_api.require_admin
+@websocket_api.async_response
+async def ws_capture_dismiss(
+    hass: HomeAssistant, connection: websocket_api.ActiveConnection, msg: dict[str, Any]
+) -> None:
+    """Remove a failed capture from the list."""
+    if _loaded_coordinator(hass, connection, msg) is None:
+        return
+    if not hass.data[KEY_CAPTURES][msg["entry_id"]].dismiss_failure(msg["failure"]):
+        connection.send_error(msg["id"], websocket_api.ERR_NOT_FOUND, "No such failure")
+        return
+    connection.send_result(msg["id"], {})
+
+
 def _filter_preview(
     entry: FritzNetworkConfigEntry,
     coordinator: FritzNetworkCoordinator,
@@ -2022,5 +2049,6 @@ def async_register(hass: HomeAssistant) -> None:
     websocket_api.async_register_command(hass, ws_capture_summary)
     websocket_api.async_register_command(hass, ws_capture_stop)
     websocket_api.async_register_command(hass, ws_capture_delete)
+    websocket_api.async_register_command(hass, ws_capture_dismiss)
     websocket_api.async_register_command(hass, ws_filter_preview)
     websocket_api.async_register_command(hass, ws_filter_apply)

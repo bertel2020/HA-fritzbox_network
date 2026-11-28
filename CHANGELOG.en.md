@@ -4,6 +4,19 @@ All notable changes to this integration are recorded here.
 
 ## Unreleased
 
+### New
+
+- Capture: The list **Existing recordings** tells for each file the number of packets, the time from the first to the last packet, why the recording ended (time is up, size limit, stopped, ended by the box, broke off), the interface with the id of the box (also for routing interfaces like `3-0`), the device with the name it had at the time and, for the ring buffer, the entity that triggered the save. The details are kept in a small file next to the capture; older captures are counted once for it. A capture being recorded shows as “recording” in the list.
+- Capture: A capture that failed or kept nothing (say “only this device” when it sent nothing in that time, or an automatic save of the ring buffer) no longer vanishes without a trace: it stays in the list as “failed” with the reason until you dismiss it, also over a restart.
+
+### Fixed
+
+- Capture: When the connection to the box broke off in the middle of a recording, the whole file was deleted. What came until then is now kept, and the list says the recording broke off.
+- Capture: When the box had dropped the session of its web interface, the next capture failed (and with an answer 403 every one after it). The integration now logs in again once and tries again.
+- Capture: When the trigger entity's automatic save of the ring buffer failed, that was only in the debug log; it is now a warning and in the list. Two saves in the same second no longer overwrite each other.
+- Capture: The page reads the list every 15 seconds also when nothing records, so captures from an action, an automation or the **Save ring buffer** button show up without opening the page again.
+- Capture: When the box ended its stream before the chosen time, the recording said “time is up”; it now says “ended by the box”.
+
 ## 1.16.0 – 2026-11-27
 
 ### New

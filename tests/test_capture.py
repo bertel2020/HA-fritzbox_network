@@ -272,3 +272,133 @@ async def test_the_file_of_a_running_capture_is_not_downloaded(hass, fake_client
     )
     assert manager.is_recording(name)
     assert (await view.get(request, entry.entry_id, name)).status == 409
+
+
+DISMISS = f"{DOMAIN}/capture/dismiss"
+HEADER = b"\xd4\xc3\xb2\xa1\x02\x00\x04\x00" + b"\0" * 8 + b"\xff\xff\0\0\x01\0\0\0"
+
+
+def _packets(times) -> bytes:
+    import struct
+
+    return b"".join(struct.pack("<IIII", int(t), 0, 60, 60) + b"\0" * 60 for t in times)
+
+
+async def test_a_failed_capture_stays_in_the_list_until_dismissed(
+    hass, hass_ws_client, fake_client, entry
+):
+    await _setup(hass, entry)
+    client = await hass_ws_client(hass)
+
+    await _call(
+        client, START, entry_id=entry.entry_id, interface="1-lan", seconds=30, mb=10, mac=LAN
+    )
+    await hass.async_block_till_done()
+
+    status = (await _call(client, STATUS, entry_id=entry.entry_id))["result"]
+    assert status["files"] == []
+    [failure] = status["failures"]
+    assert failure["interface"] == "1-lan"
+    assert failure["device"] == LAN.replace(":", "")
+    assert failure["device_name"]  # the name of the device at the time, from the host list
+    assert "nothing" in failure["error"]
+    assert failure["ring"] is False
+
+    assert not (await _call(client, DISMISS, entry_id=entry.entry_id, failure="nope"))["success"]
+    assert (await _call(client, DISMISS, entry_id=entry.entry_id, failure=failure["id"]))["success"]
+    assert (await _call(client, STATUS, entry_id=entry.entry_id))["result"]["failures"] == []
+
+
+async def test_the_list_tells_packets_duration_reason_and_interface(hass, fake_client, entry):
+    from custom_components.fritzbox_network.capture import KEY_CAPTURES
+
+    def capture(interface, path, seconds, max_bytes, stop, progress, sink=None):
+        path.write_bytes(HEADER + _packets([100, 101, 112.0]))
+        return "size"
+
+    fake_client.capture = capture
+    await _setup(hass, entry)
+    manager = hass.data[KEY_CAPTURES][entry.entry_id]
+    manager.start("3-0", 30, 10 * 1048576)
+    await hass.async_block_till_done()
+
+    [item] = await hass.async_add_executor_job(manager.files)
+    assert item["interface"] == "30"
+    assert item["interface_id"] == "3-0"  # the id of the box, not only the part in the name
+    assert item["packets"] == 3
+    assert item["seconds"] == 12.0
+    assert item["reason"] == "size"
+    assert item["ring"] is False
+    assert item["recording"] is False
+    # the details are kept next to the capture, the capture itself is not read again
+    assert (manager.directory / f"{item['name']}.json").is_file()
+
+
+async def test_an_older_capture_without_details_is_counted_once(hass, fake_client, entry):
+    from custom_components.fritzbox_network.capture import KEY_CAPTURES
+
+    await _setup(hass, entry)
+    manager = hass.data[KEY_CAPTURES][entry.entry_id]
+    manager.directory.mkdir(parents=True)
+    path = manager.directory / "1lan_20261104-101500.pcap"
+    path.write_bytes(HEADER + _packets([10, 15]))
+
+    [item] = await hass.async_add_executor_job(manager.files)
+    assert (item["packets"], item["seconds"], item["reason"]) == (2, 5.0, None)
+    assert (manager.directory / f"{path.name}.json").is_file()
+
+
+async def test_pruning_keeps_the_newest_by_time_and_takes_the_details_along(
+    hass, fake_client, entry
+):
+    import os
+
+    from custom_components.fritzbox_network.capture import KEEP_FILES, KEY_CAPTURES
+
+    await _setup(hass, entry)
+    manager = hass.data[KEY_CAPTURES][entry.entry_id]
+    directory = manager.directory
+    (directory / "ring").mkdir(parents=True)
+    (directory / "ring" / "seg-00000001.pcap").write_bytes(HEADER)  # the ring buffer's own
+    names = []
+    for n in range(KEEP_FILES + 2):
+        name = f"1lan_202611{n + 1:02d}-101500.pcap"
+        (directory / name).write_bytes(HEADER)
+        (directory / f"{name}.json").write_text("{}")
+        os.utime(directory / name, (1_800_000_000 + n, 1_800_000_000 + n))
+        names.append(name)
+    (directory / "1lan_20260101-000000.pcap.json").write_text("{}")  # its capture is gone
+
+    await hass.async_add_executor_job(manager._prune)  # noqa: SLF001
+
+    kept = sorted(p.name for p in directory.iterdir() if p.suffix == ".pcap")
+    assert kept == sorted(names[2:])  # the two oldest went
+    assert not (directory / f"{names[0]}.json").exists()
+    assert not (directory / "1lan_20260101-000000.pcap.json").exists()
+    assert (directory / "ring" / "seg-00000001.pcap").exists()
+
+
+async def test_deleting_a_capture_takes_its_details_along(hass, fake_client, entry):
+    from custom_components.fritzbox_network.capture import KEY_CAPTURES
+
+    await _setup(hass, entry)
+    manager = hass.data[KEY_CAPTURES][entry.entry_id]
+    manager.start("1-lan", 30, 10 * 1048576)
+    await hass.async_block_till_done()
+    [item] = await hass.async_add_executor_job(manager.files)
+    assert await hass.async_add_executor_job(manager.delete, item["name"])
+    assert list(manager.directory.iterdir()) == []
+
+
+async def test_failures_are_kept_over_a_restart(hass, fake_client, entry):
+    from custom_components.fritzbox_network.capture import KEY_CAPTURES
+
+    await _setup(hass, entry)
+    fake_client.fail_actions = True
+    hass.data[KEY_CAPTURES][entry.entry_id].start("2-1", 30, 10 * 1048576)
+    await hass.async_block_till_done()
+    await hass.config_entries.async_reload(entry.entry_id)
+    await hass.async_block_till_done()
+
+    [failure] = hass.data[KEY_CAPTURES][entry.entry_id].failures
+    assert failure["interface"] == "2-1"

@@ -68,6 +68,7 @@ test.afterEach(() => {
   for (const p of panels.splice(0)) {
     clearTimeout(p._restartTimer);
     clearTimeout(p._secretTimer);
+    clearTimeout(p._captureTimer); // the capture page reads again now and then while it is open
   }
 });
 

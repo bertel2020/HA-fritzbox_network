@@ -186,3 +186,50 @@ async def test_the_trigger_entity_saves_the_ring_buffer_after_the_wait(hass, fak
     assert not (manager.directory / "ring").exists() or not list(
         (manager.directory / "ring").iterdir()
     )
+
+
+async def test_a_trigger_save_that_fails_is_listed_and_warned(hass, fake_client, entry, caplog):
+    hass.states.async_set("binary_sensor.nas", "on")
+    hass.config_entries.async_update_entry(
+        entry,
+        options={**entry.options, "ring_trigger": "binary_sensor.nas", "ring_after": 5},
+    )
+    await _setup(hass, entry)
+    manager = hass.data[KEY_CAPTURES][entry.entry_id]
+    # a ring buffer narrowed to a device that sends nothing: the save keeps nothing
+    manager.ring_start("1-lan", 5, 50 * 1048576, "aa:bb:cc:dd:ee:99", (), "Drucker")
+    for _ in range(50):
+        if manager.ring.writer.status()["bytes"] > 24:
+            break
+        await hass.async_add_executor_job(lambda: __import__("time").sleep(0.05))
+
+    hass.states.async_set("binary_sensor.nas", "off")
+    await hass.async_block_till_done()
+    async_fire_time_changed(hass, dt_util.utcnow() + timedelta(seconds=10))
+    await hass.async_block_till_done(wait_background_tasks=False)
+
+    assert manager.files() == []
+    [failure] = manager.failures
+    assert failure["ring"] is True
+    assert failure["trigger"] == "binary_sensor.nas"
+    assert failure["device_name"] == "Drucker"
+    assert "ring buffer was not saved after binary_sensor.nas" in caplog.text
+    manager.ring_stop()
+    await hass.async_block_till_done()
+
+
+async def test_a_saved_ring_buffer_names_its_trigger_and_packets(hass, fake_client, entry):
+    await _setup(hass, entry)
+    manager = hass.data[KEY_CAPTURES][entry.entry_id]
+    manager.ring_start("1-lan", 5, 50 * 1048576)
+    for _ in range(50):
+        if manager.ring.writer.status()["bytes"] > 24:
+            break
+        await hass.async_add_executor_job(lambda: __import__("time").sleep(0.05))
+
+    await manager.async_ring_save(trigger="binary_sensor.nas")
+    [item] = await hass.async_add_executor_job(manager.files)
+    assert (item["ring"], item["trigger"], item["packets"]) == (True, "binary_sensor.nas", 3)
+    assert item["seconds"] == 2.0
+    manager.ring_stop()
+    await hass.async_block_till_done()

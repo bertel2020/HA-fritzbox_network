@@ -12,6 +12,7 @@ import contextlib
 from dataclasses import dataclass, field
 from datetime import datetime
 import http.client
+import json
 import logging
 from pathlib import Path
 import re
@@ -20,6 +21,7 @@ import struct
 import threading
 import time
 from typing import Any
+import uuid
 
 from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
@@ -73,6 +75,12 @@ DIR_NAME = "fritzbox_captures"
 KEY_CAPTURES = f"{DOMAIN}_captures"
 FILE_RE = re.compile(r"^[a-z0-9]+_\d{8}-\d{6}(-[0-9a-f]{12})?(-ring)?\.pcap$")
 FILE_PARTS_RE = re.compile(r"^([a-z0-9]+)_\d{8}-\d{6}(?:-([0-9a-f]{12}))?(-ring)?\.pcap$")
+# next to each capture a small file with what is known about it: the interface, the device,
+# why it ended, how many packets and how long; the list reads it instead of the capture
+META_SUFFIX = ".json"
+META_RE = re.compile(FILE_RE.pattern.removesuffix("$") + re.escape(META_SUFFIX) + "$")
+# the captures that failed or kept nothing are listed too, the newest of them
+KEEP_FAILURES = 10
 # the ring buffer: segments of this length, kept for the window, never more than the size limit
 RING_DIR = "ring"
 RING_SEGMENT_SECONDS = 30
@@ -355,6 +363,7 @@ class Ring:
     ips: tuple[str, ...] = ()
     error: str | None = None
     stop: Any = field(default_factory=threading.Event, repr=False)
+    device_name: str | None = None
 
 
 @dataclass
@@ -368,6 +377,7 @@ class Job:
     max_bytes: int
     device: str | None = None  # the MAC the capture is narrowed to afterwards
     ips: tuple[str, ...] = ()
+    device_name: str | None = None  # the name of that device when the capture began
     bytes: int = 0
     state: str = "running"  # running, done, failed
     reason: str | None = None  # why it ended: time, size, stopped; the error when it failed
@@ -398,6 +408,7 @@ class CaptureManager:
         self._client = client
         self.job: Job | None = None
         self.bands: dict[str, str] = {}  # interface -> band, as last found
+        self.failures: list[dict[str, Any]] = []  # the captures that kept nothing, newest first
         self._store: Store | None = None
         self.detecting = False
         self._interfaces: list[dict[str, str]] | None = None
@@ -426,16 +437,61 @@ class CaptureManager:
         stored = await manager._store.async_load()  # noqa: SLF001
         if isinstance(stored, dict) and isinstance(stored.get("bands"), dict):
             manager.bands = {k: v for k, v in stored["bands"].items() if INTERFACE_RE.match(k)}
+        if isinstance(stored, dict) and isinstance(stored.get("failures"), list):
+            manager.failures = [f for f in stored["failures"] if isinstance(f, dict)][
+                :KEEP_FAILURES
+            ]
         return manager
+
+    def _stored(self) -> dict[str, Any]:
+        return {"bands": self.bands, "failures": self.failures}
 
     def save_bands(self) -> None:
         """Keep the bands found; in the event loop, the thread that found them may not save."""
         if self._store is not None:
-            self._store.async_delay_save(lambda: {"bands": self.bands}, HISTORY_SAVE_DELAY)
+            self._store.async_delay_save(self._stored, HISTORY_SAVE_DELAY)
+
+    @callback
+    def _remember_failure(
+        self,
+        interface: str,
+        error: str,
+        *,
+        device: str | None = None,
+        device_name: str | None = None,
+        ring: bool = False,
+        trigger: str | None = None,
+    ) -> None:
+        """Keep a capture that failed or kept nothing in the list, so it does not just vanish."""
+        self.failures.insert(
+            0,
+            {
+                "id": uuid.uuid4().hex[:12],
+                "time": dt_util.utcnow().isoformat(),
+                "interface": interface,
+                "device": device.replace(":", "") if device else None,
+                "device_name": device_name,
+                "ring": ring,
+                "trigger": trigger,
+                "error": error,
+            },
+        )
+        del self.failures[KEEP_FAILURES:]
+        self.save_bands()
+
+    @callback
+    def dismiss_failure(self, failure_id: str) -> bool:
+        """Remove a failed capture from the list; False when there is none of that id."""
+        kept = [f for f in self.failures if f.get("id") != failure_id]
+        if len(kept) == len(self.failures):
+            return False
+        self.failures = kept
+        self.save_bands()
+        return True
 
     async def async_flush(self) -> None:
         if self._store is not None:
-            await self._store.async_save({"bands": self.bands})
+            await self._store.async_save(self._stored())
         # an ended ring buffer drops its segments before the box is gone
         if self._ring_task is not None and not self._ring_task.done():
             with contextlib.suppress(TimeoutError, asyncio.CancelledError):
@@ -518,6 +574,7 @@ class CaptureManager:
         max_bytes: int,
         device: str | None = None,
         ips: tuple[str, ...] = (),
+        device_name: str | None = None,
     ) -> Job:
         """Begin a capture; raises ValueError for a bad request or when one is running."""
         if not INTERFACE_RE.match(interface):
@@ -539,6 +596,7 @@ class CaptureManager:
             max_bytes=max_bytes,
             device=device,
             ips=ips,
+            device_name=device_name,
         )
         job.stop = threading.Event()
         self.job = job
@@ -556,6 +614,7 @@ class CaptureManager:
         max_bytes: int,
         device: str | None = None,
         ips: tuple[str, ...] = (),
+        device_name: str | None = None,
     ) -> Ring:
         """Begin the ring buffer; raises ValueError for a bad request or when the box is busy."""
         if not INTERFACE_RE.match(interface):
@@ -567,7 +626,7 @@ class CaptureManager:
         if device and not re.fullmatch(r"([0-9a-f]{2}:){5}[0-9a-f]{2}", device):
             raise ValueError("invalid device")
         writer = SegmentWriter(self.directory / RING_DIR, minutes * 60, max_bytes)
-        ring = Ring(interface, minutes, max_bytes, writer, device, ips)
+        ring = Ring(interface, minutes, max_bytes, writer, device, ips, device_name=device_name)
         self.ring = ring
         # a background task: it runs for as long as the ring buffer does, and nothing waits for it
         self._ring_task = self._hass.async_create_background_task(
@@ -631,14 +690,14 @@ class CaptureManager:
             **ring.writer.status(),
         }
 
-    def _save_ring(self) -> str:
-        ring = self.ring
-        if ring is None:
-            raise ValueError("not running")
+    def _save_ring(self, ring: Ring, trigger: str | None = None) -> str:
         stamp = dt_util.now().strftime("%Y%m%d-%H%M%S")
         suffix = f"-{ring.device.replace(':', '')}" if ring.device else ""
         name = f"{interface_slug(ring.interface)}_{stamp}{suffix}-ring.pcap"
         path = self.directory / name
+        if path.exists():
+            # a second save in the same second (the button and a trigger): do not overwrite
+            raise ValueError("the ring buffer was saved a moment ago")
         self.directory.mkdir(parents=True, exist_ok=True)
         if ring.device:
             joined = path.with_suffix(".tmp")
@@ -652,12 +711,42 @@ class CaptureManager:
                 raise ValueError("the device sent or received nothing in that time")
         else:
             ring.writer.save(path)
+        write_meta(
+            path,
+            {
+                "interface": ring.interface,
+                "device": ring.device,
+                "device_name": ring.device_name,
+                "ring": True,
+                "trigger": trigger,
+                "reason": None,
+            },
+        )
         self._prune()
         return name
 
-    async def async_ring_save(self) -> str:
-        """Keep what the ring buffer holds as a capture file; the ring goes on recording."""
-        name = await self._hass.async_add_executor_job(self._save_ring)
+    async def async_ring_save(self, trigger: str | None = None) -> str:
+        """Keep what the ring buffer holds as a capture file; the ring goes on recording.
+
+        ``trigger`` is the entity whose change saved it. A save that fails is kept in the list
+        of failures and raises ValueError, also for an error of the disk.
+        """
+        ring = self.ring
+        if ring is None:
+            raise ValueError("not running")
+        try:
+            name = await self._hass.async_add_executor_job(self._save_ring, ring, trigger)
+        except (ValueError, OSError) as err:
+            self._remember_failure(
+                ring.interface,
+                str(err),
+                device=ring.device,
+                device_name=ring.device_name,
+                ring=True,
+                trigger=trigger,
+            )
+            self._notify()
+            raise ValueError(str(err)) from err
         self._notify()
         return name
 
@@ -682,6 +771,18 @@ class CaptureManager:
                 if kept == 0:
                     path.unlink()
                     raise ValueError("the device sent or received nothing in that time")
+            write_meta(
+                path,
+                {
+                    "interface": job.interface,
+                    "device": job.device,
+                    "device_name": job.device_name,
+                    "ring": False,
+                    "trigger": None,
+                    "reason": reason,
+                    "limit_seconds": job.seconds,
+                },
+            )
             return reason
 
         try:
@@ -691,34 +792,70 @@ class CaptureManager:
             _LOGGER.warning("The capture on %s failed: %s", job.interface, err)
             job.state = "failed"
             job.reason = str(err)
-            await self._hass.async_add_executor_job(lambda: path.unlink(missing_ok=True))
+            self._remember_failure(
+                job.interface, str(err), device=job.device, device_name=job.device_name
+            )
+            await self._hass.async_add_executor_job(
+                lambda: [p.unlink(missing_ok=True) for p in (path, meta_path(path))]
+            )
         await self._hass.async_add_executor_job(self._prune)
 
     def _prune(self) -> None:
-        files = self.files()
-        for item in files[KEEP_FILES:]:
-            (self.directory / item["name"]).unlink(missing_ok=True)
+        """Keep the newest captures; their small files of details go with them."""
+        directory = self.directory
+        found = self._found()
+        for path, _stat in found[KEEP_FILES:]:
+            if self.is_recording(path.name):
+                continue
+            path.unlink(missing_ok=True)
+            meta_path(path).unlink(missing_ok=True)
+        if directory.is_dir():
+            kept = {path.name for path, _stat in found[:KEEP_FILES]}
+            for path in directory.iterdir():
+                if META_RE.match(path.name) and path.name[: -len(META_SUFFIX)] not in kept:
+                    path.unlink(missing_ok=True)  # the details of a capture deleted by hand
 
-    def files(self) -> list[dict[str, Any]]:
-        """The kept captures, newest first."""
+    def _found(self) -> list[tuple[Path, Any]]:
+        """The capture files with their stat, newest first."""
         if not self.directory.is_dir():
             return []
-        found = []
-        for path in self.directory.iterdir():
-            if FILE_RE.match(path.name) and path.is_file():
-                stat = path.stat()
-                found.append({"name": path.name, "bytes": stat.st_size, "time": stat.st_mtime})
-        found.sort(key=lambda f: f["time"], reverse=True)
-        return [
-            {
-                **f,
-                "time": datetime.fromtimestamp(f["time"], dt_util.UTC).isoformat(),
-                "interface": f["name"].split("_", 1)[0],
-                "device": (m := FILE_PARTS_RE.match(f["name"])) and m.group(2),
-                "ring": bool((m := FILE_PARTS_RE.match(f["name"])) and m.group(3)),
-            }
-            for f in found
+        found = [
+            (path, path.stat())
+            for path in self.directory.iterdir()
+            if FILE_RE.match(path.name) and path.is_file()
         ]
+        found.sort(key=lambda item: item[1].st_mtime, reverse=True)
+        return found
+
+    def files(self) -> list[dict[str, Any]]:
+        """The kept captures, newest first, with what is known about each.
+
+        The details come from the small file next to each capture. An older capture that has
+        none is counted once (only the record headers are read) and gets one.
+        """
+        listed = []
+        for path, stat in self._found():
+            parts = FILE_PARTS_RE.match(path.name)
+            recording = self.is_recording(path.name)
+            meta = {} if recording else read_meta(path, stat.st_size)
+            listed.append(
+                {
+                    "name": path.name,
+                    "bytes": stat.st_size,
+                    "time": datetime.fromtimestamp(stat.st_mtime, dt_util.UTC).isoformat(),
+                    "interface": path.name.split("_", 1)[0],
+                    "interface_id": meta.get("interface"),
+                    "device": parts and parts.group(2),
+                    "device_name": meta.get("device_name"),
+                    "ring": bool(parts and parts.group(3)),
+                    "trigger": meta.get("trigger"),
+                    "reason": meta.get("reason"),
+                    "packets": meta.get("packets"),
+                    "seconds": meta.get("seconds"),
+                    "recording": recording,
+                }
+            )
+        return listed
 
     def summary(self, name: str) -> pcap.Summary | None:
         """What a kept capture contains; None where it is gone or cannot be read."""
@@ -741,7 +878,47 @@ class CaptureManager:
         if not path.is_file() or self.is_recording(name):
             return False
         path.unlink()
+        meta_path(path).unlink(missing_ok=True)
         return True
+
+
+def meta_path(path: Path) -> Path:
+    """The small file with the details of a capture."""
+    return path.with_name(path.name + META_SUFFIX)
+
+
+def write_meta(path: Path, meta: dict[str, Any]) -> dict[str, Any]:
+    """Count the finished capture and keep what is known about it next to it; blocking."""
+    try:
+        size = path.stat().st_size
+    except OSError:
+        return meta  # deleted meanwhile: nothing to count, and the list must not fail for it
+    try:
+        packets, first, last = pcap.stats(path)
+    except (pcap.PcapError, OSError):
+        packets, first, last = None, None, None
+    meta = {
+        **meta,
+        "bytes": size,
+        "packets": packets,
+        "seconds": round(last - first, 1) if first is not None and last is not None else None,
+    }
+    with contextlib.suppress(OSError):
+        meta_path(path).write_text(json.dumps(meta), encoding="utf-8")
+    return meta
+
+
+def read_meta(path: Path, size: int) -> dict[str, Any]:
+    """The details of a capture; made once for a capture that has none yet (or a changed one)."""
+    meta: Any = {}
+    with contextlib.suppress(OSError, ValueError):
+        meta = json.loads(meta_path(path).read_text(encoding="utf-8"))
+    if not isinstance(meta, dict):
+        meta = {}
+    if meta.get("bytes") == size:
+        return meta
+    # older than the details, or changed after them: counted again, what was known stays
+    return write_meta(path, {k: v for k, v in meta.items() if k not in ("packets", "seconds")})
 
 
 class CaptureDownloadView(HomeAssistantView):
@@ -799,9 +976,10 @@ def async_setup_ring(hass: HomeAssistant, entry: ConfigEntry, manager: CaptureMa
     async def save(_now: Any) -> None:
         pending.clear()
         try:
-            await manager.async_ring_save()
+            await manager.async_ring_save(trigger=entity)
         except ValueError as err:
-            _LOGGER.debug("The ring buffer was not saved: %s", err)
+            # nobody waits for this save: say it where it is seen (the panel lists it too)
+            _LOGGER.warning("The ring buffer was not saved after %s changed: %s", entity, err)
 
     @callback
     def changed(event: Event) -> None:

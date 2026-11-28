@@ -1287,6 +1287,51 @@ test("the capture card narrows to a device and shows the summary of a file", () 
   assert.match(html, /Auf der Internetseite/);
 });
 
+test("a kept capture tells packets, duration, why it ended and where it came from; a failed one stays listed", () => {
+  const status = {
+    job: null,
+    files: [
+      { name: "30_20261128-101500-ring.pcap", bytes: 5000, time: "2026-11-28T10:15:00Z", interface: "30", interface_id: "3-0", device: "aabbccddee02", device_name: "Drucker", ring: true, trigger: "binary_sensor.nas", reason: null, packets: 1234, seconds: 125.4, recording: false },
+      { name: "1lan_20261128-090000.pcap", bytes: 900, time: "2026-11-28T09:00:00Z", interface: "1lan", interface_id: "1-lan", device: null, ring: false, reason: "error", packets: 3, seconds: 12, recording: false },
+      { name: "1lan_20261128-110000.pcap", bytes: 24, time: "2026-11-28T11:00:00Z", interface: "1lan", device: null, ring: false, recording: true },
+    ],
+    failures: [{ id: "abc123", time: "2026-11-28T10:30:00Z", interface: "1-lan", device: "aabbccddee01", device_name: "Fernseher", ring: false, trigger: null, error: "the device sent or received nothing in that time" }],
+    interfaces: [
+      { id: "1-lan", label: "lan", group: "lan", slug: "1lan" },
+      { id: "3-0", label: "Routing-Schnittstelle", group: "routing", slug: "30" },
+    ],
+    url: "/x/",
+    limits: { min_seconds: 5, max_seconds: 600, seconds: 60, max_mb: 200, mb: 50 },
+  };
+  const html = capture.renderCapture(status, { t, language: "de", canWrite: true, clients: [], form: capture.captureDefaults(status.limits) });
+  assert.match(html, /<b>Routing, gesamter Verkehr<\/b><code>3-0<\/code>/); // the id of the box from the details
+  assert.match(html, /Ringpuffer, durch binary_sensor\.nas/);
+  assert.match(html, /<span class="chip">Drucker<\/span>/); // the name kept with the capture, the device is gone
+  assert.match(html, /1\.234 Pakete/);
+  assert.match(html, /2 Min\. 5 s/);
+  assert.match(html, /<span class="chip warn">abgebrochen<\/span>/);
+  assert.match(html, /<span class="chip bad">fehlgeschlagen<\/span>[\s\S]*Fernseher[\s\S]*nothing in that time/);
+  assert.match(html, /data-act="cap-dismiss" data-id="abc123"/);
+  assert.match(html, /Vorhandene Mitschnitte \(3\)/);
+  // the one that records has no buttons yet
+  assert.match(html, /<span class="chip info">läuft<\/span>/);
+  assert.doesNotMatch(html, /data-name="1lan_20261128-110000\.pcap"/);
+  // newest first, the failed one between the files
+  const order = capture.captureItems(status).map((i) => i.item.name ?? i.item.id);
+  assert.deepEqual(order, ["1lan_20261128-110000.pcap", "abc123", "30_20261128-101500-ring.pcap", "1lan_20261128-090000.pcap"]);
+  assert.equal(capture.captureSpan(12.4, t.inet.capture), "12 s");
+  assert.equal(capture.captureSpan(null, t.inet.capture), "");
+  const english = texts.panelTexts("en");
+  assert.match(capture.renderCapture(status, { t: english, language: "en", canWrite: true, clients: [], form: capture.captureDefaults(status.limits) }), /1,234 packets[\s\S]*2 min 5 s/);
+});
+
+test("the capture page reads again quickly while recording and now and then otherwise", () => {
+  assert.equal(capture.captureRefreshMs({ job: { state: "running" } }), 1000);
+  assert.equal(capture.captureRefreshMs({ job: { state: "done" }, ring: { active: true } }), 3000);
+  assert.equal(capture.captureRefreshMs({ job: null, ring: { active: false } }), 15000);
+  assert.equal(capture.captureRefreshMs("failed"), 15000);
+});
+
 const check = await import(`${base}panel-check.js`);
 
 test("the connection card shows the steps as tiles and names what to look at", () => {

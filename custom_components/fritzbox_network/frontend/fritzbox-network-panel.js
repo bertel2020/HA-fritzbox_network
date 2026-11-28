@@ -39,7 +39,7 @@ import { drawLinks, mapOrder, renderMap } from "./panel-map.js";
 import { renderInternet, renderPortsPage, renderVolume } from "./panel-internet.js";
 import { renderVpn } from "./panel-vpn.js";
 import { renderRoutes } from "./panel-routes.js";
-import { captureDefaults, captureForDevice, defaultInterface, renderCapture, ringDefaults } from "./panel-capture.js";
+import { captureDefaults, captureForDevice, captureRefreshMs, defaultInterface, renderCapture, ringDefaults } from "./panel-capture.js";
 import { diagHead, renderConnection } from "./panel-check.js";
 import { renderLog } from "./panel-log.js";
 import { renderRadio, renderRadioVerdict } from "./panel-radio.js";
@@ -920,9 +920,9 @@ class FritzboxNetworkPanel extends HTMLElement {
       this._state.capture = "failed";
     }
     this._update();
-    if (this._state.tab === "capture" && (this._state.capture?.job?.state === "running" || this._state.capture?.ring?.active)) {
-      this._captureTimer = setTimeout(() => this._loadCapture(), this._state.capture?.job?.state === "running" ? 1000 : 3000);
-    }
+    // read again while the page is open: quickly while something records, now and then otherwise, so a
+    // capture started elsewhere (an action, an automation, the button of the ring buffer) shows up too
+    if (this._state.tab === "capture") this._captureTimer = setTimeout(() => this._loadCapture(), captureRefreshMs(this._state.capture));
   }
 
   /** The course of the connection is read when the page opens, and again every minute while it is open and recorded. */
@@ -1020,6 +1020,9 @@ class FritzboxNetworkPanel extends HTMLElement {
         this._update();
       } else if (ds.act === "cap-stop") {
         await this._ws("capture/stop");
+        await this._loadCapture();
+      } else if (ds.act === "cap-dismiss") {
+        await this._ws("capture/dismiss", { failure: ds.id });
         await this._loadCapture();
       } else if (ds.act === "cap-del") {
         const ok = await openDialog(this.shadowRoot, t, { title: c.deleteTitle, body: c.deleteBody, list: [ds.name], ok: c.delete, danger: true });
